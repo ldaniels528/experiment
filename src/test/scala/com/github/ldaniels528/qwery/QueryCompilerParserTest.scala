@@ -3,16 +3,16 @@ package com.github.ldaniels528.qwery
 import org.scalatest.FunSpec
 
 /**
-  * Query Language Parser Test
+  * Query Compiler Test
   * @author lawrence.daniels@gmail.com
   */
-class QueryLanguageParserTest extends FunSpec {
+class QueryCompilerParserTest extends FunSpec {
 
-  describe("QueryLanguageParser") {
+  describe("QueryCompiler") {
 
-    it("parses reference to a CVS file into a query object") {
-      val languageParser = new QueryCompiler()
-      val query = languageParser(
+    it("parses reference to a CVS file into an executable object") {
+      val compiler = new QueryCompiler()
+      val query = compiler(
         """
           |SELECT * FROM './companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
