@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.1"
+val apiVersion = "0.1.1"
 val scalaJsVersion = "2.12.1"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
@@ -11,7 +11,7 @@ homepage := Some(url("https://github.com/ldaniels528/qwery"))
 lazy val root = (project in file(".")).
   settings(
     name := "qwery",
-    organization := "io.scalajs.npm",
+    organization := "com.github.ldaniels528",
     description := "This is a complete and feature rich Qwery client for node.js",
     version := apiVersion,
     scalaVersion := scalaJsVersion,
@@ -56,7 +56,7 @@ lazy val publishingSettings = Seq(
           <id>ldaniels528</id>
           <name>Lawrence Daniels</name>
           <email>lawrence.daniels@gmail.com</email>
-          <organization>io.scalajs</organization>
+          <organization>com.github.ldaniels528</organization>
           <organizationUrl>https://github.com/ldaniels528</organizationUrl>
           <roles>
             <role>Project-Administrator</role>
