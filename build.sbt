@@ -3,8 +3,8 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.1.1"
-val scalaJsVersion = "2.12.1"
+val apiVersion = "0.1.2"
+val appScalaVersion = "2.12.1"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
 
@@ -14,12 +14,13 @@ lazy val root = (project in file(".")).
     organization := "com.github.ldaniels528",
     description := "This is a complete and feature rich Qwery client for node.js",
     version := apiVersion,
-    scalaVersion := scalaJsVersion,
+    scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-	    "org.scala-lang" % "scala-reflect" % scalaJsVersion,
+      "org.scala-lang" % "scala-compiler" % appScalaVersion,
+      "org.scala-lang" % "scala-reflect" % appScalaVersion,
 	    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25"
   ))

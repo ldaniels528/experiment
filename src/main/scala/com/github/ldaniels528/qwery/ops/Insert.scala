@@ -1,17 +1,17 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.sources.QueryOutputSource
+import com.github.ldaniels528.qwery.{Field, ResultSet}
 
 /**
   * Represents an INSERT-SELECT statement
   * @author lawrence.daniels@gmail.com
   */
-case class InsertSelect(target: QueryOutputSource, fields: Seq[Field], query: Query) extends Statement {
+case class Insert(target: QueryOutputSource, fields: Seq[Field], source: Executable) extends Statement {
 
-  override def execute(): TraversableOnce[Seq[(String, Any)]] = {
-    val results = query.execute()
+  override def execute(): ResultSet = {
     var count = 0L
-    results foreach { data =>
+    source.execute() foreach { data =>
       target.write(data)
       count += 1
     }

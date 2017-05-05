@@ -6,7 +6,8 @@ import com.github.ldaniels528.qwery.SyntaxException._
   * Syntax Exception
   * @author lawrence.daniels@gmail.com
   */
-class SyntaxException(message: String, token: Token = null) extends RuntimeException(formatMessage(message, token))
+class SyntaxException(message: String, token: Token = null, cause: Throwable = null)
+  extends RuntimeException(formatMessage(message, token), cause)
 
 /**
   * Syntax Exception

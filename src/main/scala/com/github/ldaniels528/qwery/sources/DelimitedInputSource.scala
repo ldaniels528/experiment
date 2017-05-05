@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.File
 import java.net.URL
 
-import com.github.ldaniels528.qwery.Query
+import com.github.ldaniels528.qwery.ops.Query
 
 import scala.io.{BufferedSource, Source}
 
@@ -11,7 +11,7 @@ import scala.io.{BufferedSource, Source}
   * Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
+abstract class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
   override def execute(query: Query): TraversableOnce[Map[String, String]] = {
@@ -55,20 +55,33 @@ case class DelimitedInputSource(source: BufferedSource) extends QueryInputSource
 }
 
 /**
-  * Delimited Input Source Companion
+  * Delimited Input Source Factory
   * @author lawrence.daniels@gmail.com
   */
-object DelimitedInputSource {
+object DelimitedInputSource extends QueryInputSourceFactory {
 
-  def apply(uri: String): DelimitedInputSource = {
-    DelimitedInputSource(uri match {
-      case url if url.toLowerCase.startsWith("http://") | url.toLowerCase.startsWith("http://") => Source.fromURL(url)
-      case file => Source.fromFile(file)
-    })
+  def apply(uri: String): Option[DelimitedInputSource] = uri match {
+    case s if s.toLowerCase.startsWith("http://") | s.toLowerCase.startsWith("https://") => Option(apply(new URL(s)))
+    case s if s.startsWith("/") | s.startsWith("./") => Option(apply(new File(s)))
+    case _ => None
   }
 
-  def apply(file: File): DelimitedInputSource = DelimitedInputSource(Source.fromFile(file))
+  def apply(file: File): DelimitedInputSource = FileDelimitedInputSource(file)
 
-  def apply(url: URL): DelimitedInputSource = DelimitedInputSource(Source.fromURL(url))
+  def apply(url: URL): DelimitedInputSource = URLDelimitedInputSource(url)
+
+  override def understands(url: String): Boolean = url.startsWith("/") || url.startsWith("./")
 
 }
+
+/**
+  * File Delimited Input Source
+  * @author lawrence.daniels@gmail.com
+  */
+case class FileDelimitedInputSource(file: File) extends DelimitedInputSource(Source.fromFile(file))
+
+/**
+  * URL Delimited Input Source
+  * @author lawrence.daniels@gmail.com
+  */
+case class URLDelimitedInputSource(url: URL) extends DelimitedInputSource(Source.fromURL(url))

@@ -1,5 +1,6 @@
 package com.github.ldaniels528.tabular
 
+import com.github.ldaniels528.qwery.ResultSet
 import com.github.ldaniels528.tabular.formatters.FormatHandler
 import org.slf4j.LoggerFactory
 
@@ -30,7 +31,7 @@ class Tabular() {
     * Transforms the given sequence of objects into a sequence of string that
     * represent a table.
     */
-  def transform(results: TraversableOnce[Seq[(String, Any)]]): Seq[String] = {
+  def transform(results: ResultSet): Seq[String] = {
     val values = results.toSeq
     val headers = values.headOption.map(_.map(_._1).toSeq).toSeq.flatten
     val rows = values.map(v => Map(v map { case (name, value) => (name, asString(value)) }: _*))

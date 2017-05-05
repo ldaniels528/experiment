@@ -40,7 +40,7 @@ import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
-val compiler = new QueryCompiler()
+val compiler = new QweryCompiler()
 val query = compiler.compile(
   """
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -61,7 +61,7 @@ import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
-val compiler = new QueryCompiler()
+val compiler = new QweryCompiler()
 val query = compiler.compile(
   """
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
@@ -98,7 +98,7 @@ import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the statement
-val compiler = new QueryCompiler()
+val compiler = new QweryCompiler()
 val statement = compiler.compile(
   """
     |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)

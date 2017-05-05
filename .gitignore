@@ -33,3 +33,6 @@ project/boot/
 .cache
 
 test1.csv
+tickers.csv
+test2.csv
+test3.csv

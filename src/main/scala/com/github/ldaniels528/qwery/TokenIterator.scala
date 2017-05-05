@@ -1,10 +1,10 @@
 package com.github.ldaniels528.qwery
 
 /**
-  * Tokenizer
+  * Token Iterator
   * @author lawrence.daniels@gmail.com
   */
-case class Tokenizer(input: String) extends Iterator[Token] {
+case class TokenIterator(input: String) extends Iterator[Token] {
   private var pos = 0
   private val ca = input.toCharArray
   private val operators = "=*-+/|&><".toCharArray
@@ -114,9 +114,9 @@ case class Tokenizer(input: String) extends Iterator[Token] {
   */
 sealed trait Token {
 
-  def text: String
-
   def start: Int
+
+  def text: String
 
   def value: Any
 

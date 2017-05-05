@@ -10,10 +10,10 @@ import org.scalatest.FunSpec
 class QueryTest extends FunSpec {
   private val connected = false
 
-  describe("QueryCriteria") {
+  describe("Query") {
 
     it("should extract filtered results from a CVS file") {
-      val compiler = new QueryCompiler()
+      val compiler = new QweryCompiler()
       val query = compiler(
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -38,8 +38,8 @@ class QueryTest extends FunSpec {
 
     it("should extract filtered results from a URL") {
       if (connected) {
-        val languageParser = new QueryCompiler()
-        val query = languageParser(
+        val compiler = new QweryCompiler()
+        val query = compiler(
           """
             |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
