@@ -34,8 +34,8 @@ object QweryMain {
     // compile the statement
     val statement = compiler.compile(
       """
-        |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
-        |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+        |INSERT INTO './test1.csv' (Sector, Name, 'ADR TSO', Industry, Symbol, IPOyear, LastSale, 'Summary Quote', MarketCap)
+        |SELECT Sector, Name, 'ADR TSO', Industry, Symbol, IPOyear, LastSale, 'Summary Quote', MarketCap
         |FROM './companylist.csv'
         |WHERE Sector = 'Basic Industries'""".stripMargin)
 
