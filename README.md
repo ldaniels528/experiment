@@ -3,7 +3,8 @@ Qwery
 
 #### Description
 
-Qwery exposes a SQL-like query language to extract structured data from a file or REST URL.
+Qwery exposes a SQL-like query language to extract structured data from a file or REST URL. Qwery can be used as
+an SDK or as a CLI application.
 
 ### Build Requirements
 
@@ -13,6 +14,15 @@ Qwery exposes a SQL-like query language to extract structured data from a file o
 
 ```bash
 $ sbt test
+```
+
+### Frequently Asked Questions (FAQ)
+
+**Q**: How do I reference a field that contains spaces or special characters?
+
+**A**: Use backticks (\`). 
+```sql
+SELECT `last name`, `first name`, position, startDate from './personnel.csv'
 ```
 
 ### Examples
@@ -45,13 +55,24 @@ val query = compiler.compile(
   """
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
     |FROM './companylist.csv'
-    |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+    |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
 val results = query.execute() // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
+```
+
+##### The Results
+
+```text
++ ------------------------------------------------------------------------------------------------ + 
+| Symbol  Name                  Sector             Industry              LastSale  MarketCap       | 
++ ------------------------------------------------------------------------------------------------ + 
+| BGI     Birks Group Inc.      Consumer Services  Consumer Specialties  1.4401    25865464.7281   | 
+| DGSE    DGSE Companies, Inc.  Consumer Services  Consumer Specialties  1.64      44125234.84     | 
++ ------------------------------------------------------------------------------------------------ + 
 ```
 
 ##### Or execute a Query against a REST-ful endpoint

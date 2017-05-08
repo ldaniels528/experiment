@@ -10,7 +10,7 @@ import scala.collection.Iterable
   */
 case class Modifications(fields: Seq[Field], dataSets: Iterable[Seq[Any]]) extends Executable {
 
-  override def execute(): ResultSet = {
+  override def execute(scope: Scope): ResultSet = {
     dataSets map { dataSet =>
       fields zip dataSet map { case (field, value) =>
         field.name -> value

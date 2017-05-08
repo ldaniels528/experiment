@@ -44,7 +44,7 @@ trait ExpressionParser {
           case _ =>
             throw new SyntaxException(s"Invalid operator", token)
         }
-      case List(ft, opt@AlphaToken(operator, _), QuotedToken(matching, _)) =>
+      case List(ft, opt@AlphaToken(operator, _), QuotedToken(matching, _, _)) =>
         operator match {
           case "LIKE" => LIKE(Field(ft.text), matching)
           case _ =>

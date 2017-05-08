@@ -1,9 +1,10 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.sources.QueryInputSource
-import com.github.ldaniels528.qwery.{Expression, Field, ResultSet, Row}
+import java.util.concurrent.atomic.AtomicInteger
 
-import scala.collection.TraversableOnce
+import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.sources.QueryInputSource
+
 import scala.language.postfixOps
 
 /**
@@ -11,26 +12,30 @@ import scala.language.postfixOps
   * @author lawrence.daniels@gmail.com
   */
 case class Select(source: Option[QueryInputSource],
-                  fields: Seq[Field],
-                  condition: Option[Expression],
-                  limit: Option[Int])
+                  fields: Seq[Evaluatable],
+                  condition: Option[Expression] = None,
+                  groupFields: Option[Seq[Field]] = None,
+                  sortFields: Option[Seq[(Field, Int)]] = None,
+                  limit: Option[Int] = None)
   extends Query {
 
-  override def execute(): ResultSet = source match {
-    case Some(device) => filterFields(fields, device.execute(this))
-    case None => Iterator.empty
+  override def execute(scope: Scope): ResultSet = source match {
+    case Some(device) =>
+      val rows = device.execute(this)
+      if (fields.isAllFields) rows.map(_.toSeq) else rows.map(filterRow(_, fields))
+    case None =>
+      Iterator.empty
   }
 
-  private def filterFields(fields: Seq[Field], rows: TraversableOnce[Map[String, Any]]): ResultSet = {
-    val allFields = fields.exists(_.name == "*")
-    if (allFields)
-      rows.map(row => row.keys.toSet ++ fields.map(_.name) flatMap (name => row.get(name).map(value => name -> value)) toSeq)
-    else
-      rows.map(filterRow(_, fields))
-  }
-
-  private def filterRow(row: Map[String, Any], fields: Seq[Field]): Row = {
-    fields.flatMap(field => row.get(field.name).map(v => field.name -> v))
+  private def filterRow(row: Map[String, Any], fields: Seq[Evaluatable]): Row = {
+    val counter = new AtomicInteger()
+    fields.flatMap {
+      case field: Field => row.get(field.name).map(v => field.name -> v)
+      case NumericValue(value) => Some(s"$$${counter.addAndGet(1)}" -> value)
+      case StringValue(value) => Some(s"$$${counter.addAndGet(1)}" -> value)
+      case unknown =>
+        throw new IllegalStateException(s"Unhandled value type '$unknown' (${Option(unknown).map(_.getClass.getName).orNull})")
+    }
   }
 
 }

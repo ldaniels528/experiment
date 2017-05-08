@@ -11,7 +11,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private val compoundOperators = "*-+|&><".toCharArray
 
   private def parsers = List(
-    parseNumeric _, parseAlphaNumeric _, parseQuotesDouble _,
+    parseNumeric _, parseAlphaNumeric _, parseQuotesBackticks _, parseQuotesDouble _,
     parseQuotesSingle _, parseCompoundOperators _, parseOperators _, parseSymbols _)
 
   override def hasNext: Boolean = {
@@ -77,6 +77,8 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     else None
   }
 
+  private def parseQuotesBackticks() = parseQuotes('`')
+
   private def parseQuotesDouble() = parseQuotes('"')
 
   private def parseQuotesSingle() = parseQuotes('\'')
@@ -88,7 +90,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
       while (hasMore && ca(pos) != ch) pos += 1
       val length = pos - start
       pos += 1
-      Some(QuotedToken(String.copyValueOf(ca, start, length), start))
+      Some(QuotedToken(String.copyValueOf(ca, start, length), start, ch))
     }
     else None
   }
@@ -140,8 +142,15 @@ case class AlphaToken(text: String, start: Int) extends TextToken {
   * Represents a quoted token
   * @author lawrence.daniels@gmail.com
   */
-case class QuotedToken(text: String, start: Int) extends TextToken {
+case class QuotedToken(text: String, start: Int, quoteChar: Char) extends TextToken {
   override def value: String = text
+
+  def isBackticks: Boolean = quoteChar == '`'
+
+  def isDouble: Boolean = quoteChar == '"'
+
+  def isSingle: Boolean = quoteChar == '\''
+
 }
 
 /**

@@ -1,10 +1,12 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.ops
+
+import com.github.ldaniels528.qwery.Evaluatable
 
 /**
-  * Represents a function
+  * Represents a function reference
   * @author lawrence.daniels@gmail.com
   */
-case class Function() extends Evaluatable {
+case class FunctionRef(name: String) extends Evaluatable {
 
   override def compare(that: Evaluatable, data: Map[String, Any]): Int = ???
 

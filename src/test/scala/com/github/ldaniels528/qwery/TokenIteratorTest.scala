@@ -10,7 +10,7 @@ class TokenIteratorTest extends FunSpec {
 
   describe("TokenIterator") {
 
-    it("supports tokenizing SELECT queries") {
+    it("supports low-level parsing of SELECT queries") {
       val query =
         """
           |SELECT * FROM './companylist.csv'
@@ -23,7 +23,7 @@ class TokenIteratorTest extends FunSpec {
       ))
     }
 
-    it("supports tokenizing INSERT-SELECT statements") {
+    it("supports low-level parsing of INSERT-SELECT statements") {
       val query =
         """
           |INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
@@ -40,7 +40,7 @@ class TokenIteratorTest extends FunSpec {
       ))
     }
 
-    it("supports tokenizing INSERT-VALUES statements") {
+    it("supports low-level parsing of INSERT-VALUES statements") {
       val query =
         """
           |INSERT INTO './test3.csv' (Symbol, Sector, Industry, LastSale)

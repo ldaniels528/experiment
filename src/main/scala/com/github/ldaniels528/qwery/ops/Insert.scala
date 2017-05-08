@@ -9,9 +9,9 @@ import com.github.ldaniels528.qwery.{Field, ResultSet}
   */
 case class Insert(target: QueryOutputSource, fields: Seq[Field], source: Executable) extends Statement {
 
-  override def execute(): ResultSet = {
+  override def execute(scope: Scope): ResultSet = {
     var count = 0L
-    source.execute() foreach { data =>
+    source.execute(scope) foreach { data =>
       target.write(data)
       count += 1
     }

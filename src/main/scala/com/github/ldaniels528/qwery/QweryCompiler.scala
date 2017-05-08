@@ -44,9 +44,9 @@ class QweryCompiler() {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     implicit val parser = TemplateParser(stream)
-    val params = parser.extract("INSERT INTO @target @(fields)")
-    val target: Option[QueryOutputSource] = params.arguments.get("target").flatMap(DataSourceFactory.getOutputSource)
-    val fields = params.fields.getOrElse("fields", throw new SyntaxException("Field arguments missing"))
+    val params = parser.extract("INSERT INTO @target ( @(fields) )")
+    val target: Option[QueryOutputSource] = params.identifiers.get("target").flatMap(DataSourceFactory.getOutputSource)
+    val fields = params.fieldReferences.getOrElse("fields", throw new SyntaxException("Field arguments missing"))
     val source = stream match {
       case ts if ts.is("SELECT") => parseSelect(ts)
       case ts if ts.is("VALUES") => parseValues(fields, ts)
@@ -68,12 +68,14 @@ class QweryCompiler() {
     */
   private def parseSelect(stream: TokenStream): Select = {
     val parser = TemplateParser(stream)
-    val params = parser.extract("SELECT @{fields} FROM @source ?WHERE @<condition> ?LIMIT @limit")
+    val params = parser.extract("SELECT @{fields} FROM @source ?WHERE @<condition> ?GROUP +?BY @(groupBy) ?ORDER +?BY @|orderBy| ?LIMIT @limit")
     Select(
-      source = params.arguments.get("source").flatMap(DataSourceFactory.getInputSource),
-      fields = params.fields.getOrElse("fields", throw new SyntaxException("Field arguments missing")),
+      fields = params.fieldArguments.getOrElse("fields", throw new SyntaxException("Field arguments missing")),
+      source = params.identifiers.get("source").flatMap(DataSourceFactory.getInputSource),
       condition = params.expressions.get("condition"),
-      limit = params.arguments.get("limit").map(parseLimit))
+      groupFields = params.fieldReferences.get("groupBy"),
+      sortFields = params.sortFields.get("orderBy"),
+      limit = params.identifiers.get("limit").map(parseLimit))
   }
 
   /**
@@ -86,8 +88,8 @@ class QweryCompiler() {
   private def parseValues(fields: Seq[Field], ts: TokenStream)(implicit parser: TemplateParser): Modifications = {
     var valueSets: List[Seq[Any]] = Nil
     while (ts.hasNext) {
-      val params = parser.extract("VALUES @[values]")
-      params.values.get("values") foreach { values =>
+      val params = parser.extract("VALUES ( @[values] )")
+      params.insertValues.get("values") foreach { values =>
         valueSets = values :: valueSets
       }
     }

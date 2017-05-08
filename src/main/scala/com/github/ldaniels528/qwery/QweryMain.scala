@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.ops.RootScope
 import com.github.ldaniels528.tabular.Tabular
 
 /**
@@ -7,11 +8,12 @@ import com.github.ldaniels528.tabular.Tabular
   * @author lawrence.daniels@gmail.com
   */
 object QweryMain {
-  private val version = "0.1.2"
+  private val version = "0.1.3"
   private var alive = true
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()
   private var ticker = 0L
+  private val globalScope = new RootScope()
 
   def main(args: Array[String]): Unit = repl()
 
@@ -69,7 +71,7 @@ object QweryMain {
   private def interpret(input: String) = {
     input match {
       case "exit" => alive = false
-      case query => compiler.compile(query).execute()
+      case query => compiler.compile(query).execute(globalScope)
     }
   }
 
@@ -83,10 +85,10 @@ object QweryMain {
        | Qwery CLI v$version
        |         ,,,,,
        |         (o o)
-       |-----oOOo-(_)-oOOo----
+       |-----oOOo-(_)-oOOo-----
        |You can executes multi-line queries here like:
        |
-       |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, 'Summary Quote' FROM './companylist.csv'
+       |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, `Summary Quote` FROM './companylist.csv'
        |WHERE Sector = 'Basic Industries'
        |LIMIT 5;
       """.stripMargin

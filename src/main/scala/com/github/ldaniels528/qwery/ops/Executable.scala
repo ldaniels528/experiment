@@ -8,6 +8,6 @@ import com.github.ldaniels528.qwery.ResultSet
   */
 trait Executable {
 
-  def execute(): ResultSet
+  def execute(scope: Scope): ResultSet
 
 }
