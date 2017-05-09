@@ -27,7 +27,7 @@ SELECT `last name`, `first name`, position, startDate from './personnel.csv'
 
 ### Examples
 
-##### The input file (./companylist.csv)
+##### Let's start with a local file (./companylist.csv)
 
 ```csv
 "Symbol","Name","LastSale","MarketCap","ADR TSO","IPOyear","Sector","Industry","Summary Quote",
@@ -43,7 +43,7 @@ SELECT `last name`, `first name`, position, startDate from './personnel.csv'
 .
 ```
 
-##### Execute a Query against a local file
+##### Let's examine the columns and values of the file
 
 ```scala
 import com.github.ldaniels528.qwery._
@@ -51,16 +51,49 @@ import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
-val compiler = new QweryCompiler()
-val query = compiler.compile(
+val query = QweryCompiler("DESCRIBE './companylist.csv'")
+    
+// execute the query    
+val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+
+// display the results as a table
+new Tabular().transform(results) foreach println    
+```
+
+##### The Results
+
+```text
++ --------------------------------------------------------------------------------------- + 
+| COLUMN         TYPE    SAMPLE                                                           | 
++ --------------------------------------------------------------------------------------- + 
+| Sector         String  n/a                                                              | 
+| Name           String  Aberdeen Emerging Markets Smaller Company Opportunities Fund I   | 
+| ADR TSO        String  n/a                                                              | 
+| Industry       String  n/a                                                              | 
+| Symbol         String  ABE                                                              | 
+| IPOyear        String  n/a                                                              | 
+| LastSale       String  13.63                                                            | 
+| Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 | 
+| MarketCap      String  131446834.05                                                     | 
++ --------------------------------------------------------------------------------------- + 
+```
+
+##### Execute a Query against thr local file
+
+```scala
+import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.tabular.Tabular
+
+// compile the query
+val query = QweryCompiler(
   """
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
     |FROM './companylist.csv'
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val scope = new RootScope()
-val results = query.execute(scope) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -85,16 +118,14 @@ import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
-val compiler = new QweryCompiler()
-val query = compiler.compile(
+val query = QweryCompiler(
   """
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
     |FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
 // execute the query    
-val scope = new RootScope()
-val results = query.execute(scope) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -124,8 +155,7 @@ import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the statement
-val compiler = new QweryCompiler()
-val statement = compiler.compile(
+val statement = QweryCompiler(
   """
     |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -133,8 +163,7 @@ val statement = compiler.compile(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val scope = new RootScope()
-val results = statement.execute(scope)
+val results = statement.execute(new RootScope())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -174,8 +203,7 @@ import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the statement
-val compiler = new QweryCompiler()
-val statement = compiler.compile(
+val statement = QweryCompiler(
   """
     |INSERT INTO './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -183,8 +211,7 @@ val statement = compiler.compile(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val scope = new RootScope()
-val results = statement.execute(scope)
+val results = statement.execute(new RootScope())
 
 // display the results as a table
 new Tabular().transform(results) foreach println

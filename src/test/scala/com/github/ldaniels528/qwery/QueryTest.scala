@@ -15,16 +15,32 @@ class QueryTest extends FunSpec {
 
   describe("Query") {
 
+    it("should describe the layout of a CVS file") {
+      val query = QweryCompiler("DESCRIBE './companylist.csv'")
+      val results = query.execute(new RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+
+      assert(results == Vector(
+        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
+        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
+        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "13.63"),
+        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/abe"),
+        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "131446834.05")
+      ))
+    }
+
     it("should extract filtered results from a CVS file") {
-      val compiler = new QweryCompiler()
-      val query = compiler(
+      val query = QweryCompiler(
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
-      val scope = new RootScope()
-      val results = query.execute(scope).toSeq
+      val results = query.execute(new RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
 
       assert(results == Stream(
@@ -36,44 +52,38 @@ class QueryTest extends FunSpec {
     }
 
     it("should copy filtered results from one source (CSV) to another (CSV)") {
-      val compiler = new QweryCompiler()
-      val query = compiler(
+      val query = QweryCompiler(
         """
           |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val scope = new RootScope()
-      val results = query.execute(scope)
+      val results = query.execute(new RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
     it("should copy filtered results from one source (CSV) to another (JSON)") {
-      val compiler = new QweryCompiler()
-      val query = compiler(
+      val query = QweryCompiler(
         """
           |INSERT INTO './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val scope = new RootScope()
-      val results = query.execute(scope)
+      val results = query.execute(new RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
     it("should extract filtered results from a URL") {
       val connected = Properties.envOrNone("QWERY_WEB").map(_.toLowerCase()).contains("true")
       if (connected) {
-        val compiler = new QweryCompiler()
-        val query = compiler(
+        val query = QweryCompiler(
           """
             |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
 
-        val scope = new RootScope()
-        val results = query.execute(scope).toSeq
+        val results = query.execute(new RootScope()).toSeq
         tabular.transform(results.toIterator) foreach (info(_))
 
         assert(results == Stream(

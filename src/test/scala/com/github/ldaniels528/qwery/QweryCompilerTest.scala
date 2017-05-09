@@ -113,7 +113,7 @@ class QweryCompilerTest extends FunSpec {
         Insert(
           target = DelimitedOutputSource(new File("./test3.csv")),
           fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
-          source = Modifications(
+          source = InsertValues(
             fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
             dataSets = List(
               List("EMX", "Basic Industries", "Precious Metals", 0.828),

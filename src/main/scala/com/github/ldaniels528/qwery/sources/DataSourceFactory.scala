@@ -37,6 +37,7 @@ object DataSourceFactory extends DataSourceFactory {
 
   this += DelimitedInputSource
   this += DelimitedOutputSource
+  this += JSONInputSource
   this += JSONOutputSource
 
 }

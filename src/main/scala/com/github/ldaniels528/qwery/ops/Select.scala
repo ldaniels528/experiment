@@ -17,7 +17,7 @@ case class Select(source: Option[QueryInputSource],
                   groupFields: Option[Seq[Field]] = None,
                   sortFields: Option[Seq[(Field, Int)]] = None,
                   limit: Option[Int] = None)
-  extends Query {
+  extends Executable {
 
   override def execute(scope: Scope): ResultSet = source match {
     case Some(device) =>

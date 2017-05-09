@@ -18,12 +18,21 @@ lazy val root = (project in file(".")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
+    mainClass in assembly := Some("com.github.ldaniels528.qwery.QweryMain"),
+    test in assembly := {},
+    assemblyJarName in assembly := s"${name.value}-${version.value}.bin.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("log4j.properties", _*) => MergeStrategy.discard
+      case PathList("META-INF", _*) => MergeStrategy.discard
+      case _ => MergeStrategy.first
+    },
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-compiler" % appScalaVersion,
       "org.scala-lang" % "scala-reflect" % appScalaVersion,
 	    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25",
-      "net.liftweb" %% "lift-json" % "3.0.1"
+      "net.liftweb" %% "lift-json" % "3.0.1",
+      "org.scala-lang" % "jline" % "2.11.0-M3"
   ))
 
 /////////////////////////////////////////////////////////////////////////////////

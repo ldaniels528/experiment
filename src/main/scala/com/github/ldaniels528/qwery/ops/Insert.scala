@@ -7,7 +7,7 @@ import com.github.ldaniels528.qwery.ResultSet
   * Represents an INSERT-SELECT statement
   * @author lawrence.daniels@gmail.com
   */
-case class Insert(target: QueryOutputSource, fields: Seq[Field], source: Executable) extends Statement {
+case class Insert(target: QueryOutputSource, fields: Seq[Field], source: Executable) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
     var count = 0L

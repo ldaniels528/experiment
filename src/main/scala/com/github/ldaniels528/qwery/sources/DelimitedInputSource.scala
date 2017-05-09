@@ -1,10 +1,11 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.util.StringHelper._
-import java.io.File
+import java.io.{File, FileInputStream}
 import java.net.URL
+import java.util.zip.GZIPInputStream
 
-import com.github.ldaniels528.qwery.ops.Query
+import com.github.ldaniels528.qwery.ops.Executable
+import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.io.{BufferedSource, Source}
 
@@ -12,10 +13,10 @@ import scala.io.{BufferedSource, Source}
   * Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-abstract class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
+class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
-  override def execute(query: Query): TraversableOnce[Map[String, String]] = {
+  override def execute(query: Executable): TraversableOnce[Map[String, Any]] = {
     autodetectDelimiter() match {
       case Some((delimiter, headers, rows)) =>
         lines.map(line => Map(headers zip line.delimitedSplit(delimiter): _*)) ++ rows.iterator
@@ -58,16 +59,24 @@ abstract class DelimitedInputSource(source: BufferedSource) extends QueryInputSo
 object DelimitedInputSource extends QueryInputSourceFactory {
 
   def apply(uri: String): Option[DelimitedInputSource] = uri match {
-    case s if s.toLowerCase.startsWith("http://") | s.toLowerCase.startsWith("https://") => Option(apply(new URL(s)))
-    case s if s.startsWith("/") | s.startsWith("./") => Option(apply(new File(s)))
-    case _ => None
+    case url if url.toLowerCase.startsWith("http://") | url.toLowerCase.startsWith("https://") =>
+      Option(URLDelimitedInputSource(new URL(url)))
+    case file if file.toLowerCase.endsWith(".gz") =>
+      Option(GzipFileDelimitedInputSource(new File(file)))
+    case file =>
+      Option(FileDelimitedInputSource(new File(file)))
   }
 
   def apply(file: File): DelimitedInputSource = FileDelimitedInputSource(file)
 
   def apply(url: URL): DelimitedInputSource = URLDelimitedInputSource(url)
 
-  override def understands(url: String): Boolean = url.startsWith("/") || url.startsWith("./")
+  override def understands(url: String): Boolean = url.toLowerCase() match {
+    case s if s.startsWith("http://") | s.startsWith("https://") => true
+    case s if s.endsWith(".csv") | s.endsWith(".psv") | s.endsWith(".tsv") | s.endsWith(".txt") => true
+    case s if s.endsWith(".gz") => understands(s.dropRight(3))
+    case _ => false
+  }
 
 }
 
@@ -75,10 +84,19 @@ object DelimitedInputSource extends QueryInputSourceFactory {
   * File Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class FileDelimitedInputSource(file: File) extends DelimitedInputSource(Source.fromFile(file))
+case class FileDelimitedInputSource(file: File)
+  extends DelimitedInputSource(Source.fromFile(file))
+
+/**
+  * Gzip'd File Delimited Input Source
+  * @author lawrence.daniels@gmail.com
+  */
+case class GzipFileDelimitedInputSource(file: File)
+  extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file))))
 
 /**
   * URL Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class URLDelimitedInputSource(url: URL) extends DelimitedInputSource(Source.fromURL(url))
+case class URLDelimitedInputSource(url: URL)
+  extends DelimitedInputSource(Source.fromURL(url))

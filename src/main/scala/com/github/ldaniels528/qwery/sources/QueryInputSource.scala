@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.Query
+import com.github.ldaniels528.qwery.ops.Executable
 
 /**
   * Query Input Source
@@ -8,6 +8,11 @@ import com.github.ldaniels528.qwery.ops.Query
   */
 trait QueryInputSource extends QuerySource {
 
-  def execute(query: Query): TraversableOnce[Map[String, String]]
+  /**
+    * Executes a query
+    * @param query the given query
+    * @return the result set
+    */
+  def execute(query: Executable): TraversableOnce[Map[String, Any]]
 
 }

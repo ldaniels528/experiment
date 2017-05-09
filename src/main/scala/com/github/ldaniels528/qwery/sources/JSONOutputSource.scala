@@ -11,7 +11,7 @@ import net.liftweb.json.JsonAST._
   */
 case class JSONOutputSource(file: File) extends QueryOutputSource {
   private lazy val writer = new BufferedWriter(new FileWriter(file))
-  implicit val formats = net.liftweb.json.DefaultFormats
+  private implicit val formats = net.liftweb.json.DefaultFormats
 
   override def close(): Unit = writer.close()
 

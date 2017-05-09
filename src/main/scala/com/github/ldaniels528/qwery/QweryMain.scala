@@ -22,33 +22,37 @@ object QweryMain {
     */
   def repl(): Unit = {
     println(welcome)
+    val commandPrompt = CommandPrompt()
+    println(s"Using ${commandPrompt.getClass.getSimpleName} for input.")
+
     val sb = new StringBuilder()
 
-    def reset(): Unit  = {
+    def reset(): Unit = {
       sb.clear()
-      print(prompt)
+      println()
     }
 
     reset()
     while (alive) {
       try {
         // take in input until an empty line is received
-        val line = Console.in.readLine().trim
-        sb.append(line).append('\n')
+        commandPrompt.readLine(prompt).map(_.trim) foreach { line =>
+          sb.append(line).append('\n')
 
-        if (line.isEmpty || line.endsWith(";")) {
-          val input = sb.toString().trim match {
-            case s if s.endsWith(";") => s.dropRight(1)
-            case s => s
+          if (line.isEmpty || line.endsWith(";")) {
+            val input = sb.toString().trim match {
+              case s if s.endsWith(";") => s.dropRight(1)
+              case s => s
+            }
+            if (input.nonEmpty) {
+              val results = interpret(input)
+              handleResults(results)
+            }
+            reset()
           }
-          if(input.nonEmpty) {
-            val results = interpret(input)
-            handleResults(results)
-          }
-          reset()
         }
-
-      } catch {
+      }
+      catch {
         case e: Throwable =>
           System.err.println(e.getMessage)
           reset()
