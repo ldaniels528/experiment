@@ -3,8 +3,8 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.1.4"
-val appScalaVersion = "2.12.1"
+val apiVersion = "0.1.5"
+val appScalaVersion = "2.12.2"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
 
@@ -12,7 +12,7 @@ lazy val root = (project in file(".")).
   settings(
     name := "qwery",
     organization := "com.github.ldaniels528",
-    description := "This is a complete and feature rich Qwery client for node.js",
+    description := "A SQL-like query language for performing ETL functions.",
     version := apiVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),

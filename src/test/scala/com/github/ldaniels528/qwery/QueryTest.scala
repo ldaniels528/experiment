@@ -21,10 +21,10 @@ class QueryTest extends FunSpec {
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
-          |WHERE Industry = "Consumer Specialties""".stripMargin)
+          |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
-      val globalScope = new RootScope()
-      val results = query.execute(globalScope).toSeq
+      val scope = new RootScope()
+      val results = query.execute(scope).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
 
       assert(results == Stream(
@@ -44,8 +44,8 @@ class QueryTest extends FunSpec {
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val globalScope = new RootScope()
-      val results = query.execute(globalScope)
+      val scope = new RootScope()
+      val results = query.execute(scope)
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
@@ -58,13 +58,13 @@ class QueryTest extends FunSpec {
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val globalScope = new RootScope()
-      val results = query.execute(globalScope)
+      val scope = new RootScope()
+      val results = query.execute(scope)
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
     it("should extract filtered results from a URL") {
-      val connected = Properties.envOrNone("QWERY_WEB").nonEmpty
+      val connected = Properties.envOrNone("QWERY_WEB").map(_.toLowerCase()).contains("true")
       if (connected) {
         val compiler = new QweryCompiler()
         val query = compiler(
@@ -72,8 +72,8 @@ class QueryTest extends FunSpec {
             |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
 
-        val globalScope = new RootScope()
-        val results = query.execute(globalScope).toSeq
+        val scope = new RootScope()
+        val results = query.execute(scope).toSeq
         tabular.transform(results.toIterator) foreach (info(_))
 
         assert(results == Stream(
