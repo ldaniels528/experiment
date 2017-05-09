@@ -47,6 +47,7 @@ SELECT `last name`, `first name`, position, startDate from './personnel.csv'
 
 ```scala
 import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
@@ -58,7 +59,8 @@ val query = compiler.compile(
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val results = query.execute() // => TraversableOnce[Seq[(String, Any)]]
+val scope = new RootScope()
+val results = query.execute(scope) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -79,6 +81,7 @@ new Tabular().transform(results) foreach println
 
 ```scala
 import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the query
@@ -89,8 +92,9 @@ val query = compiler.compile(
     |FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
-// execute the query     
-val results = query.execute() // => TraversableOnce[Seq[(String, Any)]]
+// execute the query    
+val scope = new RootScope()
+val results = query.execute(scope) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -116,6 +120,7 @@ records where the "Sector" field contains the text "Basic Industries", and write
 
 ```scala
 import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.tabular.Tabular
 
 // compile the statement
@@ -128,7 +133,8 @@ val statement = compiler.compile(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute()
+val scope = new RootScope()
+val results = statement.execute(scope)
 
 // display the results as a table
 new Tabular().transform(results) foreach println
