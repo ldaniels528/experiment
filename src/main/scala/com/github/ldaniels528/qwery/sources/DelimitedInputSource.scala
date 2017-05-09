@@ -16,16 +16,12 @@ abstract class DelimitedInputSource(source: BufferedSource) extends QueryInputSo
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
   override def execute(query: Query): TraversableOnce[Map[String, String]] = {
-    val results = autodetectDelimiter() match {
+    autodetectDelimiter() match {
       case Some((delimiter, headers, rows)) =>
         lines.map(line => Map(headers zip line.delimitedSplit(delimiter): _*)) ++ rows.iterator
       case None =>
         Iterator.empty
     }
-
-    results
-      .filter(r => query.condition.isEmpty || query.condition.exists(_.satisfies(r)))
-      .take(query.limit getOrElse Int.MaxValue)
   }
 
   private def autodetectDelimiter(): Option[(Char, List[String], List[Map[String, String]])] = {

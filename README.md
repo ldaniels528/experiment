@@ -113,7 +113,7 @@ new Tabular().transform(results) foreach println
 + -------------------------------------------------------------------------------------------------------------------- +
 ```
 
-##### Copy filtered results from one source to another
+##### Copy filtered results from one source (csv) to another (csv)
 
 The source file (./companylist.csv) contains 360 lines of CSV text. The following query will filter these for 
 records where the "Sector" field contains the text "Basic Industries", and write the results to the output file (./test1.csv)
@@ -159,43 +159,55 @@ new Tabular().transform(results) foreach println
 "USAS","Americas Silver Corporation","Basic Industries","Precious Metals","2.99","118908646.22"
 "AKG","Asanko Gold Inc.","Basic Industries","Mining & Quarrying of Nonmetallic Minerals (No Fuels)","2.45","498032832.15"
 "ASM","Avino Silver","Basic Industries","Precious Metals","1.52","79710321.52"
-"BTG","B2Gold Corp","Basic Industries","Precious Metals","2.54","2471589235.12"
-"BAA","BANRO CORPORATION","Basic Industries","Precious Metals","0.1215","133355740.608"
-"LEU","Centrus Energy Corp.","Basic Industries","Mining & Quarrying of Nonmetallic Minerals (No Fuels)","5.19","46710000"
-"LODE","Comstock Mining, Inc.","Basic Industries","Precious Metals","0.1825","34200513.6875"
-"DNN","Denison Mine Corp","Basic Industries","Precious Metals","0.52","290716869.04"
-"UUUU","Energy Fuels Inc","Basic Industries","Mining & Quarrying of Nonmetallic Minerals (No Fuels)","1.75","122921372"
-"EGI","Entree Gold Inc","Basic Industries","Precious Metals","0.4603","79541205.7101"
-"EMX","Eurasian Minerals Inc.","Basic Industries","Precious Metals","0.828","61408379.88"
-"XRA","Exeter Resource Corporation","Basic Industries","Mining & Quarrying of Nonmetallic Minerals (No Fuels)","1.6601","149417720.5053"
-"FSI","Flexible Solutions International Inc.","Basic Industries","Major Chemicals","1.56","17879145.96"
-"GMO","General Moly, Inc","Basic Industries","Precious Metals","0.3675","33421643.64"
-"GORO","Gold Resource Corporation","Basic Industries","Precious Metals","3.3","187571415.9"
-"GSV","Gold Standard Ventures Corporation","Basic Industries","Mining & Quarrying of Nonmetallic Minerals (No Fuels)","1.7","378751795.8"
-"AUMN","Golden Minerals Company","Basic Industries","Precious Metals","0.5399","48159901.1879"
-"GSS","Golden Star Resources, Ltd","Basic Industries","Precious Metals","0.7186","263525279.44"
-"GV","Goldfield Corporation (The)","Basic Industries","Water Supply","5.45","138709879.3"
-"SIM","Grupo Simec, S.A. de C.V.","Basic Industries","Steel/Iron Ore","11.12","1844842149.52"
-"THM","International Tower Hill Mines Ltd","Basic Industries","Precious Metals","0.5","81093486"
-"KLDX","Klondex Mines Ltd.","Basic Industries","Precious Metals","3.59","636552090.4"
-"MAG","MAG Silver Corporation","Basic Industries","Precious Metals","12.22","986836401.46"
-"NSU","Nevsun Resources Ltd","Basic Industries","Precious Metals","2.27","685243976.11"
-"NGD","New Gold Inc.","Basic Industries","Precious Metals","2.84","1634384400.6"
-"NAK","Northern Dynasty Minerals, Ltd.","Basic Industries","Precious Metals","1.6","478060116.8"
-"NG","Novagold Resources Inc.","Basic Industries","Precious Metals","4.18","1344542470.04"
-"TIS","Orchids Paper Products Company","Basic Industries","Paper","24.35","250875395.85"
-"PZG","Paramount Gold Nevada Corp.","Basic Industries","Precious Metals","1.6299","28979547.0246"
-"PLG","Platinum Group Metals Ltd.","Basic Industries","Precious Metals","1.19","176662862.53"
-"PLM","Polymet Mining Corp.","Basic Industries","Precious Metals","0.7098","226103609.3862"
-"SAND          ","Sandstorm Gold Ltd","Basic Industries","Precious Metals","3.48","528940056.12"
-"SKY","Skyline Corporation","Basic Industries","Homebuilding","6.22","52193537.68"
-"XPL","Solitario Exploration & Royalty Corp","Basic Industries","Precious Metals","0.77","29787595.53"
-"TRX","Tanzanian Royalty Exploration Corporation","Basic Industries","Precious Metals","0.51","60079485.12"
-"TGB","Taseko Mines Limited","Basic Industries","Precious Metals","1.14","257807732.76"
-"TGD","Timmons Gold Corp","Basic Industries","Precious Metals","0.395","140473297.79"
-"TMQ","Trilogy Metals Inc.","Basic Industries","Precious Metals","0.705","74404165.92"
-"URG","Ur Energy Inc","Basic Industries","Precious Metals","0.55","80230643.9"
-"UEC","Uranium Energy Corp.","Basic Industries","Precious Metals","1.24","170763394.6"
-"VGZ","Vista Gold Corporation","Basic Industries","Precious Metals","1.03","101142197.24"
-"WRN","Western Copper and Gold Corporation","Basic Industries","Precious Metals","1.1233","106815273.2266"
+.
+.
+```
+
+##### Copy filtered results from one source (csv) to another (json)
+
+The source file (./companylist.csv) contains 360 lines of CSV text. The following query will filter these for 
+records where the "Sector" field contains the text "Basic Industries", and write the results to the output file (./test1.csv)
+
+```scala
+import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.tabular.Tabular
+
+// compile the statement
+val compiler = new QweryCompiler()
+val statement = compiler.compile(
+  """
+    |INSERT INTO './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+    |FROM './companylist.csv'
+    |WHERE Sector = 'Basic Industries'""".stripMargin)
+
+// execute the query
+val scope = new RootScope()
+val results = statement.execute(scope)
+
+// display the results as a table
+new Tabular().transform(results) foreach println
+```
+
+##### Output
+
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 44              |
++ --------------- +
+```
+
+##### And the output file (./test1.json) will contain:
+
+```json
+{"Sector":"Basic Industries","Name":"Alexco Resource Corp","Industry":"Precious Metals","Symbol":"AXU","LastSale":"1.43","MarketCap":"138634117.05"}
+{"Sector":"Basic Industries","Name":"Almaden Minerals, Ltd.","Industry":"Precious Metals","Symbol":"AAU","LastSale":"1.47","MarketCap":"132378409.8"}
+{"Sector":"Basic Industries","Name":"Americas Silver Corporation","Industry":"Precious Metals","Symbol":"USAS","LastSale":"2.99","MarketCap":"118908646.22"}
+{"Sector":"Basic Industries","Name":"Asanko Gold Inc.","Industry":"Mining & Quarrying of Nonmetallic Minerals (No Fuels)","Symbol":"AKG","LastSale":"2.45","MarketCap":"498032832.15"}
+{"Sector":"Basic Industries","Name":"Avino Silver","Industry":"Precious Metals","Symbol":"ASM","LastSale":"1.52","MarketCap":"79710321.52"}
+.
+.
 ```

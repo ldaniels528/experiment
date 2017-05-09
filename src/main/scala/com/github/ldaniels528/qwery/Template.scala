@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.ops.{Evaluatable, Expression, Field}
+
 /**
   * Represents the extracted template properties
   * @param expressions     the named list of expressions (e.g. "now() + 1")

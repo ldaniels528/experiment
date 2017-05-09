@@ -1,7 +1,8 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.Field.AllFields
+import com.github.ldaniels528.qwery.ops.Field.AllFields
 import com.github.ldaniels528.qwery.TemplateParser.TokenStreamExtensions
+import com.github.ldaniels528.qwery.ops.{Evaluatable, Field}
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**

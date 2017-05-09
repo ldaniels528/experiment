@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery
 
 import java.io.File
 
-import com.github.ldaniels528.qwery.Field.AllFields
+import com.github.ldaniels528.qwery.ops.Field.AllFields
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec

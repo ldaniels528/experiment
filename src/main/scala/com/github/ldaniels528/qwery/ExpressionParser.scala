@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.ops._
+
 /**
   * Expression Parser
   * @author lawrence.daniels@gmail.com

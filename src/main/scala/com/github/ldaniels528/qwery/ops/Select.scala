@@ -22,12 +22,17 @@ case class Select(source: Option[QueryInputSource],
   override def execute(scope: Scope): ResultSet = source match {
     case Some(device) =>
       val rows = device.execute(this)
-      if (fields.isAllFields) rows.map(_.toSeq) else rows.map(filterRow(_, fields))
+        .map { r => scope.update(r); r }
+        .filter(r => condition.isEmpty || condition.exists(_.satisfies(scope)))
+        .toIterator
+        .take(limit getOrElse Int.MaxValue)
+
+      if (fields.isAllFields) rows.map(_.toSeq) else rows.map(filterRow)
     case None =>
       Iterator.empty
   }
 
-  private def filterRow(row: Map[String, Any], fields: Seq[Evaluatable]): Row = {
+  private def filterRow(row: Map[String, Any]): Row = {
     val counter = new AtomicInteger()
     fields.flatMap {
       case field: Field => row.get(field.name).map(v => field.name -> v)

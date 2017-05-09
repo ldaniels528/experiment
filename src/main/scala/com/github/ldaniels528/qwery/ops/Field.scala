@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.ops
+
+import com.github.ldaniels528.qwery.Token
 
 /**
   * Represents a field reference
@@ -6,11 +8,12 @@ package com.github.ldaniels528.qwery
   */
 case class Field(name: String) extends Evaluatable {
 
-  override def compare(that: Evaluatable, data: Map[String, Any]): Int = {
-    data.get(name).map(v => Evaluatable.apply(v).compare(that, data)) getOrElse -1
+  override def compare(that: Evaluatable, scope: Scope): Int = {
+    scope.get(name).map(v => Evaluatable(v).compare(that, scope)) getOrElse -1
   }
 
-  override def evaluate(data: Map[String, Any]): Option[Any] = data.get(name)
+  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+
 }
 
 /**

@@ -8,7 +8,7 @@ import com.github.ldaniels528.tabular.Tabular
   * @author lawrence.daniels@gmail.com
   */
 object QweryMain {
-  private val version = "0.1.3"
+  private val version = "0.1.4"
   private var alive = true
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()

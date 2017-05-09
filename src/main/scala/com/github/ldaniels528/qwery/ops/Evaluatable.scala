@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.ops
+
+import com.github.ldaniels528.qwery._
 
 /**
   * Represents an evaluatable value
@@ -6,9 +8,9 @@ package com.github.ldaniels528.qwery
   */
 trait Evaluatable {
 
-  def compare(that: Evaluatable, data: Map[String, Any]): Int
+  def compare(that: Evaluatable, scope: Scope): Int
 
-  def evaluate(data: Map[String, Any]): Option[Any]
+  def evaluate(scope: Scope): Option[Any]
 
 }
 
@@ -48,17 +50,17 @@ object Evaluatable {
   */
 case class NumericValue(value: Double) extends Evaluatable {
 
-  override def compare(that: Evaluatable, data: Map[String, Any]): Int = {
+  override def compare(that: Evaluatable, scope: Scope): Int = {
     that match {
       case NumericValue(v) => value.compareTo(v)
       case StringValue(s) => value.toString.compareTo(s)
-      case field: Field => field.compare(this, data)
+      case field: Field => field.compare(this, scope)
       case unknown =>
         throw new IllegalStateException(s"Unhandled value '$unknown' (${Option(unknown).map(_.getClass.getName).orNull})")
     }
   }
 
-  override def evaluate(data: Map[String, Any]): Option[Double] = Option(value)
+  override def evaluate(scope: Scope): Option[Double] = Option(value)
 }
 
 /**
@@ -67,16 +69,16 @@ case class NumericValue(value: Double) extends Evaluatable {
   */
 case class StringValue(value: String) extends Evaluatable {
 
-  override def compare(that: Evaluatable, data: Map[String, Any]): Int = {
+  override def compare(that: Evaluatable, scope: Scope): Int = {
     that match {
       case NumericValue(v) => value.compareTo(v.toString)
       case StringValue(v) => value.compareTo(v)
-      case field: Field => field.compare(this, data)
+      case field: Field => field.compare(this, scope)
       case unknown =>
         throw new IllegalStateException(s"Unhandled value '$unknown' (${Option(unknown).map(_.getClass.getName).orNull})")
     }
   }
 
-  override def evaluate(data: Map[String, Any]): Option[String] = Option(value)
+  override def evaluate(scope: Scope): Option[String] = Option(value)
 }
 

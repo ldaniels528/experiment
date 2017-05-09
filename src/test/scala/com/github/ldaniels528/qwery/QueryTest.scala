@@ -35,7 +35,7 @@ class QueryTest extends FunSpec {
       ))
     }
 
-    it("should copy filtered results from one source to another") {
+    it("should copy filtered results from one source (CSV) to another (CSV)") {
       val compiler = new QweryCompiler()
       val query = compiler(
         """
@@ -49,7 +49,21 @@ class QueryTest extends FunSpec {
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
-      it("should extract filtered results from a URL") {
+    it("should copy filtered results from one source (CSV) to another (JSON)") {
+      val compiler = new QweryCompiler()
+      val query = compiler(
+        """
+          |INSERT INTO './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |FROM './companylist.csv'
+          |WHERE Sector = 'Basic Industries'""".stripMargin)
+
+      val globalScope = new RootScope()
+      val results = query.execute(globalScope)
+      assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
+    }
+
+    it("should extract filtered results from a URL") {
       val connected = Properties.envOrNone("QWERY_WEB").nonEmpty
       if (connected) {
         val compiler = new QweryCompiler()
