@@ -44,7 +44,22 @@ LIMIT 5;
       
 Using UNIXCommandPrompt for input.
 
-[1]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+[1]> DESCRIBE './companylist.csv';
++ --------------------------------------------------------------------------------------- +
+| COLUMN         TYPE    SAMPLE                                                           |
++ --------------------------------------------------------------------------------------- +
+| Symbol         String  ABE                                                              |
+| Name           String  Aberdeen Emerging Markets Smaller Company Opportunities Fund I   |
+| LastSale       String  13.63                                                            |
+| MarketCap      String  131446834.05                                                     |
+| ADR TSO        String  n/a                                                              |
+| IPOyear        String  n/a                                                              |
+| Sector         String  n/a                                                              |
+| Industry       String  n/a                                                              |
+| Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 |
++ --------------------------------------------------------------------------------------- +
+
+[2]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
 + -------------------------------------------------------------------------------- +
 | Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
 + -------------------------------------------------------------------------------- +
