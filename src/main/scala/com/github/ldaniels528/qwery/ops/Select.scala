@@ -23,9 +23,33 @@ case class Select(source: Option[QueryInputSource],
         .toIterator
         .take(limit getOrElse Int.MaxValue)
 
-      if (fields.isAllFields) rows.map(_.data) else rows.map(filterRow)
+      // is this an aggregate query?
+      if (isAggregate) {
+        // collect the aggregates
+        val aggregates = fields.collect {
+          case fx: BuiltinFunction if fx.isAggregateOnly => fx
+        }
+
+        // update each aggregate field, and return the evaluated results
+        rows.foreach(rowScope => aggregates.foreach(_.update(rowScope)))
+        Seq(aggregates.flatMap(field => field.evaluate(scope).map(scope.getName(field) -> _)))
+      }
+
+      // otherwise, it's a normal query
+      else {
+        if (fields.isAllFields) rows.map(_.data) else rows.map(filterRow)
+      }
     case None =>
       Iterator.empty
+  }
+
+  /**
+    * Indicates whether this is an aggregate query
+    * @return true, if at least one field is an aggregate-only field
+    */
+  def isAggregate: Boolean = fields.exists {
+    case fx: BuiltinFunction if fx.isAggregateOnly => true
+    case _ => false
   }
 
   private def filterRow(scope: LocalScope): Row = {

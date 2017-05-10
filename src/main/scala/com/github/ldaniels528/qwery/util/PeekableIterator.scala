@@ -11,7 +11,7 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
 
   override def next(): T = {
     // must have more elements
-    if(!hasNext)
+    if (!hasNext)
       throw new IllegalStateException("Out of bounds")
 
     // return the value
@@ -28,11 +28,13 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
     } else None
   }
 
-  def peek: Option[T] = if(hasNext) Some(values(position)) else None
+  def peek: Option[T] = if (hasNext) Some(values(position)) else None
+
+  def peekAhead(offset: Int): Option[T] = if (position + offset < values.length) Some(values(position + offset)) else None
 
   def previous: Option[T] = {
     val ok = position > 0
-    if(ok) {
+    if (ok) {
       val value = values(position)
       position -= 1
       Some(value)

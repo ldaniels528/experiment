@@ -1,15 +1,13 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.Field.AllFields
-import com.github.ldaniels528.qwery.TemplateParser.TokenStreamExtensions
-import com.github.ldaniels528.qwery.ops.{Value, Field}
+import com.github.ldaniels528.qwery.ops.{Field, Value}
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
-  * Template Parser
+  * SQL Template Parser
   * @author lawrence.daniels@gmail.com
   */
-class TemplateParser(ts: TokenStream) extends ExpressionParser {
+class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalExpressionParser {
 
   /**
     * Extracts the tokens that correspond to the given template
@@ -27,11 +25,11 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
 
         // field name list? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
         case tag if tag.startsWith("@(") & tag.endsWith(")") =>
-          results = results + extractFieldListByName(tag.drop(2).dropRight(1))
+          results = results + extractFieldNames(tag.drop(2).dropRight(1))
 
         // field arguments list? (e.g. "@{fields}" => "field1, 'hello', 5 + now(), ..., fieldN")
         case tag if tag.startsWith("@{") & tag.endsWith("}") =>
-          results = results + extractFieldArgumentList(tag.drop(2).dropRight(1))
+          results = results + extractFieldArguments(tag.drop(2).dropRight(1))
 
         // insert values list? (e.g. "@[values]" => "('hello', 'world', ..., 1234)")
         case tag if tag.startsWith("@[") & tag.endsWith("]") =>
@@ -84,7 +82,7 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
     * @param name the given identifier name (e.g. "fields")
     * @return a [[Template template]] represents the parsed outcome
     */
-  private def extractFieldListByName(name: String) = {
+  private def extractFieldNames(name: String) = {
     var fields: List[Field] = Nil
     do {
       if (fields.nonEmpty) ts.expect(",")
@@ -95,19 +93,14 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
 
   /**
     * Extracts a field argument list from the token stream
-    * @param name the given identifier name (e.g. "fields")
+    * @param name the given identifier name (e.g. "customerId, COUNT(*)")
     * @return a [[Template template]] represents the parsed outcome
     */
-  private def extractFieldArgumentList(name: String) = {
+  private def extractFieldArguments(name: String) = {
     var arguments: List[Value] = Nil
     do {
       if (arguments.nonEmpty) ts.expect(",")
-      arguments = arguments ::: ts.nextOption.map {
-        case t if t.text == "*" => AllFields
-        case t: AlphaToken => Field(t.text)
-        case t: QuotedToken if t.isBackticks => Field(t.text)
-        case t => Value(t)
-      }.getOrElse(die("Unexpected end of statement")) :: Nil
+      arguments = arguments ::: parseExpressions(ts).getOrElse(die("Unexpected end of statement")) :: Nil
     } while (ts.is(","))
     Template(fieldArguments = Map(name -> arguments))
   }
@@ -118,7 +111,7 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
     * @return a [[Template template]] represents the parsed outcome
     */
   private def extractExpression(name: String) = {
-    val expression = parseExpressions(ts)
+    val expression = parseConditions(ts)
     Template(expressions = Map(name -> expression.getOrElse(die("Expression expected"))))
   }
 

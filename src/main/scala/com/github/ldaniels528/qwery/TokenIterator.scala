@@ -116,6 +116,8 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   */
 sealed trait Token {
 
+  def is(value: String): Boolean = text.equalsIgnoreCase(value)
+
   def start: Int
 
   def text: String

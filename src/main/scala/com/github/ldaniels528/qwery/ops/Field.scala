@@ -27,7 +27,10 @@ object Field {
     * @param token the given [[Token token]]
     * @return a new [[Field field]] instance
     */
-  def apply(token: Token): Field = Field(token.text)
+  def apply(token: Token): Field = token.text match {
+    case "*" => AllFields
+    case name => Field(name)
+  }
 
   /**
     * Represents a reference to all fields in a specific collection

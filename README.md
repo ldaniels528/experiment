@@ -59,7 +59,29 @@ Using UNIXCommandPrompt for input.
 | Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 |
 + --------------------------------------------------------------------------------------- +
 
-[2]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+[2]> SELECT COUNT(*) FROM './companylist.csv';
++ ------- +
+| $1      |
++ ------- +
+| 359     |
++ ------- +
+
+[3]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
++ ------- +
+| $2      |
++ ------- +
+| 44      |
++ ------- +
+
+[4]> SELECT SUM(LastSale) FROM './companylist.csv' LIMIT 5;
++ --------- +
+| $3        |
++ --------- +
+| 77.1087   |
++ --------- +
+
+
+[5]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
 + -------------------------------------------------------------------------------- +
 | Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
 + -------------------------------------------------------------------------------- +

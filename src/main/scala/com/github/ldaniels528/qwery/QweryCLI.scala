@@ -7,7 +7,7 @@ import com.github.ldaniels528.tabular.Tabular
   * Qwery Main Application
   * @author lawrence.daniels@gmail.com
   */
-object QweryMain {
+object QweryCLI {
   private val version = "0.1.6"
   private var alive = true
   private val compiler = new QweryCompiler()
