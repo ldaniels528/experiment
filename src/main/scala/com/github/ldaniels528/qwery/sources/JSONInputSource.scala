@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.File
 import java.net.URL
 
+import com.github.ldaniels528.qwery.ResultSet
 import com.github.ldaniels528.qwery.ops.Executable
 import net.liftweb.json._
 
@@ -13,15 +14,14 @@ import scala.io.Source
   * @author lawrence.daniels@gmail.com
   */
 class JSONInputSource(source: Source) extends QueryInputSource {
-  private implicit val formats = net.liftweb.json.DefaultFormats
 
-  override def execute(query: Executable): TraversableOnce[Map[String, Any]] = {
+  override def execute(query: Executable): ResultSet = {
     source.getLines().filter(_.trim.nonEmpty) map { line =>
       parse(line) match {
-        case jo: JObject => jo.values
+        case jo: JObject => jo.values.toSeq
         case jx =>
           println(s"jx => $jx")
-          Map.empty
+          Nil
       }
     }
   }

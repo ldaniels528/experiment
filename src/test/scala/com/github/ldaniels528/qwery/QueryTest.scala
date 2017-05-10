@@ -21,15 +21,15 @@ class QueryTest extends FunSpec {
       tabular.transform(results.toIterator) foreach (info(_))
 
       assert(results == Vector(
-        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
-        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "n/a"),
         List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
-        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
         List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "13.63"),
-        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/abe"),
-        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "131446834.05")
+        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "131446834.05"),
+        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/abe")
       ))
     }
 

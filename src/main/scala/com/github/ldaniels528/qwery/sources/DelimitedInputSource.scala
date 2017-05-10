@@ -4,6 +4,7 @@ import java.io.{File, FileInputStream}
 import java.net.URL
 import java.util.zip.GZIPInputStream
 
+import com.github.ldaniels528.qwery.ResultSet
 import com.github.ldaniels528.qwery.ops.Executable
 import com.github.ldaniels528.qwery.util.StringHelper._
 
@@ -16,16 +17,16 @@ import scala.io.{BufferedSource, Source}
 class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
-  override def execute(query: Executable): TraversableOnce[Map[String, Any]] = {
+  override def execute(query: Executable): ResultSet = {
     autodetectDelimiter() match {
       case Some((delimiter, headers, rows)) =>
-        lines.map(line => Map(headers zip line.delimitedSplit(delimiter): _*)) ++ rows.iterator
+        lines.map(line => headers zip line.delimitedSplit(delimiter)) ++ rows.iterator
       case None =>
         Iterator.empty
     }
   }
 
-  private def autodetectDelimiter(): Option[(Char, List[String], List[Map[String, String]])] = {
+  private def autodetectDelimiter(): Option[(Char, List[String], List[Seq[(String, String)]])] = {
     // attempt to get up to 5 non-empty lines from the source file
     val sampleLines = lines.take(5).toList
 
@@ -46,7 +47,7 @@ class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
     for {
       delimiter <- delimiter_?
       headers <- sampleLines.headOption.map(_.delimitedSplit(delimiter))
-      rows = sampleLines.tail.map(line => Map(headers zip line.delimitedSplit(delimiter): _*))
+      rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter))
     } yield (delimiter, headers, rows)
   }
 
