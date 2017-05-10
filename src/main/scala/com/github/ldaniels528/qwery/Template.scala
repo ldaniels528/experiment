@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.{Evaluatable, Expression, Field}
+import com.github.ldaniels528.qwery.ops.{Value, Expression, Field}
 
 /**
   * Represents the extracted template properties
@@ -12,7 +12,7 @@ import com.github.ldaniels528.qwery.ops.{Evaluatable, Expression, Field}
   * @param sortFields      the named list of sort fields (e.g. "ORDER BY symbol")
   */
 case class Template(expressions: Map[String, Expression] = Map.empty,
-                    fieldArguments: Map[String, List[Evaluatable]] = Map.empty,
+                    fieldArguments: Map[String, List[Value]] = Map.empty,
                     fieldReferences: Map[String, List[Field]] = Map.empty,
                     identifiers: Map[String, String] = Map.empty,
                     insertValues: Map[String, List[Any]] = Map.empty,

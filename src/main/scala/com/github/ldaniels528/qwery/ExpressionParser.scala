@@ -36,13 +36,13 @@ trait ExpressionParser {
     tok.take(3).toList match {
       case List(AlphaToken(name, _), opt@OperatorToken(operator, _), token) =>
         operator match {
-          case "=" => EQ(Field(name), Evaluatable(token.value))
-          case ">" => GT(Field(name), Evaluatable(token.value))
-          case ">=" => GE(Field(name), Evaluatable(token.value))
-          case "<" => LT(Field(name), Evaluatable(token.value))
-          case "<=" => LE(Field(name), Evaluatable(token.value))
-          case "!=" => NE(Field(name), Evaluatable(token.value))
-          case "<>" => NE(Field(name), Evaluatable(token.value))
+          case "=" => EQ(Field(name), Value(token.value))
+          case ">" => GT(Field(name), Value(token.value))
+          case ">=" => GE(Field(name), Value(token.value))
+          case "<" => LT(Field(name), Value(token.value))
+          case "<=" => LE(Field(name), Value(token.value))
+          case "!=" => NE(Field(name), Value(token.value))
+          case "<>" => NE(Field(name), Value(token.value))
           case _ =>
             throw new SyntaxException(s"Invalid operator", token)
         }

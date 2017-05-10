@@ -12,34 +12,34 @@ case class AND(a: Expression, b: Expression) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.satisfies(scope) && b.satisfies(scope)
 }
 
-case class EQ(a: Evaluatable, b: Evaluatable) extends Expression {
+case class EQ(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) == 0
 }
 
-case class GT(a: Evaluatable, b: Evaluatable) extends Expression {
+case class GT(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) > 0
 }
 
-case class GE(a: Evaluatable, b: Evaluatable) extends Expression {
+case class GE(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) >= 0
 }
 
-case class LIKE(a: Evaluatable, b: String) extends Expression {
+case class LIKE(a: Value, b: String) extends Expression {
   override def satisfies(scope: Scope): Boolean = a match {
     case StringValue(s) => s.matches(b)
     case _ => false
   }
 }
 
-case class LT(a: Evaluatable, b: Evaluatable) extends Expression {
+case class LT(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) < 0
 }
 
-case class LE(a: Evaluatable, b: Evaluatable) extends Expression {
+case class LE(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) >= 0
 }
 
-case class NE(a: Evaluatable, b: Evaluatable) extends Expression {
+case class NE(a: Value, b: Value) extends Expression {
   override def satisfies(scope: Scope): Boolean = a.compare(b, scope) != 0
 }
 

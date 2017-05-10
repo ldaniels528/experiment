@@ -15,7 +15,7 @@ class SyntaxException(message: String, token: Token = null, cause: Throwable = n
   */
 object SyntaxException {
 
-  private def formatMessage(message: String, token: Token = null) = {
+  private def formatMessage(message: String, token: Token) = {
     Option(token).map(t => s"$message near '${token.text}' at ${token.start}") getOrElse message
   }
 

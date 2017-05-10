@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.1.5"
+val apiVersion = "0.1.6"
 val appScalaVersion = "2.12.2"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))

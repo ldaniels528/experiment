@@ -17,7 +17,7 @@ class QueryTest extends FunSpec {
 
     it("should describe the layout of a CVS file") {
       val query = QweryCompiler("DESCRIBE './companylist.csv'")
-      val results = query.execute(new RootScope()).toSeq
+      val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
 
       assert(results == Vector(
@@ -40,7 +40,7 @@ class QueryTest extends FunSpec {
           |FROM './companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
-      val results = query.execute(new RootScope()).toSeq
+      val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
 
       assert(results == Stream(
@@ -59,7 +59,7 @@ class QueryTest extends FunSpec {
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val results = query.execute(new RootScope())
+      val results = query.execute(RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
@@ -71,7 +71,7 @@ class QueryTest extends FunSpec {
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
 
-      val results = query.execute(new RootScope())
+      val results = query.execute(RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
@@ -83,7 +83,7 @@ class QueryTest extends FunSpec {
             |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
 
-        val results = query.execute(new RootScope()).toSeq
+        val results = query.execute(RootScope()).toSeq
         tabular.transform(results.toIterator) foreach (info(_))
 
         assert(results == Stream(

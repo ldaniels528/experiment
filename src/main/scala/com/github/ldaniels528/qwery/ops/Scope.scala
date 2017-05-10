@@ -6,8 +6,10 @@ package com.github.ldaniels528.qwery.ops
   */
 trait Scope {
 
+  def data: Seq[(String, Any)]
+
   def get(name: String): Option[Any]
 
-  def update(data: Map[String, Any]): Unit
+  def getName(value: Value): String
 
 }

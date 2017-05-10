@@ -22,10 +22,40 @@ $ sbt test
 
 **A**: Use backticks (\`). 
 ```sql
-SELECT `last name`, `first name`, position, startDate from './personnel.csv'
+SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
 ```
 
-### Examples
+### CLI Examples
+
+Qwery offers a command line interface (CLI), which allows interactive querying or files, REST endpoints, etc.
+
+```bash
+ldaniels@Spartan:~$ sbt run
+
+ Qwery CLI v0.1.6
+         ,,,,,
+         (o o)
+-----oOOo-(_)-oOOo-----
+You can executes multi-line queries here like:
+
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, `Summary Quote` FROM './companylist.csv'
+WHERE Sector = 'Basic Industries'
+LIMIT 5;
+      
+Using UNIXCommandPrompt for input.
+
+[1]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
++ -------------------------------------------------------------------------------- +
+| Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
++ -------------------------------------------------------------------------------- +
+| TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
+| WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
++ -------------------------------------------------------------------------------- +
+```
+
+### Code Examples
+
+Qwery can also be used as an SDK.
 
 ##### Let's start with a local file (./companylist.csv)
 
@@ -54,7 +84,7 @@ import com.github.ldaniels528.tabular.Tabular
 val query = QweryCompiler("DESCRIBE './companylist.csv'")
     
 // execute the query    
-val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println    
@@ -93,7 +123,7 @@ val query = QweryCompiler(
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -125,7 +155,7 @@ val query = QweryCompiler(
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
 // execute the query    
-val results = query.execute(new RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -163,7 +193,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(new RootScope())
+val results = statement.execute(RootScope())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -211,7 +241,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(new RootScope())
+val results = statement.execute(RootScope())
 
 // display the results as a table
 new Tabular().transform(results) foreach println

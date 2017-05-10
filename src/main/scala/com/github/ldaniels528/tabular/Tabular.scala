@@ -5,7 +5,6 @@ import com.github.ldaniels528.tabular.formatters.FormatHandler
 import org.slf4j.LoggerFactory
 
 import scala.collection.GenSeq
-import scala.language.postfixOps
 
 /**
   * Tabular

@@ -3,24 +3,24 @@ package com.github.ldaniels528.qwery.ops
 import com.github.ldaniels528.qwery._
 
 /**
-  * Represents an evaluatable value
+  * Represents a wrapped value
   * @author lawrence.daniels@gmail.com
   */
-trait Evaluatable {
+trait Value {
 
-  def compare(that: Evaluatable, scope: Scope): Int
+  def compare(that: Value, scope: Scope): Int
 
   def evaluate(scope: Scope): Option[Any]
 
 }
 
 /**
-  * Evaluatable Companion
+  * Value Companion
   * @author lawrence.daniels@gmail.com
   */
-object Evaluatable {
+object Value {
 
-  def apply(value: Any): Evaluatable = value match {
+  def apply(value: Any): Value = value match {
     case v: Double => NumericValue(v)
     case v: String => StringValue(v)
     case t: Token => apply(t.value)
@@ -29,13 +29,13 @@ object Evaluatable {
   }
 
   /**
-    * Field Sequence Extensions
-    * @param fields the given collection of fields
+    * Value Sequence Extensions
+    * @param values the given collection of values
     */
-  implicit class FieldSeqExtensions(val fields: Seq[Evaluatable]) extends AnyVal {
+  implicit class ValueSeqExtensions(val values: Seq[Value]) extends AnyVal {
 
     @inline
-    def isAllFields: Boolean = fields.exists {
+    def isAllFields: Boolean = values.exists {
       case field: Field => field.name == "*"
       case _ => false
     }
@@ -45,12 +45,22 @@ object Evaluatable {
 }
 
 /**
+  * Represents a named value (e.g. field)
+  * @author lawrence.daniels@gmail.com
+  */
+trait NamedValue extends Value {
+
+  def name: String
+
+}
+
+/**
   * Represents a numeric value
   * @author lawrence.daniels@gmail.com
   */
-case class NumericValue(value: Double) extends Evaluatable {
+case class NumericValue(value: Double) extends Value {
 
-  override def compare(that: Evaluatable, scope: Scope): Int = {
+  override def compare(that: Value, scope: Scope): Int = {
     that match {
       case NumericValue(v) => value.compareTo(v)
       case StringValue(s) => value.toString.compareTo(s)
@@ -67,9 +77,9 @@ case class NumericValue(value: Double) extends Evaluatable {
   * Represents a string value
   * @author lawrence.daniels@gmail.com
   */
-case class StringValue(value: String) extends Evaluatable {
+case class StringValue(value: String) extends Value {
 
-  override def compare(that: Evaluatable, scope: Scope): Int = {
+  override def compare(that: Value, scope: Scope): Int = {
     that match {
       case NumericValue(v) => value.compareTo(v.toString)
       case StringValue(v) => value.compareTo(v)

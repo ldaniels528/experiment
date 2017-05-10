@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops.Field.AllFields
 import com.github.ldaniels528.qwery.TemplateParser.TokenStreamExtensions
-import com.github.ldaniels528.qwery.ops.{Evaluatable, Field}
+import com.github.ldaniels528.qwery.ops.{Value, Field}
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
@@ -99,14 +99,14 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
     * @return a [[Template template]] represents the parsed outcome
     */
   private def extractFieldArgumentList(name: String) = {
-    var arguments: List[Evaluatable] = Nil
+    var arguments: List[Value] = Nil
     do {
       if (arguments.nonEmpty) ts.expect(",")
       arguments = arguments ::: ts.nextOption.map {
         case t if t.text == "*" => AllFields
         case t: AlphaToken => Field(t.text)
         case t: QuotedToken if t.isBackticks => Field(t.text)
-        case t => Evaluatable(t)
+        case t => Value(t)
       }.getOrElse(die("Unexpected end of statement")) :: Nil
     } while (ts.is(","))
     Template(fieldArguments = Map(name -> arguments))
