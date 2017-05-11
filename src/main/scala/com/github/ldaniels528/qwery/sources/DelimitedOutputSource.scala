@@ -62,5 +62,5 @@ object DelimitedOutputSource extends QueryOutputSourceFactory {
   * File Delimited Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class FileDelimitedOutputSource(file: File, delimiter: String = ",", quoted: Boolean = true)
-  extends DelimitedOutputSource(new BufferedWriter(new FileWriter(file)), delimiter = delimiter, quoted = quoted)
+case class FileDelimitedOutputSource(file: File, delimiter: String = ",", quoted: Boolean = true, append: Boolean = false)
+  extends DelimitedOutputSource(new BufferedWriter(new FileWriter(file, append)), delimiter = delimiter, quoted = quoted)

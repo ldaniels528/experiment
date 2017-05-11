@@ -1,13 +1,13 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.{Field, Value}
+import com.github.ldaniels528.qwery.ops.{Expression, Field}
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
   * SQL Template Parser
   * @author lawrence.daniels@gmail.com
   */
-class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalExpressionParser {
+class TemplateParser(ts: TokenStream) extends ExpressionParser {
 
   /**
     * Extracts the tokens that correspond to the given template
@@ -19,24 +19,20 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
     val tags = new PeekableIterator(template.split("[ ]").map(_.trim))
     while (tags.hasNext) {
       tags.next() match {
-        // conditional expression? e.g. "@<condition>" => "x = 1 and y = 2"
+        // conditional expression? (e.g. "@<condition>" => "x = 1 and y = 2")
         case tag if tag.startsWith("@<") & tag.endsWith(">") =>
-          results = results + extractExpression(tag.drop(2).dropRight(1))
+          results = results + extractCondition(tag.drop(2).dropRight(1))
 
-        // field name list? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
+        // field names? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
         case tag if tag.startsWith("@(") & tag.endsWith(")") =>
-          results = results + extractFieldNames(tag.drop(2).dropRight(1))
+          results = results + extractListOfFields(tag.drop(2).dropRight(1))
 
-        // field arguments list? (e.g. "@{fields}" => "field1, 'hello', 5 + now(), ..., fieldN")
+        // expressions? (e.g. "@{fields}" => "field1, 'hello', 5 + now(), ..., fieldN")
         case tag if tag.startsWith("@{") & tag.endsWith("}") =>
-          results = results + extractFieldArguments(tag.drop(2).dropRight(1))
+          results = results + extractListOfExpressions(tag.drop(2).dropRight(1))
 
-        // insert values list? (e.g. "@[values]" => "('hello', 'world', ..., 1234)")
+        // sort field list? (e.g. "@[sortFields]" => "field1 DESC, field2 ASC")
         case tag if tag.startsWith("@[") & tag.endsWith("]") =>
-          results = results + extractValueList(tag.drop(2).dropRight(1))
-
-        // sort field list? (e.g. "@|sortFields|" => "field1 DESC, field2 ASC")
-        case tag if tag.startsWith("@|") & tag.endsWith("|") =>
           results = results + extractSortFields(tag.drop(2).dropRight(1))
 
         // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
@@ -73,7 +69,7 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
     * @return a [[Template template]] represents the parsed outcome
     */
   private def extractIdentifier(name: String) = {
-    val value = ts.nextOption.map(_.text).getOrElse(die(s"'$name' value expected"))
+    val value = ts.nextOption.map(_.text).getOrElse(die(s"'$name' identifier expected"))
     Template(identifiers = Map(name -> value))
   }
 
@@ -82,13 +78,13 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
     * @param name the given identifier name (e.g. "fields")
     * @return a [[Template template]] represents the parsed outcome
     */
-  private def extractFieldNames(name: String) = {
+  private def extractListOfFields(name: String) = {
     var fields: List[Field] = Nil
     do {
       if (fields.nonEmpty) ts.expect(",")
       fields = fields ::: ts.nextOption.map(t => Field(t.text)).getOrElse(die("Unexpected end of statement")) :: Nil
     } while (ts.is(","))
-    Template(fieldReferences = Map(name -> fields))
+    Template(fields = Map(name -> fields))
   }
 
   /**
@@ -96,13 +92,13 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
     * @param name the given identifier name (e.g. "customerId, COUNT(*)")
     * @return a [[Template template]] represents the parsed outcome
     */
-  private def extractFieldArguments(name: String) = {
-    var arguments: List[Value] = Nil
+  private def extractListOfExpressions(name: String) = {
+    var expressions: List[Expression] = Nil
     do {
-      if (arguments.nonEmpty) ts.expect(",")
-      arguments = arguments ::: parseExpressions(ts).getOrElse(die("Unexpected end of statement")) :: Nil
+      if (expressions.nonEmpty) ts.expect(",")
+      expressions = expressions ::: parseExpression(ts).getOrElse(die("Unexpected end of statement")) :: Nil
     } while (ts.is(","))
-    Template(fieldArguments = Map(name -> arguments))
+    Template(expressions = Map(name -> expressions))
   }
 
   /**
@@ -110,9 +106,9 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
     * @param name the given identifier name (e.g. "condition")
     * @return a [[Template template]] represents the parsed outcome
     */
-  private def extractExpression(name: String) = {
-    val expression = parseConditions(ts)
-    Template(expressions = Map(name -> expression.getOrElse(die("Expression expected"))))
+  private def extractCondition(name: String) = {
+    val condition = parseCondition(ts)
+    Template(conditions = Map(name -> condition.getOrElse(die("Conditional expression expected"))))
   }
 
   /**
@@ -133,20 +129,6 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser with ConditionalE
       sortFields = sortFields ::: field -> direction :: Nil
     } while (ts.is(","))
     Template(sortFields = Map(name -> sortFields))
-  }
-
-  /**
-    * Extracts a value list from the token stream
-    * @param name the given identifier name (e.g. "values")
-    * @return a [[Template template]] represents the parsed outcome
-    */
-  private def extractValueList(name: String) = {
-    var values: List[Any] = Nil
-    while (!ts.is(")")) {
-      if (values.nonEmpty) ts.expect(",")
-      values = values ::: ts.nextOption.map(_.value).getOrElse(die("Unexpected end of statement")) :: Nil
-    }
-    Template(insertValues = Map(name -> values))
   }
 
   private def die[A](message: String): A = throw new SyntaxException(message, ts.peek.orNull)

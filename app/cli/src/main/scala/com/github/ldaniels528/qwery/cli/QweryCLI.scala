@@ -1,7 +1,9 @@
 package com.github.ldaniels528.qwery
+package cli
 
-import com.github.ldaniels528.qwery.ops.RootScope
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.tabular._
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery._
 
 /**
   * Qwery Main Application
@@ -13,7 +15,7 @@ object QweryCLI {
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()
   private var ticker = 0L
-  private val globalScope = new RootScope()
+  private val globalScope = RootScope()
 
   def main(args: Array[String]): Unit = repl()
 
@@ -46,6 +48,7 @@ object QweryCLI {
             }
             if (input.nonEmpty) {
               val results = interpret(input)
+              println()
               handleResults(results)
             }
             reset()

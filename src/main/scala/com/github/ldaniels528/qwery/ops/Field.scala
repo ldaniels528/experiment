@@ -6,13 +6,11 @@ import com.github.ldaniels528.qwery.Token
   * Represents a field reference
   * @author lawrence.daniels@gmail.com
   */
-case class Field(name: String) extends NamedValue {
-
-  override def compare(that: Value, scope: Scope): Int = {
-    evaluate(scope).map(v => Value(v).compare(that, scope)) getOrElse -1
-  }
+case class Field(name: String) extends Expression {
 
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+
+  override def toString: String = name
 
 }
 

@@ -8,6 +8,8 @@ import com.github.ldaniels528.qwery.util.PeekableIterator
   */
 class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
+  def apply(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
+
   def expect(text: String): Unit = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected $text")
   }

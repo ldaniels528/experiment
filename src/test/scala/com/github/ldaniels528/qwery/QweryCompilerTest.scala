@@ -26,7 +26,7 @@ class QweryCompilerTest extends FunSpec {
       assert(executable ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
-          fields = List(Field("Symbol"), Field("Name"), Field("Sector"), Field("Industry"), Field("Summary Quote")),
+          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           condition = Some(EQ(Field("Industry"), StringValue("Oil/Gas Transmission")))
         ))
     }
@@ -75,7 +75,7 @@ class QweryCompilerTest extends FunSpec {
       assert(executable ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
-          fields = List(Field("Symbol"), Field("Name"), Field("Sector"), Field("Industry"), Field("Summary Quote")),
+          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           condition = Some(EQ(Field("Industry"), StringValue("Oil/Gas Transmission"))),
           groupFields = Option(List(Field("Symbol"))),
           sortFields = Option(List(Field("Symbol") -> -1))
@@ -93,10 +93,10 @@ class QweryCompilerTest extends FunSpec {
       assert(executable ==
         Insert(
           target = DelimitedOutputSource(new File("./test2.csv")),
-          fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
+          fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
           source = Select(
             source = Some(DelimitedInputSource(new File("./companylist.csv"))),
-            fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             condition = Some(EQ(Field("Industry"), StringValue("Precious Metals"))),
             limit = None)))
     }
@@ -112,12 +112,12 @@ class QweryCompilerTest extends FunSpec {
       assert(executable ==
         Insert(
           target = DelimitedOutputSource(new File("./test3.csv")),
-          fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
+          fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
           source = InsertValues(
-            fields = List(Field("Symbol"), Field("Sector"), Field("Industry"), Field("LastSale")),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(
-              List("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0),
-              List("EMX", "Basic Industries", "Precious Metals", 0.828)
+              List("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0).map(Expression.apply),
+              List("EMX", "Basic Industries", "Precious Metals", 0.828).map(Expression.apply)
             ))
         ))
     }

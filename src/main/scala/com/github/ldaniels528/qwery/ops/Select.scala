@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops.Select._
 import com.github.ldaniels528.qwery.sources.QueryInputSource
 
 /**
@@ -8,8 +9,8 @@ import com.github.ldaniels528.qwery.sources.QueryInputSource
   * @author lawrence.daniels@gmail.com
   */
 case class Select(source: Option[QueryInputSource],
-                  fields: Seq[Value],
-                  condition: Option[Expression] = None,
+                  fields: Seq[Expression],
+                  condition: Option[Condition] = None,
                   groupFields: Option[Seq[Field]] = None,
                   sortFields: Option[Seq[(Field, Int)]] = None,
                   limit: Option[Int] = None)
@@ -19,7 +20,7 @@ case class Select(source: Option[QueryInputSource],
     case Some(device) =>
       val rows = device.execute(this)
         .map(row => LocalScope(scope, row))
-        .filter(rowScope => condition.isEmpty || condition.exists(_.satisfies(rowScope)))
+        .filter(rowScope => condition.isEmpty || condition.exists(_.isSatisfied(rowScope)))
         .toIterator
         .take(limit getOrElse Int.MaxValue)
 
@@ -27,7 +28,7 @@ case class Select(source: Option[QueryInputSource],
       if (isAggregate) {
         // collect the aggregates
         val aggregates = fields.collect {
-          case fx: BuiltinFunction if fx.isAggregateOnly => fx
+          case fx: InternalFunction if fx.isAggregateOnly => fx
         }
 
         // update each aggregate field, and return the evaluated results
@@ -40,7 +41,7 @@ case class Select(source: Option[QueryInputSource],
         if (fields.isAllFields) rows.map(_.data) else rows.map(filterRow)
       }
     case None =>
-      Iterator.empty
+      Seq(fields.flatMap(field => field.evaluate(scope).map(scope.getName(field) -> _)))
   }
 
   /**
@@ -48,12 +49,33 @@ case class Select(source: Option[QueryInputSource],
     * @return true, if at least one field is an aggregate-only field
     */
   def isAggregate: Boolean = fields.exists {
-    case fx: BuiltinFunction if fx.isAggregateOnly => true
+    case fx: InternalFunction if fx.isAggregateOnly => true
     case _ => false
   }
 
   private def filterRow(scope: LocalScope): Row = {
     fields.flatMap(ev => ev.evaluate(scope).map(value => scope.getName(ev) -> value))
+  }
+
+}
+
+/**
+  * Select Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object Select {
+
+  /**
+    * Value Sequence Extensions
+    * @param values the given collection of values
+    */
+  implicit class ValueSeqExtensions(val values: Seq[Expression]) extends AnyVal {
+
+    @inline
+    def isAllFields: Boolean = values.exists {
+      case field: Field => field.name == "*"
+      case _ => false
+    }
   }
 
 }

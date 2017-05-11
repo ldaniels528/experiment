@@ -29,7 +29,7 @@ SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
 
 Qwery offers a command line interface (CLI), which allows interactive querying or files, REST endpoints, etc.
 
-```bash
+```text
 ldaniels@Spartan:~$ sbt run
 
  Qwery CLI v0.1.6
@@ -60,25 +60,25 @@ Using UNIXCommandPrompt for input.
 + --------------------------------------------------------------------------------------- +
 
 [2]> SELECT COUNT(*) FROM './companylist.csv';
-+ ------- +
-| $1      |
-+ ------- +
-| 359     |
-+ ------- +
++ ---------- +
+| COUNT(*)   |
++ ---------- +
+| 359        |
++ ---------- +
 
 [3]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
-+ ------- +
-| $2      |
-+ ------- +
-| 44      |
-+ ------- +
++ ---------- +
+| COUNT(*)   |
++ ---------- +
+| 44         |
++ ---------- +
 
 [4]> SELECT SUM(LastSale) FROM './companylist.csv' LIMIT 5;
-+ --------- +
-| $3        |
-+ --------- +
-| 77.1087   |
-+ --------- +
++ --------------- +
+| SUM(LastSale)   |
++ --------------- +
+| 77.1087         |
++ --------------- +
 
 
 [5]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';

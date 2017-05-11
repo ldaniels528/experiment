@@ -35,7 +35,7 @@ class TemplateParserTest extends FunSpec {
       val targetAndFields = templateParser.extract("INSERT INTO @target ( @(fields) )")
       var valueSets: List[Template] = Nil
       while (tokenStream.hasNext) {
-        valueSets = templateParser.extract("VALUES ( @[values] )") :: valueSets
+        valueSets = templateParser.extract("VALUES ( @{values} )") :: valueSets
       }
       info(s"targetAndFields: $targetAndFields")
       valueSets.foreach(values => info(s"values:          $values"))

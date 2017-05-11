@@ -8,6 +8,10 @@ trait Function {
 
   def name: String
 
-  def invoke(scope: Scope, args: Seq[Value]): Option[Any]
+  def params: Seq[String] = Nil
+
+  def invoke(scope: Scope, args: Seq[Expression]): Option[Any]
+
+  override def toString: String = s"$name(${params.mkString(", ")})"
 
 }

@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.cli
 
 import java.io.{BufferedReader, File, InputStreamReader}
 
