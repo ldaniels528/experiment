@@ -22,8 +22,7 @@ class QweryCompilerTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM './companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
@@ -37,8 +36,7 @@ class QweryCompilerTest extends FunSpec {
         """
           |SELECT * FROM './companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           fields = List(AllFields),
@@ -53,8 +51,7 @@ class QweryCompilerTest extends FunSpec {
           |SELECT * FROM './companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'
           |ORDER BY Symbol DESC""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           fields = List(AllFields),
@@ -71,8 +68,7 @@ class QweryCompilerTest extends FunSpec {
           |WHERE Industry = 'Oil/Gas Transmission'
           |GROUP BY Symbol
           |ORDER BY Symbol DESC""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Select(
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
@@ -89,8 +85,7 @@ class QweryCompilerTest extends FunSpec {
           |INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
           |SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Insert(
           target = DelimitedOutputSource(new File("./test2.csv")),
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
@@ -109,8 +104,7 @@ class QweryCompilerTest extends FunSpec {
           |INSERT INTO './test3.csv' (Symbol, Sector, Industry, LastSale)
           |VALUES ('ACU', 'Capital Goods', 'Industrial Machinery/Components', 29)
           |VALUES ('EMX', 'Basic Industries', 'Precious Metals', 0.828)""".stripMargin
-      val executable = compiler.compile(query)
-      assert(executable ==
+      assert(compiler.compile(query) ==
         Insert(
           target = DelimitedOutputSource(new File("./test3.csv")),
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),

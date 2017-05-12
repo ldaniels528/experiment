@@ -65,6 +65,18 @@ class QweryCompiler {
     * INSERT INTO './tickers.csv' (symbol, exchange, lastSale)
     * SELECT symbol, exchange, lastSale FROM './EOD-20170505.txt' WHERE exchange = 'NASDAQ'
     * }}}
+    * @example
+    * {{{
+    * INSERT OVERWRITE './tickers.csv' (symbol, exchange, lastSale)
+    * SELECT symbol, exchange, lastSale FROM './EOD-20170505.txt' WHERE exchange = 'NASDAQ'
+    * }}}
+    * @example
+    * {{{
+    * INSERT OVERWRITE './companyinfo.csv' WITH HINTS (DELIMITER ',', HEADERS ON, QUOTES ON)
+    * (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    * SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+    * FROM './companylist.csv' WHERE Industry = 'EDP Services'
+    * }}}
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Insert executable]]
     */
