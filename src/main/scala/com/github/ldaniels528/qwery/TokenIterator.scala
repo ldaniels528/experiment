@@ -8,7 +8,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private var pos = 0
   private val ca = input.toCharArray
   private val operators = "=*-+/|&><".toCharArray
-  private val compoundOperators = "*-+|&><".toCharArray
+  private val compoundOperators = Seq("!=", ">=", "<=", "<>", "||")
 
   private def parsers = List(
     parseNumeric _, parseAlphaNumeric _, parseQuotesBackticks _, parseQuotesDouble _,
@@ -43,6 +43,10 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     token_?
   }
 
+  def span(length: Int): Option[String] = {
+    if(pos + length < ca.length) Some(String.copyValueOf(ca, pos, length)) else None
+  }
+
   @inline
   private def hasMore = pos < ca.length
 
@@ -53,11 +57,11 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   }
 
   private def parseCompoundOperators(): Option[Token] = {
-    if (hasMore && compoundOperators.contains(ca(pos))) {
+    if (hasMore && span(2).exists(compoundOperators.contains)) {
       val start = pos
-      pos += 1
-      if (hasMore && ca(pos) == ca(pos - 1)) pos += 1
-      Some(OperatorToken(ca(start).toString, start))
+      val result = span(2).map(OperatorToken(_, start))
+      pos += 2
+      result
     }
     else None
   }

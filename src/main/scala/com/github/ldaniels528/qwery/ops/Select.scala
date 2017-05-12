@@ -28,7 +28,7 @@ case class Select(source: Option[QueryInputSource],
       if (isAggregate) {
         // collect the aggregates
         val aggregates = fields.collect {
-          case fx: InternalFunction if fx.isAggregateOnly => fx
+          case fx: AggregateFunction => fx
         }
 
         // update each aggregate field, and return the evaluated results
@@ -49,7 +49,7 @@ case class Select(source: Option[QueryInputSource],
     * @return true, if at least one field is an aggregate-only field
     */
   def isAggregate: Boolean = fields.exists {
-    case fx: InternalFunction if fx.isAggregateOnly => true
+    case _: AggregateFunction => true
     case _ => false
   }
 

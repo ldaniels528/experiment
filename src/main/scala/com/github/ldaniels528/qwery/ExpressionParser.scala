@@ -1,9 +1,9 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.ExpressionParser._
 import com.github.ldaniels528.qwery.ops.Field.AllFields
 import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**
   * Expression Parser
@@ -31,22 +31,31 @@ trait ExpressionParser {
   }
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
-    var condition: Option[Condition] = None
-    var expression: Option[Expression] = None
-    var done: Boolean = false
-    do {
-      expression match {
-        case Some(exp0) =>
-          val result = for {
-            (_, op) <- ConditionalOps.find { case (symbol, _) => stream.nextIf(symbol) }
-            exp1 <- parseExpression(stream)
-          } yield op(exp0, exp1)
-          if (result.nonEmpty) condition = result else done = true
-        case None =>
-          expression = parseExpression(stream)
-      }
-    } while (!done && expression.nonEmpty && stream.hasNext)
-    condition
+    if (stream.nextIf("NOT")) {
+      val condition = parseCondition(stream)
+        .getOrElse(throw new SyntaxException("Conditional expression expected", stream.previous.orNull))
+      Option(NOT(condition))
+    }
+    else {
+      var condition: Option[Condition] = None
+      var expression: Option[Expression] = None
+      var done: Boolean = false
+
+      do {
+        expression match {
+          case Some(exp0) =>
+            val result = for {
+              (_, op) <- ConditionalOps.find { case (symbol, _) => stream.nextIf(symbol) }
+              exp1 <- parseExpression(stream)
+            } yield op(exp0, exp1)
+            if (result.nonEmpty) condition = result else done = true
+          case None =>
+            expression = parseExpression(stream)
+        }
+      } while (!done && expression.nonEmpty && stream.hasNext)
+      condition
+    }
+
   }
 
   def parseExpression(stream: TokenStream): Option[Expression] = {
@@ -79,7 +88,7 @@ trait ExpressionParser {
         ts.expect(")")
         expr
       // is it a function?
-      case ts if /*ts.matches(IdentifierRegEx) &*/ ts.peekAhead(1).exists(_.is("(")) =>
+      case ts if ts.matches(IdentifierRegEx) & ts.peekAhead(1).exists(_.is("(")) =>
         parseFieldFunction(stream) ?? parseValueFunction(stream)
       // is it a simple value
       case ts =>
@@ -240,7 +249,7 @@ object ExpressionParser {
     * AVG function
     * @param field the field to count
     */
-  case class AvgFx(field: Field) extends InternalFunction(isAggregatable = true, isAggregateOnly = true) {
+  case class AvgFx(field: Field) extends AggregateFunction {
     private var total = 0d
     private var count = 0L
 
@@ -258,7 +267,7 @@ object ExpressionParser {
     * COUNT function
     * @param field the field to count
     */
-  case class CountFx(field: Field) extends InternalFunction(isAggregatable = true, isAggregateOnly = true) {
+  case class CountFx(field: Field) extends AggregateFunction {
     private var count = 0L
 
     override def evaluate(scope: Scope): Option[Long] = Some(count)
@@ -274,10 +283,8 @@ object ExpressionParser {
     * LEN function
     * @param expression the field to count
     */
-  case class LenFx(expression: Expression) extends InternalFunction(isAggregatable = false, isAggregateOnly = false) {
+  case class LenFx(expression: Expression) extends InternalFunction {
     override def evaluate(scope: Scope): Option[Int] = expression.getAsString(scope).map(_.length)
-
-    override def update(scope: Scope): Unit = ()
 
     override def toString: String = s"LEN($expression)"
   }
@@ -286,7 +293,7 @@ object ExpressionParser {
     * MAX function
     * @param field the field to count
     */
-  case class MaxFx(field: Field) extends InternalFunction(isAggregatable = true, isAggregateOnly = true) {
+  case class MaxFx(field: Field) extends AggregateFunction {
     private var maximum = 0d
 
     override def evaluate(scope: Scope): Option[Double] = Some(maximum)
@@ -302,7 +309,7 @@ object ExpressionParser {
     * MIN function
     * @param field the field to count
     */
-  case class MinFx(field: Field) extends InternalFunction(isAggregatable = true, isAggregateOnly = true) {
+  case class MinFx(field: Field) extends AggregateFunction {
     private var minimum = 0d
 
     override def evaluate(scope: Scope): Option[Double] = Some(minimum)
@@ -318,10 +325,8 @@ object ExpressionParser {
     * SQRT function
     * @param expression the field to count
     */
-  case class SqrtFx(expression: Expression) extends InternalFunction(isAggregatable = false, isAggregateOnly = false) {
+  case class SqrtFx(expression: Expression) extends InternalFunction {
     override def evaluate(scope: Scope): Option[Double] = expression.getAsDouble(scope).map(Math.sqrt)
-
-    override def update(scope: Scope): Unit = ()
 
     override def toString: String = s"SQRT($expression)"
   }
@@ -330,7 +335,7 @@ object ExpressionParser {
     * SUM function
     * @param field the field to count
     */
-  case class SumFx(field: Field) extends InternalFunction(isAggregatable = true, isAggregateOnly = true) {
+  case class SumFx(field: Field) extends AggregateFunction {
     private var total = 0d
 
     override def evaluate(scope: Scope): Option[Double] = Some(total)

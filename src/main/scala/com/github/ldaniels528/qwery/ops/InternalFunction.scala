@@ -4,9 +4,13 @@ package com.github.ldaniels528.qwery.ops
   * Represents an internal function
   * @author lawrence.daniels@gmail.com
   */
-abstract class InternalFunction(val isAggregatable: Boolean = false,
-                                val isAggregateOnly: Boolean = false)
-  extends Expression {
+trait InternalFunction extends Expression
+
+/**
+  * Represents an internal aggregate function
+  * @author lawrence.daniels@gmail.com
+  */
+trait AggregateFunction extends InternalFunction {
 
   def update(scope: Scope): Unit
 
