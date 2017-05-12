@@ -275,7 +275,7 @@ object ExpressionParser {
     * @param expression the field to count
     */
   case class LenFx(expression: Expression) extends InternalFunction(isAggregatable = false, isAggregateOnly = false) {
-    override def evaluate(scope: Scope): Option[Int] = getAsString(scope).map(_.length)
+    override def evaluate(scope: Scope): Option[Int] = expression.getAsString(scope).map(_.length)
 
     override def update(scope: Scope): Unit = ()
 
