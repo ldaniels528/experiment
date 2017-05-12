@@ -20,6 +20,28 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def nextIf(keyword: String): Boolean = is(keyword) && nextOption.nonEmpty
 
+  def isBackticks: Boolean = peek.exists {
+    case t: QuotedToken => t.isBackticks
+    case _ => false
+  }
+
+  def isDoubleQuoted: Boolean = peek.exists {
+    case t: QuotedToken => t.isDoubleQuoted
+    case _ => false
+  }
+
+  def isNumeric: Boolean = peek.exists {
+    case t: NumericToken => true
+    case _ => false
+  }
+
+  def isQuoted: Boolean = isDoubleQuoted || isSingleQuoted
+
+  def isSingleQuoted: Boolean = peek.exists {
+    case t: QuotedToken => t.isSingleQuoted
+    case _ => false
+  }
+
 }
 
 /**

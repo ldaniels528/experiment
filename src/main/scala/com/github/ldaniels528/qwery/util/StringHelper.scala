@@ -6,13 +6,20 @@ package com.github.ldaniels528.qwery.util
   */
 object StringHelper {
 
+  final implicit class BooleanConversions(val state: Boolean) extends AnyVal {
+
+    @inline
+    def onOff: String = if (state) "ON" else "OFF"
+
+  }
+
   /**
     * Delimited Text Enrichment
     * @param text the given Delimited text string
     */
   final implicit class DelimitedTextEnrichment(val text: String) extends AnyVal {
 
-     def delimitedSplit(delimiter: Char): List[String] = {
+    def delimitedSplit(delimiter: Char): List[String] = {
       var inQuotes = false
       val sb = new StringBuilder()
       val values = text.toCharArray.foldLeft[List[String]](Nil) {

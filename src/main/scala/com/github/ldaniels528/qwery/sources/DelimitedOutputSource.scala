@@ -4,6 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.net.URL
 
 import com.github.ldaniels528.qwery.Row
+import com.github.ldaniels528.qwery.ops.Hints
 
 /**
   * Delimited Output Source
@@ -24,7 +25,7 @@ abstract class DelimitedOutputSource(output: Hints => BufferedWriter) extends Qu
   override def flush(): Unit = writer.flush()
 
   override def write(data: Row): Unit = {
-    if (hints.includeHeaders && !headersWritten) {
+    if (hints.headers && !headersWritten) {
       headersWritten = true
       val header = data.map(_._1).map(s => '"' + s + '"').mkString(hints.delimiter)
       writer.write(header)

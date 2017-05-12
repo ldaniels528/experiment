@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.ResultSet
-import com.github.ldaniels528.qwery.sources.{Hints, QueryOutputSource}
+import com.github.ldaniels528.qwery.sources.QueryOutputSource
 
 /**
   * Represents an INSERT statement

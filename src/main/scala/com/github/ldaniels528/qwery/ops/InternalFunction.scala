@@ -10,8 +10,4 @@ trait InternalFunction extends Expression
   * Represents an internal aggregate function
   * @author lawrence.daniels@gmail.com
   */
-trait AggregateFunction extends InternalFunction {
-
-  def update(scope: Scope): Unit
-
-}
+trait AggregateFunction extends InternalFunction with Aggregation

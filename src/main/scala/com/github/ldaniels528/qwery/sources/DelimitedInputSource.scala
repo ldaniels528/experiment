@@ -5,7 +5,7 @@ import java.net.URL
 import java.util.zip.GZIPInputStream
 
 import com.github.ldaniels528.qwery.ResultSet
-import com.github.ldaniels528.qwery.ops.Executable
+import com.github.ldaniels528.qwery.ops.Scope
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.io.{BufferedSource, Source}
@@ -17,7 +17,7 @@ import scala.io.{BufferedSource, Source}
 class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
-  override def execute(query: Executable): ResultSet = {
+  override def execute(scope: Scope): ResultSet = {
     autodetectDelimiter() match {
       case Some((delimiter, headers, rows)) =>
         lines.map(line => headers zip line.delimitedSplit(delimiter)) ++ rows.iterator

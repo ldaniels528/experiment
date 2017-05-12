@@ -18,6 +18,6 @@ case class StringValue(value: String) extends Expression {
 
   override def evaluate(scope: Scope): Option[String] = Option(value)
 
-  override def toString: String = value
+  override def toString: String = s"'$value'"
 
 }

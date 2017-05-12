@@ -2,6 +2,7 @@ package com.github.ldaniels528.qwery.sources
 
 import java.io.{BufferedWriter, File, FileWriter}
 
+import com.github.ldaniels528.qwery.ops.Hints
 import net.liftweb.json.Extraction._
 import net.liftweb.json.JsonAST._
 

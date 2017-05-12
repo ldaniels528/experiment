@@ -182,17 +182,4 @@ object TemplateParser {
     */
   def apply(ts: TokenStream): TemplateParser = new TemplateParser(ts)
 
-  /**
-    * Token Stream Extensions
-    * @param ts the given [[TokenStream token stream]]
-    */
-  implicit class TokenStreamExtensions(val ts: TokenStream) extends AnyVal {
-
-    @inline
-    def expect(keyword: String): Unit = {
-      if (!ts.nextIf(keyword)) throw new SyntaxException(s"Keyword '$keyword' expected", ts.peek.orNull)
-    }
-
-  }
-
 }

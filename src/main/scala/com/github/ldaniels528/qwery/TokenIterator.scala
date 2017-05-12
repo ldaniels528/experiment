@@ -153,9 +153,9 @@ case class QuotedToken(text: String, start: Int, quoteChar: Char) extends TextTo
 
   def isBackticks: Boolean = quoteChar == '`'
 
-  def isDouble: Boolean = quoteChar == '"'
+  def isDoubleQuoted: Boolean = quoteChar == '"'
 
-  def isSingle: Boolean = quoteChar == '\''
+  def isSingleQuoted: Boolean = quoteChar == '\''
 
 }
 
