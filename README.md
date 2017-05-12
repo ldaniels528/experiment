@@ -21,13 +21,17 @@ $ sbt test
 **Q**: How do I reference a field that contains spaces or special characters?
 
 **A**: Use backticks (\`). 
-```sql
+
+
+```text
 SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
 ```
 
 ### CLI Examples
 
 Qwery offers a command line interface (CLI), which allows interactive querying or files, REST endpoints, etc.
+
+##### Start the REPL/CLI
 
 ```text
 ldaniels@Spartan:~$ sbt run
@@ -43,8 +47,13 @@ WHERE Sector = 'Basic Industries'
 LIMIT 5;
       
 Using UNIXCommandPrompt for input.
+```
 
+##### Describe the layout of a local file:
+
+```text
 [1]> DESCRIBE './companylist.csv';
+
 + --------------------------------------------------------------------------------------- +
 | COLUMN         TYPE    SAMPLE                                                           |
 + --------------------------------------------------------------------------------------- +
@@ -58,36 +67,83 @@ Using UNIXCommandPrompt for input.
 | Industry       String  n/a                                                              |
 | Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 |
 + --------------------------------------------------------------------------------------- +
+```
 
+##### Count the number of (non-blank) lines in the file:
+
+```text
 [2]> SELECT COUNT(*) FROM './companylist.csv';
+
 + ---------- +
 | COUNT(*)   |
 + ---------- +
 | 359        |
 + ---------- +
+```
 
+##### Count the number of lines that match a given set of criteria in the file:
+
+```text
 [3]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
+
 + ---------- +
 | COUNT(*)   |
 + ---------- +
 | 44         |
 + ---------- +
+```
 
+##### Sum values (just like you normally do with SQL) in the file:
+
+```text
 [4]> SELECT SUM(LastSale) FROM './companylist.csv' LIMIT 5;
+
 + --------------- +
 | SUM(LastSale)   |
 + --------------- +
 | 77.1087         |
 + --------------- +
+```
 
+##### Select fields from the file using criteria:
 
+```text
 [5]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+
 + -------------------------------------------------------------------------------- +
 | Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
 + -------------------------------------------------------------------------------- +
 | TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
 | WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
 + -------------------------------------------------------------------------------- +
+```
+
+##### Copy a portion of one file to another (appending the target)
+
+```text
+[6]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+     SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+     WHERE Industry = 'Homebuilding'
+
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 1               |
++ --------------- +
+```
+
+##### Copy a portion of one file to another (overwriting the target)
+
+```text
+[7]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+     SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+     WHERE Industry = 'Precious Metals'
+
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 44              |
++ --------------- +
 ```
 
 ### Code Examples

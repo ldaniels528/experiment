@@ -63,7 +63,7 @@ class QueryTest extends FunSpec {
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
-    it("should append filtered results from one source (CSV) to another (CSV)") {
+    it("should overwrite/append filtered results from one source (CSV) to another (CSV)") {
       val queries = Seq(
         QweryCompiler(
           """
