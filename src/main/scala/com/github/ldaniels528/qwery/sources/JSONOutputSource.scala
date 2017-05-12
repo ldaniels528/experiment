@@ -9,9 +9,11 @@ import net.liftweb.json.JsonAST._
   * JSON Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class JSONOutputSource(file: File, append: Boolean = false) extends QueryOutputSource {
-  private lazy val writer = new BufferedWriter(new FileWriter(file, append))
+case class JSONOutputSource(file: File) extends QueryOutputSource {
   private implicit val formats = net.liftweb.json.DefaultFormats
+  private var writer: BufferedWriter = _
+
+  override def open(hints: Hints): Unit = writer = new BufferedWriter(new FileWriter(file, hints.append))
 
   override def close(): Unit = writer.close()
 

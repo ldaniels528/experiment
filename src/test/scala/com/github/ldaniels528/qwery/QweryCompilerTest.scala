@@ -86,7 +86,7 @@ class QweryCompilerTest extends FunSpec {
       val compiler = new QweryCompiler()
       val query =
         """
-          |INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+          |INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
           |SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin
       val executable = compiler.compile(query)
@@ -98,7 +98,8 @@ class QweryCompilerTest extends FunSpec {
             source = Some(DelimitedInputSource(new File("./companylist.csv"))),
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             condition = Some(EQ(Field("Industry"), StringValue("Precious Metals"))),
-            limit = None)))
+            limit = None),
+          hints = Hints(append = false)))
     }
 
     it("should compiles INSERT statements") {
@@ -118,7 +119,8 @@ class QweryCompilerTest extends FunSpec {
             dataSets = List(
               List("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0).map(Expression.apply),
               List("EMX", "Basic Industries", "Precious Metals", 0.828).map(Expression.apply)
-            ))
+            )),
+          hints = Hints(append = true)
         ))
     }
 

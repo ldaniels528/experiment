@@ -6,6 +6,8 @@ package com.github.ldaniels528.qwery.sources
   */
 trait QueryOutputSource extends QuerySource {
 
+  def open(hints: Hints): Unit
+
   def close(): Unit
 
   def flush(): Unit

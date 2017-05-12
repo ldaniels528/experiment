@@ -9,32 +9,38 @@ import com.github.ldaniels528.qwery.Row
   * Delimited Output Source
   * @author lawrence.daniels@gmail.com
   */
-abstract class DelimitedOutputSource(writer: BufferedWriter, delimiter: String = ",", quoted: Boolean = true)
-  extends QueryOutputSource {
-  private var headersWritten: Boolean = false
+abstract class DelimitedOutputSource(output: Hints => BufferedWriter) extends QueryOutputSource {
+  private var headersWritten = false
+  private var hints = Hints()
+  private var writer: BufferedWriter = _
+
+  override def open(hints: Hints): Unit = {
+    this.hints = hints
+    writer = output(hints)
+  }
 
   override def close(): Unit = writer.close()
 
   override def flush(): Unit = writer.flush()
 
   override def write(data: Row): Unit = {
-    if (!headersWritten) {
+    if (hints.includeHeaders && !headersWritten) {
       headersWritten = true
-      val header = data.map(_._1).map(s => '"' + s + '"').mkString(delimiter)
+      val header = data.map(_._1).map(s => '"' + s + '"').mkString(hints.delimiter)
       writer.write(header)
       writer.newLine()
     }
 
-    val line = data.map(_._2).map(_.asInstanceOf[AnyRef]).map {
+    val line = data.map(_._2).map(_.asInstanceOf[Object]).map {
       case n: Number => n.toString
       case x => asString(x)
-    } mkString delimiter
+    } mkString hints.delimiter
 
     writer.write(line)
     writer.newLine()
   }
 
-  private def asString(x: AnyRef) = if (quoted) '"' + x.toString + '"' else x.toString
+  private def asString(x: AnyRef) = if (hints.quoted) '"' + x.toString + '"' else x.toString
 
 }
 
@@ -62,5 +68,5 @@ object DelimitedOutputSource extends QueryOutputSourceFactory {
   * File Delimited Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class FileDelimitedOutputSource(file: File, delimiter: String = ",", quoted: Boolean = true, append: Boolean = false)
-  extends DelimitedOutputSource(new BufferedWriter(new FileWriter(file, append)), delimiter = delimiter, quoted = quoted)
+case class FileDelimitedOutputSource(file: File)
+  extends DelimitedOutputSource((hints: Hints) => new BufferedWriter(new FileWriter(file, hints.append)))

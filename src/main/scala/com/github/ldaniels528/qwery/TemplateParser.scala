@@ -35,6 +35,10 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
         case tag if tag.startsWith("@[") & tag.endsWith("]") =>
           results = results + extractSortFields(tag.drop(2).dropRight(1))
 
+        // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." or "INSERT OVERWRITE ...")
+        case tag if tag.startsWith("@|") & tag.endsWith("|") =>
+          results = results + extractEnumeratedItem(tag.drop(2).dropRight(1).split('|'))
+
         // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
         case tag if tag.startsWith("@/") & tag.endsWith("/") =>
           val pattern = tag.drop(2).dropRight(1)
@@ -56,6 +60,29 @@ class TemplateParser(ts: TokenStream) extends ExpressionParser {
     results
   }
 
+  /**
+    * Extracts an enumerated item
+    * @param values the values
+    * @return a [[Template template]] represents the parsed outcome
+    */
+  private def extractEnumeratedItem(values: Seq[String]) = {
+    def error[A](items: List[String]) = die[A](s"One of the following '${items.mkString(", ")}' identifiers is expected")
+
+    values.toList match {
+      case name :: items =>
+        val item = ts.nextOption.map(_.text).getOrElse(error(items))
+        if(!items.contains(item)) error(items)
+        Template(identifiers = Map(name -> item))
+      case _ =>
+        die(s"Template error: ${values.mkString(", ")}")
+    }
+  }
+
+  /**
+    * Extracts an optional view
+    * @param name the named identifier
+    * @param tags the [[PeekableIterator iterator]]
+    */
   private def extractOptional(name: String, tags: PeekableIterator[String]) = {
     if (!ts.nextIf(name)) {
       // if the option tag wasn't matched, skip any associated arguments

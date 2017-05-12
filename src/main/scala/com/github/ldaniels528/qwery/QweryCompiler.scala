@@ -70,17 +70,18 @@ class QweryCompiler {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = TemplateParser(stream)
-    val params = parser.extract("INSERT INTO @target ( @(fields) )")
+    val params = parser.extract("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
     val target = params.identifiers.get("target")
       .flatMap(DataSourceFactory.getOutputSource)
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
+    val append = params.identifiers.get("mode").exists(_.equalsIgnoreCase("INTO"))
     val source = stream match {
       case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
       case ts => parseNext(ts)
     }
-    Insert(target, fields, source)
+    Insert(target, fields, source, Hints(append = append))
   }
 
   /**

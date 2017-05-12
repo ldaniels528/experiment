@@ -51,10 +51,10 @@ class QueryTest extends FunSpec {
       ))
     }
 
-    it("should copy filtered results from one source (CSV) to another (CSV)") {
+    it("should overwrite filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
         """
-          |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
@@ -63,10 +63,33 @@ class QueryTest extends FunSpec {
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
-    it("should copy filtered results from one source (CSV) to another (JSON)") {
+    it("should append filtered results from one source (CSV) to another (CSV)") {
+      val queries = Seq(
+        QweryCompiler(
+          """
+            |INSERT OVERWRITE './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+            |FROM './companylist.csv'
+            |WHERE Industry = 'Precious Metals'""".stripMargin),
+        QweryCompiler(
+          """
+            |INSERT INTO './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+            |FROM './companylist.csv'
+            |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
+      )
+
+      val results = queries.map(_.execute(RootScope()))
+      assert(results == Seq(
+        Seq(Seq(("ROWS_INSERTED", 34))),
+        Seq(Seq(("ROWS_INSERTED", 5)))
+      ))
+    }
+
+    it("should overwrite filtered results from one source (CSV) to another (JSON)") {
       val query = QweryCompiler(
         """
-          |INSERT INTO './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)

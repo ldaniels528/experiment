@@ -211,7 +211,7 @@ new Tabular().transform(results) foreach println
 + -------------------------------------------------------------------------------------------------------------------- +
 ```
 
-##### Copy filtered results from one source (csv) to another (csv)
+##### Copy (append) filtered results from one source (csv) to another (csv)
 
 The source file (./companylist.csv) contains 360 lines of CSV text. The following query will filter these for 
 records where the "Sector" field contains the text "Basic Industries", and write the results to the output file (./test1.csv)
@@ -225,6 +225,38 @@ import com.github.ldaniels528.tabular.Tabular
 val statement = QweryCompiler(
   """
     |INSERT INTO './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+    |FROM './companylist.csv'
+    |WHERE Sector = 'Basic Industries'""".stripMargin)
+
+// execute the query
+val results = statement.execute(RootScope())
+
+// display the results as a table
+new Tabular().transform(results) foreach println
+```
+
+##### Output
+
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 44              |
++ --------------- +
+```
+
+##### Alternatively, you could overwrite the file instead of appending it...
+
+```scala
+import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.tabular.Tabular
+
+// compile the statement
+val statement = QweryCompiler(
+  """
+    |INSERT OVERWRITE './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
     |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
     |FROM './companylist.csv'
     |WHERE Sector = 'Basic Industries'""".stripMargin)
