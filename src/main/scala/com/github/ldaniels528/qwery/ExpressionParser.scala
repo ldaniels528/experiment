@@ -262,7 +262,11 @@ object ExpressionParser {
   case class CountFx(field: Field) extends AggregateFunction {
     private var count = 0L
 
-    override def evaluate(scope: Scope): Option[Long] = Some(count)
+    override def evaluate(scope: Scope): Option[Long] = {
+      val returnValue = Some(count)
+      count = 0L
+      returnValue
+    }
 
     override def update(scope: Scope): Unit = {
       if (field.name == "*" || scope.get(field.name).nonEmpty) count += 1
