@@ -4,7 +4,7 @@ import java.io.File
 import java.net.URL
 
 import com.github.ldaniels528.qwery.ResultSet
-import com.github.ldaniels528.qwery.ops.Executable
+import com.github.ldaniels528.qwery.ops.Scope
 import net.liftweb.json._
 
 import scala.io.Source
@@ -15,7 +15,7 @@ import scala.io.Source
   */
 class JSONInputSource(source: Source) extends QueryInputSource {
 
-  override def execute(query: Executable): ResultSet = {
+  override def execute(scope: Scope): ResultSet = {
     source.getLines().filter(_.trim.nonEmpty) map { line =>
       parse(line) match {
         case jo: JObject => jo.values.toSeq

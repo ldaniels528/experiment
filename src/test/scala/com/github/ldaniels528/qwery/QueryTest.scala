@@ -19,7 +19,6 @@ class QueryTest extends FunSpec {
       val query = QweryCompiler("DESCRIBE './companylist.csv'")
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
-
       assert(results == Vector(
         List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
         List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
@@ -42,13 +41,23 @@ class QueryTest extends FunSpec {
 
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
-
       assert(results == Stream(
         List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281"),
         List("Symbol" -> "DGSE", "Name" -> "DGSE Companies, Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.64", "MarketCap" -> "44125234.84")
       ))
+    }
+
+    it("should aggregate the results from a CVS file") {
+      val query = QweryCompiler(
+        """
+          |SELECT Sector, COUNT(*)
+          |FROM './companylist.csv'
+          |GROUP BY Sector""".stripMargin)
+
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
     }
 
     it("should overwrite filtered results from one source (CSV) to another (CSV)") {
@@ -58,7 +67,6 @@ class QueryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
-
       val results = query.execute(RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
@@ -78,7 +86,6 @@ class QueryTest extends FunSpec {
             |FROM './companylist.csv'
             |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
       )
-
       val results = queries.map(_.execute(RootScope()))
       assert(results == Seq(
         Seq(Seq(("ROWS_INSERTED", 34))),
@@ -93,7 +100,6 @@ class QueryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
-
       val results = query.execute(RootScope())
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
@@ -105,10 +111,8 @@ class QueryTest extends FunSpec {
           """
             |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
-
         val results = query.execute(RootScope()).toSeq
         tabular.transform(results.toIterator) foreach (info(_))
-
         assert(results == Stream(
           List("Symbol" -> "CQH", "Name" -> "Cheniere Energy Partners LP Holdings, LLC", "Sector" -> "Public Utilities",
             "Industry" -> "Oil/Gas Transmission", "LastSale" -> "25.68", "MarketCap" -> "5950056000"),

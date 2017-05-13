@@ -36,3 +36,17 @@ object Field {
   object AllFields extends Field(name = "*")
 
 }
+
+/**
+  * Represents an Aggregate Field
+  * @author lawrence.daniels@gmail.com
+  */
+class AggregateField(name: String) extends Field(name) with Aggregation {
+  private var value: Option[Any] = None
+
+  override def evaluate(scope: Scope): Option[Any] = value
+
+  override def update(scope: Scope): Unit = {
+    this.value = scope.get(name)
+  }
+}

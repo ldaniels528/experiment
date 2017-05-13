@@ -18,22 +18,28 @@ case class Select(source: Option[QueryInputSource],
 
   override def execute(scope: Scope): ResultSet = source match {
     case Some(device) =>
-      val rows = device.execute(this)
+      val rows = device.execute(scope)
+        .toIterator
         .map(row => LocalScope(scope, row))
         .filter(rowScope => condition.isEmpty || condition.exists(_.isSatisfied(rowScope)))
-        .toIterator
         .take(limit getOrElse Int.MaxValue)
 
       // is this an aggregate query?
       if (isAggregate) {
         // collect the aggregates
+        val groupFieldNames = groupFields.getOrElse(Nil).map(_.name)
         val aggregates = fields.collect {
+          case field: Field if groupFieldNames.contains(field.name) => new AggregateField(field.name)
           case fx: AggregateFunction => fx
         }
 
         // update each aggregate field, and return the evaluated results
-        rows.foreach(rowScope => aggregates.foreach(_.update(rowScope)))
-        Seq(aggregates.flatMap(field => field.evaluate(scope).map(scope.getName(field) -> _)))
+        groupFields match {
+          case Some(_) => groupBy(scope, rows, aggregates, groupFieldNames)
+          case None =>
+            rows.foreach(rowScope => aggregates.foreach(_.update(rowScope)))
+            Seq(aggregates.map(expand(scope, _)))
+        }
       }
 
       // otherwise, it's a normal query
@@ -41,7 +47,24 @@ case class Select(source: Option[QueryInputSource],
         if (fields.isAllFields) rows.map(_.data) else rows.map(filterRow)
       }
     case None =>
-      Seq(fields.flatMap(field => field.evaluate(scope).map(scope.getName(field) -> _)))
+      Seq(fields.map(expand(scope, _)))
+  }
+
+  def groupBy(rootScope: Scope,
+              resultSets: Iterator[LocalScope],
+              aggregates: Seq[Expression with Aggregation],
+              groupFields: Seq[String]): ResultSet = {
+    val groupField = groupFields.headOption.orNull
+    val groupedResults = resultSets.toSeq.groupBy(_.data.find(_._1 == groupField).map(_._2).orNull)
+    val results = groupedResults map { case (key, rows) =>
+      val scope = LocalScope(rootScope, data = Nil)
+      rows foreach { row =>
+        aggregates.foreach(_.update(row))
+        //println(s"$key: $row")
+      }
+      aggregates.map(expand(scope, _))
+    }
+    results
   }
 
   /**
@@ -53,8 +76,10 @@ case class Select(source: Option[QueryInputSource],
     case _ => false
   }
 
-  private def filterRow(scope: LocalScope): Row = {
-    fields.flatMap(ev => ev.evaluate(scope).map(value => scope.getName(ev) -> value))
+  private def filterRow(scope: LocalScope): Row = fields.map(expand(scope, _))
+
+  private def expand(scope: Scope, expression: Expression) = {
+    scope.getName(expression) -> expression.evaluate(scope).map(_.asInstanceOf[AnyRef]).orNull
   }
 
 }
@@ -66,13 +91,13 @@ case class Select(source: Option[QueryInputSource],
 object Select {
 
   /**
-    * Value Sequence Extensions
-    * @param values the given collection of values
+    * Expression Sequence Extensions
+    * @param expressions the given collection of values
     */
-  implicit class ValueSeqExtensions(val values: Seq[Expression]) extends AnyVal {
+  implicit class ExpressionSeqExtensions(val expressions: Seq[Expression]) extends AnyVal {
 
     @inline
-    def isAllFields: Boolean = values.exists {
+    def isAllFields: Boolean = expressions.exists {
       case field: Field => field.name == "*"
       case _ => false
     }
