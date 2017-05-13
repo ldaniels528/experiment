@@ -118,10 +118,34 @@ Using UNIXCommandPrompt for input.
 + -------------------------------------------------------------------------------- +
 ```
 
+##### Aggregate data via Group By
+
+```text
+[6]> SELECT Sector, COUNT(*) FROM './companylist.csv' GROUP BY Sector
+
++ --------------------------------- + 
+| Sector                 COUNT(*)   | 
++ --------------------------------- + 
+| Consumer Durables      4          | 
+| Consumer Non-Durables  13         | 
+| Energy                 30         | 
+| Consumer Services      27         | 
+| Transportation         1          | 
+| n/a                    120        | 
+| Health Care            48         | 
+| Basic Industries       44         | 
+| Public Utilities       11         | 
+| Capital Goods          24         | 
+| Finance                12         | 
+| Technology             20         | 
+| Miscellaneous          5          | 
++ --------------------------------- + 
+```
+
 ##### Copy a portion of one file to another (appending the target)
 
 ```text
-[6]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+[7]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
      WHERE Industry = 'Homebuilding'
 
@@ -135,7 +159,7 @@ Using UNIXCommandPrompt for input.
 ##### Copy a portion of one file to another (overwriting the target)
 
 ```text
-[7]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+[8]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
      WHERE Industry = 'Precious Metals'
 

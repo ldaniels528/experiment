@@ -15,6 +15,15 @@ class QueryTest extends FunSpec {
 
   describe("Query") {
 
+    it("should CAST values from one type to another") {
+      val query = QweryCompiler("SELECT CAST('1234' AS 'Double')")
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+      assert(results == List(
+        List("CAST('1234' AS 'Double')" -> 1234.0)
+      ))
+    }
+
     it("should describe the layout of a CVS file") {
       val query = QweryCompiler("DESCRIBE './companylist.csv'")
       val results = query.execute(RootScope()).toSeq
@@ -58,6 +67,21 @@ class QueryTest extends FunSpec {
 
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
+      assert(results == List(
+        List("Sector" -> "Consumer Durables", "COUNT(*)" -> 4L),
+        List("Sector" -> "Consumer Non-Durables", "COUNT(*)" -> 13L),
+        List("Sector" -> "Energy", "COUNT(*)" -> 30L),
+        List("Sector" -> "Consumer Services", "COUNT(*)" -> 27L),
+        List("Sector" -> "Transportation", "COUNT(*)" -> 1L),
+        List("Sector" -> "n/a", "COUNT(*)" -> 120L),
+        List("Sector" -> "Health Care", "COUNT(*)" -> 48L),
+        List("Sector" -> "Basic Industries", "COUNT(*)" -> 44L),
+        List("Sector" -> "Public Utilities", "COUNT(*)" -> 11L),
+        List("Sector" -> "Capital Goods", "COUNT(*)" -> 24L),
+        List("Sector" -> "Finance", "COUNT(*)" -> 12L),
+        List("Sector" -> "Technology", "COUNT(*)" -> 20L),
+        List("Sector" -> "Miscellaneous", "COUNT(*)" -> 5L)
+      ))
     }
 
     it("should overwrite filtered results from one source (CSV) to another (CSV)") {

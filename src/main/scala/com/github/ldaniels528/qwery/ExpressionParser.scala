@@ -30,32 +30,6 @@ trait ExpressionParser {
     condition
   }
 
-  private def parseNextCondition(stream: TokenStream): Option[Condition] = {
-    if (stream.nextIf("NOT")) {
-      val condition = parseCondition(stream)
-        .getOrElse(throw new SyntaxException("Conditional expression expected", stream.previous.orNull))
-      Option(NOT(condition))
-    }
-    else {
-      var condition: Option[Condition] = None
-      var expression: Option[Expression] = None
-      var done: Boolean = false
-
-      do {
-        if (expression.isEmpty) expression = parseExpression(stream)
-        else {
-          val result = for {
-            (_, op) <- conditionalOps.find { case (symbol, _) => stream.nextIf(symbol) }
-            a <- expression
-            b <- parseExpression(stream)
-          } yield op(a, b)
-          if (result.nonEmpty) condition = result else done = true
-        }
-      } while (!done && expression.nonEmpty && stream.hasNext)
-      condition
-    }
-  }
-
   def parseExpression(stream: TokenStream): Option[Expression] = {
     var expression: Option[Expression] = None
     var done: Boolean = false
@@ -77,8 +51,48 @@ trait ExpressionParser {
     expression
   }
 
+  /**
+    * Parses an internal expression-based function (e.g. "LEN('Hello World')")
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[InternalFunction internal function]]
+    */
+  private def parseExpressionFunction(ts: TokenStream): Option[InternalFunction] = {
+    expressionFunctions.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
+      ts.expect("(")
+      val expression = parseExpression(ts)
+        .getOrElse(throw new SyntaxException(s"Function $name expects an expression"))
+      ts.expect(")")
+      fx(expression)
+    }
+  }
+
+  private def parseNextCondition(stream: TokenStream): Option[Condition] = {
+    stream match {
+      case ts if ts.nextIf("NOT") => parseNOT(ts)
+      case ts =>
+        var condition: Option[Condition] = None
+        var expression: Option[Expression] = None
+        var done: Boolean = false
+
+        do {
+          if (expression.isEmpty) expression = parseExpression(ts)
+          else {
+            val result = for {
+              (_, op) <- conditionalOps.find { case (symbol, _) => ts.nextIf(symbol) }
+              a <- expression
+              b <- parseExpression(ts)
+            } yield op(a, b)
+            if (result.nonEmpty) condition = result else done = true
+          }
+        } while (!done && expression.nonEmpty && ts.hasNext)
+        condition
+    }
+  }
+
   private def parseNextExpression(stream: TokenStream): Option[Expression] = {
     stream match {
+      // is it a CAST instruction?
+      case ts if ts.nextIf("CAST") => parseCAST(ts)
       // is it an all fields reference?
       case ts if ts.nextIf("*") => Option(AllFields)
       // is it a quantity (e.g. "(2 + (5 * 2))")?
@@ -93,21 +107,6 @@ trait ExpressionParser {
       case ts if ts.isNumeric | ts.isQuoted => Option(Expression(ts.next()))
       case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
       case _ => None
-    }
-  }
-
-  /**
-    * Parses an internal expression-based function (e.g. "LEN('Hello World')")
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[InternalFunction internal function]]
-    */
-  private def parseExpressionFunction(ts: TokenStream): Option[InternalFunction] = {
-    expressionFunctions.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-      ts.expect("(")
-      val expression = parseExpression(ts)
-        .getOrElse(throw new SyntaxException(s"Function $name expects an expression"))
-      ts.expect(")")
-      fx(expression)
     }
   }
 
@@ -127,6 +126,32 @@ trait ExpressionParser {
       ts.expect(")")
       result
     }
+  }
+
+  /**
+    * Parses a CAST expression (e.g. "CAST(1234 as 'String')")
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Expression CAST expression]]
+    */
+  private def parseCAST(ts: TokenStream): Option[Expression] = {
+    val parentheses = ts.nextIf("(")
+    for {
+      input <- parseExpression(ts)
+      _ = ts.expect("AS")
+      toType <- parseExpression(ts)
+      _ = if (parentheses) ts.expect(")")
+    } yield CastFx(input, toType)
+  }
+
+  /**
+    * Parses a NOT condition (e.g. "NOT X = 1")
+    * @param ts the given [[TokenStream token stream]]
+    * @return a [[Condition condition]]
+    */
+  private def parseNOT(ts: TokenStream): Option[Condition] = {
+    val condition = parseCondition(ts)
+      .getOrElse(throw new SyntaxException("Conditional expression expected", ts.previous.orNull))
+    Option(NOT(condition))
   }
 
 }
@@ -253,6 +278,27 @@ object ExpressionParser {
     }
 
     override def toString: String = s"AVG($expression)"
+  }
+
+  /**
+    * CAST function
+    * @param value  the expression for which is the input data
+    * @param toType the express which describes desired type
+    */
+  case class CastFx(value: Expression, toType: Expression) extends InternalFunction {
+
+    override def evaluate(scope: Scope): Option[Any] = {
+      toType.getAsString(scope) flatMap {
+        case s if s.equalsIgnoreCase("Boolean") => value.getAsBoolean(scope)
+        case s if s.equalsIgnoreCase("Double") => value.getAsDouble(scope)
+        case s if s.equalsIgnoreCase("Long") => value.getAsLong(scope)
+        case s if s.equalsIgnoreCase("String") => value.getAsString(scope)
+        case theType =>
+          throw new IllegalStateException(s"Invalid conversion type $theType")
+      }
+    }
+
+    override def toString: String = s"CAST($value AS $toType)"
   }
 
   /**
