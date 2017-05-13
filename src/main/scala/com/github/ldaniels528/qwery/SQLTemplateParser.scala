@@ -42,7 +42,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
         // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
         case tag if tag.startsWith("@/") & tag.endsWith("/") =>
           val pattern = tag.drop(2).dropRight(1)
-          if (ts.matches(pattern)) die(s"Did not match the expected pattern '$pattern'")
+          if (ts.matches(pattern)) ts.die(s"Did not match the expected pattern '$pattern'")
 
         // identifier? (e.g. "@table" => "'./tickers.csv'")
         case tag if tag.startsWith("@") => results = results + extractIdentifier(tag.drop(1))
@@ -66,7 +66,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     * @return a [[SQLTemplateParams template]] represents the parsed outcome
     */
   private def extractEnumeratedItem(values: Seq[String]) = {
-    def error[A](items: List[String]) = die[A](s"One of the following '${items.mkString(", ")}' identifiers is expected")
+    def error[A](items: List[String]) = ts.die[A](s"One of the following '${items.mkString(", ")}' identifiers is expected")
 
     values.toList match {
       case name :: items =>
@@ -74,7 +74,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
         if (!items.contains(item)) error(items)
         SQLTemplateParams(identifiers = Map(name -> item))
       case _ =>
-        die(s"Template error: ${values.mkString(", ")}")
+        ts.die(s"Template error: ${values.mkString(", ")}")
     }
   }
 
@@ -96,7 +96,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     * @return a [[SQLTemplateParams template]] represents the parsed outcome
     */
   private def extractIdentifier(name: String) = {
-    val value = ts.nextOption.map(_.text).getOrElse(die(s"'$name' identifier expected"))
+    val value = ts.nextOption.map(_.text).getOrElse(ts.die(s"'$name' identifier expected"))
     SQLTemplateParams(identifiers = Map(name -> value))
   }
 
@@ -109,7 +109,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     var fields: List[Field] = Nil
     do {
       if (fields.nonEmpty) ts.expect(",")
-      fields = fields ::: ts.nextOption.map(t => Field(t.text)).getOrElse(die("Unexpected end of statement")) :: Nil
+      fields = fields ::: ts.nextOption.map(t => Field(t.text)).getOrElse(ts.die("Unexpected end of statement")) :: Nil
     } while (ts.is(","))
     SQLTemplateParams(fields = Map(name -> fields))
   }
@@ -123,8 +123,8 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
 
     def fetchNext(ts: TokenStream): Expression = {
       val expression = parseExpression(ts)
-      val result = if (ts.nextIf("AS")) expression.map(parseAlias(ts, _)) else expression
-      result.getOrElse(die("Unexpected end of statement"))
+      val result = if (ts.nextIf("AS")) expression.map(parseNamedAlias(ts, _)) else expression
+      result.getOrElse(ts.die("Unexpected end of statement"))
     }
 
     var expressions: List[Expression] = Nil
@@ -142,7 +142,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     */
   private def extractCondition(name: String) = {
     val condition = parseCondition(ts)
-    SQLTemplateParams(conditions = Map(name -> condition.getOrElse(die("Conditional expression expected"))))
+    SQLTemplateParams(conditions = Map(name -> condition.getOrElse(ts.die("Conditional expression expected"))))
   }
 
   /**
@@ -154,7 +154,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     var sortFields: List[(Field, Int)] = Nil
     do {
       if (sortFields.nonEmpty) ts.expect(",")
-      val field = ts.nextOption.map(t => Field(t.text)).getOrElse(die("Unexpected end of statement"))
+      val field = ts.nextOption.map(t => Field(t.text)).getOrElse(ts.die("Unexpected end of statement"))
       val direction = ts match {
         case t if t.is("ASC") => ts.next(); 1
         case t if t.is("DESC") => ts.next(); -1
@@ -164,8 +164,6 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     } while (ts.is(","))
     SQLTemplateParams(sortFields = Map(name -> sortFields))
   }
-
-  private def die[A](message: String): A = throw new SyntaxException(message, ts.peek.orNull)
 
 }
 

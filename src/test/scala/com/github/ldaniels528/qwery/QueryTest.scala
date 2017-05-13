@@ -15,15 +15,6 @@ class QueryTest extends FunSpec {
 
   describe("Query") {
 
-    it("should support column name aliases") {
-      val query = QweryCompiler("SELECT 1234 AS number")
-      val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
-      assert(results == List(
-        List("number" -> 1234.0)
-      ))
-    }
-
     it("should CAST values from one type to another") {
       val query = QweryCompiler("SELECT CAST('1234' AS Double) AS number")
       val results = query.execute(RootScope()).toSeq
@@ -31,6 +22,32 @@ class QueryTest extends FunSpec {
       assert(results == List(
         List("number" -> 1234.0)
       ))
+    }
+
+    it("should be capable of simple data aggregation") {
+      val query = QweryCompiler(
+        """
+          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
+          |FROM './companylist.csv'""".stripMargin('|'))
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+      assert(results == List(
+        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
+      ))
+    }
+
+    it("should be capable of data aggregation via GROUP BY") {
+      val query = QweryCompiler(
+        """
+          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
+          |FROM './companylist.csv'
+          |GROUP BY Sector""".stripMargin('|'))
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+      /*
+      assert(results == List(
+        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
+      ))*/
     }
 
     it("should describe the layout of a CVS file") {
@@ -70,38 +87,38 @@ class QueryTest extends FunSpec {
     it("should aggregate the results from a CVS file") {
       val query = QweryCompiler(
         """
-          |SELECT Sector, COUNT(*)
+          |SELECT Sector, COUNT(*) AS Securities
           |FROM './companylist.csv'
           |GROUP BY Sector""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
       assert(results == List(
-        List("Sector" -> "Consumer Durables", "COUNT(*)" -> 4L),
-        List("Sector" -> "Consumer Non-Durables", "COUNT(*)" -> 13L),
-        List("Sector" -> "Energy", "COUNT(*)" -> 30L),
-        List("Sector" -> "Consumer Services", "COUNT(*)" -> 27L),
-        List("Sector" -> "Transportation", "COUNT(*)" -> 1L),
-        List("Sector" -> "n/a", "COUNT(*)" -> 120L),
-        List("Sector" -> "Health Care", "COUNT(*)" -> 48L),
-        List("Sector" -> "Basic Industries", "COUNT(*)" -> 44L),
-        List("Sector" -> "Public Utilities", "COUNT(*)" -> 11L),
-        List("Sector" -> "Capital Goods", "COUNT(*)" -> 24L),
-        List("Sector" -> "Finance", "COUNT(*)" -> 12L),
-        List("Sector" -> "Technology", "COUNT(*)" -> 20L),
-        List("Sector" -> "Miscellaneous", "COUNT(*)" -> 5L)
+        List("Sector" -> "Consumer Durables", "Securities" -> 4L),
+        List("Sector" -> "Consumer Non-Durables", "Securities" -> 13L),
+        List("Sector" -> "Energy", "Securities" -> 30L),
+        List("Sector" -> "Consumer Services", "Securities" -> 27L),
+        List("Sector" -> "Transportation", "Securities" -> 1L),
+        List("Sector" -> "n/a", "Securities" -> 120L),
+        List("Sector" -> "Health Care", "Securities" -> 48L),
+        List("Sector" -> "Basic Industries", "Securities" -> 44L),
+        List("Sector" -> "Public Utilities", "Securities" -> 11L),
+        List("Sector" -> "Capital Goods", "Securities" -> 24L),
+        List("Sector" -> "Finance", "Securities" -> 12L),
+        List("Sector" -> "Technology", "Securities" -> 20L),
+        List("Sector" -> "Miscellaneous", "Securities" -> 5L)
       ))
     }
 
-    it("should overwrite filtered results from one source (CSV) to another (CSV)") {
+    it("should write filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
         """
           |INSERT OVERWRITE './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
-          |WHERE Sector = 'Basic Industries'""".stripMargin)
+          |WHERE Industry = 'Precious Metals'""".stripMargin)
       val results = query.execute(RootScope())
-      assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
+      assert(results == Stream(Seq(("ROWS_INSERTED", 34))))
     }
 
     it("should overwrite/append filtered results from one source (CSV) to another (CSV)") {
@@ -126,10 +143,10 @@ class QueryTest extends FunSpec {
       ))
     }
 
-    it("should overwrite filtered results from one source (CSV) to another (JSON)") {
+    it("should write filtered results from one source (CSV) to another (JSON)") {
       val query = QweryCompiler(
         """
-          |INSERT OVERWRITE './test1.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE './test3.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)

@@ -20,7 +20,7 @@ $ sbt test
 
 **Q**: How do I reference a field that contains spaces or special characters?
 
-**A**: Use backticks (\`). 
+**A**: Use back ticks (\`). 
 
 
 ```text
@@ -96,10 +96,10 @@ Using UNIXCommandPrompt for input.
 ##### Sum values (just like you normally do with SQL) in the file:
 
 ```text
-[4]> SELECT SUM(LastSale) FROM './companylist.csv' LIMIT 5;
+[4]> SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
 
 + --------------- +
-| SUM(LastSale)   |
+| total           |
 + --------------- +
 | 77.1087         |
 + --------------- +
@@ -130,13 +130,13 @@ Using UNIXCommandPrompt for input.
 + -------------------------------------------------------------------------------- +
 ```
 
-##### Aggregate data via Group By
+##### Aggregating data via GROUP BY
 
 ```text
-[6]> SELECT Sector, COUNT(*) FROM './companylist.csv' GROUP BY Sector
+[6]> SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
 
 + --------------------------------- + 
-| Sector                 COUNT(*)   | 
+| Sector                 Securities | 
 + --------------------------------- + 
 | Consumer Durables      4          | 
 | Consumer Non-Durables  13         | 
@@ -184,7 +184,7 @@ Using UNIXCommandPrompt for input.
 
 ### Code Examples
 
-Qwery can also be used as an SDK.
+Qwery can also be used as a Library.
 
 ##### Let's start with a local file (./companylist.csv)
 

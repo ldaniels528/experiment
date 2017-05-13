@@ -8,13 +8,13 @@ import com.github.ldaniels528.qwery.sources.QueryInputSource
   * Represents a selection query
   * @author lawrence.daniels@gmail.com
   */
-case class Select(source: Option[QueryInputSource],
-                  fields: Seq[Expression],
+case class Select(fields: Seq[Expression],
+                  source: Option[QueryInputSource] = None,
                   condition: Option[Condition] = None,
                   groupFields: Option[Seq[Field]] = None,
                   sortFields: Option[Seq[(Field, Int)]] = None,
                   limit: Option[Int] = None)
-  extends Executable {
+  extends Executable with SQLLike {
 
   override def execute(scope: Scope): ResultSet = source match {
     case Some(device) =>
@@ -29,8 +29,8 @@ case class Select(source: Option[QueryInputSource],
         // collect the aggregates
         val groupFieldNames = groupFields.getOrElse(Nil).map(_.name)
         val aggregates = fields.collect {
-          case field: Field if groupFieldNames.contains(field.name) => AggregateField(field.name)
-          case fx: AggregateFunction => fx
+          case agg: Aggregation => agg
+          case field: Field if groupFieldNames.exists(_.equalsIgnoreCase(field.name)) => AggregateField(field.name)
         }
 
         // update each aggregate field, and return the evaluated results
@@ -72,7 +72,7 @@ case class Select(source: Option[QueryInputSource],
     * @return true, if at least one field is an aggregate-only field
     */
   def isAggregate: Boolean = fields.exists {
-    case _: AggregateFunction => true
+    case _: Aggregation => true
     case _ => false
   }
 
@@ -83,19 +83,19 @@ case class Select(source: Option[QueryInputSource],
   }
 
   private def getName(scope: Scope, value: Expression): String = value match {
-    case Field(name) => name
-    case _ => value.toString
+    case NamedExpression(name) => name
+    case _ => value.toSQL
   }
 
-  override def toString: String = {
-    val sb = new StringBuilder(s"SELECT ${fields.mkString(", ")}")
+  override def toSQL: String = {
+    val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL).mkString(", ")}")
     source.foreach(src => sb.append(s" FROM $src"))
-    condition.foreach(expr => s" WHERE $expr")
-    groupFields.foreach(fields => s" GROUP BY ${fields.mkString(", ")}")
+    condition.foreach(expr => s" WHERE ${expr.toSQL}")
+    groupFields.foreach(fields => s" GROUP BY ${fields.map(_.toSQL).mkString(", ")}")
     sortFields.foreach(fields => s" ORDER BY ${
       fields map {
-        case (name, 1) => s"$name ASC"
-        case (name, n) => s"$name DESC"
+        case (field, 1) => s"${field.toSQL} ASC"
+        case (field, n) => s"${field.toSQL} DESC"
       } mkString ", "
     }")
     limit.foreach(n => s" LIMIT $n")

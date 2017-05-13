@@ -13,7 +13,7 @@ import scala.io.Source
   * JSON Input Source
   * @author lawrence.daniels@gmail.com
   */
-class JSONInputSource(source: Source) extends QueryInputSource {
+abstract class JSONInputSource(source: Source) extends QueryInputSource {
 
   override def execute(scope: Scope): ResultSet = {
     source.getLines().filter(_.trim.nonEmpty) map { line =>
@@ -49,6 +49,14 @@ object JSONInputSource extends QueryInputSourceFactory {
 
 }
 
-case class JSONFileInputSource(file: File) extends JSONInputSource(Source.fromFile(file))
+case class JSONFileInputSource(file: File) extends JSONInputSource(Source.fromFile(file)) {
 
-case class JSONURLInputSource(url: URL) extends JSONInputSource(Source.fromURL(url))
+  override def toSQL: String = s"'${file.getCanonicalFile}'"
+
+}
+
+case class JSONURLInputSource(url: URL) extends JSONInputSource(Source.fromURL(url)) {
+
+  override def toSQL: String = s"'${url.toExternalForm}'"
+
+}

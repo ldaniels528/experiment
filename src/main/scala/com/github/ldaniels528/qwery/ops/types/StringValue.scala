@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.types
+
+import com.github.ldaniels528.qwery.ops.{Expression, Field, Scope}
 
 /**
   * Represents a string value
@@ -18,6 +20,6 @@ case class StringValue(value: String) extends Expression {
 
   override def evaluate(scope: Scope): Option[String] = Option(value)
 
-  override def toString: String = s"'$value'"
+  override def toSQL: String = s"'$value'"
 
 }

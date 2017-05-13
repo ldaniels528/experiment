@@ -14,7 +14,7 @@ import scala.io.{BufferedSource, Source}
   * Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
+abstract class DelimitedInputSource(source: BufferedSource) extends QueryInputSource {
   private lazy val lines = source.getLines().filter(_.trim.nonEmpty)
 
   override def execute(scope: Scope): ResultSet = {
@@ -88,7 +88,7 @@ object DelimitedInputSource extends QueryInputSourceFactory {
 case class FileDelimitedInputSource(file: File)
   extends DelimitedInputSource(Source.fromFile(file)) {
 
-  override def toString: String = s"'${file.getCanonicalFile}'"
+  override def toSQL: String = s"'${file.getCanonicalFile}'"
 
 }
 
@@ -99,7 +99,7 @@ case class FileDelimitedInputSource(file: File)
 case class GzipFileDelimitedInputSource(file: File)
   extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file)))) {
 
-  override def toString: String = s"'${file.getCanonicalFile}'"
+  override def toSQL: String = s"'${file.getCanonicalFile}'"
 
 }
 
@@ -110,6 +110,6 @@ case class GzipFileDelimitedInputSource(file: File)
 case class URLDelimitedInputSource(url: URL)
   extends DelimitedInputSource(Source.fromURL(url)) {
 
-  override def toString: String = s"'${url.toExternalForm}'"
+  override def toSQL: String = s"'${url.toExternalForm}'"
 
 }

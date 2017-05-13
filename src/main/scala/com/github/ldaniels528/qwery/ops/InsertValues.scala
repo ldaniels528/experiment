@@ -19,4 +19,8 @@ case class InsertValues(fields: Seq[Field], dataSets: Iterable[Seq[Expression]])
     }
   }
 
+  override def toSQL: String = {
+    dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
+  }
+
 }

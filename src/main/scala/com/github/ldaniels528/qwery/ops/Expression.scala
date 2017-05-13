@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.qwery.ops.types.{BooleanValue, NumericValue, StringValue}
 
 import scala.util.Try
 
@@ -8,7 +9,8 @@ import scala.util.Try
   * Represents an expression; while in its simplest form is a value (boolean, double or string)
   * @author lawrence.daniels@gmail.com
   */
-trait Expression {
+trait Expression extends SQLLike {
+  private val booleans = Seq("on", "true", "yes")
 
   def compare(that: Expression, scope: Scope): Int = {
     evaluate(scope).map(Expression.apply).map(_.compare(that, scope)) getOrElse -1
@@ -18,8 +20,14 @@ trait Expression {
 
   def getAsBoolean(scope: Scope): Option[Boolean] = evaluate(scope).map(_.asInstanceOf[Object]) map {
     case value: Number => value.doubleValue() != 0
-    case value: String => value.equalsIgnoreCase("true")
+    case value: String => booleans.exists(_.equalsIgnoreCase(value))
     case value => value.toString.equalsIgnoreCase("true")
+  }
+
+  def getAsByte(scope: Scope): Option[Byte] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
+    case value: Number => Option(value.byteValue())
+    case value: String => Try(value.toByte).toOption
+    case value => Try(value.toString.toByte).toOption
   }
 
   def getAsDouble(scope: Scope): Option[Double] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
@@ -28,10 +36,28 @@ trait Expression {
     case value => Try(value.toString.toDouble).toOption
   }
 
+  def getAsFloat(scope: Scope): Option[Float] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
+    case value: Number => Option(value.floatValue())
+    case value: String => Try(value.toFloat).toOption
+    case value => Try(value.toString.toFloat).toOption
+  }
+
+  def getAsInt(scope: Scope): Option[Int] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
+    case value: Number => Option(value.intValue())
+    case value: String => Try(value.toInt).toOption
+    case value => Try(value.toString.toInt).toOption
+  }
+
   def getAsLong(scope: Scope): Option[Long] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
     case value: Number => Option(value.longValue())
     case value: String => Try(value.toLong).toOption
     case value => Try(value.toString.toLong).toOption
+  }
+
+  def getAsShort(scope: Scope): Option[Short] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {
+    case value: Number => Option(value.shortValue())
+    case value: String => Try(value.toShort).toOption
+    case value => Try(value.toString.toShort).toOption
   }
 
   def getAsString(scope: Scope): Option[String] = evaluate(scope) map {
@@ -53,6 +79,7 @@ object Expression {
     * @return a [[Expression]]
     */
   def apply(value: Any): Expression = value.asInstanceOf[Object] match {
+    case v: java.lang.Boolean => BooleanValue(v)
     case v: Number => NumericValue(v.doubleValue())
     case v: String => StringValue(v)
     case t: Token => apply(t.value)

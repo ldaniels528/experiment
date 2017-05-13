@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.types
+
+import com.github.ldaniels528.qwery.ops.{Expression, Field, Scope}
 
 /**
   * Represents a numeric value
@@ -18,6 +20,6 @@ case class NumericValue(value: Double) extends Expression {
 
   override def evaluate(scope: Scope): Option[Double] = Option(value)
 
-  override def toString: String = value.toString
+  override def toSQL: String = value.toString
 
 }

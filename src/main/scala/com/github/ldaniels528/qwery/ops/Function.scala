@@ -1,10 +1,10 @@
 package com.github.ldaniels528.qwery.ops
 
 /**
-  * Represents a function
+  * Represents a user-defined function
   * @author lawrence.daniels@gmail.com
   */
-trait Function {
+trait Function extends SQLLike {
 
   def name: String
 
@@ -12,6 +12,6 @@ trait Function {
 
   def invoke(scope: Scope, args: Seq[Expression]): Option[Any]
 
-  override def toString: String = s"$name(${params.mkString(", ")})"
+  override def toSQL: String = s"$name(${params.mkString(", ")})"
 
 }

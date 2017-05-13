@@ -6,13 +6,7 @@ import com.github.ldaniels528.qwery.Token
   * Represents a field reference
   * @author lawrence.daniels@gmail.com
   */
-trait Field extends Expression {
-
-  def name: String
-
-  override def toString: String = if(name.contains(' ')) s"`$name`" else name
-
-}
+trait Field extends NamedExpression
 
 /**
   * Field Companion
@@ -37,6 +31,9 @@ object Field {
     case name => BasicField(name)
   }
 
+  /**
+    * For pattern matching
+    */
   def unapply(field: Field): Option[String] = Some(field.name)
 
 }
@@ -55,10 +52,7 @@ case class AggregateField(name: String) extends Field with Aggregation {
 
   override def evaluate(scope: Scope): Option[Any] = value
 
-  override def update(scope: Scope): Unit = {
-    this.value = scope.get(name)
-  }
-
+  override def update(scope: Scope): Unit = value = scope.get(name)
 }
 
 /**
@@ -66,19 +60,6 @@ case class AggregateField(name: String) extends Field with Aggregation {
   * @author lawrence.daniels@gmail.com
   */
 case class BasicField(name: String) extends Field {
-
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
-
 }
 
-/**
-  * Represents an alias for a field or expression
-  * @author lawrence.daniels@gmail.com
-  */
-case class FieldAlias(name: String, expression: Expression) extends Field {
-
-  override def evaluate(scope: Scope): Option[Any] = expression.evaluate(scope)
-
-  override def toString: String = s"$expression AS ${super.toString}"
-
-}

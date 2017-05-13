@@ -13,8 +13,9 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def die[A](message: String): A = throw new SyntaxException(message, (peek ?? previous).orNull)
 
-  def expect(text: String): Unit = {
+  def expect(text: String): this.type = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected $text")
+    this
   }
 
   def is(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
