@@ -6,11 +6,11 @@ import com.github.ldaniels528.qwery.Token
   * Represents a field reference
   * @author lawrence.daniels@gmail.com
   */
-case class Field(name: String) extends Expression {
+trait Field extends Expression {
 
-  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+  def name: String
 
-  override def toString: String = name
+  override def toString: String = if(name.contains(' ')) s"`$name`" else name
 
 }
 
@@ -21,27 +21,36 @@ case class Field(name: String) extends Expression {
 object Field {
 
   /**
+    * Creates a new field
+    * @param name the name of the field
+    * @return a new [[Field field]] instance
+    */
+  def apply(name: String) = BasicField(name)
+
+  /**
     * Creates a new field from a token
     * @param token the given [[Token token]]
     * @return a new [[Field field]] instance
     */
   def apply(token: Token): Field = token.text match {
     case "*" => AllFields
-    case name => Field(name)
+    case name => BasicField(name)
   }
 
-  /**
-    * Represents a reference to all fields in a specific collection
-    */
-  object AllFields extends Field(name = "*")
+  def unapply(field: Field): Option[String] = Some(field.name)
 
 }
+
+/**
+  * Represents a reference to all fields in a specific collection
+  */
+object AllFields extends BasicField(name = "*")
 
 /**
   * Represents an Aggregate Field
   * @author lawrence.daniels@gmail.com
   */
-class AggregateField(name: String) extends Field(name) with Aggregation {
+case class AggregateField(name: String) extends Field with Aggregation {
   private var value: Option[Any] = None
 
   override def evaluate(scope: Scope): Option[Any] = value
@@ -49,4 +58,27 @@ class AggregateField(name: String) extends Field(name) with Aggregation {
   override def update(scope: Scope): Unit = {
     this.value = scope.get(name)
   }
+
+}
+
+/**
+  * Represents a field reference
+  * @author lawrence.daniels@gmail.com
+  */
+case class BasicField(name: String) extends Field {
+
+  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+
+}
+
+/**
+  * Represents an alias for a field or expression
+  * @author lawrence.daniels@gmail.com
+  */
+case class FieldAlias(name: String, expression: Expression) extends Field {
+
+  override def evaluate(scope: Scope): Option[Any] = expression.evaluate(scope)
+
+  override def toString: String = s"$expression AS ${super.toString}"
+
 }

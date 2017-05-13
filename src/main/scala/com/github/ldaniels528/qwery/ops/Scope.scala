@@ -10,8 +10,6 @@ trait Scope {
 
   def get(name: String): Option[Any]
 
-  def getName(value: Expression): String = value.toString
-
   def lookup(ref: FunctionRef): Option[Function]
 
 }

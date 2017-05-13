@@ -51,7 +51,7 @@ class QweryCompiler {
     * @return an [[Describe executable]]
     */
   private def parseDescribe(ts: TokenStream): Describe = {
-    val params = TemplateParser(ts).extract("DESCRIBE @source ?LIMIT @limit")
+    val params = SQLTemplateParser(ts).extract("DESCRIBE @source ?LIMIT @limit")
     Describe(
       source = params.identifiers.get("source").flatMap(DataSourceFactory.getInputSource)
         .getOrElse(die("No source provided", ts)),
@@ -81,7 +81,7 @@ class QweryCompiler {
     * @return an [[Insert executable]]
     */
   private def parseInsert(stream: TokenStream): Insert = {
-    val parser = TemplateParser(stream)
+    val parser = SQLTemplateParser(stream)
     val params = parser.extract("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
     val target = params.identifiers.get("target")
       .flatMap(DataSourceFactory.getOutputSource)
@@ -100,10 +100,10 @@ class QweryCompiler {
     * Parses an INSERT VALUES clause
     * @param fields the corresponding fields
     * @param ts     the [[TokenStream token stream]]
-    * @param parser the implicit [[TemplateParser template parser]]
+    * @param parser the implicit [[SQLTemplateParser template parser]]
     * @return the resulting [[InsertValues modifications]]
     */
-  private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: TemplateParser): InsertValues = {
+  private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLTemplateParser): InsertValues = {
     var valueSets: List[Seq[Expression]] = Nil
     while (ts.hasNext) {
       val params = parser.extract("VALUES ( @{values} )")
@@ -125,7 +125,7 @@ class QweryCompiler {
     * @return an [[Select executable]]
     */
   private def parseSelect(ts: TokenStream): Select = {
-    val params = TemplateParser(ts).extract(
+    val params = SQLTemplateParser(ts).extract(
       "SELECT @{fields} ?FROM @source ?WHERE @<condition> ?GROUP +?BY @(groupBy) ?ORDER +?BY @[orderBy] ?LIMIT @limit")
     Select(
       fields = params.expressions.getOrElse("fields", die("Field arguments missing", ts)),

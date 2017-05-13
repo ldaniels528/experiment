@@ -86,18 +86,30 @@ object DelimitedInputSource extends QueryInputSourceFactory {
   * @author lawrence.daniels@gmail.com
   */
 case class FileDelimitedInputSource(file: File)
-  extends DelimitedInputSource(Source.fromFile(file))
+  extends DelimitedInputSource(Source.fromFile(file)) {
+
+  override def toString: String = s"'${file.getCanonicalFile}'"
+
+}
 
 /**
   * Gzip'd File Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
 case class GzipFileDelimitedInputSource(file: File)
-  extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file))))
+  extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file)))) {
+
+  override def toString: String = s"'${file.getCanonicalFile}'"
+
+}
 
 /**
   * URL Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
 case class URLDelimitedInputSource(url: URL)
-  extends DelimitedInputSource(Source.fromURL(url))
+  extends DelimitedInputSource(Source.fromURL(url)) {
+
+  override def toString: String = s"'${url.toExternalForm}'"
+
+}

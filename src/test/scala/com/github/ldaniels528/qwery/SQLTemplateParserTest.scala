@@ -6,7 +6,7 @@ import org.scalatest.FunSpec
   * Template Parser Tests
   * @author lawrence.daniels@gmail.com
   */
-class TemplateParserTest extends FunSpec {
+class SQLTemplateParserTest extends FunSpec {
 
   describe("TemplateParser") {
 
@@ -18,7 +18,7 @@ class TemplateParserTest extends FunSpec {
           |WHERE Industry = 'Oil/Gas Transmission'
           |LIMIT 5""".stripMargin
 
-      val templateParser = TemplateParser(query)
+      val templateParser = SQLTemplateParser(query)
       val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE @<condition> ?LIMIT @limit")
       info(s"values: $values")
     }
@@ -31,9 +31,9 @@ class TemplateParserTest extends FunSpec {
           |VALUES ('EMX', 'Basic Industries', 'Precious Metals', 0.828)""".stripMargin
 
       val tokenStream = TokenStream(TokenIterator(query))
-      val templateParser = new TemplateParser(tokenStream)
+      val templateParser = new SQLTemplateParser(tokenStream)
       val targetAndFields = templateParser.extract("INSERT INTO @target ( @(fields) )")
-      var valueSets: List[Template] = Nil
+      var valueSets: List[SQLTemplateParams] = Nil
       while (tokenStream.hasNext) {
         valueSets = templateParser.extract("VALUES ( @{values} )") :: valueSets
       }

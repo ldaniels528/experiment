@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
@@ -9,6 +10,8 @@ import com.github.ldaniels528.qwery.util.PeekableIterator
 class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def apply(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
+
+  def die[A](message: String): A = throw new SyntaxException(message, (peek ?? previous).orNull)
 
   def expect(text: String): Unit = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected $text")

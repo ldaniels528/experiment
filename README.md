@@ -105,6 +105,18 @@ Using UNIXCommandPrompt for input.
 + --------------- +
 ```
 
+##### Type-casting and column name aliases are supported:
+
+```text
+[5]>  SELECT CAST('1234' AS Double) AS number
+
++ -------- + 
+| number   | 
++ -------- + 
+| 1234.0   | 
++ -------- + 
+```
+
 ##### Select fields from the file using criteria:
 
 ```text

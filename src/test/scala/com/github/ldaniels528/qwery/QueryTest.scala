@@ -15,12 +15,21 @@ class QueryTest extends FunSpec {
 
   describe("Query") {
 
-    it("should CAST values from one type to another") {
-      val query = QweryCompiler("SELECT CAST('1234' AS 'Double')")
+    it("should support column name aliases") {
+      val query = QweryCompiler("SELECT 1234 AS number")
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
       assert(results == List(
-        List("CAST('1234' AS 'Double')" -> 1234.0)
+        List("number" -> 1234.0)
+      ))
+    }
+
+    it("should CAST values from one type to another") {
+      val query = QweryCompiler("SELECT CAST('1234' AS Double) AS number")
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+      assert(results == List(
+        List("number" -> 1234.0)
       ))
     }
 

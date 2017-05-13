@@ -29,7 +29,7 @@ case class Select(source: Option[QueryInputSource],
         // collect the aggregates
         val groupFieldNames = groupFields.getOrElse(Nil).map(_.name)
         val aggregates = fields.collect {
-          case field: Field if groupFieldNames.contains(field.name) => new AggregateField(field.name)
+          case field: Field if groupFieldNames.contains(field.name) => AggregateField(field.name)
           case fx: AggregateFunction => fx
         }
 
@@ -79,7 +79,27 @@ case class Select(source: Option[QueryInputSource],
   private def filterRow(scope: LocalScope): Row = fields.map(expand(scope, _))
 
   private def expand(scope: Scope, expression: Expression) = {
-    scope.getName(expression) -> expression.evaluate(scope).map(_.asInstanceOf[AnyRef]).orNull
+    getName(scope, expression) -> expression.evaluate(scope).map(_.asInstanceOf[AnyRef]).orNull
+  }
+
+  private def getName(scope: Scope, value: Expression): String = value match {
+    case Field(name) => name
+    case _ => value.toString
+  }
+
+  override def toString: String = {
+    val sb = new StringBuilder(s"SELECT ${fields.mkString(", ")}")
+    source.foreach(src => sb.append(s" FROM $src"))
+    condition.foreach(expr => s" WHERE $expr")
+    groupFields.foreach(fields => s" GROUP BY ${fields.mkString(", ")}")
+    sortFields.foreach(fields => s" ORDER BY ${
+      fields map {
+        case (name, 1) => s"$name ASC"
+        case (name, n) => s"$name DESC"
+      } mkString ", "
+    }")
+    limit.foreach(n => s" LIMIT $n")
+    sb.toString
   }
 
 }

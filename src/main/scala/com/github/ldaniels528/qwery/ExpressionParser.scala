@@ -1,7 +1,6 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ExpressionParser._
-import com.github.ldaniels528.qwery.ops.Field.AllFields
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
@@ -60,7 +59,7 @@ trait ExpressionParser {
     expressionFunctions.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
       ts.expect("(")
       val expression = parseExpression(ts)
-        .getOrElse(throw new SyntaxException(s"Function $name expects an expression"))
+        .getOrElse(ts.die(s"Function $name expects an expression"))
       ts.expect(")")
       fx(expression)
     }
@@ -121,7 +120,7 @@ trait ExpressionParser {
       val result = parseExpression(ts) match {
         case Some(field: Field) => fx(field)
         case _ =>
-          throw new SyntaxException(s"Function $name expects a field reference")
+          ts.die(s"Function $name expects a field reference")
       }
       ts.expect(")")
       result
@@ -129,18 +128,33 @@ trait ExpressionParser {
   }
 
   /**
-    * Parses a CAST expression (e.g. "CAST(1234 as 'String')")
+    * Parses an expression alias (e.g. "(1 + 3) * 2 AS qty")
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Expression CAST expression]]
+    */
+  def parseAlias(stream: TokenStream, expression: Expression): Expression = {
+    stream match {
+      case ts if ts.isBackticks => FieldAlias(ts.next().text, expression)
+      case ts if ts.matches(identifierRegEx) => FieldAlias(ts.next().text, expression)
+      case ts => ts.die("Identifier expected for alias")
+    }
+  }
+
+  /**
+    * Parses a CAST expression (e.g. "CAST(1234 as String)")
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Expression CAST expression]]
     */
   private def parseCAST(ts: TokenStream): Option[Expression] = {
-    val parentheses = ts.nextIf("(")
-    for {
-      input <- parseExpression(ts)
-      _ = ts.expect("AS")
-      toType <- parseExpression(ts)
-      _ = if (parentheses) ts.expect(")")
-    } yield CastFx(input, toType)
+    ts.expect("(")
+    val expression = parseExpression(ts) map { value =>
+      ts.expect("AS")
+      val toType = ts.nextOption.map(_.text).getOrElse(ts.die("Type expected"))
+      ts.expect(")")
+      CastFx(value, toType)
+    }
+    expression getOrElse ts.die("Syntax error")
+    expression
   }
 
   /**
@@ -150,7 +164,7 @@ trait ExpressionParser {
     */
   private def parseNOT(ts: TokenStream): Option[Condition] = {
     val condition = parseCondition(ts)
-      .getOrElse(throw new SyntaxException("Conditional expression expected", ts.previous.orNull))
+      .getOrElse(ts.die("Conditional expression expected"))
     Option(NOT(condition))
   }
 
@@ -285,10 +299,10 @@ object ExpressionParser {
     * @param value  the expression for which is the input data
     * @param toType the express which describes desired type
     */
-  case class CastFx(value: Expression, toType: Expression) extends InternalFunction {
+  case class CastFx(value: Expression, toType: String) extends InternalFunction {
 
     override def evaluate(scope: Scope): Option[Any] = {
-      toType.getAsString(scope) flatMap {
+      toType match {
         case s if s.equalsIgnoreCase("Boolean") => value.getAsBoolean(scope)
         case s if s.equalsIgnoreCase("Double") => value.getAsDouble(scope)
         case s if s.equalsIgnoreCase("Long") => value.getAsLong(scope)
@@ -391,7 +405,7 @@ object ExpressionParser {
     * Expression Extensions
     * @param value the given [[Expression value]]
     */
-  implicit class ExpressionExtensions(val value: Expression) extends AnyVal {
+  final implicit class ExpressionExtensions(val value: Expression) extends AnyVal {
 
     def +(that: Expression) = Add(value, that)
 
