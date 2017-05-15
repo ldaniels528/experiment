@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.File
 import java.net.URL
 
-import com.github.ldaniels528.qwery.ResultSet
+import com.github.ldaniels528.qwery.ops.ResultSet
 import com.github.ldaniels528.qwery.ops.Scope
 import net.liftweb.json._
 

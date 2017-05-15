@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream}
 import java.net.URL
 import java.util.zip.GZIPInputStream
 
-import com.github.ldaniels528.qwery.ResultSet
+import com.github.ldaniels528.qwery.ops.ResultSet
 import com.github.ldaniels528.qwery.ops.Scope
 import com.github.ldaniels528.qwery.util.StringHelper._
 

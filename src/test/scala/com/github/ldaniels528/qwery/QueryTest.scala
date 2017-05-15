@@ -159,7 +159,7 @@ class QueryTest extends FunSpec {
       if (connected) {
         val query = QweryCompiler(
           """
-            |SELECT * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
+            |SELECT TOP 4 * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
         val results = query.execute(RootScope()).toSeq
         tabular.transform(results.toIterator) foreach (info(_))

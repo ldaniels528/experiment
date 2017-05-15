@@ -13,5 +13,5 @@ case class Divide(a: Expression, b: Expression) extends Expression {
     y <- b.getAsDouble(scope) if y != 0
   } yield x / y
 
-  override def toSQL: String = s"$a / $b"
+  override def toSQL: String = s"${a.toSQL} / ${b.toSQL}"
 }

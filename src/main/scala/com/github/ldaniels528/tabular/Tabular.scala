@@ -1,7 +1,9 @@
 package com.github.ldaniels528.tabular
 
-import com.github.ldaniels528.qwery.ResultSet
-import com.github.ldaniels528.tabular.formatters.FormatHandler
+import java.text.SimpleDateFormat
+import java.util.Date
+
+import com.github.ldaniels528.qwery.ops.ResultSet
 import org.slf4j.LoggerFactory
 
 import scala.collection.GenSeq
@@ -12,19 +14,6 @@ import scala.collection.GenSeq
   */
 class Tabular() {
   private lazy val logger = LoggerFactory.getLogger(getClass)
-  private var handlers: List[FormatHandler] = Nil
-
-  /**
-    * Attaches the given formatter to this instance
-    * @param formatter the given format handler
-    * @return self
-    */
-  def +=(formatter: FormatHandler): Tabular = add(formatter)
-
-  def add(formatter: FormatHandler): Tabular = {
-    handlers = formatter :: handlers
-    this
-  }
 
   /**
     * Transforms the given sequence of objects into a sequence of string that
@@ -171,20 +160,13 @@ class Tabular() {
   }
 
   protected def asString(value: Any): String = {
-    import java.text.SimpleDateFormat
-    import java.util.Date
-
-    val output = handlers.find(_.handles(value)) flatMap (_.format(value)) match {
-      case Some(formattedValue) => formattedValue
-      case None =>
-        value match {
-          case v if v == null => ""
-          case d: Date => new SimpleDateFormat("MM/dd/yy hh:mm:ss z").format(d)
-          case o: Option[_] => if (o.isDefined) asString(o.get) else ""
-          case v => String.valueOf(v)
-        }
+    val output = value match {
+      case v if v == null => ""
+      case d: Date => new SimpleDateFormat("MM/dd/yy hh:mm:ss z").format(d)
+      case o: Option[_] => if (o.isDefined) asString(o.get) else ""
+      case v => String.valueOf(v)
     }
-    if (output.length > 140) output.substring(0, 140) + "..." else output
+    if (output.length > 50) output.take(50) + "..." else output
   }
 
   protected def getHeaders[A](value: A): Seq[String] = {

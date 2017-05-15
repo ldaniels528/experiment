@@ -19,7 +19,7 @@ class SQLTemplateParserTest extends FunSpec {
           |LIMIT 5""".stripMargin
 
       val templateParser = SQLTemplateParser(query)
-      val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE @<condition> ?LIMIT @limit")
+      val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE ?@<condition> ?LIMIT ?@limit")
       info(s"values: $values")
     }
 

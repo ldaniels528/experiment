@@ -9,7 +9,6 @@ trait NamedExpression extends Expression {
   def name: String
 
   override def toSQL: String = if (name.contains(' ')) s"`$name`" else name
-
 }
 
 /**
@@ -56,6 +55,18 @@ object NamedExpression {
     override def evaluate(scope: Scope): Option[Any] = expression.evaluate(scope)
 
     override def toSQL: String = s"$expression AS ${super.toSQL}"
+  }
+
+  /**
+    * Expression Extensions
+    * @param expression the given [[Expression expression]]
+    */
+  final implicit class ExpressionExtensions(val expression: Expression) extends AnyVal {
+
+    def getName: String = expression match {
+      case NamedExpression(name) => name
+      case value => value.toSQL
+    }
   }
 
 }

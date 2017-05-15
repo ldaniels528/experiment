@@ -1,7 +1,9 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.util.StringHelper._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.sources._
+import com.github.ldaniels528.qwery.util.OptionHelper._
 
 import scala.util.{Failure, Success, Try}
 
@@ -51,11 +53,11 @@ class QweryCompiler {
     * @return an [[Describe executable]]
     */
   private def parseDescribe(ts: TokenStream): Describe = {
-    val params = SQLTemplateParser(ts).extract("DESCRIBE @source ?LIMIT @limit")
+    val params = SQLTemplateParser(ts).extract("DESCRIBE @source ?LIMIT ?@limit")
     Describe(
-      source = params.identifiers.get("source").flatMap(DataSourceFactory.getInputSource)
+      source = params.atoms.get("source").flatMap(DataSourceFactory.getInputSource)
         .getOrElse(die("No source provided", ts)),
-      limit = params.identifiers.get("limit").map(parseLimit))
+      limit = params.atoms.get("limit").map(parseInteger(_, "Numeric value expected for LIMIT")))
   }
 
   /**
@@ -83,12 +85,12 @@ class QweryCompiler {
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
     val params = parser.extract("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
-    val target = params.identifiers.get("target")
+    val target = params.atoms.get("target")
       .flatMap(DataSourceFactory.getOutputSource)
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
-    val append = params.identifiers.get("mode").exists(_.equalsIgnoreCase("INTO"))
+    val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
     val source = stream match {
       case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
       case ts => parseNext(ts)
@@ -126,14 +128,22 @@ class QweryCompiler {
     */
   private def parseSelect(ts: TokenStream): Select = {
     val params = SQLTemplateParser(ts).extract(
-      "SELECT @{fields} ?FROM @source ?WHERE @<condition> ?GROUP +?BY @(groupBy) ?ORDER +?BY @[orderBy] ?LIMIT @limit")
+      """
+        |SELECT ?TOP ?@top @{fields}
+        |?FROM ?@source
+        |?WHERE ?@<condition>
+        |?GROUP +?BY ?@(groupBy)
+        |?ORDER +?BY ?@[orderBy]
+        |?LIMIT ?@limit""".stripMargin.toSingleLine)
     Select(
       fields = params.expressions.getOrElse("fields", die("Field arguments missing", ts)),
-      source = params.identifiers.get("source").flatMap(DataSourceFactory.getInputSource),
+      source = params.atoms.get("source").flatMap(DataSourceFactory.getInputSource),
       condition = params.conditions.get("condition"),
-      groupFields = params.fields.get("groupBy"),
-      sortFields = params.sortFields.get("orderBy"),
-      limit = params.identifiers.get("limit").map(parseLimit))
+      groupFields = params.fields.getOrElse("groupBy", Nil),
+      orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
+      limit = (params.atoms.get("top") ?? params.atoms.get("limit"))
+        .map(parseInteger(_, "Numeric value expected LIMIT or TOP"))
+    )
   }
 
   /**
@@ -141,11 +151,11 @@ class QweryCompiler {
     * @param value the given text value
     * @return an integer value
     */
-  private def parseLimit(value: String): Int = {
+  private def parseInteger(value: String, message: String): Int = {
     Try(value.toInt) match {
       case Success(limit) => limit
       case Failure(e) =>
-        throw new SyntaxException("Numeric value expected for LIMIT", cause = e)
+        throw new SyntaxException(message, cause = e)
     }
   }
 

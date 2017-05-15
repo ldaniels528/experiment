@@ -19,6 +19,8 @@ object StringHelper {
     */
   final implicit class DelimitedTextEnrichment(val text: String) extends AnyVal {
 
+    def toSingleLine: String = text.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ").trim
+
     def delimitedSplit(delimiter: Char): List[String] = {
       var inQuotes = false
       val sb = new StringBuilder()

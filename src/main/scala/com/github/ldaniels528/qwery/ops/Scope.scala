@@ -6,7 +6,7 @@ package com.github.ldaniels528.qwery.ops
   */
 trait Scope {
 
-  def data: Seq[(String, Any)]
+  def data: Row
 
   def get(name: String): Option[Any]
 

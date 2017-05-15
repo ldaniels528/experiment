@@ -20,7 +20,7 @@ package object math {
 
     def /(that: Expression) = Divide(value, that)
 
-    def |(that: Expression) = Concat(value, that)
+    def ||(that: Expression) = Concat(value, that)
 
   }
 

@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.{Expression, Field}
+import com.github.ldaniels528.qwery.ops.{Expression, Field, OrderedColumn}
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
@@ -18,46 +18,47 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     var results = SQLTemplateParams()
     val tags = new PeekableIterator(template.split("[ ]").map(_.trim))
     while (tags.hasNext) {
-      tags.next() match {
-        // conditional expression? (e.g. "@<condition>" => "x = 1 and y = 2")
-        case tag if tag.startsWith("@<") & tag.endsWith(">") =>
-          results = results + extractCondition(tag.drop(2).dropRight(1))
-
-        // field names? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
-        case tag if tag.startsWith("@(") & tag.endsWith(")") =>
-          results = results + extractListOfFields(tag.drop(2).dropRight(1))
-
-        // expressions? (e.g. "@{fields}" => "field1, 'hello', 5 + now(), ..., fieldN")
-        case tag if tag.startsWith("@{") & tag.endsWith("}") =>
-          results = results + extractListOfExpressions(tag.drop(2).dropRight(1))
-
-        // sort field list? (e.g. "@[sortFields]" => "field1 DESC, field2 ASC")
-        case tag if tag.startsWith("@[") & tag.endsWith("]") =>
-          results = results + extractSortFields(tag.drop(2).dropRight(1))
-
-        // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." or "INSERT OVERWRITE ...")
-        case tag if tag.startsWith("@|") & tag.endsWith("|") =>
-          results = results + extractEnumeratedItem(tag.drop(2).dropRight(1).split('|'))
-
-        // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
-        case tag if tag.startsWith("@/") & tag.endsWith("/") =>
-          val pattern = tag.drop(2).dropRight(1)
-          if (ts.matches(pattern)) ts.die(s"Did not match the expected pattern '$pattern'")
-
-        // identifier? (e.g. "@table" => "'./tickers.csv'")
-        case tag if tag.startsWith("@") => results = results + extractIdentifier(tag.drop(1))
-
-        // optional dependent-identifier? (e.g. "?ORDER +?BY @|sortFields|" => "ORDER BY Symbol DESC")
-        case tag if tag.startsWith("+?") => ts.expect(tag.drop(2))
-
-        // optional identifier? (e.g. "?LIMIT @limit" => "LIMIT 100")
-        case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
-
-        // literal text?
-        case text => ts.expect(text)
-      }
+      extractNextTag(tags.next(), tags) foreach (params => results = results + params)
     }
     results
+  }
+
+  private def extractNextTag(aTag: String, tags: PeekableIterator[String]): Option[SQLTemplateParams] = aTag match {
+    // conditional expression? (e.g. "@<condition>" => "x = 1 and y = 2")
+    case tag if tag.startsWith("@<") & tag.endsWith(">") => Some(extractCondition(tag.drop(2).dropRight(1)))
+
+    // field names? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
+    case tag if tag.startsWith("@(") & tag.endsWith(")") => Some(extractListOfFields(tag.drop(2).dropRight(1)))
+
+    // expressions? (e.g. "@{fields}" => "field1, 'hello', 5 + now(), ..., fieldN")
+    case tag if tag.startsWith("@{") & tag.endsWith("}") => Some(extractListOfExpressions(tag.drop(2).dropRight(1)))
+
+    // ordered field list? (e.g. "@[orderedFields]" => "field1 DESC, field2 ASC")
+    case tag if tag.startsWith("@[") & tag.endsWith("]") => Some(extractSortColumns(tag.drop(2).dropRight(1)))
+
+    // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." or "INSERT OVERWRITE ...")
+    case tag if tag.startsWith("@|") & tag.endsWith("|") => Some(extractEnumeratedItem(tag.drop(2).dropRight(1).split('|')))
+
+    // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
+    case tag if tag.startsWith("@/") & tag.endsWith("/") =>
+      val pattern = tag.drop(2).dropRight(1)
+      if (ts.matches(pattern)) ts.die(s"Did not match the expected pattern '$pattern'")
+      None
+
+    // atom? (e.g. "@table" => "'./tickers.csv'")
+    case tag if tag.startsWith("@") => Some(extractIdentifier(tag.drop(1)))
+
+    // optionally required tag? (e.g. "?TOP ?@top" => "TOP 100")
+    case tag if tag.startsWith("?@") => extractNextTag(tag.drop(1), tags)
+
+    // optionally required atom? (e.g. "?ORDER +?BY ?@|sortFields|" => "ORDER BY Symbol DESC")
+    case tag if tag.startsWith("+?") => ts.expect(tag.drop(2)); None
+
+    // optional atom? (e.g. "?LIMIT ?@limit" => "LIMIT 100")
+    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags); None
+
+    // literal text?
+    case text => ts.expect(text); None
   }
 
   /**
@@ -72,7 +73,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
       case name :: items =>
         val item = ts.nextOption.map(_.text).getOrElse(error(items))
         if (!items.contains(item)) error(items)
-        SQLTemplateParams(identifiers = Map(name -> item))
+        SQLTemplateParams(atoms = Map(name -> item))
       case _ =>
         ts.die(s"Template error: ${values.mkString(", ")}")
     }
@@ -86,7 +87,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
   private def extractOptional(name: String, tags: PeekableIterator[String]) = {
     if (!ts.nextIf(name)) {
       // if the option tag wasn't matched, skip any associated arguments
-      while (tags.hasNext && (tags.peek.exists(_.startsWith("@")) || tags.peek.exists(_.startsWith("+?")))) tags.next()
+      while (tags.hasNext && tags.peek.exists(tag => tag.startsWith("?@") || tag.startsWith("+?"))) tags.next()
     }
   }
 
@@ -97,7 +98,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     */
   private def extractIdentifier(name: String) = {
     val value = ts.nextOption.map(_.text).getOrElse(ts.die(s"'$name' identifier expected"))
-    SQLTemplateParams(identifiers = Map(name -> value))
+    SQLTemplateParams(atoms = Map(name -> value))
   }
 
   /**
@@ -146,23 +147,23 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
   }
 
   /**
-    * Extracts a value list from the token stream
-    * @param name the given identifier name (e.g. "values")
+    * Extracts a list of sort columns from the token stream
+    * @param name the given identifier name (e.g. "sortedColumns")
     * @return a [[SQLTemplateParams template]] represents the parsed outcome
     */
-  private def extractSortFields(name: String) = {
-    var sortFields: List[(Field, Int)] = Nil
+  private def extractSortColumns(name: String) = {
+    var sortFields: List[OrderedColumn] = Nil
     do {
       if (sortFields.nonEmpty) ts.expect(",")
-      val field = ts.nextOption.map(t => Field(t.text)).getOrElse(ts.die("Unexpected end of statement"))
+      val name = ts.nextOption.map(_.text).getOrElse(ts.die("Unexpected end of statement"))
       val direction = ts match {
-        case t if t.is("ASC") => ts.next(); 1
-        case t if t.is("DESC") => ts.next(); -1
-        case _ => 1
+        case t if t.nextIf("ASC") => true
+        case t if t.nextIf("DESC") => false
+        case _ => true
       }
-      sortFields = sortFields ::: field -> direction :: Nil
+      sortFields = sortFields ::: OrderedColumn(name, direction) :: Nil
     } while (ts.is(","))
-    SQLTemplateParams(sortFields = Map(name -> sortFields))
+    SQLTemplateParams(orderedFields = Map(name -> sortFields))
   }
 
 }

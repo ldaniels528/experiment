@@ -44,22 +44,9 @@ object Field {
 object AllFields extends BasicField(name = "*")
 
 /**
-  * Represents an Aggregate Field
-  * @author lawrence.daniels@gmail.com
-  */
-case class AggregateField(name: String) extends Field with Aggregation {
-  private var value: Option[Any] = None
-
-  override def evaluate(scope: Scope): Option[Any] = value
-
-  override def update(scope: Scope): Unit = value = scope.get(name)
-}
-
-/**
   * Represents a field reference
   * @author lawrence.daniels@gmail.com
   */
 case class BasicField(name: String) extends Field {
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
 }
-

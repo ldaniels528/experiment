@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
   * Represents a local ephemeral scope
   * @author lawrence.daniels@gmail.com
   */
-case class LocalScope(parent: Scope, data: Seq[(String, Any)]) extends Scope {
+case class LocalScope(parent: Scope, data: Row) extends Scope {
   private val functions = TrieMap[String, Function]()
   private lazy val mapping = Map(data: _*)
 

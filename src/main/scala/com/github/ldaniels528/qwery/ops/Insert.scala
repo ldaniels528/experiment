@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.ResultSet
+import com.github.ldaniels528.qwery.ops.ResultSet
 import com.github.ldaniels528.qwery.sources.QueryOutputSource
 
 /**
@@ -22,7 +22,12 @@ case class Insert(target: QueryOutputSource, fields: Seq[Field], source: Executa
   }
 
   override def toSQL: String = {
-    s"INSERT ${if(hints.append) "INTO" else "OVERWRITE"} $target WITH $hints (${fields.map(_.toSQL).mkString(", ")}) ${source.toSQL}"
+    s"""
+       |INSERT ${if (hints.append) "INTO" else "OVERWRITE"} $target
+       |WITH ${hints.toSQL} (${fields.map(_.toSQL).mkString(", ")})
+       |${source.toSQL}""".stripMargin
+      .replaceAllLiterally("\n", " ")
+      .replaceAllLiterally("  ", " ")
   }
 
 }

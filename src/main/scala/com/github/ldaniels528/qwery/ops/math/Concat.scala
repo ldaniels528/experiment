@@ -13,5 +13,5 @@ case class Concat(a: Expression, b: Expression) extends Expression {
     y <- b.getAsString(scope)
   } yield x + y
 
-  override def toSQL: String = s"$a | $b"
+  override def toSQL: String = s"${a.toSQL} | ${b.toSQL}"
 }

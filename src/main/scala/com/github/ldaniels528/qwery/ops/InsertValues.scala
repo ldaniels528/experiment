@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.ResultSet
+import com.github.ldaniels528.qwery.ops.ResultSet
 
 import scala.collection.Iterable
 

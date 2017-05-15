@@ -56,13 +56,13 @@ class QweryCompilerTest extends FunSpec {
         """
           |SELECT * FROM './companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'
-          |ORDER BY Symbol DESC""".stripMargin
+          |ORDER BY Symbol ASC""".stripMargin
       assert(QweryCompiler(query) ==
         Select(
           fields = List(AllFields),
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
-          sortFields = Option(List(Field("Symbol") -> -1))
+          orderedColumns = List(OrderedColumn("Symbol", ascending = true))
         ))
     }
 
@@ -78,8 +78,8 @@ class QweryCompilerTest extends FunSpec {
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           source = Some(DelimitedInputSource(new File("./companylist.csv"))),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
-          groupFields = Option(List(Field("Symbol"))),
-          sortFields = Option(List(Field("Symbol") -> -1))
+          groupFields = List(Field("Symbol")),
+          orderedColumns = List(OrderedColumn("Symbol", ascending = false))
         ))
     }
 

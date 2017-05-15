@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.{BufferedWriter, File, FileWriter}
 import java.net.URL
 
-import com.github.ldaniels528.qwery.Row
+import com.github.ldaniels528.qwery.ops.Row
 import com.github.ldaniels528.qwery.ops.Hints
 
 /**

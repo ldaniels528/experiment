@@ -39,7 +39,7 @@ trait ExpressionParser {
           case ts if ts.nextIf("-") => for (a <- expression; b <- parseNextExpression(ts)) yield a - b
           case ts if ts.nextIf("*") => for (a <- expression; b <- parseNextExpression(ts)) yield a * b
           case ts if ts.nextIf("/") => for (a <- expression; b <- parseNextExpression(ts)) yield a / b
-          case ts if ts.nextIf("|") => for (a <- expression; b <- parseNextExpression(ts)) yield a | b
+          case ts if ts.nextIf("||") => for (a <- expression; b <- parseNextExpression(ts)) yield a || b
           case _ => None
         }
         // if the expression was resolved ...
@@ -98,12 +98,9 @@ trait ExpressionParser {
 
   private def invalidParameters(ts: TokenStream, name: String, expected: Int) = {
     expected match {
-      case 0 =>
-        ts.die(s"Function $name expects no parameters")
-      case 1 =>
-        ts.die(s"Function $name expects a single parameter")
-      case n =>
-        ts.die(s"Function $name expects $n parameters")
+      case 0 => ts.die(s"Function $name expects no parameters")
+      case 1 => ts.die(s"Function $name expects a single parameter")
+      case n => ts.die(s"Function $name expects $n parameters")
     }
   }
 
