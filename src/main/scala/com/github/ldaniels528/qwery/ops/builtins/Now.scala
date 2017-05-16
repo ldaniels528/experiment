@@ -5,7 +5,7 @@ import java.util.Date
 import com.github.ldaniels528.qwery.ops.Scope
 
 /**
-  * Now() function
+  * Now() - Returns the current date
   * @author lawrence.daniels@gmail.com
   */
 trait Now extends InternalFunction {

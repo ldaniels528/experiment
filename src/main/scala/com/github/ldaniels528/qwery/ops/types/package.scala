@@ -14,6 +14,8 @@ package object types {
 
   implicit def longConversion(value: Long): Expression = NumericValue(value)
 
+  implicit def numberConversion(value: Number): Expression = NumericValue(value.doubleValue())
+
   implicit def stringConversion(value: String): Expression = StringValue(value)
 
 }

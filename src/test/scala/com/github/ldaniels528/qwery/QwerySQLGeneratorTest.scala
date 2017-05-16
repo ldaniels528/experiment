@@ -11,13 +11,13 @@ import org.scalatest.FunSpec
 class QwerySQLGeneratorTest extends FunSpec {
 
   it("DESCRIBE") {
-    val sql0 = "DESCRIBE './companylist.csv'"
+    val sql0 = "DESCRIBE 'companylist.csv'"
     val sql1 = QweryCompiler(sql0).toSQL
     assert(sql0 == sql1)
   }
 
   it("DESCRIBE w/LIMIT") {
-    val sql0 = "DESCRIBE './companylist.csv' LIMIT 100"
+    val sql0 = "DESCRIBE 'companylist.csv' LIMIT 100"
     val sql1 = QweryCompiler(sql0).toSQL
     assert(sql0 == sql1)
   }
@@ -26,7 +26,7 @@ class QwerySQLGeneratorTest extends FunSpec {
     val sql0 =
       """
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-        |FROM './companylist.csv'
+        |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties'
         |LIMIT 25""".stripMargin.toSingleLine
     val sql1 = QweryCompiler(sql0).toSQL
@@ -37,15 +37,38 @@ class QwerySQLGeneratorTest extends FunSpec {
     val sql0 =
       """
         |SELECT TOP 25 Symbol, Name, Sector, Industry, LastSale, MarketCap
-        |FROM './companylist.csv'
+        |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |""".stripMargin.toSingleLine
     val sql1 =
       """
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-        |FROM './companylist.csv'
+        |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |LIMIT 25""".stripMargin.toSingleLine
+    val sql2 = QweryCompiler(sql0).toSQL
+    assert(sql1 == sql2)
+  }
+
+  it("SELECT-CASE-WHEN") {
+    val sql0 =
+      """
+        |SELECT
+        |   CASE 'Hello World'
+        |     WHEN 'HelloWorld' THEN 'Found 1'
+        |     WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
+        |     ELSE 'Not Found'
+        |   END
+      """.stripMargin.toSingleLine
+    val sql1 =
+      """
+        |SELECT
+        |   CASE
+        |     WHEN 'Hello World' = 'HelloWorld' THEN 'Found 1'
+        |     WHEN 'Hello World' = 'Hello' || ' ' || 'World' THEN 'Found 2'
+        |     ELSE 'Not Found'
+        |   END
+      """.stripMargin.toSingleLine
     val sql2 = QweryCompiler(sql0).toSQL
     assert(sql1 == sql2)
   }
@@ -53,9 +76,9 @@ class QwerySQLGeneratorTest extends FunSpec {
   it("INSERT-INTO-SELECT") {
     val sql0 =
       """
-        |INSERT INTO './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+        |INSERT INTO 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-        |FROM './companylist.csv'
+        |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties' OR Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |LIMIT 1000""".stripMargin.toSingleLine
     val sql1 = QweryCompiler(sql0).toSQL
@@ -65,9 +88,9 @@ class QwerySQLGeneratorTest extends FunSpec {
   it("INSERT-OVERWRITE-SELECT") {
     val sql0 =
       """
-        |INSERT OVERWRITE './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+        |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-        |FROM './companylist.csv'
+        |FROM 'companylist.csv'
         |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin.toSingleLine
     val sql1 = QweryCompiler(sql0).toSQL
     assert(sql0 == sql1)

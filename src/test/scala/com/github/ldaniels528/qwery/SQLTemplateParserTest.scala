@@ -14,19 +14,19 @@ class SQLTemplateParserTest extends FunSpec {
       val query =
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'
           |LIMIT 5""".stripMargin
 
       val templateParser = SQLTemplateParser(query)
-      val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE ?@<condition> ?LIMIT ?@limit")
+      val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE ?@&{condition} ?LIMIT ?@limit")
       info(s"values: $values")
     }
 
     it("should extract values from INSERT-VALUES statements") {
       val query =
         """
-          |INSERT INTO './test3.csv' (Symbol, Sector, Industry, LastSale)
+          |INSERT INTO 'test3.csv' (Symbol, Sector, Industry, LastSale)
           |VALUES ('ACU', 'Capital Goods', 'Industrial Machinery/Components', 29)
           |VALUES ('EMX', 'Basic Industries', 'Precious Metals', 0.828)""".stripMargin
 

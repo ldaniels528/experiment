@@ -1,7 +1,5 @@
 package com.github.ldaniels528.qwery
 
-import java.io.File
-
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Cast
 import com.github.ldaniels528.qwery.ops.types._
@@ -22,93 +20,93 @@ class QweryCompilerTest extends FunSpec {
         Select(fields = List(NamedExpression(name = "number", Cast("1234", "Double")))))
     }
 
-    it("should compiles SELECT queries") {
+    it("should compile SELECT queries") {
       val sql =
         """
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
       assert(QweryCompiler(sql) ==
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          source = Some(FileDelimitedInputSource("./companylist.csv")),
+          source = Some(FileDelimitedInputSource("companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission"))
         ))
     }
 
-    it("should compiles SELECT queries for all (*) fields") {
+    it("should compile SELECT queries for all (*) fields") {
       val sql =
         """
-          |SELECT * FROM './companylist.csv'
+          |SELECT * FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
       assert(QweryCompiler(sql) ==
         Select(
           fields = List(AllFields),
-          source = Some(FileDelimitedInputSource("./companylist.csv")),
+          source = Some(FileDelimitedInputSource("companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission"))
         ))
     }
 
-    it("should compiles SELECT queries with ORDER BY clauses") {
+    it("should compile SELECT queries with ORDER BY clauses") {
       val sql =
         """
-          |SELECT * FROM './companylist.csv'
+          |SELECT * FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'
           |ORDER BY Symbol ASC""".stripMargin
       assert(QweryCompiler(sql) ==
         Select(
           fields = List(AllFields),
-          source = Some(FileDelimitedInputSource("./companylist.csv")),
+          source = Some(FileDelimitedInputSource("companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
           orderedColumns = List(OrderedColumn("Symbol", ascending = true))
         ))
     }
 
-    it("should compiles SELECT queries with GROUP BY and ORDER BY clauses") {
+    it("should compile SELECT queries with GROUP BY and ORDER BY clauses") {
       val sql =
         """
-          |SELECT Symbol, Name, Sector, Industry, `Summary Quote` FROM './companylist.csv'
+          |SELECT Symbol, Name, Sector, Industry, `Summary Quote` FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'
           |GROUP BY Symbol
           |ORDER BY Symbol DESC""".stripMargin
       assert(QweryCompiler(sql) ==
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          source = Some(FileDelimitedInputSource("./companylist.csv")),
+          source = Some(FileDelimitedInputSource("companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
           groupFields = List(Field("Symbol")),
           orderedColumns = List(OrderedColumn("Symbol", ascending = false))
         ))
     }
 
-    it("should compiles INSERT-SELECT statements") {
+    it("should compile INSERT-SELECT statements") {
       val sql =
         """
-          |INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
-          |SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+          |INSERT OVERWRITE 'test2.csv' (Symbol, Sector, Industry, LastSale)
+          |SELECT Symbol, Sector, Industry, LastSale FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DelimitedOutputSource(new File("./test2.csv")),
+          target = FileDelimitedOutputSource("test2.csv"),
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-            source = Some(FileDelimitedInputSource("./companylist.csv")),
+            source = Some(FileDelimitedInputSource("companylist.csv")),
             condition = Some(EQ(Field("Industry"), "Precious Metals")),
             limit = None),
           hints = Hints(append = false)))
     }
 
-    it("should compiles INSERT statements") {
+    it("should compile INSERT statements") {
       val sql =
         """
-          |INSERT INTO './test3.csv' (Symbol, Sector, Industry, LastSale)
+          |INSERT INTO 'test3.csv' (Symbol, Sector, Industry, LastSale)
           |VALUES ('ACU', 'Capital Goods', 'Industrial Machinery/Components', 29)
           |VALUES ('EMX', 'Basic Industries', 'Precious Metals', 0.828)""".stripMargin
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DelimitedOutputSource(new File("./test3.csv")),
+          target = FileDelimitedOutputSource("test3.csv"),
           source = InsertValues(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(

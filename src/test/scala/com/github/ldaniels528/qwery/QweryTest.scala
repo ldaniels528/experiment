@@ -16,7 +16,7 @@ class QweryTest extends FunSpec {
   describe("Qwery") {
 
     it("should support describing the layout of a file") {
-      val query = QweryCompiler("DESCRIBE './companylist.csv'")
+      val query = QweryCompiler("DESCRIBE 'companylist.csv'")
       val results = query.execute(RootScope()).toSeq
       assert(results == Vector(
         List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
@@ -43,11 +43,26 @@ class QweryTest extends FunSpec {
       assert(results == List(List("number" -> 1234.0)))
     }
 
+    it("should support CASE statement") {
+      val query = QweryCompiler(
+        """
+          |SELECT
+          |   CASE 'Hello World'
+          |     WHEN 'HelloWorld' THEN '1'
+          |     WHEN 'Hello' || ' ' || 'World' THEN '2'
+          |     ELSE '3'
+          |   END AS ItemNo
+        """.stripMargin)
+
+      val results = query.execute(RootScope()).toSeq
+      assert(results.headOption.flatMap(_.headOption.map(_._2)).contains("2"))
+    }
+
     it("should support extracting filtered results from a file") {
       val query = QweryCompiler(
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
@@ -62,7 +77,7 @@ class QweryTest extends FunSpec {
     it("should support extracting filtered results from a file for all (*) fields") {
       val query = QweryCompiler(
         """
-          |SELECT * FROM './companylist.csv'
+          |SELECT * FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
       val results = query.execute(RootScope()).toSeq
       assert(results ==
@@ -84,7 +99,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |SELECT TOP 1 Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
@@ -98,7 +113,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'
           |LIMIT 1""".stripMargin)
 
@@ -113,7 +128,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |SELECT Sector, COUNT(*) AS Securities
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |GROUP BY Sector""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
@@ -138,7 +153,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
-          |FROM './companylist.csv'""".stripMargin('|'))
+          |FROM 'companylist.csv'""".stripMargin('|'))
       val results = query.execute(RootScope()).toSeq
       assert(results == List(
         List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
@@ -149,7 +164,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |GROUP BY Sector""".stripMargin('|'))
       val results = query.execute(RootScope()).toSeq
       tabular.transform(results.toIterator) foreach (info(_))
@@ -162,9 +177,9 @@ class QweryTest extends FunSpec {
     it("should write filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
         """
-          |INSERT OVERWRITE './test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE 'test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
       val results = query.execute(RootScope()).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 34))))
@@ -174,15 +189,15 @@ class QweryTest extends FunSpec {
       val queries = Seq(
         QweryCompiler(
           """
-            |INSERT OVERWRITE './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
             |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-            |FROM './companylist.csv'
+            |FROM 'companylist.csv'
             |WHERE Industry = 'Precious Metals'""".stripMargin),
         QweryCompiler(
           """
-            |INSERT INTO './test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |INSERT INTO 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
             |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-            |FROM './companylist.csv'
+            |FROM 'companylist.csv'
             |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
       )
       val results = queries.map(_.execute(RootScope()))
@@ -195,9 +210,9 @@ class QweryTest extends FunSpec {
     it("should write filtered results from one source (CSV) to another (JSON)") {
       val query = QweryCompiler(
         """
-          |INSERT OVERWRITE './test3.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE 'test3.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-          |FROM './companylist.csv'
+          |FROM 'companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
       val results = query.execute(RootScope()).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))

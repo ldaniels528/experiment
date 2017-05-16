@@ -75,7 +75,7 @@ Using UNIXCommandPrompt for input.
 [2]> SELECT COUNT(*) FROM './companylist.csv';
 
 + ---------- +
-| COUNT(*)   |
+| SYQWYsxb   |
 + ---------- +
 | 359        |
 + ---------- +
@@ -87,7 +87,7 @@ Using UNIXCommandPrompt for input.
 [3]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
 
 + ---------- +
-| COUNT(*)   |
+| pUREGxhj   |
 + ---------- +
 | 44         |
 + ---------- +
@@ -154,10 +154,27 @@ Using UNIXCommandPrompt for input.
 + --------------------------------- + 
 ```
 
+##### CASE-WHEN is also supported
+
+```text
+[7]> SELECT
+       CASE 'Hello World'
+         WHEN 'HelloWorld' THEN 'Found 1'
+         WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
+         ELSE 'Not Found'
+       END;
+
++ ---------- +
+| JSOdavyb   |
++ ---------- +
+| Found 2    |
++ ---------- +
+```
+
 ##### Copy a portion of one file to another (appending the target)
 
 ```text
-[7]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+[8]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
      WHERE Industry = 'Homebuilding'
 
@@ -171,7 +188,7 @@ Using UNIXCommandPrompt for input.
 ##### Copy a portion of one file to another (overwriting the target)
 
 ```text
-[8]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+[9]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
      WHERE Industry = 'Precious Metals'
 

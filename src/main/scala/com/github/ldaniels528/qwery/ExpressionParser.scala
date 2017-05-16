@@ -2,8 +2,9 @@ package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ExpressionParser._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.ops.math._
+import com.github.ldaniels528.qwery.ops.builtins.Case.When
 import com.github.ldaniels528.qwery.ops.builtins._
+import com.github.ldaniels528.qwery.ops.math._
 
 /**
   * Expression Parser
@@ -59,41 +60,43 @@ trait ExpressionParser {
       // is it a parameter-less function? (e.g. "Now()")
       case ts if function0s.exists(fx => ts.is(fx.name)) =>
         function0s.find(f => ts.nextIf(f.name)) map { fx =>
-          ts.expect("(").expect(")")
-          fx
+          ts.expect("(").expect(")"); fx
         }
       // is it a single-parameter function? (e.g. "Trim('Hello ')")
       case ts if function1s.exists { case (name, _) => ts.is(name) } =>
         function1s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          ts.expect("(")
-          val a = parseExpression(ts).getOrElse(invalidParameters(ts, name, 1))
-          ts.expect(")")
-          fx(a)
+          parseParameters(ts, name, 1) match {
+            case a :: Nil => fx(a)
+          }
         }
       // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
       case ts if function2s.exists { case (name, _) => ts.is(name) } =>
         function2s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          ts.expect("(")
-          val a = parseExpression(ts).getOrElse(invalidParameters(ts, name, 2))
-          ts.expect(",")
-          val b = parseExpression(ts).getOrElse(invalidParameters(ts, name, 2))
-          ts.expect(")")
-          fx(a, b)
+          parseParameters(ts, name, 2) match {
+            case a :: b :: Nil => fx(a, b)
+          }
         }
       // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
       case ts if function3s.exists { case (name, _) => ts.is(name) } =>
         function3s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          ts.expect("(")
-          val a = parseExpression(ts).getOrElse(invalidParameters(ts, name, 3))
-          ts.expect(",")
-          val b = parseExpression(ts).getOrElse(invalidParameters(ts, name, 3))
-          ts.expect(",")
-          val c = parseExpression(ts).getOrElse(invalidParameters(ts, name, 3))
-          ts.expect(")")
-          fx(a, b, c)
+          parseParameters(ts, name, 3) match {
+            case a :: b :: c :: Nil => fx(a, b, c)
+          }
         }
       case ts => ts.die(s"${ts.peek.orNull} is not a defined function")
     }
+  }
+
+  private def parseParameters(ts: TokenStream, name: String, count: Int): List[Expression] = {
+    ts.expect("(")
+    var list: List[Expression] = Nil
+    for (n <- 1 to count) {
+      val expr = parseExpression(ts).getOrElse(invalidParameters(ts, name, count))
+      list = list ::: expr :: Nil
+      if (n < count) ts.expect(",")
+    }
+    ts.expect(")")
+    list
   }
 
   private def invalidParameters(ts: TokenStream, name: String, expected: Int) = {
@@ -129,6 +132,8 @@ trait ExpressionParser {
 
   private def parseNextExpression(stream: TokenStream): Option[Expression] = {
     stream match {
+      // is it a Case expression?
+      case ts if ts.nextIf("Case") => parseCase(ts)
       // is it a special function?
       case ts if ts.nextIf("Cast") => parseCast(ts)
       // is it an all fields reference?
@@ -157,6 +162,67 @@ trait ExpressionParser {
       case ts if ts.isBackticks | ts.matches(identifierRegEx) => NamedExpression(name = ts.next().text, expression)
       case ts => ts.die("Identifier expected for alias")
     }
+  }
+
+  /**
+    * Parses a CASE expression
+    *
+    * Syntax 1:
+    * {{{
+    * CASE primary-expr
+    *   WHEN expr1 THEN result-expr1
+    *   WHEN expr2 THEN result-expr2
+    *   ELSE expr3
+    * END
+    * }}}
+    *
+    * Syntax 2:
+    * {{{
+    * CASE
+    *   WHEN primary-expr = expr1 THEN result-expr1
+    *   WHEN primary-expr = expr2 THEN result-expr2
+    *   ELSE expr3
+    * END
+    * }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return
+    */
+  private def parseCase(ts: TokenStream): Option[Expression] = {
+    var cases: List[When] = Nil
+    var done = false
+    var otherwise: Option[Expression] = None
+
+    // is there a primary expression?
+    val primaryExpr = parseExpression(ts)
+
+    while (!done && ts.nextIf("WHEN")) {
+      // get the condition
+      val condition = {
+        if (primaryExpr.nonEmpty) {
+          for {
+            expr0 <- primaryExpr
+            expr1 <- parseExpression(ts)
+          } yield EQ(expr0, expr1)
+        }
+        else parseCondition(ts)
+      } getOrElse ts.die("Conditional expression expected")
+
+      // get the result
+      ts.expect("THEN")
+      val result = parseExpression(ts) getOrElse ts.die("Results expression expected")
+
+      // else case?
+      if (ts.nextIf("ELSE")) {
+        otherwise = parseExpression(ts)
+        if (otherwise.isEmpty) ts.die("Else expression expected")
+        done = true
+      }
+
+      // add the case
+      cases = cases ::: When(condition, result) :: Nil
+    }
+    ts.expect("END")
+    Option(Case(conditions = cases, otherwise = otherwise))
   }
 
   /**
@@ -196,7 +262,7 @@ trait ExpressionParser {
 object ExpressionParser {
   private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
   private val function0s = Seq(
-    Now
+    Now, Uuid
   )
   private val function1s = Map(
     "AVG" -> Avg.apply _,

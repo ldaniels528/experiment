@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops.types
 
-import com.github.ldaniels528.qwery.ops.{Expression, Field, Scope}
+import com.github.ldaniels528.qwery.ops.{Expression, Scope}
 
 /**
   * Represents a numeric value
@@ -12,7 +12,7 @@ case class NumericValue(value: Double) extends Expression {
     that match {
       case NumericValue(v) => value.compareTo(v)
       case StringValue(s) => value.toString.compareTo(s)
-      case field: Field => field.compare(this, scope)
+      case expression: Expression => expression.compare(this, scope)
       case unknown =>
         throw new IllegalStateException(s"Unhandled value '$unknown' (${Option(unknown).map(_.getClass.getName).orNull})")
     }

@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.QwerySQLGenerator._
+import scala.util.Random
 
 /**
   * Represents a Named Expression
@@ -64,8 +64,14 @@ object NamedExpression {
 
     def getName: String = expression match {
       case NamedExpression(name) => name
-      case value => value.toSQL
+      case _ => randomName
     }
+  }
+
+  private def randomName: String = {
+    val random = new Random()
+    val chars = for (_ <- 1 to 16) yield (random.nextInt('z' - 'A') + 'A').toChar
+    String.copyValueOf(chars.filter(_.isLetterOrDigit).toArray).take(8)
   }
 
 }

@@ -24,8 +24,8 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
   }
 
   private def extractNextTag(aTag: String, tags: PeekableIterator[String]): Option[SQLTemplateParams] = aTag match {
-    // conditional expression? (e.g. "@<condition>" => "x = 1 and y = 2")
-    case tag if tag.startsWith("@<") & tag.endsWith(">") => Some(extractCondition(tag.drop(2).dropRight(1)))
+    // conditional expression? (e.g. "@&{condition}" => "x = 1 and y = 2")
+    case tag if tag.startsWith("@&{") & tag.endsWith("}") => Some(extractCondition(tag.drop(3).dropRight(1)))
 
     // field names? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
     case tag if tag.startsWith("@(") & tag.endsWith(")") => Some(extractListOfFields(tag.drop(2).dropRight(1)))
@@ -42,8 +42,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
     case tag if tag.startsWith("@/") & tag.endsWith("/") =>
       val pattern = tag.drop(2).dropRight(1)
-      if (ts.matches(pattern)) ts.die(s"Did not match the expected pattern '$pattern'")
-      None
+      if (ts.matches(pattern)) None else ts.die(s"Did not match the expected pattern '$pattern'")
 
     // atom? (e.g. "@table" => "'./tickers.csv'")
     case tag if tag.startsWith("@") => Some(extractIdentifier(tag.drop(1)))
@@ -57,7 +56,7 @@ class SQLTemplateParser(ts: TokenStream) extends ExpressionParser {
     // optional atom? (e.g. "?LIMIT ?@limit" => "LIMIT 100")
     case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags); None
 
-    // literal text?
+    // must be literal text
     case text => ts.expect(text); None
   }
 

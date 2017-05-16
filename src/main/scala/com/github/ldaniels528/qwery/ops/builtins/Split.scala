@@ -12,6 +12,6 @@ case class Split(string: Expression, delimiter: Expression) extends InternalFunc
     for {
       str <- string.getAsString(scope)
       delim <- delimiter.getAsString(scope)
-    } yield str.split(s"[$delim]")
+    } yield str.split(s"[$delim]").toList
   }
 }

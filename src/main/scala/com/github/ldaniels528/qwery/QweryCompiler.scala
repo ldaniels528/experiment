@@ -131,7 +131,7 @@ class QweryCompiler {
       """
         |SELECT ?TOP ?@top @{fields}
         |?FROM ?@source
-        |?WHERE ?@<condition>
+        |?WHERE ?@&{condition}
         |?GROUP +?BY ?@(groupBy)
         |?ORDER +?BY ?@[orderBy]
         |?LIMIT ?@limit""".stripMargin.toSingleLine)

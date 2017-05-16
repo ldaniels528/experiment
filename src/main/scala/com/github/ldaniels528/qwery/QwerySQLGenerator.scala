@@ -26,7 +26,7 @@ object QwerySQLGenerator {
     case NOT(cond) => s"NOT ${cond.toSQL}"
     case OR(a, b) => s"${a.toSQL} OR ${b.toSQL}"
     case unknown =>
-      throw new IllegalArgumentException(s"Object '$unknown' was unhandled")
+      throw new IllegalArgumentException(s"Condition '$unknown' was unhandled")
   }
 
   private def makeSQL(executable: Executable): String = executable match {
@@ -43,16 +43,10 @@ object QwerySQLGenerator {
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case JSONFileInputSource(file) => s"'$file'"
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
-      val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
-      source.foreach(src => sb.append(s" FROM ${src.toSQL}"))
-      condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
-      if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
-      if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")
-      limit.foreach(n => sb.append(s" LIMIT $n"))
-      sb.toString
+      toSelect(fields, source, condition, groupFields, orderedColumns, limit)
     case URLDelimitedInputSource(url) => s"'${url.toExternalForm}'"
     case unknown =>
-      throw new IllegalArgumentException(s"Object '$unknown' was unhandled")
+      throw new IllegalArgumentException(s"Executable '$unknown' was unhandled")
   }
 
   private def makeSQL(expression: Expression): String = expression match {
@@ -61,6 +55,7 @@ object QwerySQLGenerator {
     case Avg(expr) => s"AVG(${expr.toSQL})"
     case BasicField(name) => nameOf(name)
     case BooleanValue(value) => value.toString
+    case Case(conditions, otherwise) => toCase(conditions, otherwise)
     case Cast(expr, toType) => s"CAST(${expr.toSQL} AS $toType)"
     case Count(expr) => s"COUNT(${expr.toSQL})"
     case Concat(a, b) => s"${a.toSQL} || ${b.toSQL}"
@@ -82,15 +77,16 @@ object QwerySQLGenerator {
     case Substring(a, b, c) => s"SUBSTRING(${a.toSQL},${b.toSQL},${c.toSQL})"
     case Sum(expr) => s"SUM(${expr.toSQL})"
     case Trim(expr) => s"TRIM(${expr.toSQL})"
+    case Uuid => "UUID()"
     case unknown =>
-      throw new IllegalArgumentException(s"Object '$unknown' was unhandled")
+      throw new IllegalArgumentException(s"Expression '$unknown' was unhandled")
   }
 
   private def makeSQL(output: QueryOutputSource): String = output match {
     case FileDelimitedOutputSource(file) => s"'$file'"
     case JSONFileOutputSource(file) => s"'$file'"
     case unknown =>
-      throw new IllegalArgumentException(s"Object '$unknown' was unhandled")
+      throw new IllegalArgumentException(s"Output source '$unknown' was unhandled")
   }
 
   private def makeSQL(value: AnyRef): String = value match {
@@ -100,11 +96,35 @@ object QwerySQLGenerator {
     case executable: Executable => makeSQL(executable)
     case expression: Expression => makeSQL(expression)
     case output: QueryOutputSource => makeSQL(output)
-    case unknown =>
-      throw new IllegalArgumentException(s"Object '$unknown' was unhandled")
+    case unknown => s"'$unknown'"
   }
 
   private def nameOf(name: String): String = if (name.forall(_.isLetterOrDigit)) name else s"`$name`"
+
+  private def toCase(conditions: Seq[Case.When], otherwise: Option[Expression]): String = {
+    val sb = new StringBuilder("CASE")
+    conditions foreach { case Case.When(condition, result) =>
+      sb.append(s" WHEN ${condition.toSQL} THEN ${result.toSQL}")
+    }
+    otherwise.foreach(expr => sb.append(s" ELSE ${expr.toSQL}"))
+    sb.append(" END")
+    sb.toString()
+  }
+
+  private def toSelect(fields: Seq[Expression],
+                       source: Option[QueryInputSource],
+                       condition: Option[Condition],
+                       groupFields: Seq[Field],
+                       orderedColumns: Seq[OrderedColumn],
+                       limit: Option[Int]): String = {
+    val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
+    source.foreach(src => sb.append(s" FROM ${src.toSQL}"))
+    condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
+    if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
+    if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")
+    limit.foreach(n => sb.append(s" LIMIT $n"))
+    sb.toString
+  }
 
   final implicit class SQLExtensions(val value: AnyRef) extends AnyVal {
     def toSQL: String = makeSQL(value)

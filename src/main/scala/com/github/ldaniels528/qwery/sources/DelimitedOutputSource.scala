@@ -1,10 +1,10 @@
 package com.github.ldaniels528.qwery.sources
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io._
 import java.net.URL
+import java.util.zip.GZIPOutputStream
 
-import com.github.ldaniels528.qwery.ops.Row
-import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 
 /**
   * Delimited Output Source
@@ -52,16 +52,25 @@ abstract class DelimitedOutputSource(output: Hints => BufferedWriter) extends Qu
 object DelimitedOutputSource extends QueryOutputSourceFactory {
 
   def apply(uri: String): Option[DelimitedOutputSource] = uri match {
-    case s if s.toLowerCase.startsWith("http://") | s.toLowerCase.startsWith("https://") => Option(apply(new URL(s)))
-    case s if s.startsWith("/") | s.startsWith("./") => Option(apply(new File(s)))
+    case s if s.toLowerCase.startsWith("http://") | s.toLowerCase.startsWith("https://") =>
+      Option(apply(new URL(s)))
+    case s if s.endsWith(".csv") | s.endsWith(".psv") | s.endsWith(".tsv") | s.endsWith(".txt") =>
+      Option(FileDelimitedOutputSource(s))
+    case file if file.toLowerCase.endsWith(".gz") =>
+      Option(GzipFileDelimitedOutputSource(file))
     case _ => None
   }
 
-  def apply(file: File): DelimitedOutputSource = FileDelimitedOutputSource(file)
+  def apply(file: File): DelimitedOutputSource = FileDelimitedOutputSource(file.getCanonicalPath)
 
   def apply(url: URL): DelimitedOutputSource = throw new IllegalStateException("URL output is not supported")
 
-  override def understands(url: String): Boolean = url.startsWith("/") || url.startsWith("./")
+  override def understands(url: String): Boolean = url.toLowerCase() match {
+    case s if s.startsWith("http://") | s.startsWith("https://") => true
+    case s if s.endsWith(".csv") | s.endsWith(".psv") | s.endsWith(".tsv") | s.endsWith(".txt") => true
+    case s if s.endsWith(".gz") => understands(s.dropRight(3))
+    case _ => false
+  }
 
 }
 
@@ -69,5 +78,12 @@ object DelimitedOutputSource extends QueryOutputSourceFactory {
   * File Delimited Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class FileDelimitedOutputSource(file: File)
+case class FileDelimitedOutputSource(file: String)
   extends DelimitedOutputSource((hints: Hints) => new BufferedWriter(new FileWriter(file, hints.append)))
+
+/**
+  * Gzip'd File Delimited Input Source
+  * @author lawrence.daniels@gmail.com
+  */
+case class GzipFileDelimitedOutputSource(file: String)
+  extends DelimitedOutputSource((hints: Hints) => new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file)))))
