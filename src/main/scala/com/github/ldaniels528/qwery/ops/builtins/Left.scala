@@ -14,6 +14,4 @@ case class Left(string: Expression, length: Expression) extends InternalFunction
       len <- length.getAsInt(scope)
     } yield str.substring(0, len)
   }
-
-  override def toSQL: String = s"LEFT(${string.toSQL}, ${length.toSQL})"
 }

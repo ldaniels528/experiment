@@ -63,12 +63,12 @@ object DelimitedInputSource extends QueryInputSourceFactory {
     case url if url.toLowerCase.startsWith("http://") | url.toLowerCase.startsWith("https://") =>
       Option(URLDelimitedInputSource(new URL(url)))
     case file if file.toLowerCase.endsWith(".gz") =>
-      Option(GzipFileDelimitedInputSource(new File(file)))
+      Option(GzipFileDelimitedInputSource(file))
     case file =>
-      Option(FileDelimitedInputSource(new File(file)))
+      Option(FileDelimitedInputSource(file))
   }
 
-  def apply(file: File): DelimitedInputSource = FileDelimitedInputSource(file)
+  def apply(file: File): DelimitedInputSource = FileDelimitedInputSource(file.getCanonicalPath)
 
   def apply(url: URL): DelimitedInputSource = URLDelimitedInputSource(url)
 
@@ -85,31 +85,19 @@ object DelimitedInputSource extends QueryInputSourceFactory {
   * File Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class FileDelimitedInputSource(file: File)
-  extends DelimitedInputSource(Source.fromFile(file)) {
-
-  override def toSQL: String = s"'${file.getCanonicalFile}'"
-
-}
+case class FileDelimitedInputSource(file: String)
+  extends DelimitedInputSource(Source.fromFile(file))
 
 /**
   * Gzip'd File Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class GzipFileDelimitedInputSource(file: File)
-  extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file)))) {
-
-  override def toSQL: String = s"'${file.getCanonicalFile}'"
-
-}
+case class GzipFileDelimitedInputSource(file: String)
+  extends DelimitedInputSource(Source.fromInputStream(new GZIPInputStream(new FileInputStream(file))))
 
 /**
   * URL Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
 case class URLDelimitedInputSource(url: URL)
-  extends DelimitedInputSource(Source.fromURL(url)) {
-
-  override def toSQL: String = s"'${url.toExternalForm}'"
-
-}
+  extends DelimitedInputSource(Source.fromURL(url))

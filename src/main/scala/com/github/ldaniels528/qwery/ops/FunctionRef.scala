@@ -10,6 +10,4 @@ case class FunctionRef(name: String, args: Seq[Expression]) extends NamedExpress
     scope.lookup(this).flatMap(_.invoke(scope, args))
   }
 
-  override def toSQL: String = s"$name(${args.map(_.toSQL).mkString(", ")})"
-
 }

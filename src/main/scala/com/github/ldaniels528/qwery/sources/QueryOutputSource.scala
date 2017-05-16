@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 
 /**
   * Query Output Source
@@ -14,6 +14,6 @@ trait QueryOutputSource extends QuerySource {
 
   def flush(): Unit
 
-  def write(data: Seq[(String, Any)]): Unit
+  def write(data: Row): Unit
 
 }

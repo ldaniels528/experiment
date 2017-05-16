@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
+import com.github.ldaniels528.qwery.QwerySQLGenerator._
+
 /**
   * Represents a Named Expression
   * @author lawrence.daniels@gmail.com
@@ -8,7 +10,6 @@ trait NamedExpression extends Expression {
 
   def name: String
 
-  override def toSQL: String = if (name.contains(' ')) s"`$name`" else name
 }
 
 /**
@@ -23,7 +24,7 @@ object NamedExpression {
     * @param expression the expression
     * @return a named alias
     */
-  def alias(name: String, expression: Expression): NamedExpression = expression match {
+  def apply(name: String, expression: Expression): NamedExpression = expression match {
     case aggregate: Expression with Aggregation => AggregateAlias(name, aggregate)
     case vanilla => ExpressionAlias(name, vanilla)
   }
@@ -43,7 +44,6 @@ object NamedExpression {
 
     override def update(scope: Scope): Unit = aggregate.update(scope)
 
-    override def toSQL: String = s"$aggregate AS ${super.toSQL}"
   }
 
   /**
@@ -54,7 +54,6 @@ object NamedExpression {
 
     override def evaluate(scope: Scope): Option[Any] = expression.evaluate(scope)
 
-    override def toSQL: String = s"$expression AS ${super.toSQL}"
   }
 
   /**

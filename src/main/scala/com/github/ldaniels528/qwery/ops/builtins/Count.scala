@@ -7,7 +7,7 @@ import com.github.ldaniels528.qwery.ops.{Aggregation, Expression, Field, Scope}
   * COUNT(field) function
   * @param expression the field to count
   */
-case class Count(expression: Expression) extends InternalFunction1 with Aggregation {
+case class Count(expression: Expression) extends InternalFunction with Aggregation {
   private var count = 0L
   private val field = expression match {
     case f: Field => f

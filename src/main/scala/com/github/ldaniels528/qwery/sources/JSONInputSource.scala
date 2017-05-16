@@ -34,7 +34,7 @@ abstract class JSONInputSource(source: Source) extends QueryInputSource {
   */
 object JSONInputSource extends QueryInputSourceFactory {
 
-  def apply(file: File): JSONFileInputSource = JSONFileInputSource(file)
+  def apply(file: File): JSONFileInputSource = JSONFileInputSource(file.getCanonicalPath)
 
   def apply(url: URL): JSONURLInputSource = JSONURLInputSource(url)
 
@@ -49,14 +49,6 @@ object JSONInputSource extends QueryInputSourceFactory {
 
 }
 
-case class JSONFileInputSource(file: File) extends JSONInputSource(Source.fromFile(file)) {
+case class JSONFileInputSource(file: String) extends JSONInputSource(Source.fromFile(file))
 
-  override def toSQL: String = s"'${file.getCanonicalFile}'"
-
-}
-
-case class JSONURLInputSource(url: URL) extends JSONInputSource(Source.fromURL(url)) {
-
-  override def toSQL: String = s"'${url.toExternalForm}'"
-
-}
+case class JSONURLInputSource(url: URL) extends JSONInputSource(Source.fromURL(url))

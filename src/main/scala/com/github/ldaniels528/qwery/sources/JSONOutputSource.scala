@@ -1,8 +1,8 @@
 package com.github.ldaniels528.qwery.sources
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, FileWriter}
 
-import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 import net.liftweb.json.Extraction._
 import net.liftweb.json.JsonAST._
 
@@ -10,7 +10,7 @@ import net.liftweb.json.JsonAST._
   * JSON Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class JSONOutputSource(file: File) extends QueryOutputSource {
+abstract class JSONOutputSource(file: String) extends QueryOutputSource {
   private implicit val formats = net.liftweb.json.DefaultFormats
   private var writer: BufferedWriter = _
 
@@ -20,7 +20,7 @@ case class JSONOutputSource(file: File) extends QueryOutputSource {
 
   override def flush(): Unit = writer.flush()
 
-  override def write(data: Seq[(String, Any)]): Unit = {
+  override def write(data: Row): Unit = {
     val line = compactRender(decompose(Map(data: _*)))
     writer.write(line)
     writer.newLine()
@@ -36,7 +36,7 @@ object JSONOutputSource extends QueryOutputSourceFactory {
 
   override def apply(uri: String): Option[QueryOutputSource] = {
     if (understands(uri))
-      Option(JSONOutputSource(new File(uri)))
+      Option(JSONFileOutputSource(uri))
     else
       None
   }
@@ -44,3 +44,5 @@ object JSONOutputSource extends QueryOutputSourceFactory {
   override def understands(url: String): Boolean = url.toLowerCase().endsWith(".json")
 
 }
+
+case class JSONFileOutputSource(file: String) extends JSONOutputSource(file)

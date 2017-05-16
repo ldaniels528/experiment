@@ -20,6 +20,4 @@ case class NumericValue(value: Double) extends Expression {
 
   override def evaluate(scope: Scope): Option[Double] = Option(value)
 
-  override def toSQL: String = value.toString
-
 }

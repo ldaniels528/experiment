@@ -21,8 +21,6 @@ case class BooleanValue(value: Boolean) extends Expression {
 
   override def evaluate(scope: Scope): Option[Boolean] = Option(value)
 
-  override def toSQL: String = s"'$value'"
-
 }
 
 /**

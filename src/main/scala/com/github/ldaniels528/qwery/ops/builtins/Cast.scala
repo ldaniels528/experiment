@@ -7,7 +7,7 @@ import com.github.ldaniels528.qwery.ops.{Expression, Scope}
   * @param expression the expression for which is the input data
   * @param toType     the express which describes desired type
   */
-case class Cast(expression: Expression, toType: String) extends InternalFunction1 {
+case class Cast(expression: Expression, toType: String) extends InternalFunction {
   override def evaluate(scope: Scope): Option[Any] = {
     toType match {
       case s if s.equalsIgnoreCase("Boolean") => expression.getAsBoolean(scope)
@@ -22,6 +22,4 @@ case class Cast(expression: Expression, toType: String) extends InternalFunction
         throw new IllegalStateException(s"Invalid conversion type $theType")
     }
   }
-
-  override def toSQL: String = s"CAST($expression AS $toType)"
 }

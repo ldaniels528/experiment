@@ -16,10 +16,4 @@ case class Describe(source: QueryInputSource, limit: Option[Int]) extends Execut
     }
   }
 
-  override def toSQL: String = {
-    val sb = new StringBuilder(s"DESCRIBE ${source.toSQL}")
-    limit.foreach(n => sb.append(s" LIMIT $n"))
-    sb.toString()
-  }
-
 }

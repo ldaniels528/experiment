@@ -1,7 +1,5 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.ops.ResultSet
-
 import scala.collection.Iterable
 
 /**
@@ -17,10 +15,6 @@ case class InsertValues(fields: Seq[Field], dataSets: Iterable[Seq[Expression]])
           .getOrElse(throw new RuntimeException(s"Could not resolve value for '${field.name}': $value"))
       }
     }
-  }
-
-  override def toSQL: String = {
-    dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
   }
 
 }

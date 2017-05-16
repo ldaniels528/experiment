@@ -9,7 +9,7 @@ import scala.util.Try
   * Represents an expression; while in its simplest form is a value (boolean, double or string)
   * @author lawrence.daniels@gmail.com
   */
-trait Expression extends SQLLike {
+trait Expression {
   private val booleans = Seq("on", "true", "yes")
 
   def compare(that: Expression, scope: Scope): Int = {

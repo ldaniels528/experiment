@@ -81,16 +81,6 @@ case class Select(fields: Seq[Expression],
     results
   }
 
-  override def toSQL: String = {
-    val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
-    source.foreach(src => sb.append(s" FROM ${src.toSQL}"))
-    condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
-    if(groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
-    if(orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")
-    limit.foreach(n => s" LIMIT $n")
-    sb.toString
-  }
-
 }
 
 /**

@@ -13,5 +13,4 @@ case class Add(a: Expression, b: Expression) extends Expression {
     y <- b.getAsDouble(scope)
   } yield x + y
 
-  override def toSQL: String = s"${a.toSQL} + ${b.toSQL}"
 }

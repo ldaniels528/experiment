@@ -7,53 +7,17 @@ import org.scalatest.FunSpec
 import scala.util.Properties
 
 /**
-  * Query Test
+  * Qwery Integration Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class QueryTest extends FunSpec {
+class QweryTest extends FunSpec {
   private val tabular = new Tabular()
 
-  describe("Query") {
+  describe("Qwery") {
 
-    it("should CAST values from one type to another") {
-      val query = QweryCompiler("SELECT CAST('1234' AS Double) AS number")
-      val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
-      assert(results == List(
-        List("number" -> 1234.0)
-      ))
-    }
-
-    it("should be capable of simple data aggregation") {
-      val query = QweryCompiler(
-        """
-          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
-          |FROM './companylist.csv'""".stripMargin('|'))
-      val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
-      assert(results == List(
-        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
-      ))
-    }
-
-    it("should be capable of data aggregation via GROUP BY") {
-      val query = QweryCompiler(
-        """
-          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
-          |FROM './companylist.csv'
-          |GROUP BY Sector""".stripMargin('|'))
-      val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
-      /*
-      assert(results == List(
-        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
-      ))*/
-    }
-
-    it("should describe the layout of a CVS file") {
+    it("should support describing the layout of a file") {
       val query = QweryCompiler("DESCRIBE './companylist.csv'")
       val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
       assert(results == Vector(
         List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
         List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
@@ -67,7 +31,19 @@ class QueryTest extends FunSpec {
       ))
     }
 
-    it("should extract filtered results from a CVS file") {
+    it("should support creating named aliases") {
+      val query = QweryCompiler("SELECT 1234 AS number")
+      val results = query.execute(RootScope()).toSeq
+      assert(results == List(List("number" -> 1234.0)))
+    }
+
+    it("should support CASTing values from one type to another") {
+      val query = QweryCompiler("SELECT CAST('1234' AS Double) AS number")
+      val results = query.execute(RootScope()).toSeq
+      assert(results == List(List("number" -> 1234.0)))
+    }
+
+    it("should support extracting filtered results from a file") {
       val query = QweryCompiler(
         """
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -75,7 +51,6 @@ class QueryTest extends FunSpec {
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
       assert(results == Stream(
         List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281"),
@@ -84,7 +59,57 @@ class QueryTest extends FunSpec {
       ))
     }
 
-    it("should aggregate the results from a CVS file") {
+    it("should support extracting filtered results from a file for all (*) fields") {
+      val query = QweryCompiler(
+        """
+          |SELECT * FROM './companylist.csv'
+          |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+      val results = query.execute(RootScope()).toSeq
+      assert(results ==
+        Stream(List("Symbol" -> "CQH", "Name" -> "Cheniere Energy Partners LP Holdings, LLC", "LastSale" -> "25.68",
+          "MarketCap" -> "5950056000", "ADR TSO" -> "n/a", "IPOyear" -> "n/a", "Sector" -> "Public Utilities",
+          "Industry" -> "Oil/Gas Transmission", "Summary Quote" -> "http://www.nasdaq.com/symbol/cqh"),
+          List("Symbol" -> "CQP", "Name" -> "Cheniere Energy Partners, LP", "LastSale" -> "31.75", "MarketCap" -> "10725987819",
+            "ADR TSO" -> "n/a", "IPOyear" -> "n/a", "Sector" -> "Public Utilities", "Industry" -> "Oil/Gas Transmission",
+            "Summary Quote" -> "http://www.nasdaq.com/symbol/cqp"),
+          List("Symbol" -> "LNG", "Name" -> "Cheniere Energy, Inc.", "LastSale" -> "45.35", "MarketCap" -> "10786934946.1",
+            "ADR TSO" -> "n/a", "IPOyear" -> "n/a", "Sector" -> "Public Utilities", "Industry" -> "Oil/Gas Transmission",
+            "Summary Quote" -> "http://www.nasdaq.com/symbol/lng"),
+          List("Symbol" -> "EGAS", "Name" -> "Gas Natural Inc.", "LastSale" -> "12.5", "MarketCap" -> "131496600", "ADR TSO" -> "n/a",
+            "IPOyear" -> "n/a", "Sector" -> "Public Utilities", "Industry" -> "Oil/Gas Transmission",
+            "Summary Quote" -> "http://www.nasdaq.com/symbol/egas")))
+    }
+
+    it("should support limiting results via 'TOP n'") {
+      val query = QweryCompiler(
+        """
+          |SELECT TOP 1 Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |FROM './companylist.csv'
+          |WHERE Industry = 'Consumer Specialties'""".stripMargin)
+
+      val results = query.execute(RootScope()).toSeq
+      assert(results == Stream(
+        List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
+          "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281")
+      ))
+    }
+
+    it("should support limiting results via 'LIMIT n'") {
+      val query = QweryCompiler(
+        """
+          |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |FROM './companylist.csv'
+          |WHERE Industry = 'Consumer Specialties'
+          |LIMIT 1""".stripMargin)
+
+      val results = query.execute(RootScope()).toSeq
+      assert(results == Stream(
+        List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
+          "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281")
+      ))
+    }
+
+    it("should support simple data aggregation") {
       val query = QweryCompiler(
         """
           |SELECT Sector, COUNT(*) AS Securities
@@ -92,7 +117,6 @@ class QueryTest extends FunSpec {
           |GROUP BY Sector""".stripMargin)
 
       val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
       assert(results == List(
         List("Sector" -> "Consumer Durables", "Securities" -> 4L),
         List("Sector" -> "Consumer Non-Durables", "Securities" -> 13L),
@@ -110,6 +134,31 @@ class QueryTest extends FunSpec {
       ))
     }
 
+    it("should support aggregation functions like AVG, MIN, MAX and SUM") {
+      val query = QweryCompiler(
+        """
+          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
+          |FROM './companylist.csv'""".stripMargin('|'))
+      val results = query.execute(RootScope()).toSeq
+      assert(results == List(
+        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
+      ))
+    }
+
+    it("should support aggregation functions like AVG, MIN, MAX and SUM via GROUP BY") {
+      val query = QweryCompiler(
+        """
+          |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
+          |FROM './companylist.csv'
+          |GROUP BY Sector""".stripMargin('|'))
+      val results = query.execute(RootScope()).toSeq
+      tabular.transform(results.toIterator) foreach (info(_))
+      /*
+      assert(results == List(
+        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
+      ))*/
+    }
+
     it("should write filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
         """
@@ -117,7 +166,7 @@ class QueryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
-      val results = query.execute(RootScope())
+      val results = query.execute(RootScope()).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 34))))
     }
 
@@ -150,7 +199,7 @@ class QueryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM './companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
-      val results = query.execute(RootScope())
+      val results = query.execute(RootScope()).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
@@ -162,7 +211,6 @@ class QueryTest extends FunSpec {
             |SELECT TOP 4 * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
         val results = query.execute(RootScope()).toSeq
-        tabular.transform(results.toIterator) foreach (info(_))
         assert(results == Stream(
           List("Symbol" -> "CQH", "Name" -> "Cheniere Energy Partners LP Holdings, LLC", "Sector" -> "Public Utilities",
             "Industry" -> "Oil/Gas Transmission", "LastSale" -> "25.68", "MarketCap" -> "5950056000"),

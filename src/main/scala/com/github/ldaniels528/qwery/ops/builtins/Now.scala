@@ -6,7 +6,15 @@ import com.github.ldaniels528.qwery.ops.Scope
 
 /**
   * Now() function
+  * @author lawrence.daniels@gmail.com
   */
-object Now extends InternalFunction0 {
+trait Now extends InternalFunction {
   override def evaluate(scope: Scope): Option[Date] = Some(new Date())
 }
+
+
+/**
+  * Now() function
+  * @author lawrence.daniels@gmail.com
+  */
+object Now extends Now

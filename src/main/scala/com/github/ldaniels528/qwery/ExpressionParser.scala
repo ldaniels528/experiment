@@ -154,7 +154,7 @@ trait ExpressionParser {
     */
   def parseNamedAlias(stream: TokenStream, expression: Expression): NamedExpression = {
     stream match {
-      case ts if ts.isBackticks | ts.matches(identifierRegEx) => NamedExpression.alias(name = ts.next().text, expression)
+      case ts if ts.isBackticks | ts.matches(identifierRegEx) => NamedExpression(name = ts.next().text, expression)
       case ts => ts.die("Identifier expected for alias")
     }
   }

@@ -14,6 +14,4 @@ case class Right(string: Expression, length: Expression) extends InternalFunctio
       len <- length.getAsInt(scope) if str.length >= len
     } yield str.substring(str.length - len, str.length)
   }
-
-  override def toSQL: String = s"RIGHT(${string.toSQL}, ${length.toSQL})"
 }

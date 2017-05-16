@@ -14,6 +14,4 @@ case class Split(string: Expression, delimiter: Expression) extends InternalFunc
       delim <- delimiter.getAsString(scope)
     } yield str.split(s"[$delim]")
   }
-
-  override def toSQL: String = s"SPLIT($string, $delimiter)"
 }

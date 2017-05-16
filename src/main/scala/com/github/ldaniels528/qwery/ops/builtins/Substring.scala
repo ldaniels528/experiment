@@ -18,6 +18,4 @@ case class Substring(string: Expression, startPos: Expression, length: Expressio
     } yield str.substring(start, start + len)
   }
 
-  override def toSQL: String = s"SUBSTRING(${string.toSQL}, ${startPos.toSQL}, ${length.toSQL})"
-
 }

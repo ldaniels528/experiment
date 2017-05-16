@@ -6,7 +6,7 @@ import com.github.ldaniels528.qwery.ops.{Aggregation, Expression, Scope}
   * SUM(field) function
   * @param expression the expression to sum
   */
-case class Sum(expression: Expression) extends InternalFunction1 with Aggregation {
+case class Sum(expression: Expression) extends InternalFunction with Aggregation {
   private var total: Option[Double] = None
 
   override def evaluate(scope: Scope): Option[Double] = {
