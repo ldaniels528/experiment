@@ -67,6 +67,7 @@ trait ExpressionParser {
         function1s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 1) match {
             case a :: Nil => fx(a)
+            case _ => ts.die(s"Invalid parameters")
           }
         }
       // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
@@ -74,6 +75,7 @@ trait ExpressionParser {
         function2s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 2) match {
             case a :: b :: Nil => fx(a, b)
+            case _ => ts.die(s"Invalid parameters")
           }
         }
       // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
@@ -81,9 +83,10 @@ trait ExpressionParser {
         function3s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 3) match {
             case a :: b :: c :: Nil => fx(a, b, c)
+            case _ => ts.die(s"Invalid parameters")
           }
         }
-      case ts => ts.die(s"${ts.peek.orNull} is not a defined function")
+      case ts => ts.die(s"${ts.previous.orNull} is not a defined function")
     }
   }
 

@@ -35,9 +35,8 @@ trait DataSourceFactory {
   */
 object DataSourceFactory extends DataSourceFactory {
 
-  this += DelimitedInputSource
+  this += TextInputSource
   this += DelimitedOutputSource
-  this += JSONInputSource
   this += JSONOutputSource
 
 }

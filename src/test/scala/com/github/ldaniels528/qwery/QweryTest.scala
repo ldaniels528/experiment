@@ -19,15 +19,15 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler("DESCRIBE 'companylist.csv'")
       val results = query.execute(RootScope()).toSeq
       assert(results == Vector(
-        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "ABE"),
-        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "Aberdeen Emerging Markets Smaller Company Opportunities Fund I"),
-        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "13.63"),
-        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "131446834.05"),
+        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "XXII"),
+        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "22nd Century Group, Inc"),
+        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "1.4"),
+        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "126977358.2"),
         List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
         List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/abe")
+        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "Consumer Non-Durables"),
+        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "Farming/Seeds/Milling"),
+        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/xxii")
       ))
     }
 
@@ -55,7 +55,7 @@ class QweryTest extends FunSpec {
         """.stripMargin)
 
       val results = query.execute(RootScope()).toSeq
-      assert(results.headOption.flatMap(_.headOption.map(_._2)).contains("2"))
+      assert(results == List(List("ItemNo" -> "2")))
     }
 
     it("should support extracting filtered results from a file") {

@@ -2,21 +2,21 @@ package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.ops.NamedExpression._
 import com.github.ldaniels528.qwery.ops.Select._
-import com.github.ldaniels528.qwery.sources.QueryInputSource
+import com.github.ldaniels528.qwery.sources.QueryResource
 
 /**
   * Represents a selection query
   * @author lawrence.daniels@gmail.com
   */
 case class Select(fields: Seq[Expression],
-                  source: Option[QueryInputSource] = None,
+                  source: Option[QueryResource] = None,
                   condition: Option[Condition] = None,
                   groupFields: Seq[Field] = Nil,
                   orderedColumns: Seq[OrderedColumn] = Nil,
                   limit: Option[Int] = None)
   extends Executable {
 
-  override def execute(scope: Scope): ResultSet = source match {
+  override def execute(scope: Scope): ResultSet = source.flatMap(_.getInputSource) match {
     case Some(device) =>
       val rows = device.execute(scope)
         .toIterator

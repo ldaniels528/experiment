@@ -30,21 +30,12 @@ object QwerySQLGenerator {
   }
 
   private def makeSQL(executable: Executable): String = executable match {
-    case Describe(source, limit) =>
-      val sb = new StringBuilder(s"DESCRIBE ${source.toSQL}")
-      limit.foreach(n => sb.append(s" LIMIT $n"))
-      sb.toString()
-    case FileDelimitedInputSource(file) => s"'$file'"
-    case Insert(target, fields, source, hints) =>
-      s"""
-         |INSERT ${if (hints.append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
-         |${source.toSQL}""".stripMargin.toSingleLine
+    case Describe(source, limit) => toDescribe(source, limit)
+    case Insert(target, fields, source, hints) => toInsert(target, fields, source, hints)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
-    case JSONFileInputSource(file) => s"'$file'"
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
       toSelect(fields, source, condition, groupFields, orderedColumns, limit)
-    case URLDelimitedInputSource(url) => s"'${url.toExternalForm}'"
     case unknown =>
       throw new IllegalArgumentException(s"Executable '$unknown' was unhandled")
   }
@@ -92,6 +83,7 @@ object QwerySQLGenerator {
   private def makeSQL(value: AnyRef): String = value match {
     case Hints(_, delimiter, headers, quoted) => s"HINTS(DELIMITER '$delimiter', HEADERS ${headers.onOff}, QUOTES ${quoted.onOff})"
     case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
+    case QueryResource(path) => s"'$path'"
     case condition: Condition => makeSQL(condition)
     case executable: Executable => makeSQL(executable)
     case expression: Expression => makeSQL(expression)
@@ -111,8 +103,20 @@ object QwerySQLGenerator {
     sb.toString()
   }
 
+  private def toDescribe(source: QueryResource, limit: Option[Int]): String = {
+    val sb = new StringBuilder(s"DESCRIBE ${source.toSQL}")
+    limit.foreach(n => sb.append(s" LIMIT $n"))
+    sb.toString()
+  }
+
+  private def toInsert(target: QueryResource, fields: Seq[Field], source: Executable, hints: Hints): String = {
+    s"""
+       |INSERT ${if (hints.append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
+       |${source.toSQL}""".stripMargin.toSingleLine
+  }
+
   private def toSelect(fields: Seq[Expression],
-                       source: Option[QueryInputSource],
+                       source: Option[QueryResource],
                        condition: Option[Condition],
                        groupFields: Seq[Field],
                        orderedColumns: Seq[OrderedColumn],
