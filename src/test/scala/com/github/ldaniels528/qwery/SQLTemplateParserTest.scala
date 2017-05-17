@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.ops.types._
 import org.scalatest.FunSpec
 
 /**
@@ -19,8 +21,12 @@ class SQLTemplateParserTest extends FunSpec {
           |LIMIT 5""".stripMargin
 
       val templateParser = SQLTemplateParser(query)
-      val values = templateParser.extract("SELECT @{fields} FROM @source ?WHERE ?@&{condition} ?LIMIT ?@limit")
-      info(s"values: $values")
+      val templateParams = templateParser.process("SELECT @{fields} FROM @source ?WHERE ?@&{condition} ?LIMIT ?@limit")
+      assert(templateParams == SQLTemplateParams(
+        atoms = Map("source" -> "companylist.csv", "limit" -> "5"),
+        conditions = Map("condition" -> EQ(Field("Industry"), "Oil/Gas Transmission")),
+        expressions = Map("fields" -> List("Symbol", "Name", "Sector", "Industry", "LastSale", "MarketCap").map(Field.apply))
+      ))
     }
 
     it("should extract values from INSERT-VALUES statements") {
@@ -32,14 +38,16 @@ class SQLTemplateParserTest extends FunSpec {
 
       val tokenStream = TokenStream(TokenIterator(query))
       val templateParser = new SQLTemplateParser(tokenStream)
-      val targetAndFields = templateParser.extract("INSERT INTO @target ( @(fields) )")
-      var valueSets: List[SQLTemplateParams] = Nil
-      while (tokenStream.hasNext) {
-        valueSets = templateParser.extract("VALUES ( @{values} )") :: valueSets
-      }
-      info(s"targetAndFields: $targetAndFields")
-      valueSets.foreach(values => info(s"values:          $values"))
+      val templateParams = templateParser.process("INSERT INTO @target ( @(fields) ) {{valueSet VALUES ( @{values} ) }}")
+      assert(templateParams == SQLTemplateParams(
+        atoms = Map("target" -> "test3.csv"),
+        fields = Map("fields" -> List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)),
+        repeatedSets = Map("valueSet" -> List(
+          SQLTemplateParams(expressions = Map("values" -> List("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0))),
+          SQLTemplateParams(expressions = Map("values" -> List("EMX", "Basic Industries", "Precious Metals", 0.828)))
+        ))
+      ))
     }
-  }
 
+  }
 }

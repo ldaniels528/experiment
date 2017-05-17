@@ -6,6 +6,6 @@ package com.github.ldaniels528.qwery.sources
   */
 trait QueryOutputSourceFactory extends QuerySourceFactory {
 
-  def apply(uri: String): Option[QueryOutputSource]
+  def apply(uri: String, append: Boolean): Option[QueryOutputSource]
 
 }

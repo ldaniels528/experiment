@@ -19,12 +19,12 @@ trait DataSourceFactory {
     }
   }
 
-  def getInputSource(url: String): Option[QueryInputSource] = {
-    inputSourceFactories.find(_.understands(url)).flatMap(_.apply(url))
+  def getInputSource(path: String): Option[QueryInputSource] = {
+    inputSourceFactories.find(_.understands(path)).flatMap(_.apply(path))
   }
 
-  def getOutputSource(url: String): Option[QueryOutputSource] = {
-    outputSourceFactories.find(_.understands(url)).flatMap(_.apply(url))
+  def getOutputSource(path: String, append: Boolean): Option[QueryOutputSource] = {
+    outputSourceFactories.find(_.understands(path)).flatMap(_.apply(path, append))
   }
 
 }
@@ -36,7 +36,6 @@ trait DataSourceFactory {
 object DataSourceFactory extends DataSourceFactory {
 
   this += TextInputSource
-  this += DelimitedOutputSource
-  this += JSONOutputSource
+  this += TextOutputSource
 
 }

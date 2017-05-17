@@ -89,12 +89,13 @@ class QweryCompilerTest extends FunSpec {
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
           target = QueryResource("test2.csv"),
+          append = false,
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             source = Option(QueryResource("companylist.csv")),
             condition = Some(EQ(Field("Industry"), "Precious Metals")),
             limit = None),
-          hints = Hints(append = false)))
+          hints = Hints()))
     }
 
     it("should compile INSERT statements") {
@@ -107,13 +108,14 @@ class QweryCompilerTest extends FunSpec {
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
           target = QueryResource("test3.csv"),
+          append = true,
           source = InsertValues(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(
               List[Expression]("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0),
               List[Expression]("EMX", "Basic Industries", "Precious Metals", 0.828)
             )),
-          hints = Hints(append = true)
+          hints = Hints()
         ))
     }
 

@@ -1,7 +1,7 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.formats
 
-import com.github.ldaniels528.qwery.util.StringHelper._
 import com.github.ldaniels528.qwery.ops.{Hints, Row}
+import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
   * CSV Formatter

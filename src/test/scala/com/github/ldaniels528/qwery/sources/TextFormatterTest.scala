@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
+import com.github.ldaniels528.qwery.formats.{CSVFormatter, JSONFormatter, TextFormatter}
 import com.github.ldaniels528.tabular.Tabular
 import org.scalatest.FunSpec
 

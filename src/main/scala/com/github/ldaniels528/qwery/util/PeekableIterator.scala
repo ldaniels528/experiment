@@ -42,4 +42,6 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
     else None
   }
 
+  override def toString: String = s"PeekableIterator(${values.toList})"
+
 }

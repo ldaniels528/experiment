@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.formats
 
 import com.github.ldaniels528.qwery.ops.Row
 import net.liftweb.json.Extraction.decompose

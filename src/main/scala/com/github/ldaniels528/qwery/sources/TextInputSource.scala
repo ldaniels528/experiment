@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
+import com.github.ldaniels528.qwery.formats.{JSONFormatter, TextFormatter}
 import com.github.ldaniels528.qwery.ops.{ResultSet, Scope}
 
 import scala.io.Source
@@ -11,23 +12,22 @@ import scala.io.Source
   * Text Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class TextInputSource(lines: Iterator[String], formatter: TextFormatter, sampleSet: Option[ResultSet] = None)
+class TextInputSource(lines: Iterator[String], formatter: TextFormatter, sampleSet: Option[ResultSet] = None)
   extends QueryInputSource {
 
   override def execute(scope: Scope): ResultSet = {
     val preloaded = sampleSet map { results => Iterator(results.toSeq: _*) } getOrElse Iterator.empty
     preloaded ++ (lines map formatter.fromText)
   }
-
 }
 
 /**
-  * Text Input Source
+  * Text Input Source Companion
   * @author lawrence.daniels@gmail.com
   */
 object TextInputSource extends QueryInputSourceFactory {
 
-  def apply(uri: String): Option[TextInputSource] = uri match {
+  override def apply(uri: String): Option[TextInputSource] = uri match {
     case url if url.toLowerCase.startsWith("http://") | url.toLowerCase.startsWith("https://") =>
       TextInputSource.fromURL(url)
     case file if file.toLowerCase.endsWith(".json") =>

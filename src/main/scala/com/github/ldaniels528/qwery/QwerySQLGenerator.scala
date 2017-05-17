@@ -31,7 +31,7 @@ object QwerySQLGenerator {
 
   private def makeSQL(executable: Executable): String = executable match {
     case Describe(source, limit) => toDescribe(source, limit)
-    case Insert(target, fields, source, hints) => toInsert(target, fields, source, hints)
+    case Insert(target, fields, source, append, hints) => toInsert(target, fields, source, append, hints)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
@@ -73,15 +73,8 @@ object QwerySQLGenerator {
       throw new IllegalArgumentException(s"Expression '$unknown' was unhandled")
   }
 
-  private def makeSQL(output: QueryOutputSource): String = output match {
-    case FileDelimitedOutputSource(file) => s"'$file'"
-    case JSONFileOutputSource(file) => s"'$file'"
-    case unknown =>
-      throw new IllegalArgumentException(s"Output source '$unknown' was unhandled")
-  }
-
   private def makeSQL(value: AnyRef): String = value match {
-    case Hints(_, delimiter, headers, quoted) => s"HINTS(DELIMITER '$delimiter', HEADERS ${headers.onOff}, QUOTES ${quoted.onOff})"
+    case Hints(delimiter, headers, quoted) => s"HINTS(DELIMITER '$delimiter', HEADERS ${headers.onOff}, QUOTES ${quoted.onOff})"
     case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
     case QueryResource(path) => s"'$path'"
     case condition: Condition => makeSQL(condition)
@@ -109,9 +102,9 @@ object QwerySQLGenerator {
     sb.toString()
   }
 
-  private def toInsert(target: QueryResource, fields: Seq[Field], source: Executable, hints: Hints): String = {
+  private def toInsert(target: QueryResource, fields: Seq[Field], source: Executable, append: Boolean, hints: Hints): String = {
     s"""
-       |INSERT ${if (hints.append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
+       |INSERT ${if (append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
        |${source.toSQL}""".stripMargin.toSingleLine
   }
 

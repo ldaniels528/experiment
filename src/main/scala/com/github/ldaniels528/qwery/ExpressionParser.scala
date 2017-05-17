@@ -91,23 +91,22 @@ trait ExpressionParser {
   }
 
   private def parseParameters(ts: TokenStream, name: String, count: Int): List[Expression] = {
+
+    def invalidParameters = count match {
+      case 0 => ts.die(s"Function $name expects no parameters")
+      case 1 => ts.die(s"Function $name expects a single parameter")
+      case n => ts.die(s"Function $name expects $n parameters")
+    }
+
     ts.expect("(")
     var list: List[Expression] = Nil
     for (n <- 1 to count) {
-      val expr = parseExpression(ts).getOrElse(invalidParameters(ts, name, count))
+      val expr = parseExpression(ts).getOrElse(invalidParameters)
       list = list ::: expr :: Nil
       if (n < count) ts.expect(",")
     }
     ts.expect(")")
     list
-  }
-
-  private def invalidParameters(ts: TokenStream, name: String, expected: Int) = {
-    expected match {
-      case 0 => ts.die(s"Function $name expects no parameters")
-      case 1 => ts.die(s"Function $name expects a single parameter")
-      case n => ts.die(s"Function $name expects $n parameters")
-    }
   }
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {

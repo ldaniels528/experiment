@@ -8,7 +8,9 @@ case class QueryResource(path: String) {
 
   def getInputSource: Option[QueryInputSource] = DataSourceFactory.getInputSource(path)
 
-  def getOutputSource: Option[QueryOutputSource] = DataSourceFactory.getOutputSource(path)
+  def getOutputSource(append: Boolean): Option[QueryOutputSource] = {
+    DataSourceFactory.getOutputSource(path, append)
+  }
 
 }
 

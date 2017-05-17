@@ -53,7 +53,7 @@ class QweryCompiler {
     * @return an [[Describe executable]]
     */
   private def parseDescribe(ts: TokenStream): Describe = {
-    val params = SQLTemplateParser(ts).extract("DESCRIBE @source ?LIMIT ?@limit")
+    val params = SQLTemplateParser(ts).process("DESCRIBE @source ?LIMIT ?@limit")
     Describe(
       source = params.atoms.get("source").map(QueryResource.apply)
         .getOrElse(die("No source provided", ts)),
@@ -84,7 +84,7 @@ class QweryCompiler {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
-    val params = parser.extract("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
+    val params = parser.process("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
     val target = params.atoms.get("target")
       .map(QueryResource.apply)
       .getOrElse(throw new SyntaxException("Output source is missing"))
@@ -95,7 +95,7 @@ class QweryCompiler {
       case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
       case ts => parseNext(ts)
     }
-    Insert(target, fields, source, Hints(append = append))
+    Insert(target, fields, source, append, Hints())
   }
 
   /**
@@ -108,7 +108,7 @@ class QweryCompiler {
   private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLTemplateParser): InsertValues = {
     var valueSets: List[Seq[Expression]] = Nil
     while (ts.hasNext) {
-      val params = parser.extract("VALUES ( @{values} )")
+      val params = parser.process("VALUES ( @{values} )")
       params.expressions.get("values") foreach { values =>
         valueSets = valueSets ::: values :: Nil
       }
@@ -127,7 +127,7 @@ class QweryCompiler {
     * @return an [[Select executable]]
     */
   private def parseSelect(ts: TokenStream): Select = {
-    val params = SQLTemplateParser(ts).extract(
+    val params = SQLTemplateParser(ts).process(
       """
         |SELECT ?TOP ?@top @{fields}
         |?FROM ?@source

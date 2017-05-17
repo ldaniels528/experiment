@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.formats
 
 import com.github.ldaniels528.qwery.ops.{ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
@@ -20,6 +20,22 @@ trait TextFormatter {
   * @author lawrence.daniels@gmail.com
   */
 object TextFormatter {
+
+  def guessFormat(path: String): Option[TextFormatter] = path.toLowerCase match {
+    case file if file.endsWith(".csv") => Option(CSVFormatter())
+    case file if file.endsWith(".json") => Option(JSONFormatter())
+    case file if file.endsWith(".psv") => Option(CSVFormatter(delimiter = "|"))
+    case file if file.endsWith(".tsv") => Option(CSVFormatter(delimiter = "\t"))
+    case file if file.endsWith(".txt") => Option(CSVFormatter())
+    case _ => None
+  }
+
+  def understands(path: String): Boolean = path.toLowerCase() match {
+    case s if s.endsWith(".csv") | s.endsWith(".psv") | s.endsWith(".tsv") => true
+    case s if s.endsWith(".txt") | s.endsWith(".json") => true
+    case s if s.endsWith(".gz") => understands(s.dropRight(3))
+    case _ => false
+  }
 
   def autodetectDelimiter(lines: Iterator[String]): Option[(TextFormatter, ResultSet)] = {
     // attempt to get up to 5 non-empty lines from the source file
