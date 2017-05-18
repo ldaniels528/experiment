@@ -1,8 +1,10 @@
-package com.github.ldaniels528.qwery.formats
+package com.github.ldaniels528.qwery.codecs
 
-import com.github.ldaniels528.qwery.formats.AutoDetectTextFormat._
+import com.github.ldaniels528.qwery.codecs.AutoDetectTextFormat._
 import com.github.ldaniels528.qwery.ops.{ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
+
+import scala.util.Try
 
 /**
   * Auto-Detecting Text Format
@@ -13,7 +15,7 @@ class AutoDetectTextFormat extends TextFormat {
   private var outgoing: List[Row] = Nil
   private var textFormat: Option[TextFormat] = None
 
-  override def fromText(line: String): Row = {
+  override def decode(line: String): Try[Row] = Try {
     if (textFormat.isEmpty) {
       incoming = line :: incoming
       if (incoming.size >= 5) {
@@ -27,7 +29,7 @@ class AutoDetectTextFormat extends TextFormat {
     Nil // TODO need to move to an asynchronous interface
   }
 
-  override def toText(row: Row): Seq[String] = {
+  override def encode(row: Row): String = {
     throw new IllegalArgumentException("Encoding is not supported")
   }
 

@@ -1,31 +1,27 @@
-package com.github.ldaniels528.qwery.formats
+package com.github.ldaniels528.qwery.codecs
 
 import com.github.ldaniels528.qwery.ops.Row
 import net.liftweb.json.Extraction.decompose
 import net.liftweb.json.JsonAST.compactRender
 import net.liftweb.json.{JObject, parse}
-import org.slf4j.LoggerFactory
+
+import scala.util.Try
 
 /**
   * JSON Format
   * @author lawrence.daniels@gmail.com
   */
 case class JSONFormat() extends TextFormat {
-  private lazy val logger = LoggerFactory.getLogger(getClass)
   private implicit val formats = net.liftweb.json.DefaultFormats
 
-  override def fromText(line: String): Row = {
+  override def decode(line: String): Try[Row] = Try {
     parse(line) match {
       case jo: JObject => jo.values.toSeq
       case jx =>
-        logger.warn(s"JSON primitive encountered: $jx")
-        Nil
+        throw new IllegalArgumentException(s"JSON primitive encountered: $jx")
     }
   }
 
-  override def toText(row: Row): Seq[String] = {
-    val data = compactRender(decompose(Map(row: _*)))
-    Seq(data)
-  }
+  override def encode(row: Row): String = compactRender(decompose(Map(row: _*)))
 
 }

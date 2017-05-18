@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.formats
+package com.github.ldaniels528.qwery.codecs
 
 import com.github.ldaniels528.qwery.ops.{ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
@@ -7,13 +7,7 @@ import com.github.ldaniels528.qwery.util.StringHelper._
   * Text Format
   * @author lawrence.daniels@gmail.com
   */
-trait TextFormat {
-
-  def fromText(line: String): Row
-
-  def toText(row: Row): Seq[String]
-
-}
+trait TextFormat extends Codec[String]
 
 /**
   * Text Format Singleton
@@ -26,7 +20,7 @@ object TextFormat {
     case file if file.endsWith(".json") => Option(JSONFormat())
     case file if file.endsWith(".psv") => Option(CSVFormat(delimiter = "|"))
     case file if file.endsWith(".tsv") => Option(CSVFormat(delimiter = "\t"))
-    case file if file.endsWith(".txt") => Option(CSVFormat())
+    case file if file.endsWith(".txt") => Option(new AutoDetectTextFormat())
     case _ => None
   }
 

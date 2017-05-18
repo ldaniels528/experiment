@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.formats
+package com.github.ldaniels528.qwery.codecs
 
 import com.github.ldaniels528.tabular.Tabular
 import org.scalatest.FunSpec
@@ -17,8 +17,8 @@ class TextFormatTest extends FunSpec {
 
     it("should be capable of parsing CSV text") {
       val csvFormat = CSVFormat(headers = headers)
-      val results = Source.fromFile("./companylist.csv").getLines().take(5) map { line =>
-        csvFormat.fromText(line)
+      val results = Source.fromFile("./companylist.csv").getLines().take(5) flatMap { line =>
+        csvFormat.decode(line).toOption
       }
       tabular.transform(results) foreach (info(_))
     }
@@ -34,7 +34,7 @@ class TextFormatTest extends FunSpec {
       val csvFormat = CSVFormat(headers = headers)
       val jsonFormat = JSONFormat()
       val results = Source.fromFile("./companylist.csv").getLines().take(5).toSeq flatMap { line =>
-        jsonFormat.toText(csvFormat.fromText(line))
+        csvFormat.decode(line).map(jsonFormat.encode).toOption
       }
       results foreach (info(_))
     }

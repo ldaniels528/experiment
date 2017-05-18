@@ -12,4 +12,6 @@ trait Scope {
 
   def lookup(ref: FunctionRef): Option[Function]
 
+  def lookupVariable(name: String): Option[Variable]
+
 }

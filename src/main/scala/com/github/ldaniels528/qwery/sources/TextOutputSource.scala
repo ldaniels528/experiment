@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.{BufferedWriter, FileOutputStream, FileWriter, OutputStreamWriter}
 import java.util.zip.GZIPOutputStream
 
-import com.github.ldaniels528.qwery.formats.TextFormat
+import com.github.ldaniels528.qwery.codecs.TextFormat
 import com.github.ldaniels528.qwery.ops.{Hints, Row}
 
 /**
@@ -20,10 +20,9 @@ class TextOutputSource(writer: BufferedWriter, formatter: TextFormat) extends Qu
   override def flush(): Unit = writer.flush()
 
   override def write(row: Row): Unit = {
-    formatter.toText(row) foreach { line =>
-      writer.write(line)
-      writer.newLine()
-    }
+    val line = formatter.encode(row)
+    writer.write(line)
+    writer.newLine()
   }
 
 }

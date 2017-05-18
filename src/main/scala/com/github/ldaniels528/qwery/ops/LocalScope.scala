@@ -10,10 +10,17 @@ import scala.collection.concurrent.TrieMap
   */
 case class LocalScope(parent: Scope, data: Row) extends Scope {
   private val functions = TrieMap[String, Function]()
+  private val variables = TrieMap[String, Variable]()
   private lazy val mapping = Map(data: _*)
 
   override def get(name: String): Option[Any] = mapping.get(name) ?? parent.get(name)
 
-  override def lookup(ref: FunctionRef): Option[Function] = functions.get(ref.name) ?? parent.lookup(ref)
+  override def lookup(ref: FunctionRef): Option[Function] = {
+    functions.get(ref.name) ?? parent.lookup(ref)
+  }
+
+  override def lookupVariable(name: String): Option[Variable] = {
+    variables.get(name) ?? parent.lookupVariable(name)
+  }
 
 }

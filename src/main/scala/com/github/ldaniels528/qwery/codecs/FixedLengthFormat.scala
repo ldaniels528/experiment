@@ -1,7 +1,9 @@
-package com.github.ldaniels528.qwery.formats
+package com.github.ldaniels528.qwery.codecs
 
-import com.github.ldaniels528.qwery.formats.FixedLengthFormat.FixedField
+import com.github.ldaniels528.qwery.codecs.FixedLengthFormat.FixedField
 import com.github.ldaniels528.qwery.ops._
+
+import scala.util.Try
 
 /**
   * Fixed-length Format
@@ -9,7 +11,7 @@ import com.github.ldaniels528.qwery.ops._
   */
 case class FixedLengthFormat(fields: Seq[FixedField]) extends TextFormat {
 
-  override def fromText(line: String): Row = {
+  override def decode(line: String): Try[Row] = Try {
     var position = 0
     fields.foldLeft[List[(String, String)]](Nil) { case (row, field) =>
       val value = extract(line, position, field.width)
@@ -18,11 +20,11 @@ case class FixedLengthFormat(fields: Seq[FixedField]) extends TextFormat {
     }
   }
 
-  override def toText(row: Row): Seq[String] = {
+  override def encode(row: Row): String = {
     val sbc = fields.foldLeft[StringBuilder](new StringBuilder()) { case (sb, field) =>
       sb.append(sizeTo(row.get(field.name), field.width))
     }
-    Seq(sbc.toString())
+    sbc.toString()
   }
 
   private def extract(line: String, position: Int, width: Int) = {

@@ -1,16 +1,15 @@
 package com.github.ldaniels528.qwery
 package cli
 
-import com.github.ldaniels528.tabular._
+import com.github.ldaniels528.qwery.AppConstants._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery._
+import com.github.ldaniels528.tabular._
 
 /**
-  * Qwery Main Application
+  * Qwery CLI Application
   * @author lawrence.daniels@gmail.com
   */
 object QweryCLI {
-  private val version = "0.1.6"
   private var alive = true
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()
@@ -89,7 +88,7 @@ object QweryCLI {
 
   private def welcome: String = {
     s"""
-       | Qwery CLI v$version
+       | Qwery CLI v$Version
        |         ,,,,,
        |         (o o)
        |-----oOOo-(_)-oOOo-----

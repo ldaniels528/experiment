@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.2.0"
+val apiVersion = "0.2.1"
 val appScalaVersion = "2.12.2"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
@@ -32,8 +32,6 @@ lazy val cli = (project in file("./app/cli")).
       "org.scala-lang" % "scala-compiler" % appScalaVersion,
       "org.scala-lang" % "scala-reflect" % appScalaVersion,
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "net.liftweb" %% "lift-json" % "3.0.1",
       "org.scala-lang" % "jline" % "2.11.0-M3"
     ))
 
@@ -76,12 +74,19 @@ lazy val core = (project in file(".")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
+      "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
+      "com.twitter" %% "bijection-avro" % "0.9.5",
+      "com.typesafe.akka" %% "akka-actor" % "2.5.1",
+      "commons-io" % "commons-io" % "2.4",
+      "log4j" % "log4j" % "1.2.17",
+      "org.apache.avro" % "avro" % "1.8.1",
+      "org.apache.kafka" %% "kafka" % "0.10.2.1",
       "org.scala-lang" % "scala-compiler" % appScalaVersion,
       "org.scala-lang" % "scala-reflect" % appScalaVersion,
-	    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "net.liftweb" %% "lift-json" % "3.0.1"
-  ))
+    ))
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Publishing

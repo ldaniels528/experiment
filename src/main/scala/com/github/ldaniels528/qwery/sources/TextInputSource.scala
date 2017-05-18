@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
-import com.github.ldaniels528.qwery.formats.{JSONFormat, TextFormat}
+import com.github.ldaniels528.qwery.codecs.{JSONFormat, TextFormat}
 import com.github.ldaniels528.qwery.ops.{ResultSet, Scope}
 
 import scala.io.Source
@@ -17,7 +17,7 @@ class TextInputSource(lines: Iterator[String], formatter: TextFormat, sampleSet:
 
   override def execute(scope: Scope): ResultSet = {
     val preloaded = sampleSet map { results => Iterator(results.toSeq: _*) } getOrElse Iterator.empty
-    preloaded ++ (lines map formatter.fromText)
+    preloaded ++ (lines flatMap(formatter.decode(_).toOption))
   }
 }
 
