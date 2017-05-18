@@ -1,9 +1,9 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.util.StringHelper._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.sources._
 import com.github.ldaniels528.qwery.util.OptionHelper._
+import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.util.{Failure, Success, Try}
 
@@ -85,8 +85,7 @@ class QweryCompiler {
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
     val params = parser.process("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
-    val target = params.atoms.get("target")
-      .map(QueryResource.apply)
+    val target = params.atoms.get("target").map(QueryResource.apply)
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
@@ -106,13 +105,13 @@ class QweryCompiler {
     * @return the resulting [[InsertValues modifications]]
     */
   private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLTemplateParser): InsertValues = {
-    var valueSets: List[Seq[Expression]] = Nil
-    while (ts.hasNext) {
-      val params = parser.process("VALUES ( @{values} )")
-      params.expressions.get("values") foreach { values =>
-        valueSets = valueSets ::: values :: Nil
-      }
+    val valueSets = parser.process("{{valueSet VALUES ( @{values} ) }}").repeatedSets.get("valueSet") match {
+      case Some(sets) => sets.flatMap(_.expressions.get("values"))
+      case None =>
+        throw new SyntaxException("VALUES clause could not be parsed", ts.previous.orNull)
     }
+    if(!valueSets.forall(_.size == fields.size))
+      throw new SyntaxException("The number of fields must match the number of values", ts.previous.orNull)
     InsertValues(fields, valueSets)
   }
 

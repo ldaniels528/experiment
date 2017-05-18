@@ -1,8 +1,8 @@
 package com.github.ldaniels528.qwery
 
+import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Cast
-import com.github.ldaniels528.qwery.ops.types._
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec
 

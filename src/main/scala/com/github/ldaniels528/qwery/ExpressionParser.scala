@@ -1,10 +1,10 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ExpressionParser._
+import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
 import com.github.ldaniels528.qwery.ops.builtins._
-import com.github.ldaniels528.qwery.ops.math._
 
 /**
   * Expression Parser
@@ -39,8 +39,9 @@ trait ExpressionParser {
           case ts if ts.nextIf("+") => for (a <- expression; b <- parseNextExpression(ts)) yield a + b
           case ts if ts.nextIf("-") => for (a <- expression; b <- parseNextExpression(ts)) yield a - b
           case ts if ts.nextIf("*") => for (a <- expression; b <- parseNextExpression(ts)) yield a * b
+          case ts if ts.nextIf("**") => for (a <- expression; b <- parseNextExpression(ts)) yield a ** b
           case ts if ts.nextIf("/") => for (a <- expression; b <- parseNextExpression(ts)) yield a / b
-          case ts if ts.nextIf("||") => for (a <- expression; b <- parseNextExpression(ts)) yield a || b
+          case ts if ts.nextIf("||") => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(a, b)
           case _ => None
         }
         // if the expression was resolved ...
@@ -53,9 +54,9 @@ trait ExpressionParser {
   /**
     * Parses an internal function (e.g. "LEN('Hello World')")
     * @param stream the given [[TokenStream token stream]]
-    * @return an [[InternalFunction internal function]]
+    * @return an [[Expression internal function]]
     */
-  private def parseInternalFunction(stream: TokenStream): Option[InternalFunction] = {
+  private def parseInternalFunction(stream: TokenStream): Option[Expression] = {
     stream match {
       // is it a parameter-less function? (e.g. "Now()")
       case ts if function0s.exists(fx => ts.is(fx.name)) =>
@@ -67,7 +68,7 @@ trait ExpressionParser {
         function1s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 1) match {
             case a :: Nil => fx(a)
-            case _ => ts.die(s"Invalid parameters")
+            case params => ts.die(s"Invalid parameters: expected 1, found ${params.size}")
           }
         }
       // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
@@ -75,7 +76,7 @@ trait ExpressionParser {
         function2s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 2) match {
             case a :: b :: Nil => fx(a, b)
-            case _ => ts.die(s"Invalid parameters")
+            case params => ts.die(s"Invalid parameters: expected 2, found ${params.size}")
           }
         }
       // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
@@ -83,7 +84,7 @@ trait ExpressionParser {
         function3s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 3) match {
             case a :: b :: c :: Nil => fx(a, b, c)
-            case _ => ts.die(s"Invalid parameters")
+            case params => ts.die(s"Invalid parameters: expected 3, found ${params.size}")
           }
         }
       case ts => ts.die(s"${ts.previous.orNull} is not a defined function")
@@ -277,6 +278,7 @@ object ExpressionParser {
     "TRIM" -> Trim.apply _
   )
   private val function2s = Map(
+    "CONCAT" -> Concat.apply _,
     "LEFT" -> Left.apply _,
     "RIGHT" -> Right.apply _,
     "SPLIT" -> Split.apply _

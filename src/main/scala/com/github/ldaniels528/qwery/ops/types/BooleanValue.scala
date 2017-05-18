@@ -1,6 +1,5 @@
 package com.github.ldaniels528.qwery.ops.types
 
-import com.github.ldaniels528.qwery.ops.types.BooleanValue._
 import com.github.ldaniels528.qwery.ops.{Expression, Scope}
 
 /**
@@ -10,24 +9,12 @@ import com.github.ldaniels528.qwery.ops.{Expression, Scope}
 case class BooleanValue(value: Boolean) extends Expression {
 
   override def compare(that: Expression, scope: Scope): Int = {
-    that match {
-      case NumericValue(v) => value.compareTo(java.lang.Boolean.valueOf(v == 0))
-      case StringValue(v) => value.compareTo(booleans.exists(_.equalsIgnoreCase(v)))
-      case expression: Expression => expression.compare(this, scope)
-      case unknown =>
-        throw new IllegalStateException(s"Unhandled value '$unknown' (${Option(unknown).map(_.getClass.getName).orNull})")
-    }
+    that.evaluate(scope).map {
+      case b: Boolean => value.compareTo(b)
+      case _ => -1
+    } getOrElse -1
   }
 
   override def evaluate(scope: Scope): Option[Boolean] = Option(value)
-
-}
-
-/**
-  * Boolean Value
-  * @author lawrence.daniels@gmail.com
-  */
-object BooleanValue {
-  private val booleans = Seq("on", "true", "yes")
 
 }

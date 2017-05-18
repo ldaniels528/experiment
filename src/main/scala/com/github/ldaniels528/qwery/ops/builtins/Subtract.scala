@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.ops.math
+package com.github.ldaniels528.qwery.ops.builtins
 
 import com.github.ldaniels528.qwery.ops.{Expression, Scope}
 

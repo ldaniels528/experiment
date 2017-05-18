@@ -43,7 +43,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     case tag if tag.startsWith("@{") & tag.endsWith("}") => Some(extractListOfExpressions(tag.drop(2).dropRight(1)))
 
     // ordered field list? (e.g. "@[orderedFields]" => "field1 DESC, field2 ASC")
-    case tag if tag.startsWith("@[") & tag.endsWith("]") => Some(extractSortColumns(tag.drop(2).dropRight(1)))
+    case tag if tag.startsWith("@[") & tag.endsWith("]") => Some(extractOrderedColumns(tag.drop(2).dropRight(1)))
 
     // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." or "INSERT OVERWRITE ...")
     case tag if tag.startsWith("@|") & tag.endsWith("|") => Some(extractEnumeratedItem(tag.drop(2).dropRight(1).split('|')))
@@ -115,9 +115,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
   private def extractListOfFields(name: String) = {
     var fields: List[Field] = Nil
     do {
-      if (fields.nonEmpty) stream.expect(",")
-      fields = fields ::: stream.nextOption.map(t => Field(t.text)).getOrElse(stream.die("Unexpected end of statement")) :: Nil
-    } while (stream.is(","))
+      fields = fields ::: stream.nextOption.map(t => Field(t.text)).getOrElse(stream.dieEOS) :: Nil
+    } while (stream.nextIf(","))
     SQLTemplateParams(fields = Map(name -> fields))
   }
 
@@ -131,14 +130,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     def fetchNext(ts: TokenStream): Expression = {
       val expression = parseExpression(ts)
       val result = if (ts.nextIf("AS")) expression.map(parseNamedAlias(ts, _)) else expression
-      result.getOrElse(ts.die("Unexpected end of statement"))
+      result.getOrElse(ts.dieEOS)
     }
 
     var expressions: List[Expression] = Nil
-    do {
-      if (expressions.nonEmpty) stream.expect(",")
-      expressions = expressions ::: fetchNext(stream) :: Nil
-    } while (stream.is(","))
+    do expressions = expressions ::: fetchNext(stream) :: Nil while (stream.nextIf(","))
     SQLTemplateParams(expressions = Map(name -> expressions))
   }
 
@@ -163,10 +159,10 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
       var result: Option[SQLTemplateParams] = None
       val count = paramSet.size
       val repeatedTags = new PeekableIterator(repeatedTagsSeq)
-      do {
+      while (repeatedTags.hasNext) {
         result = processNextTag(repeatedTags.next(), repeatedTags)
         result.foreach(params => paramSet = paramSet ::: params :: Nil)
-      } while (repeatedTags.hasNext)
+      }
 
       // if we didn't add anything, stop.
       done = paramSet.size == count
@@ -183,18 +179,17 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     * @param name the given identifier name (e.g. "sortedColumns")
     * @return a [[SQLTemplateParams template]] represents the parsed outcome
     */
-  private def extractSortColumns(name: String) = {
+  private def extractOrderedColumns(name: String) = {
     var sortFields: List[OrderedColumn] = Nil
     do {
-      if (sortFields.nonEmpty) stream.expect(",")
-      val name = stream.nextOption.map(_.text).getOrElse(stream.die("Unexpected end of statement"))
+      val name = stream.nextOption.map(_.text).getOrElse(stream.dieEOS)
       val direction = stream match {
         case ts if ts.nextIf("ASC") => true
         case ts if ts.nextIf("DESC") => false
         case _ => true
       }
       sortFields = sortFields ::: OrderedColumn(name, direction) :: Nil
-    } while (stream.is(","))
+    } while (stream.nextIf(","))
     SQLTemplateParams(orderedFields = Map(name -> sortFields))
   }
 

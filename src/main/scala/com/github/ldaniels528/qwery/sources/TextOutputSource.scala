@@ -3,14 +3,14 @@ package com.github.ldaniels528.qwery.sources
 import java.io.{BufferedWriter, FileOutputStream, FileWriter, OutputStreamWriter}
 import java.util.zip.GZIPOutputStream
 
-import com.github.ldaniels528.qwery.formats.TextFormatter
+import com.github.ldaniels528.qwery.formats.TextFormat
 import com.github.ldaniels528.qwery.ops.{Hints, Row}
 
 /**
   * Text Output Source
   * @author lawrence.daniels@gmail.com
   */
-class TextOutputSource(writer: BufferedWriter, formatter: TextFormatter) extends QueryOutputSource {
+class TextOutputSource(writer: BufferedWriter, formatter: TextFormat) extends QueryOutputSource {
   private var hints = Hints()
 
   override def open(hints: Hints): Unit = this.hints = hints
@@ -36,14 +36,14 @@ object TextOutputSource extends QueryOutputSourceFactory {
 
   override def apply(path: String, append: Boolean): Option[TextOutputSource] = path match {
     case s if s.toLowerCase.startsWith("http://") | s.toLowerCase.startsWith("https://") =>
-      TextFormatter.guessFormat(s).map(fromUrl(s, _))
+      TextFormat.guessFormat(s).map(fromUrl(s, _))
     case file if file.toLowerCase.endsWith(".gz") =>
-      TextFormatter.guessFormat(file.dropRight(3)).map(fromFile(file, _, append, compress = true))
-    case file => TextFormatter.guessFormat(file).map(fromFile(file, _, append))
+      TextFormat.guessFormat(file.dropRight(3)).map(fromFile(file, _, append, compress = true))
+    case file => TextFormat.guessFormat(file).map(fromFile(file, _, append))
   }
 
   def fromFile(file: String,
-               formatter: TextFormatter,
+               formatter: TextFormat,
                append: Boolean,
                compress: Boolean = false): TextOutputSource = {
     val writer = if (compress)
@@ -53,13 +53,13 @@ object TextOutputSource extends QueryOutputSourceFactory {
     new TextOutputSource(writer, formatter)
   }
 
-  def fromUrl(url: String, formatter: TextFormatter): TextOutputSource = {
+  def fromUrl(url: String, formatter: TextFormat): TextOutputSource = {
     throw new IllegalStateException("HTTP output is not yet supported")
   }
 
   override def understands(path: String): Boolean = path.toLowerCase() match {
     case s if s.startsWith("http://") | s.startsWith("https://") => true
-    case _ => TextFormatter.understands(path)
+    case _ => TextFormat.understands(path)
   }
 
 }

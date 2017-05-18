@@ -1,24 +1,24 @@
 package com.github.ldaniels528.qwery.formats
 
-import com.github.ldaniels528.qwery.formats.AutoDetectTextFormatter._
+import com.github.ldaniels528.qwery.formats.AutoDetectTextFormat._
 import com.github.ldaniels528.qwery.ops.{ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
-  * Auto-Detecting Text Formatter
+  * Auto-Detecting Text Format
   * @author lawrence.daniels@gmail.com
   */
-class AutoDetectTextFormatter extends TextFormatter {
+class AutoDetectTextFormat extends TextFormat {
   private var incoming: List[String] = Nil
   private var outgoing: List[Row] = Nil
-  private var textFormatter: Option[TextFormatter] = None
+  private var textFormat: Option[TextFormat] = None
 
   override def fromText(line: String): Row = {
-    if (textFormatter.isEmpty) {
+    if (textFormat.isEmpty) {
       incoming = line :: incoming
       if (incoming.size >= 5) {
         autodetectDelimiter(incoming) foreach { case (formatter, results) =>
-          textFormatter = Option(formatter)
+          textFormat = Option(formatter)
           outgoing = results.toList
           incoming = Nil
         }
@@ -34,12 +34,12 @@ class AutoDetectTextFormatter extends TextFormatter {
 }
 
 /**
-  * Auto-Detecting Text Formatter Companion
+  * Auto-Detecting Text Format Companion
   * @author lawrence.daniels@gmail.com
   */
-object AutoDetectTextFormatter {
+object AutoDetectTextFormat {
 
-  def autodetectDelimiter(sampleLines: List[String]): Option[(TextFormatter, ResultSet)] = {
+  def autodetectDelimiter(sampleLines: List[String]): Option[(TextFormat, ResultSet)] = {
     // identify the potential delimiters (from the header line)
     val delimiters = sampleLines.headOption map { header =>
       header.collect {
@@ -58,7 +58,7 @@ object AutoDetectTextFormatter {
       delimiter <- delimiter_?
       headers <- sampleLines.headOption.map(_.delimitedSplit(delimiter))
       rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter))
-    } yield (new CSVFormatter(delimiter = String.valueOf(delimiter), headers = headers), rows)
+    } yield (new CSVFormat(delimiter = String.valueOf(delimiter), headers = headers), rows)
   }
 
 }

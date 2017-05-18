@@ -1,41 +1,40 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.formats
 
-import com.github.ldaniels528.qwery.formats.{CSVFormatter, JSONFormatter, TextFormatter}
 import com.github.ldaniels528.tabular.Tabular
 import org.scalatest.FunSpec
 
 import scala.io.Source
 
 /**
-  * Text Formatter Test
+  * Text Format Test
   * @author lawrence.daniels@gmail.com
   */
-class TextFormatterTest extends FunSpec {
+class TextFormatTest extends FunSpec {
   val headers = List("Symbol", "Name", "LastSale", "MarketCap", "ADR TSO", "IPOyear", "Sector", "Industry", "Summary Quote")
   val tabular = new Tabular()
 
-  describe("TextFormatter") {
+  describe("TextFormat") {
 
     it("should be capable of parsing CSV text") {
-      val csvFormatter = CSVFormatter(headers = headers)
+      val csvFormat = CSVFormat(headers = headers)
       val results = Source.fromFile("./companylist.csv").getLines().take(5) map { line =>
-        csvFormatter.fromText(line)
+        csvFormat.fromText(line)
       }
       tabular.transform(results) foreach (info(_))
     }
 
     it("should be capable of determining the delimiter via auto-detection") {
       val lines = Source.fromFile("./companylist.csv").getLines()
-      TextFormatter.autodetectDelimiter(lines) foreach { case (_, results) =>
+      TextFormat.autodetectDelimiter(lines) foreach { case (_, results) =>
         tabular.transform(results) foreach (info(_))
       }
     }
 
     it("should be capable of transforming CSV to JSON") {
-      val csvFormatter = CSVFormatter(headers = headers)
-      val jsonFormatter = JSONFormatter()
+      val csvFormat = CSVFormat(headers = headers)
+      val jsonFormat = JSONFormat()
       val results = Source.fromFile("./companylist.csv").getLines().take(5).toSeq flatMap { line =>
-        jsonFormatter.toText(csvFormatter.fromText(line))
+        jsonFormat.toText(csvFormat.fromText(line))
       }
       results foreach (info(_))
     }

@@ -178,7 +178,7 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler(
         """
           |INSERT OVERWRITE 'test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
-          |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |SELECT Symbol, Name, Sector, Industry, CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap
           |FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
       val results = query.execute(RootScope()).toSeq

@@ -8,7 +8,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private var pos = 0
   private val ca = input.toCharArray
   private val operators = "=*-+/|&><".toCharArray
-  private val compoundOperators = Seq("!=", ">=", "<=", "<>", "||")
+  private val compoundOperators = Seq("!=", ">=", "<=", "<>", "||", "**")
 
   private def parsers = List(
     parseNumeric _, parseAlphaNumeric _, parseQuotesBackticks _, parseQuotesDouble _,

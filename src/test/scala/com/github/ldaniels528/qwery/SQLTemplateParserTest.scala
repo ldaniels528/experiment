@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.ops.types._
+import com.github.ldaniels528.qwery.ops.Field
+import com.github.ldaniels528.qwery.ops.Implicits._
 import org.scalatest.FunSpec
 
 /**
@@ -24,7 +24,7 @@ class SQLTemplateParserTest extends FunSpec {
       val templateParams = templateParser.process("SELECT @{fields} FROM @source ?WHERE ?@&{condition} ?LIMIT ?@limit")
       assert(templateParams == SQLTemplateParams(
         atoms = Map("source" -> "companylist.csv", "limit" -> "5"),
-        conditions = Map("condition" -> EQ(Field("Industry"), "Oil/Gas Transmission")),
+        conditions = Map("condition" -> (Field("Industry") === "Oil/Gas Transmission")),
         expressions = Map("fields" -> List("Symbol", "Name", "Sector", "Industry", "LastSale", "MarketCap").map(Field.apply))
       ))
     }

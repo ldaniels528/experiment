@@ -1,14 +1,19 @@
 package com.github.ldaniels528.qwery.formats
 
+import java.text.DecimalFormat
+
 import com.github.ldaniels528.qwery.ops.{Hints, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
-  * CSV Formatter
+  * CSV Format
   * @author lawrence.daniels@gmail.com
   */
-case class CSVFormatter(delimiter: String = ",", headers: List[String] = Nil, quoted: Boolean = true)
-  extends TextFormatter {
+case class CSVFormat(delimiter: String = ",",
+                     headers: List[String] = Nil,
+                     quoted: Boolean = true)
+  extends TextFormat {
+  private lazy val numberFormat = new DecimalFormat("###.#####")
   private var headersApplied = false
   private val delimiterCh = delimiter.head
 
@@ -28,7 +33,7 @@ case class CSVFormatter(delimiter: String = ",", headers: List[String] = Nil, qu
 
     // apply a line of data
     val data = row.map(_._2).map(_.asInstanceOf[Object]).map {
-      case n: Number => n.toString
+      case n: Number => numberFormat.format(n)
       case x => asString(x)
     } mkString delimiter
     lines = lines ::: data :: Nil
@@ -40,13 +45,13 @@ case class CSVFormatter(delimiter: String = ",", headers: List[String] = Nil, qu
 }
 
 /**
-  * CSV Formatter Singleton
+  * CSV Format Singleton
   * @author lawrence.daniels@gmail.com
   */
-object CSVFormatter {
+object CSVFormat {
 
-  def apply(hints: Hints): CSVFormatter = {
-    new CSVFormatter(delimiter = hints.delimiter, quoted = hints.quoted)
+  def apply(hints: Hints): CSVFormat = {
+    new CSVFormat(delimiter = hints.delimiter, quoted = hints.quoted)
   }
 
 }

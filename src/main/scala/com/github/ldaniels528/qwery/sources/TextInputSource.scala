@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
-import com.github.ldaniels528.qwery.formats.{JSONFormatter, TextFormatter}
+import com.github.ldaniels528.qwery.formats.{JSONFormat, TextFormat}
 import com.github.ldaniels528.qwery.ops.{ResultSet, Scope}
 
 import scala.io.Source
@@ -12,7 +12,7 @@ import scala.io.Source
   * Text Input Source
   * @author lawrence.daniels@gmail.com
   */
-class TextInputSource(lines: Iterator[String], formatter: TextFormatter, sampleSet: Option[ResultSet] = None)
+class TextInputSource(lines: Iterator[String], formatter: TextFormat, sampleSet: Option[ResultSet] = None)
   extends QueryInputSource {
 
   override def execute(scope: Scope): ResultSet = {
@@ -31,7 +31,7 @@ object TextInputSource extends QueryInputSourceFactory {
     case url if url.toLowerCase.startsWith("http://") | url.toLowerCase.startsWith("https://") =>
       TextInputSource.fromURL(url)
     case file if file.toLowerCase.endsWith(".json") =>
-      Option(TextInputSource.fromFile(file, JSONFormatter()))
+      Option(TextInputSource.fromFile(file, JSONFormat()))
     case file if file.toLowerCase.endsWith(".gz") =>
       TextInputSource.fromGzipFile(file)
     case file =>
@@ -48,30 +48,30 @@ object TextInputSource extends QueryInputSourceFactory {
 
   def fromFile(file: String): Option[TextInputSource] = {
     lazy val lines = Source.fromFile(file).getLines()
-    TextFormatter.autodetectDelimiter(lines) map { case (formatter, sample) =>
+    TextFormat.autodetectDelimiter(lines) map { case (formatter, sample) =>
       new TextInputSource(lines, formatter, sampleSet = Some(sample))
     }
   }
 
-  def fromFile(file: String, formatter: TextFormatter): TextInputSource = {
+  def fromFile(file: String, formatter: TextFormat): TextInputSource = {
     new TextInputSource(Source.fromFile(file).getLines(), formatter)
   }
 
   def fromGzipFile(file: String): Option[TextInputSource] = {
     lazy val lines = Source.fromInputStream(new GZIPInputStream(new FileInputStream(file))).getLines()
-    TextFormatter.autodetectDelimiter(lines) map { case (formatter, sample) =>
+    TextFormat.autodetectDelimiter(lines) map { case (formatter, sample) =>
       new TextInputSource(lines, formatter, sampleSet = Some(sample))
     }
   }
 
   def fromURL(url: String): Option[TextInputSource] = {
     lazy val lines = Source.fromURL(url).getLines()
-    TextFormatter.autodetectDelimiter(lines) map { case (formatter, sample) =>
+    TextFormat.autodetectDelimiter(lines) map { case (formatter, sample) =>
       new TextInputSource(lines, formatter, sampleSet = Some(sample))
     }
   }
 
-  def fromURL(url: String, formatter: TextFormatter): TextInputSource = {
+  def fromURL(url: String, formatter: TextFormat): TextInputSource = {
     new TextInputSource(Source.fromURL(url).getLines(), formatter)
   }
 

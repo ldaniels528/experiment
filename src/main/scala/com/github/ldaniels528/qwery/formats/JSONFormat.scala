@@ -7,10 +7,10 @@ import net.liftweb.json.{JObject, parse}
 import org.slf4j.LoggerFactory
 
 /**
-  * JSON Formatter
+  * JSON Format
   * @author lawrence.daniels@gmail.com
   */
-case class JSONFormatter() extends TextFormatter {
+case class JSONFormat() extends TextFormat {
   private lazy val logger = LoggerFactory.getLogger(getClass)
   private implicit val formats = net.liftweb.json.DefaultFormats
 
