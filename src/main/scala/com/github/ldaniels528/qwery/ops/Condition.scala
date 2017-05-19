@@ -1,7 +1,5 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.ops.types.StringValue
-
 /**
   * Represents a conditional expression
   * @author lawrence.daniels@gmail.com
@@ -28,7 +26,7 @@ case class GE(a: Expression, b: Expression) extends Condition {
 
 case class LIKE(a: Expression, b: Expression) extends Condition {
   override def isSatisfied(scope: Scope): Boolean = a match {
-    case StringValue(s) => b.getAsString(scope).exists(s.matches)
+    case ConstantValue(s) => b.getAsString(scope).exists(s.toString.matches)
     case _ => false
   }
 }

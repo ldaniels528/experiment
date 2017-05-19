@@ -11,7 +11,7 @@ import scala.util.Try
   * CSV Format
   * @author lawrence.daniels@gmail.com
   */
-case class CSVFormat(delimiter: String = ",", quoted: Boolean = true, var headers: List[String] = Nil)
+case class CSVFormat(delimiter: String = ",", quoted: Boolean = true, var headers: Seq[String] = Nil)
   extends TextFormat {
   private lazy val numberFormat = new DecimalFormat("###.#####")
   private var headersApplied = false
@@ -23,6 +23,9 @@ case class CSVFormat(delimiter: String = ",", quoted: Boolean = true, var header
 
   override def encode(row: Row): String = {
     var lines: List[String] = Nil
+
+    // set the headers
+    if(headers.isEmpty) headers = row.map(_._1)
 
     // apply the headers
     if (headers.nonEmpty && !headersApplied) {

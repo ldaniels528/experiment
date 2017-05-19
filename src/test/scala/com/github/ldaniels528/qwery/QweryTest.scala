@@ -1,7 +1,6 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops.RootScope
-import com.github.ldaniels528.tabular.Tabular
 import org.scalatest.FunSpec
 
 import scala.util.Properties
@@ -11,35 +10,19 @@ import scala.util.Properties
   * @author lawrence.daniels@gmail.com
   */
 class QweryTest extends FunSpec {
-  private val tabular = new Tabular()
+  private val scope = RootScope()
 
   describe("Qwery") {
 
-    it("should support describing the layout of a file") {
-      val query = QweryCompiler("DESCRIBE 'companylist.csv'")
-      val results = query.execute(RootScope()).toSeq
-      assert(results == Vector(
-        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "XXII"),
-        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "22nd Century Group, Inc"),
-        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "1.4"),
-        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "126977358.2"),
-        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "Consumer Non-Durables"),
-        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "Farming/Seeds/Milling"),
-        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/xxii")
-      ))
-    }
-
     it("should support creating named aliases") {
       val query = QweryCompiler("SELECT 1234 AS number")
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == List(List("number" -> 1234.0)))
     }
 
-    it("should support CASTing values from one type to another") {
+    it("should CAST values from one type to another") {
       val query = QweryCompiler("SELECT CAST('1234' AS Double) AS number")
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == List(List("number" -> 1234.0)))
     }
 
@@ -53,8 +36,7 @@ class QweryTest extends FunSpec {
           |     ELSE '3'
           |   END AS ItemNo
         """.stripMargin)
-
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == List(List("ItemNo" -> "2")))
     }
 
@@ -64,8 +46,7 @@ class QweryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
-
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == Stream(
         List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281"),
@@ -79,7 +60,7 @@ class QweryTest extends FunSpec {
         """
           |SELECT * FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results ==
         Stream(List("Symbol" -> "CQH", "Name" -> "Cheniere Energy Partners LP Holdings, LLC", "LastSale" -> "25.68",
           "MarketCap" -> "5950056000", "ADR TSO" -> "n/a", "IPOyear" -> "n/a", "Sector" -> "Public Utilities",
@@ -101,8 +82,7 @@ class QweryTest extends FunSpec {
           |SELECT TOP 1 Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'""".stripMargin)
-
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == Stream(
         List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281")
@@ -116,8 +96,7 @@ class QweryTest extends FunSpec {
           |FROM 'companylist.csv'
           |WHERE Industry = 'Consumer Specialties'
           |LIMIT 1""".stripMargin)
-
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == Stream(
         List("Symbol" -> "BGI", "Name" -> "Birks Group Inc.", "Sector" -> "Consumer Services",
           "Industry" -> "Consumer Specialties", "LastSale" -> "1.4401", "MarketCap" -> "25865464.7281")
@@ -130,8 +109,7 @@ class QweryTest extends FunSpec {
           |SELECT Sector, COUNT(*) AS Securities
           |FROM 'companylist.csv'
           |GROUP BY Sector""".stripMargin)
-
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == List(
         List("Sector" -> "Consumer Durables", "Securities" -> 4L),
         List("Sector" -> "Consumer Non-Durables", "Securities" -> 13L),
@@ -154,7 +132,7 @@ class QweryTest extends FunSpec {
         """
           |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
           |FROM 'companylist.csv'""".stripMargin('|'))
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == List(
         List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
       ))
@@ -166,13 +144,40 @@ class QweryTest extends FunSpec {
           |SELECT MIN(LastSale) AS min, MAX(LastSale) AS max, AVG(LastSale) AS avg, SUM(LastSale) AS total, COUNT(*) AS records
           |FROM 'companylist.csv'
           |GROUP BY Sector""".stripMargin('|'))
-      val results = query.execute(RootScope()).toSeq
-      tabular.transform(results.toIterator) foreach (info(_))
-      /*
+      val results = query.execute(scope).toSeq
       assert(results == List(
-        List("min" -> 0.1213, "max" -> 4234.01, "avg" -> 23.68907242339833, "total" -> 8504.377, "records" -> 359)
-      ))*/
+        List(("min", 0.45), ("max", 102.5), ("avg", 26.246975000000003), ("total", 104.98790000000001), ("records", 4)),
+        List(("min", 0.45), ("max", 95.5), ("avg", 16.67923846153846), ("total", 216.8301), ("records", 13)),
+        List(("min", 0.3189), ("max", 40.62), ("avg", 7.20831), ("total", 216.2493), ("records", 30)),
+        List(("min", 0.4985), ("max", 67.2943), ("avg", 13.454151851851854), ("total", 363.2621000000001), ("records", 27)),
+        List(("min", 6.0), ("max", 6.0), ("avg", 6.0), ("total", 6.0), ("records", 1)),
+        List(("min", 1.26), ("max", 153.82), ("avg", 16.451099166666673), ("total", 1974.1319000000005), ("records", 120)),
+        List(("min", 0.1213), ("max", 74.42), ("avg", 3.5293604166666674), ("total", 169.40930000000003), ("records", 48)),
+        List(("min", 0.1215), ("max", 24.35), ("avg", 2.729804545454545), ("total", 120.11139999999999), ("records", 44)),
+        List(("min", 0.2998), ("max", 128.86), ("avg", 23.643109090909093), ("total", 260.0742), ("records", 11)),
+        List(("min", 0.4399), ("max", 29.0), ("avg", 9.704875), ("total", 232.91699999999997), ("records", 24)),
+        List(("min", 1.18), ("max", 4234.01), ("avg", 390.67642500000005), ("total", 4688.1171), ("records", 12)),
+        List(("min", 0.372), ("max", 41.45), ("avg", 6.22684), ("total", 124.5368), ("records", 20)),
+        List(("min", 0.9999), ("max", 11.65), ("avg", 5.549980000000001), ("total", 27.749900000000004), ("records", 5))
+      ))
     }
+
+    it("should support describing the layout of a file") {
+      val query = QweryCompiler("DESCRIBE 'companylist.csv'")
+      val results = query.execute(scope).toSeq
+      assert(results == Vector(
+        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "XXII"),
+        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "22nd Century Group, Inc"),
+        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "1.4"),
+        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "126977358.2"),
+        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
+        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "Consumer Non-Durables"),
+        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "Farming/Seeds/Milling"),
+        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/xxii")
+      ))
+    }
+
 
     it("should write filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
@@ -181,7 +186,7 @@ class QweryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap
           |FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 34))))
     }
 
@@ -200,7 +205,7 @@ class QweryTest extends FunSpec {
             |FROM 'companylist.csv'
             |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
       )
-      val results = queries.map(_.execute(RootScope()))
+      val results = queries.map(_.execute(scope))
       assert(results == Seq(
         Seq(Seq(("ROWS_INSERTED", 34))),
         Seq(Seq(("ROWS_INSERTED", 5)))
@@ -214,7 +219,7 @@ class QweryTest extends FunSpec {
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM 'companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
-      val results = query.execute(RootScope()).toSeq
+      val results = query.execute(scope).toSeq
       assert(results == Stream(Seq(("ROWS_INSERTED", 44))))
     }
 
@@ -225,7 +230,7 @@ class QweryTest extends FunSpec {
           """
             |SELECT TOP 4 * FROM 'http://www.nasdaq.com/screening/companies-by-industry.aspx?exchange=AMEX&render=download'
             |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
-        val results = query.execute(RootScope()).toSeq
+        val results = query.execute(scope).toSeq
         assert(results == Stream(
           List("Symbol" -> "CQH", "Name" -> "Cheniere Energy Partners LP Holdings, LLC", "Sector" -> "Public Utilities",
             "Industry" -> "Oil/Gas Transmission", "LastSale" -> "25.68", "MarketCap" -> "5950056000"),

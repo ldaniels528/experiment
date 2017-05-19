@@ -3,7 +3,6 @@ package com.github.ldaniels528.qwery
 import com.github.ldaniels528.qwery.ops.NamedExpression.{AggregateAlias, ExpressionAlias}
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins._
-import com.github.ldaniels528.qwery.ops.types._
 import com.github.ldaniels528.qwery.sources._
 import com.github.ldaniels528.qwery.util.StringHelper._
 
@@ -44,12 +43,11 @@ object QwerySQLGenerator {
     case AggregateAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case Avg(expr) => s"AVG(${expr.toSQL})"
     case BasicField(name) => nameOf(name)
-    case BooleanValue(value) => value.toString
     case Case(conditions, otherwise) => toCase(conditions, otherwise)
     case Cast(expr, toType) => s"CAST(${expr.toSQL} AS $toType)"
     case Count(expr) => s"COUNT(${expr.toSQL})"
     case Concat(a, b) => s"${a.toSQL} || ${b.toSQL}"
-    case DateValue(value) => s"'$value'"
+    case ConstantValue(value) => s"'$value'"
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
     case ExpressionAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
@@ -59,12 +57,10 @@ object QwerySQLGenerator {
     case Min(expr) => s"MIN(${expr.toSQL})"
     case Multiply(a, b) => s"${a.toSQL} * ${b.toSQL}"
     case Now => "NOW()"
-    case NumericValue(value) => value.toString
     case Pow(a, b) => s"${a.toSQL} ** ${b.toSQL}"
     case Right(a, b) => s"RIGHT(${a.toSQL}, ${b.toSQL})"
     case Split(a, b) => s"SPLIT(${a.toSQL},${b.toSQL})"
     case Sqrt(expr) => s"SQRT(${expr.toSQL})"
-    case StringValue(value) => s"'$value'"
     case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
     case Substring(a, b, c) => s"SUBSTRING(${a.toSQL},${b.toSQL},${c.toSQL})"
     case Sum(expr) => s"SUM(${expr.toSQL})"

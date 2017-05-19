@@ -1,7 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.ops.builtins._
-import com.github.ldaniels528.qwery.ops.types.{BooleanValue, DateValue, NumericValue, StringValue}
 
 /**
   * Ops Implicits
@@ -9,19 +8,23 @@ import com.github.ldaniels528.qwery.ops.types.{BooleanValue, DateValue, NumericV
   */
 object Implicits {
 
-  implicit def booleanConversion(value: Boolean): BooleanValue = BooleanValue(value)
+  implicit def booleanConversion(value: Boolean): ConstantValue = ConstantValue(value)
 
-  implicit def dateConversion(value: java.util.Date): DateValue = DateValue(value)
+  implicit def dateConversion(value: java.util.Date): ConstantValue = ConstantValue(value)
 
-  implicit def doubleConversion(value: Double): NumericValue = NumericValue(value)
+  implicit def doubleConversion(value: Double): ConstantValue = ConstantValue(value)
 
-  implicit def intConversion(value: Int): NumericValue = NumericValue(value)
+  implicit def floatConversion(value: Float): ConstantValue = ConstantValue(value)
 
-  implicit def longConversion(value: Long): NumericValue = NumericValue(value)
+  implicit def intConversion(value: Int): ConstantValue = ConstantValue(value)
 
-  implicit def numberConversion(value: Number): NumericValue = NumericValue(value.doubleValue())
+  implicit def longConversion(value: Long): ConstantValue = ConstantValue(value)
 
-  implicit def stringConversion(value: String): StringValue = StringValue(value)
+  implicit def numberConversion(value: Number): ConstantValue = ConstantValue(value.doubleValue())
+
+  implicit def shortConversion(value: Short): ConstantValue = ConstantValue(value)
+
+  implicit def stringConversion(value: String): ConstantValue = ConstantValue(value)
 
   /**
     * Expression Extensions
@@ -34,6 +37,8 @@ object Implicits {
     def !==(expr1: Expression) = NE(expr0, expr1)
 
     def +(expr1: Expression) = Add(expr0, expr1)
+
+    def ||(expr1: Expression) = Concat(expr0, expr1)
 
     def -(expr1: Expression) = Subtract(expr0, expr1)
 

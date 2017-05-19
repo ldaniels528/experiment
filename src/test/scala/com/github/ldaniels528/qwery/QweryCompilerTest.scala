@@ -2,7 +2,8 @@ package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.ops.builtins.Cast
+import com.github.ldaniels528.qwery.ops.builtins.Case.When
+import com.github.ldaniels528.qwery.ops.builtins.{Case, Cast, Concat}
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec
 
@@ -14,10 +15,35 @@ class QweryCompilerTest extends FunSpec {
 
   describe("QweryCompiler") {
 
+    it("should support creating named aliases") {
+      val sql = "SELECT 1234 AS number"
+      assert(QweryCompiler(sql) ==
+        Select(fields = List(NamedExpression(name = "number", 1234))))
+    }
+
     it("should CAST values from one type to another") {
       val sql = "SELECT CAST('1234' AS Double) AS number"
       assert(QweryCompiler(sql) ==
         Select(fields = List(NamedExpression(name = "number", Cast("1234", "Double")))))
+    }
+
+    it("should support CASE statement") {
+      val sql =
+        """
+          |SELECT
+          |   CASE 'Hello World'
+          |     WHEN 'HelloWorld' THEN '1'
+          |     WHEN 'Hello' || ' ' || 'World' THEN '2'
+          |     ELSE '3'
+          |   END AS ItemNo
+        """.stripMargin
+      assert(QweryCompiler(sql) ==
+        Select(fields = List(
+          NamedExpression("ItemNo", Case(conditions = List(
+            When(EQ("Hello World", "HelloWorld"), "1"),
+            When(EQ("Hello World", Concat(Concat("Hello", " "), "World")), "2")),
+            otherwise = Some("3"))))
+        ))
     }
 
     it("should compile SELECT queries") {

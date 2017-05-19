@@ -1,7 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery._
-import com.github.ldaniels528.qwery.ops.types.{BooleanValue, NumericValue, StringValue}
 
 import scala.util.Try
 
@@ -79,12 +78,8 @@ object Expression {
     * @return a [[Expression]]
     */
   def apply(value: Any): Expression = value.asInstanceOf[Object] match {
-    case v: java.lang.Boolean => BooleanValue(v)
-    case v: Number => NumericValue(v.doubleValue())
-    case v: String => StringValue(v)
     case t: Token => apply(t.value)
-    case v =>
-      throw new IllegalArgumentException(s"Invalid value type '$v' (${Option(v).map(_.getClass.getName).orNull})")
+    case v => ConstantValue(v)
   }
 
 }
