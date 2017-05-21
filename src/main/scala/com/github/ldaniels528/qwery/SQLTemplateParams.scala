@@ -28,4 +28,8 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       repeatedSets = this.repeatedSets ++ that.repeatedSets)
   }
 
+  def isEmpty: Boolean = !nonEmpty
+
+  def nonEmpty: Boolean = Seq(atoms, conditions, expressions, fields, orderedFields, repeatedSets).exists(_.nonEmpty)
+
 }

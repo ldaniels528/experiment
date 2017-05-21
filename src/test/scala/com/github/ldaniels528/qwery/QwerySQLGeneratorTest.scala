@@ -10,19 +10,19 @@ import org.scalatest.FunSpec
   */
 class QwerySQLGeneratorTest extends FunSpec {
 
-  it("DESCRIBE") {
+  it("supports DESCRIBE") {
     val sql0 = "DESCRIBE 'companylist.csv'"
     val sql1 = QweryCompiler(sql0).toSQL
     assert(sql0 == sql1)
   }
 
-  it("DESCRIBE w/LIMIT") {
+  it("supports DESCRIBE w/LIMIT") {
     val sql0 = "DESCRIBE 'companylist.csv' LIMIT 100"
     val sql1 = QweryCompiler(sql0).toSQL
     assert(sql0 == sql1)
   }
 
-  it("SELECT-WHERE-LIMIT") {
+  it("supports SELECT-WHERE-LIMIT") {
     val sql0 =
       """
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -33,7 +33,7 @@ class QwerySQLGeneratorTest extends FunSpec {
     assert(sql0 == sql1)
   }
 
-  it("SELECT-TOP-WHERE") {
+  it("supports SELECT-TOP-WHERE") {
     val sql0 =
       """
         |SELECT TOP 25 Symbol, Name, Sector, Industry, LastSale, MarketCap
@@ -50,7 +50,7 @@ class QwerySQLGeneratorTest extends FunSpec {
     assert(sql1 == sql2)
   }
 
-  it("SELECT-CASE-WHEN") {
+  it("supports SELECT-CASE-WHEN") {
     val sql0 =
       """
         |SELECT
@@ -73,7 +73,19 @@ class QwerySQLGeneratorTest extends FunSpec {
     assert(sql1 == sql2)
   }
 
-  it("INSERT-INTO-SELECT") {
+  it("supports INSERT-INTO-SELECT-WITH-FORMAT") {
+    val sql0 =
+      """
+        |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
+        |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        |FROM 'companylist.csv' WITH FORMAT CSV
+        |WHERE Industry = 'Oil/Gas Transmission'
+      """.stripMargin.toSingleLine
+    val sql2 = QweryCompiler(sql0).toSQL
+    info(sql2)
+  }
+
+  it("supports INSERT-INTO-SELECT") {
     val sql0 =
       """
         |INSERT INTO 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
@@ -85,7 +97,7 @@ class QwerySQLGeneratorTest extends FunSpec {
     assert(sql0 == sql1)
   }
 
-  it("INSERT-OVERWRITE-SELECT") {
+  it("supports INSERT-OVERWRITE-SELECT") {
     val sql0 =
       """
         |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)

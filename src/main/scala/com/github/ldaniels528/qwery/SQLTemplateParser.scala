@@ -10,6 +10,18 @@ import com.github.ldaniels528.qwery.util.PeekableIterator
 class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
 
   /**
+    * Indicates whether the given stream matches the given template
+    * @param template  the given template
+    * @return true, if the stream matches the template from its current position
+    */
+  def matches(template: String): Boolean = {
+    stream.mark()
+    try new SQLTemplateParser(stream).process(template).nonEmpty catch {
+      case e: Throwable => false
+    } finally stream.reset()
+  }
+
+  /**
     * Extracts the tokens that correspond to the given template
     * @param template the given template (e.g. "INSERT INTO @table ( @(fields) ) VALUES ( @[values] )")
     * @return a mapping of the extracted values
@@ -143,13 +155,19 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     * @param name the named identifier
     * @param tags the [[PeekableIterator iterator]]
     */
-  private def extractOptional(name: String, tags: PeekableIterator[String]) = {
+  private def extractOptional(name: String, tags: PeekableIterator[String]): Unit = {
     if (!stream.nextIf(name)) {
       // if the option tag wasn't matched, skip any associated arguments
       while (tags.hasNext && tags.peek.exists(tag => tag.startsWith("?@") || tag.startsWith("+?"))) tags.next()
     }
   }
 
+  /**
+    * Extracts a repeated sequence from the stream
+    * @param name the named identifier
+    * @param tags the [[PeekableIterator iterator]]
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
   private def processRepeatedSequence(name: String, tags: PeekableIterator[String]) = {
     // extract the repeated sequence
     val repeatedTagsSeq = extractRepeatedSequence(tags)

@@ -5,9 +5,12 @@ package com.github.ldaniels528.qwery.util
   * @author lawrence.daniels@gmail.com
   */
 class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
+  private var marks: List[Int] = Nil
   protected var position = 0
 
   override def hasNext: Boolean = position < values.length
+
+  def mark(): Unit = marks = position :: marks
 
   override def next(): T = {
     // must have more elements
@@ -33,13 +36,19 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
   def peekAhead(offset: Int): Option[T] = if (position + offset < values.length) Some(values(position + offset)) else None
 
   def previous: Option[T] = {
-    val ok = position > 0
-    if (ok) {
-      val value = values(position)
-      position -= 1
-      Some(value)
+    val result = position match {
+      case p if p >= values.length => Some(values.last)
+      case p if p > 0 => Some(values(position))
+      case _ => None
     }
-    else None
+    position -= 1
+    result
+  }
+
+  def reset(): Boolean = marks.headOption exists { markedPos =>
+    position = markedPos
+    marks = marks.tail
+    true
   }
 
   override def toString: String = s"PeekableIterator(${values.toList})"

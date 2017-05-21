@@ -15,7 +15,8 @@ case class Select(fields: Seq[Expression],
                   condition: Option[Condition] = None,
                   groupFields: Seq[Field] = Nil,
                   orderedColumns: Seq[OrderedColumn] = Nil,
-                  limit: Option[Int] = None)
+                  limit: Option[Int] = None,
+                  hints: Option[Hints] = None)
   extends Executable {
 
   override def execute(scope: Scope): ResultSet = source.flatMap(_.getInputSource) match {

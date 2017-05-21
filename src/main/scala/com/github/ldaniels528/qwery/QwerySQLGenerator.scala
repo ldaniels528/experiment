@@ -4,13 +4,23 @@ import com.github.ldaniels528.qwery.ops.NamedExpression.{NamedAggregation, Named
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins._
 import com.github.ldaniels528.qwery.sources._
-import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
   * Qwery SQL Generator
   * @author lawrence.daniels@gmail.com
   */
 object QwerySQLGenerator {
+
+  private def makeSQL(value: AnyRef): String = value match {
+    case hints: Hints => toHint(hints)
+    case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
+    case DataResource(path) => s"'$path'"
+    case condition: Condition => makeSQL(condition)
+    case executable: Executable => makeSQL(executable)
+    case expression: Expression => makeSQL(expression)
+    case output: OutputSource => makeSQL(output)
+    case unknown => s"'$unknown'"
+  }
 
   private def makeSQL(condition: Condition): String = condition match {
     case AND(a, b) => s"${a.toSQL} AND ${b.toSQL}"
@@ -32,8 +42,8 @@ object QwerySQLGenerator {
     case Insert(target, fields, source, append, hints) => toInsert(target, fields, source, append, hints)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
-    case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
-      toSelect(fields, source, condition, groupFields, orderedColumns, limit)
+    case Select(fields, source, condition, groupFields, orderedColumns, limit, hints) =>
+      toSelect(fields, source, condition, groupFields, orderedColumns, limit, hints)
     case unknown =>
       throw new IllegalArgumentException(s"Executable '$unknown' was unhandled")
   }
@@ -70,17 +80,6 @@ object QwerySQLGenerator {
       throw new IllegalArgumentException(s"Expression '$unknown' was unhandled")
   }
 
-  private def makeSQL(value: AnyRef): String = value match {
-    case Hints(delimiter, headers, quoted) => s"HINTS(DELIMITER '$delimiter', HEADERS ${headers.onOff}, QUOTES ${quoted.onOff})"
-    case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
-    case DataResource(path) => s"'$path'"
-    case condition: Condition => makeSQL(condition)
-    case executable: Executable => makeSQL(executable)
-    case expression: Expression => makeSQL(expression)
-    case output: OutputSource => makeSQL(output)
-    case unknown => s"'$unknown'"
-  }
-
   private def nameOf(name: String): String = if (name.forall(_.isLetterOrDigit)) name else s"`$name`"
 
   private def toCase(conditions: Seq[Case.When], otherwise: Option[Expression]): String = {
@@ -99,10 +98,22 @@ object QwerySQLGenerator {
     sb.toString()
   }
 
+  private def toHint(hints: Hints): String = {
+    val sb = new StringBuilder(80)
+    hints.delimiter.foreach(delimiter => sb.append(s" WITH DELIMITER '$delimiter'"))
+    hints.format.foreach(format => sb.append(s" WITH FORMAT $format"))
+    hints.headers.foreach(_ => sb.append(s" WITH COLUMN HEADERS"))
+    hints.quotedNumbers.foreach(_ => sb.append(" WITH QUOTED NUMBERS"))
+    hints.quotedText.foreach(_ => sb.append(" WITH QUOTED TEXT"))
+    sb.drop(1).toString()
+  }
+
   private def toInsert(target: DataResource, fields: Seq[Field], source: Executable, append: Boolean, hints: Hints): String = {
-    s"""
-       |INSERT ${if (append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
-       |${source.toSQL}""".stripMargin.toSingleLine
+    val sb = new StringBuilder(80)
+    sb.append(s"""INSERT ${if (append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})""")
+    if (hints.nonEmpty) sb.append(' ').append(hints.toSQL)
+    sb.append(' ').append(source.toSQL)
+    sb.toString()
   }
 
   private def toSelect(fields: Seq[Expression],
@@ -110,9 +121,11 @@ object QwerySQLGenerator {
                        condition: Option[Condition],
                        groupFields: Seq[Field],
                        orderedColumns: Seq[OrderedColumn],
-                       limit: Option[Int]): String = {
+                       limit: Option[Int],
+                       hints: Option[Hints]): String = {
     val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
     source.foreach(src => sb.append(s" FROM ${src.toSQL}"))
+    hints.foreach(hints => sb.append(' ').append(hints.toSQL))
     condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
     if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
     if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")

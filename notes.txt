@@ -2,16 +2,16 @@ DESIGN NOTES
 
 1. Result set, row and column-level Modifiers
 
-    a. Modifier Examples
+    a. Modifier Proposals
 
-        WITH ROWS AS CSV|PSV|TSV|JSON|AUTO?
+        WITH FORMAT CSV|PSV|TSV|JSON|AUTO?
         WITH DELIMITER ','
         WITH QUOTED TEXT
         WITH QUOTED NUMBERS
 
-    b. Text Formatting Examples
+    b. Text Formatting Proposals
 
-        Example 1: CSV/PSV Format
+        Proposal 1: CSV/PSV Format
 
             SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             FROM 'companylist.csv'
@@ -25,14 +25,14 @@ DESIGN NOTES
             WITH ROWS AS PSV
             WHERE Industry = 'Oil/Gas Transmission'
 
-        Example 2: JSON Format
+        Proposal 2: JSON Format
 
             SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             FROM 'companylist.csv'
             WITH ROWS AS JSON
             WHERE Industry = 'Oil/Gas Transmission'
 
-        Example 3: Fixed-length Format
+        Proposal 3: Fixed-length Format
 
             SELECT
                 WIDTH(Symbol, 10) AS Symbol,
@@ -45,7 +45,7 @@ DESIGN NOTES
 
             Comments: This works for writing fixed-length fields, but what about reading?
 
-        Example 4: Fixed-length Format
+        Proposal 4: Fixed-length Format
 
             SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             FROM 'companylist.csv'

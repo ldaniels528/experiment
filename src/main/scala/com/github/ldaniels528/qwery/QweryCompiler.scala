@@ -69,32 +69,81 @@ class QweryCompiler {
     * }}}
     * @example
     * {{{
-    * INSERT OVERWRITE './tickers.csv' (symbol, exchange, lastSale)
-    * SELECT symbol, exchange, lastSale FROM './EOD-20170505.txt' WHERE exchange = 'NASDAQ'
+    * INSERT OVERWRITE './companyinfo.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    * SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+    * FROM './companylist.csv' WHERE Industry = 'EDP Services'
     * }}}
     * @example
     * {{{
-    * INSERT OVERWRITE './companyinfo.csv' WITH HINTS (DELIMITER ',', HEADERS ON, QUOTES ON)
-    * (Symbol, Name, Sector, Industry, LastSale, MarketCap)
-    * SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-    * FROM './companylist.csv' WHERE Industry = 'EDP Services'
+    * INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM 'companylist.csv' WITH FORMAT CSV
+    * WHERE Industry = 'Oil/Gas Transmission'
     * }}}
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Insert executable]]
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
-    val params = parser.process("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
+    val params = parser.process(
+      """
+        |INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )
+        |?WITH ?@|withVerb|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withArg""".stripMargin.toSingleLine)
     val target = params.atoms.get("target").map(DataResource.apply)
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
     val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
+    // WITH clauses
+    val hints = processHints(stream, params) getOrElse Hints()
+    // VALUES or SELECT
     val source = stream match {
       case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
       case ts => parseNext(ts)
     }
-    Insert(target, fields, source, append, Hints())
+    Insert(target, fields, source, append, hints)
+  }
+
+  /**
+    * Parses WITH clauses
+    * @example WITH ROWS AS CSV|PSV|TSV|JSON
+    * @example WITH DELIMITER ','
+    * @example WITH QUOTED TEXT
+    * @example WITH QUOTED NUMBERS
+    * @param stream the given [[TokenStream token stream]]
+    */
+  private def parseWithClause(stream: TokenStream): Hints = {
+    val withDelimiter = "WITH DELIMITER @type"
+    val withQuotedNumbers = "WITH QUOTED NUMBERS"
+    val withQuotedText = "WITH QUOTED TEXT"
+    val withRowsAs = "WITH FORMAT @format"
+    val parser = SQLTemplateParser(stream)
+    var hints = Hints()
+    while (stream.is("WITH")) {
+      parser match {
+        // WITH DELIMITER ','
+        case p if p.matches(withDelimiter) =>
+          val params = p.process(withDelimiter)
+          val delimiter = params.atoms.getOrElse("type", stream.die("A text delimiter was expected"))
+          hints = hints.copy(delimiter = Some(delimiter))
+        // WITH QUOTED NUMBERS
+        case p if p.matches(withQuotedNumbers) =>
+          p.process(withQuotedNumbers)
+          hints = hints.copy(quotedNumbers = Some(true))
+        // WITH QUOTED TEXT
+        case p if p.matches(withQuotedText) =>
+          p.process(withQuotedText)
+          hints = hints.copy(quotedText = Some(true))
+        // WITH ROWS AS CSV|PSV|TSV|JSON
+        case p if p.matches(withRowsAs) =>
+          val params = p.process(withRowsAs)
+          val format = params.atoms.getOrElse("format", stream.die("A format identifier was expected (CSV, JSON, PSV or TSV"))
+          hints = hints.usingFormat(format = format)
+        case _ =>
+          stream.die("Syntax error")
+      }
+    }
+    hints
   }
 
   /**
@@ -110,7 +159,7 @@ class QweryCompiler {
       case None =>
         throw new SyntaxException("VALUES clause could not be parsed", ts.previous.orNull)
     }
-    if(!valueSets.forall(_.size == fields.size))
+    if (!valueSets.forall(_.size == fields.size))
       throw new SyntaxException("The number of fields must match the number of values", ts.previous.orNull)
     InsertValues(fields, valueSets)
   }
@@ -130,6 +179,7 @@ class QweryCompiler {
       """
         |SELECT ?TOP ?@top @{fields}
         |?FROM ?@source
+        |?WITH ?@|withVerb|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withArg
         |?WHERE ?@&{condition}
         |?GROUP +?BY ?@(groupBy)
         |?ORDER +?BY ?@[orderBy]
@@ -141,8 +191,25 @@ class QweryCompiler {
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.atoms.get("top") ?? params.atoms.get("limit"))
-        .map(parseInteger(_, "Numeric value expected LIMIT or TOP"))
+        .map(parseInteger(_, "Numeric value expected LIMIT or TOP")),
+      hints = processHints(ts, params)
     )
+  }
+
+  private def processHints(ts: TokenStream, params: SQLTemplateParams): Option[Hints] = {
+    import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
+    for {
+      verb <- params.atoms.get("withVerb")
+      arg <- params.atoms.get("withArg")
+    } yield {
+      verb match {
+        case "COLUMN" => Hints(headers = arg.equalsIgnoreCase("HEADERS"))
+        case "DELIMITER" => Hints(delimiter = arg)
+        case "FORMAT" => Hints().usingFormat(arg)
+        case "QUOTED" => Hints(quotedNumbers = arg.equalsIgnoreCase("NUNBERS"), quotedText = arg.equalsIgnoreCase("TEXT"))
+        case _ => ts.die("Invalid verb for WITH")
+      }
+    }
   }
 
   /**
