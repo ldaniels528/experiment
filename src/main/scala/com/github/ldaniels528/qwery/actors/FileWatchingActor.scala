@@ -5,7 +5,6 @@ import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_MODIFY}
 import java.nio.file.{Paths, WatchKey}
 
 import akka.actor.{Actor, ActorLogging}
-import com.github.ldaniels528.qwery.QweryActorSystem
 import com.github.ldaniels528.qwery.actors.FileWatchingActor.{FileWatchCallback, StartFileWatch}
 
 import scala.collection.JavaConverters._

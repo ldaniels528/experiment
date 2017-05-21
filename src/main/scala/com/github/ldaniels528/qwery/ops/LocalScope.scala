@@ -2,25 +2,21 @@ package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
-import scala.collection.concurrent.TrieMap
-
 /**
   * Represents a local ephemeral scope
   * @author lawrence.daniels@gmail.com
   */
-case class LocalScope(parent: Scope, data: Row) extends Scope {
-  private val functions = TrieMap[String, Function]()
-  private val variables = TrieMap[String, Variable]()
-  private lazy val mapping = Map(data: _*)
+case class LocalScope(parent: Scope, row: Row) extends Scope {
+  private lazy val mapping = Map(row: _*)
 
   override def get(name: String): Option[Any] = mapping.get(name) ?? parent.get(name)
 
-  override def lookup(ref: FunctionRef): Option[Function] = {
-    functions.get(ref.name) ?? parent.lookup(ref)
+  override def lookupFunction(name: String): Option[Function] = {
+    super.lookupFunction(name) ?? parent.lookupFunction(name)
   }
 
   override def lookupVariable(name: String): Option[Variable] = {
-    variables.get(name) ?? parent.lookupVariable(name)
+    super.lookupVariable(name) ?? parent.lookupVariable(name)
   }
 
 }

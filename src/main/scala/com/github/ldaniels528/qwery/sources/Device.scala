@@ -1,7 +1,13 @@
 package com.github.ldaniels528.qwery.sources
 
 /**
-  * Query Source
+  * Represents an I/O device
   * @author lawrence.daniels@gmail.com
   */
-trait QuerySource
+trait Device {
+
+  def open(): Unit
+
+  def close(): Unit
+
+}

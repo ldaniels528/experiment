@@ -1,11 +1,11 @@
 package com.github.ldaniels528.qwery.sources
 
 /**
-  * Query Source Factory
+  * Output Device
   * @author lawrence.daniels@gmail.com
   */
-trait QuerySourceFactory {
+trait OutputDevice extends Device {
 
-  def understands(url: String): Boolean
+  def write(record: Record): Unit
 
 }

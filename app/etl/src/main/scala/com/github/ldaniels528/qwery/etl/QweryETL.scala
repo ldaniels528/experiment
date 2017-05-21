@@ -4,7 +4,7 @@ package etl
 import java.io.File
 
 import com.github.ldaniels528.qwery.AppConstants._
-import com.github.ldaniels528.qwery.actors.FileWatchingActor
+import com.github.ldaniels528.qwery.actors.{FileWatchingActor, QweryActorSystem}
 import com.github.ldaniels528.qwery.actors.FileWatchingActor.StartFileWatch
 import org.slf4j.LoggerFactory
 

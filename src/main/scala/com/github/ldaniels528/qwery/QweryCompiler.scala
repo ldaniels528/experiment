@@ -55,7 +55,7 @@ class QweryCompiler {
   private def parseDescribe(ts: TokenStream): Describe = {
     val params = SQLTemplateParser(ts).process("DESCRIBE @source ?LIMIT ?@limit")
     Describe(
-      source = params.atoms.get("source").map(QueryResource.apply)
+      source = params.atoms.get("source").map(DataResource.apply)
         .getOrElse(die("No source provided", ts)),
       limit = params.atoms.get("limit").map(parseInteger(_, "Numeric value expected for LIMIT")))
   }
@@ -85,7 +85,7 @@ class QweryCompiler {
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
     val params = parser.process("INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )")
-    val target = params.atoms.get("target").map(QueryResource.apply)
+    val target = params.atoms.get("target").map(DataResource.apply)
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
@@ -136,7 +136,7 @@ class QweryCompiler {
         |?LIMIT ?@limit""".stripMargin.toSingleLine)
     Select(
       fields = params.expressions.getOrElse("fields", die("Field arguments missing", ts)),
-      source = params.atoms.get("source").map(QueryResource.apply),
+      source = params.atoms.get("source").map(DataResource.apply),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),

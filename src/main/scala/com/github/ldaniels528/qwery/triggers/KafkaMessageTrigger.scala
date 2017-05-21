@@ -2,16 +2,14 @@ package com.github.ldaniels528.qwery.triggers
 
 import java.util.Properties
 
-import com.github.ldaniels528.qwery.codecs.Decoder
+import com.github.ldaniels528.qwery.sources.{OutputDevice, Record}
 import com.github.ldaniels528.qwery.triggers.KafkaMessageTrigger.SSLOptions
 import com.github.ldaniels528.qwery.util.DurationHelper._
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 // TODO Consider making a distinction between streaming and triggered events
 
@@ -22,9 +20,8 @@ import scala.util.{Failure, Success}
 class KafkaMessageTrigger(bootstrapServers: String,
                           topic: String,
                           groupId: String,
-                          decoder: Decoder[Array[Byte]],
+                          decoder: OutputDevice,
                           sslOptions: Option[SSLOptions] = None) extends Trigger {
-  private val logger = LoggerFactory.getLogger(getClass)
   private var alive: Boolean = _
 
   override def start()(implicit ec: ExecutionContext): Unit = Future {
@@ -36,11 +33,7 @@ class KafkaMessageTrigger(bootstrapServers: String,
     while (alive) {
       val records = consumer.poll(1.seconds).asScala
       for (record <- records) {
-        decoder.decode(record.value) match {
-          case Success(jsonString) => println(jsonString)
-          case Failure(e) =>
-            logger.error("Failed to deserialize message", e)
-        }
+        decoder.write(Record(record.offset, record.value))
       }
     }
   }

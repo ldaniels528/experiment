@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
 import scala.collection.Iterable
+import scala.language.postfixOps
 
 /**
   * Represents a collection of insert values
@@ -14,7 +15,7 @@ case class InsertValues(fields: Seq[Field], dataSets: Iterable[Seq[Expression]])
         field.name -> value.evaluate(scope)
           .getOrElse(throw new RuntimeException(s"Could not resolve value for '${field.name}': $value"))
       }
-    }
+    } toIterator
   }
 
 }

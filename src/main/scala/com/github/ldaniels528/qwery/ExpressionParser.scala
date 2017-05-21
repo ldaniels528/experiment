@@ -281,7 +281,8 @@ object ExpressionParser {
     "CONCAT" -> Concat.apply _,
     "LEFT" -> Left.apply _,
     "RIGHT" -> Right.apply _,
-    "SPLIT" -> Split.apply _
+    "SPLIT" -> Split.apply _,
+    "WIDTH" -> Width.apply _
   )
   private val function3s = Map(
     "SUBSTRING" -> Substring.apply _

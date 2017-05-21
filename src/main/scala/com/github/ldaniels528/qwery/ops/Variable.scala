@@ -2,14 +2,12 @@ package com.github.ldaniels528.qwery.ops
 
 /**
   * Represents a variable
+  * @author lawrence.daniels@gmail.com
   */
-class Variable(initialValue: Option[Any] = None) {
-  private var value: Option[Any] = initialValue
+case class Variable(name: String, var value: Option[Any] = None) extends NamedExpression {
 
-  def get: Option[Any] = value
+  override def evaluate(scope: Scope): Option[Any] = value
 
-  def set(scope: Scope, expression: Expression): Unit = {
-    value = expression.evaluate(scope)
-  }
+  def set(scope: Scope, expression: Expression): Unit = value = expression.evaluate(scope)
 
 }

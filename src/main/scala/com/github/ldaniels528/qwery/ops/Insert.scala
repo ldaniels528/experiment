@@ -1,12 +1,12 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.sources.QueryResource
+import com.github.ldaniels528.qwery.sources.DataResource
 
 /**
   * Represents an INSERT statement
   * @author lawrence.daniels@gmail.com
   */
-case class Insert(target: QueryResource,
+case class Insert(target: DataResource,
                   fields: Seq[Field],
                   source: Executable,
                   append: Boolean,
@@ -15,15 +15,15 @@ case class Insert(target: QueryResource,
 
   override def execute(scope: Scope): ResultSet = {
     var count = 0L
-    val device = target.getOutputSource(append)
+    val outputSource = target.getOutputSource(append, hints)
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
-    device.open(hints)
+    outputSource.open()
     source.execute(scope) foreach { data =>
-      device.write(data)
+      outputSource.write(data)
       count += 1
     }
-    device.close()
-    Seq(Seq("ROWS_INSERTED" -> count))
+    outputSource.close()
+    Iterator(Seq("ROWS_INSERTED" -> count))
   }
 
 }

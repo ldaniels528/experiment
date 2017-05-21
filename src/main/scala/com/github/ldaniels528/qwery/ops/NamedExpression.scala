@@ -17,6 +17,8 @@ trait NamedExpression extends Expression {
   * @author lawrence.daniels@gmail.com
   */
 object NamedExpression {
+  private val random = new Random()
+  private val namingCharSet: List[Char] = ('A' to 'Z').toList ::: ('a' to 'z').toList
 
   /**
     * Returns a named alias for the given expression
@@ -25,8 +27,8 @@ object NamedExpression {
     * @return a named alias
     */
   def apply(name: String, expression: Expression): NamedExpression = expression match {
-    case aggregate: Expression with Aggregation => AggregateAlias(name, aggregate)
-    case vanilla => ExpressionAlias(name, vanilla)
+    case aggregate: Expression with Aggregation => NamedAggregation(name, aggregate)
+    case vanilla => NamedAlias(name, vanilla)
   }
 
   /**
@@ -35,10 +37,10 @@ object NamedExpression {
   def unapply(expression: NamedExpression): Option[String] = Some(expression.name)
 
   /**
-    * Represents an alias for a field or expression
+    * Represents a named alias for an aggregate field or expression
     * @author lawrence.daniels@gmail.com
     */
-  case class AggregateAlias(name: String, aggregate: Expression with Aggregation) extends NamedExpression with Aggregation {
+  case class NamedAggregation(name: String, aggregate: Expression with Aggregation) extends NamedExpression with Aggregation {
 
     override def evaluate(scope: Scope): Option[Any] = aggregate.evaluate(scope)
 
@@ -47,10 +49,10 @@ object NamedExpression {
   }
 
   /**
-    * Represents an alias for a field or expression
+    * Represents a named alias for a field or expression
     * @author lawrence.daniels@gmail.com
     */
-  case class ExpressionAlias(name: String, expression: Expression) extends NamedExpression {
+  case class NamedAlias(name: String, expression: Expression) extends NamedExpression {
 
     override def evaluate(scope: Scope): Option[Any] = expression.evaluate(scope)
 
@@ -64,14 +66,12 @@ object NamedExpression {
 
     def getName: String = expression match {
       case NamedExpression(name) => name
-      case _ => randomName
+      case _ => randomName()
     }
   }
 
-  private def randomName: String = {
-    val random = new Random()
-    val chars = for (_ <- 1 to 16) yield (random.nextInt('z' - 'A') + 'A').toChar
-    String.copyValueOf(chars.filter(_.isLetterOrDigit).toArray).take(8)
+  def randomName(length: Int = 8): String = {
+    (1 to length).map(_ => namingCharSet(random.nextInt(namingCharSet.length))).mkString
   }
 
 }

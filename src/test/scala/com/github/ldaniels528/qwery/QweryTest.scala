@@ -205,7 +205,7 @@ class QweryTest extends FunSpec {
             |FROM 'companylist.csv'
             |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
       )
-      val results = queries.map(_.execute(scope))
+      val results = queries.map(_.execute(scope).toSeq)
       assert(results == Seq(
         Seq(Seq(("ROWS_INSERTED", 34))),
         Seq(Seq(("ROWS_INSERTED", 5)))

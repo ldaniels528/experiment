@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.NamedExpression.{AggregateAlias, ExpressionAlias}
+import com.github.ldaniels528.qwery.ops.NamedExpression.{NamedAggregation, NamedAlias}
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins._
 import com.github.ldaniels528.qwery.sources._
@@ -40,7 +40,7 @@ object QwerySQLGenerator {
 
   private def makeSQL(expression: Expression): String = expression match {
     case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
-    case AggregateAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
+    case NamedAggregation(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case Avg(expr) => s"AVG(${expr.toSQL})"
     case BasicField(name) => nameOf(name)
     case Case(conditions, otherwise) => toCase(conditions, otherwise)
@@ -49,7 +49,7 @@ object QwerySQLGenerator {
     case Concat(a, b) => s"${a.toSQL} || ${b.toSQL}"
     case ConstantValue(value) => s"'$value'"
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
-    case ExpressionAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
+    case NamedAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
     case Left(a, b) => s"LEFT(${a.toSQL}, ${b.toSQL})"
     case Len(expr) => s"LEN(${expr.toSQL})"
@@ -73,11 +73,11 @@ object QwerySQLGenerator {
   private def makeSQL(value: AnyRef): String = value match {
     case Hints(delimiter, headers, quoted) => s"HINTS(DELIMITER '$delimiter', HEADERS ${headers.onOff}, QUOTES ${quoted.onOff})"
     case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
-    case QueryResource(path) => s"'$path'"
+    case DataResource(path) => s"'$path'"
     case condition: Condition => makeSQL(condition)
     case executable: Executable => makeSQL(executable)
     case expression: Expression => makeSQL(expression)
-    case output: QueryOutputSource => makeSQL(output)
+    case output: OutputSource => makeSQL(output)
     case unknown => s"'$unknown'"
   }
 
@@ -93,20 +93,20 @@ object QwerySQLGenerator {
     sb.toString()
   }
 
-  private def toDescribe(source: QueryResource, limit: Option[Int]): String = {
+  private def toDescribe(source: DataResource, limit: Option[Int]): String = {
     val sb = new StringBuilder(s"DESCRIBE ${source.toSQL}")
     limit.foreach(n => sb.append(s" LIMIT $n"))
     sb.toString()
   }
 
-  private def toInsert(target: QueryResource, fields: Seq[Field], source: Executable, append: Boolean, hints: Hints): String = {
+  private def toInsert(target: DataResource, fields: Seq[Field], source: Executable, append: Boolean, hints: Hints): String = {
     s"""
        |INSERT ${if (append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")})
        |${source.toSQL}""".stripMargin.toSingleLine
   }
 
   private def toSelect(fields: Seq[Expression],
-                       source: Option[QueryResource],
+                       source: Option[DataResource],
                        condition: Option[Condition],
                        groupFields: Seq[Field],
                        orderedColumns: Seq[OrderedColumn],

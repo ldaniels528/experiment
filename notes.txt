@@ -1,0 +1,79 @@
+DESIGN NOTES
+
+1. Result set, row and column-level Modifiers
+
+    a. Modifier Examples
+
+        WITH ROWS AS CSV|PSV|TSV|JSON|AUTO?
+        WITH DELIMITER ','
+        WITH QUOTED TEXT
+        WITH QUOTED NUMBERS
+
+    b. Text Formatting Examples
+
+        Example 1: CSV/PSV Format
+
+            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+            FROM 'companylist.csv'
+            WITH DELIMITER ','
+            WITH QUOTED TEXT
+            WITH QUOTED NUMBERS
+            WHERE Industry = 'Oil/Gas Transmission'
+
+            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+            FROM 'companylist.csv'
+            WITH ROWS AS PSV
+            WHERE Industry = 'Oil/Gas Transmission'
+
+        Example 2: JSON Format
+
+            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+            FROM 'companylist.csv'
+            WITH ROWS AS JSON
+            WHERE Industry = 'Oil/Gas Transmission'
+
+        Example 3: Fixed-length Format
+
+            SELECT
+                WIDTH(Symbol, 10) AS Symbol,
+                WIDTH(Name, 64) AS Name,
+                WIDTH(Sector, 30) AS Sector,
+                WIDTH(Industry, 30) AS Industry,
+                WIDTH(`Summary Quote`, 128) AS `Summary Quote`
+            FROM 'companylist.csv'
+            WHERE Industry = 'Oil/Gas Transmission'
+
+            Comments: This works for writing fixed-length fields, but what about reading?
+
+        Example 4: Fixed-length Format
+
+            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+            FROM 'companylist.csv'
+            WHERE Industry = 'Oil/Gas Transmission'
+            WITH FIXED COLUMNS (
+                Symbol WIDTH 10,
+                Name WIDTH 64,
+                Sector WIDTH 30,
+                Industry WIDTH 30,
+                `Summary Quote` WIDTH 128
+            )
+
+            INSERT INTO 'fixed-data.txt' (Symbol, Name, Sector, Industry)
+            WITH FIXED COLUMNS (
+                Symbol WIDTH 8,
+                Name WIDTH 32,
+                Sector WIDTH 20,
+                Industry WIDTH 20
+            )
+            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+            FROM 'companylist.csv'
+            WITH FIXED COLUMNS (
+                Symbol WIDTH 10,
+                Name WIDTH 64,
+                Sector WIDTH 30,
+                Industry WIDTH 30,
+                `Summary Quote` WIDTH 128
+            )
+            WHERE Industry = 'Oil/Gas Transmission'
+
+2.

@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.codecs
+package com.github.ldaniels528.qwery.sources
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.zip.{Deflater, GZIPInputStream, GZIPOutputStream}

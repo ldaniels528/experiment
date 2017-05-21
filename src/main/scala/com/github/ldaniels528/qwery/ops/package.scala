@@ -10,7 +10,7 @@ package object ops {
 
   type Row = Seq[Column]
 
-  type ResultSet = TraversableOnce[Row]
+  type ResultSet = Iterator[Row]
 
   /**
     * Row Enrichmnent

@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery
+package com.github.ldaniels528.qwery.actors
 
 import akka.actor._
 
@@ -14,6 +14,8 @@ class QweryActorSystem {
   val scheduler: Scheduler = system.scheduler
 
   def createActor[T <: Actor : ClassTag]: ActorRef = system.actorOf(Props[T])
+
+  def createActor[T <: Actor : ClassTag](factory: () => T): ActorRef = system.actorOf(Props(factory()))
 
   def shutdown(): Future[Terminated] = system.terminate()
 
