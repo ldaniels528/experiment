@@ -21,11 +21,11 @@ trait DataSourceFactory {
     }
   }
 
-  def getInputSource(path: String): Option[InputSource] = {
+  def getInputSource(path: String, hints: Option[Hints]): Option[InputSource] = {
     inputSourceFactories.find(_.understands(path)).flatMap(_.apply(path))
   }
 
-  def getOutputSource(path: String, append: Boolean, hints: Hints): Option[OutputSource] = {
+  def getOutputSource(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
     outputSourceFactories.find(_.understands(path)).flatMap(_.apply(path, append, hints))
   }
 

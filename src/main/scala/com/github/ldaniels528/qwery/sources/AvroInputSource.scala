@@ -9,7 +9,7 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.slf4j.LoggerFactory
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 /**
   * Represents an Avro Input Source

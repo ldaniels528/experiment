@@ -1,16 +1,23 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Scope}
 
 /**
   * Represents a data source resource path
   * @author lawrence.daniels@gmail.com
   */
-case class DataResource(path: String) {
+case class DataResource(path: String, hints: Option[Hints] = None) extends Executable {
 
-  def getInputSource: Option[InputSource] = DataSourceFactory.getInputSource(path)
+  override def execute(scope: Scope): ResultSet = getInputSource match {
+    case Some(device) => device.execute(scope)
+    case None => Iterator.empty
+  }
 
-  def getOutputSource(append: Boolean, hints: Hints): Option[OutputSource] = {
+  def getInputSource: Option[InputSource] = {
+    DataSourceFactory.getInputSource(path, hints)
+  }
+
+  def getOutputSource(append: Boolean): Option[OutputSource] = {
     DataSourceFactory.getOutputSource(path, append, hints)
   }
 

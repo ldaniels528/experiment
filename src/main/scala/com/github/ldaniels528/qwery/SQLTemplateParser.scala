@@ -17,7 +17,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
   def matches(template: String): Boolean = {
     stream.mark()
     try new SQLTemplateParser(stream).process(template).nonEmpty catch {
-      case e: Throwable => false
+      case _: Throwable => false
     } finally stream.reset()
   }
 

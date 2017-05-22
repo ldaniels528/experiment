@@ -55,8 +55,7 @@ class QweryCompiler {
   private def parseDescribe(ts: TokenStream): Describe = {
     val params = SQLTemplateParser(ts).process("DESCRIBE @source ?LIMIT ?@limit")
     Describe(
-      source = params.atoms.get("source").map(DataResource.apply)
-        .getOrElse(die("No source provided", ts)),
+      source = params.atoms.get("source").map(DataResource.apply(_)).getOrElse(die("No source provided", ts)),
       limit = params.atoms.get("limit").map(parseInteger(_, "Numeric value expected for LIMIT")))
   }
 
@@ -88,20 +87,19 @@ class QweryCompiler {
     val params = parser.process(
       """
         |INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )
-        |?WITH ?@|withVerb|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withArg""".stripMargin.toSingleLine)
-    val target = params.atoms.get("target").map(DataResource.apply)
+        |?WITH ?@|withKey|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withValue""".stripMargin.toSingleLine)
+    val hints = processHints(stream, params)
+    val target = params.atoms.get("target").map(DataResource.apply(_, hints))
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", die("Field arguments missing", stream))
     val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
-    // WITH clauses
-    val hints = processHints(stream, params) getOrElse Hints()
     // VALUES or SELECT
     val source = stream match {
       case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
       case ts => parseNext(ts)
     }
-    Insert(target, fields, source, append, hints)
+    Insert(target, fields, source, append)
   }
 
   /**
@@ -180,34 +178,33 @@ class QweryCompiler {
       """
         |SELECT ?TOP ?@top @{fields}
         |?FROM ?@source
-        |?WITH ?@|withVerb|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withArg
+        |?WITH ?@|withKey|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withValue
         |?WHERE ?@!{condition}
         |?GROUP +?BY ?@(groupBy)
         |?ORDER +?BY ?@[orderBy]
         |?LIMIT ?@limit""".stripMargin.toSingleLine)
     Select(
       fields = params.expressions.getOrElse("fields", die("Field arguments missing", ts)),
-      source = params.atoms.get("source").map(DataResource.apply),
+      source = params.atoms.get("source").map(DataResource.apply(_, processHints(ts, params))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.atoms.get("limit") ?? params.atoms.get("top"))
-        .map(parseInteger(_, "Numeric value expected LIMIT or TOP")),
-      hints = processHints(ts, params)
+        .map(parseInteger(_, "Numeric value expected LIMIT or TOP"))
     )
   }
 
   private def processHints(ts: TokenStream, params: SQLTemplateParams): Option[Hints] = {
     import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
     for {
-      verb <- params.atoms.get("withVerb")
-      arg <- params.atoms.get("withArg")
+      key <- params.atoms.get("withKey")
+      value <- params.atoms.get("withValue")
     } yield {
-      verb match {
-        case "COLUMN" => Hints(headers = arg.equalsIgnoreCase("HEADERS"))
-        case "DELIMITER" => Hints(delimiter = arg)
-        case "FORMAT" => Hints().usingFormat(arg)
-        case "QUOTED" => Hints(quotedNumbers = arg.equalsIgnoreCase("NUNBERS"), quotedText = arg.equalsIgnoreCase("TEXT"))
+      key match {
+        case "COLUMN" => Hints(headers = value.equalsIgnoreCase("HEADERS"))
+        case "DELIMITER" => Hints(delimiter = value)
+        case "FORMAT" => Hints().usingFormat(value)
+        case "QUOTED" => Hints(quotedNumbers = value.equalsIgnoreCase("NUNBERS"), quotedText = value.equalsIgnoreCase("TEXT"))
         case _ => ts.die("Invalid verb for WITH")
       }
     }

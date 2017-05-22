@@ -9,6 +9,24 @@ import scala.reflect.ClassTag
   */
 object ResourceHelper {
 
+  type OpenAndClose = {
+    def open(): Unit
+
+    def close(): Unit
+  }
+
+  /**
+    * Automatically closes a resource after the completion of a code block
+    */
+  implicit class AutoOpenClose[T <: OpenAndClose](val resource: T) extends AnyVal {
+
+    def igloo[S](block: T => S): S = try {
+      resource.open()
+      block(resource)
+    } finally resource.close()
+
+  }
+
   /**
     * Automatically closes a resource after the completion of a code block
     */

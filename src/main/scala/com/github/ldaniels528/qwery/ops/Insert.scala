@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
 import com.github.ldaniels528.qwery.sources.DataResource
+import com.github.ldaniels528.qwery.util.ResourceHelper._
 
 /**
   * Represents an INSERT statement
@@ -9,20 +10,19 @@ import com.github.ldaniels528.qwery.sources.DataResource
 case class Insert(target: DataResource,
                   fields: Seq[Field],
                   source: Executable,
-                  append: Boolean,
-                  hints: Hints)
+                  append: Boolean = false)
   extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
     var count = 0L
-    val outputSource = target.getOutputSource(append, hints)
+    val outputSource = target.getOutputSource(append)
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
-    outputSource.open()
-    source.execute(scope) foreach { data =>
-      outputSource.write(data)
-      count += 1
+    outputSource igloo { device =>
+      source.execute(scope) foreach { data =>
+        device.write(data)
+        count += 1
+      }
     }
-    outputSource.close()
     Iterator(Seq("ROWS_INSERTED" -> count))
   }
 

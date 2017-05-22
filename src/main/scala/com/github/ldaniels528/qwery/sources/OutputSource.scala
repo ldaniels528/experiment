@@ -22,7 +22,7 @@ trait OutputSource {
   */
 object OutputSource extends OutputSourceFactory {
 
-  override def apply(path: String, append: Boolean, hints: Hints): Option[OutputSource] = path.toLowerCase() match {
+  override def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = path.toLowerCase() match {
     case file if file.endsWith(".csv") => Option(CSVOutputSource(TextFileOutputDevice(path, append)))
     case file if file.endsWith(".json") => Option(JSONOutputSource(TextFileOutputDevice(path, append)))
     case file if file.endsWith(".psv") => Option(CSVOutputSource(TextFileOutputDevice(path, append), delimiter = "|"))

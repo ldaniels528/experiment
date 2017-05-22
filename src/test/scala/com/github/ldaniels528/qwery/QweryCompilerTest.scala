@@ -55,7 +55,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          source = Option(DataResource("companylist.csv")),
+          source = Option(DataResource(path = "companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission"))
         ))
     }
@@ -68,7 +68,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Select(
           fields = List(AllFields),
-          source = Option(DataResource("companylist.csv")),
+          source = Option(DataResource(path = "companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission"))
         ))
     }
@@ -82,7 +82,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Select(
           fields = List(AllFields),
-          source = Option(DataResource("companylist.csv")),
+          source = Option(DataResource(path = "companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
           orderedColumns = List(OrderedColumn("Symbol", ascending = true))
         ))
@@ -98,7 +98,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          source = Option(DataResource("companylist.csv")),
+          source = Option(DataResource(path = "companylist.csv")),
           condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")),
           groupFields = List(Field("Symbol")),
           orderedColumns = List(OrderedColumn("Symbol", ascending = false))
@@ -115,13 +115,12 @@ class QweryCompilerTest extends FunSpec {
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
           target = DataResource("test2.csv"),
-          append = false,
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-            source = Option(DataResource("companylist.csv")),
+            source = Option(DataResource(path = "companylist.csv")),
             condition = Some(EQ(Field("Industry"), "Precious Metals")),
-            limit = None),
-          hints = Hints()))
+            limit = None)
+        ))
     }
 
     it("should compile INSERT statements") {
@@ -140,8 +139,7 @@ class QweryCompilerTest extends FunSpec {
             dataSets = List(
               List[Expression]("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0),
               List[Expression]("EMX", "Basic Industries", "Precious Metals", 0.828)
-            )),
-          hints = Hints()
+            ))
         ))
     }
 

@@ -36,7 +36,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.1.6
+ Qwery CLI v0.2.2
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -230,7 +230,7 @@ import com.github.ldaniels528.tabular.Tabular
 val query = QweryCompiler("DESCRIBE './companylist.csv'")
     
 // execute the query    
-val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println    
@@ -269,7 +269,7 @@ val query = QweryCompiler(
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -301,7 +301,7 @@ val query = QweryCompiler(
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => TraversableOnce[Seq[(String, Any)]]
+val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println

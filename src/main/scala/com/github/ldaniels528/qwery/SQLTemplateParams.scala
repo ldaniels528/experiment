@@ -28,8 +28,16 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       repeatedSets = this.repeatedSets ++ that.repeatedSets)
   }
 
+  /**
+    * Indicates whether all of the template mappings are empty
+    * @return true, if all of the template mappings are empty
+    */
   def isEmpty: Boolean = !nonEmpty
 
+  /**
+    * Indicates whether at least one of the template mappings is not empty
+    * @return true, if at least one of the template mappings is not empty
+    */
   def nonEmpty: Boolean = Seq(atoms, conditions, expressions, fields, orderedFields, repeatedSets).exists(_.nonEmpty)
 
 }

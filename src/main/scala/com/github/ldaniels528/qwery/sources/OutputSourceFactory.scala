@@ -8,6 +8,6 @@ import com.github.ldaniels528.qwery.ops.Hints
   */
 trait OutputSourceFactory extends IOSourceFactory {
 
-  def apply(uri: String, append: Boolean, hints: Hints): Option[OutputSource]
+  def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource]
 
 }
