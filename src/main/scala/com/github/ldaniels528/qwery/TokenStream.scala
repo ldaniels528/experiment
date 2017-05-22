@@ -15,16 +15,16 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def dieEOS[A]: A = die("Unexpected end of statement")
 
-  def expect(text: String): this.type = {
+  def expect(text: => String): this.type = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected $text")
     this
   }
 
-  def is(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
+  def is(text: => String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
 
-  def matches(pattern: String): Boolean = peek.exists(_.text.matches(pattern))
+  def matches(pattern: => String): Boolean = peek.exists(_.text.matches(pattern))
 
-  def nextIf(keyword: String): Boolean = is(keyword) && nextOption.nonEmpty
+  def nextIf(keyword: => String): Boolean = is(keyword) && nextOption.nonEmpty
 
   def isBackticks: Boolean = peek.exists {
     case t: QuotedToken => t.isBackticks

@@ -34,9 +34,9 @@ class QweryCompiler {
     */
   def parseNext(stream: TokenStream): Executable = {
     stream match {
-      case ts if ts.is("DESCRIBE") => parseDescribe(ts)
-      case ts if ts.is("INSERT") => parseInsert(ts)
-      case ts if ts.is("SELECT") => parseSelect(ts)
+      case ts if ts is "DESCRIBE" => parseDescribe(ts)
+      case ts if ts is "INSERT" => parseInsert(ts)
+      case ts if ts is "SELECT" => parseSelect(ts)
       case ts => die("Unexpected end of line", ts)
     }
   }
@@ -170,6 +170,7 @@ class QweryCompiler {
     * {{{
     * SELECT symbol, exchange, lastSale FROM './EOD-20170505.txt'
     * WHERE exchange = 'NASDAQ'
+    * LIMIT 5
     * }}}
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Select executable]]
@@ -180,7 +181,7 @@ class QweryCompiler {
         |SELECT ?TOP ?@top @{fields}
         |?FROM ?@source
         |?WITH ?@|withVerb|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withArg
-        |?WHERE ?@&{condition}
+        |?WHERE ?@!{condition}
         |?GROUP +?BY ?@(groupBy)
         |?ORDER +?BY ?@[orderBy]
         |?LIMIT ?@limit""".stripMargin.toSingleLine)
@@ -190,7 +191,7 @@ class QweryCompiler {
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
-      limit = (params.atoms.get("top") ?? params.atoms.get("limit"))
+      limit = (params.atoms.get("limit") ?? params.atoms.get("top"))
         .map(parseInteger(_, "Numeric value expected LIMIT or TOP")),
       hints = processHints(ts, params)
     )

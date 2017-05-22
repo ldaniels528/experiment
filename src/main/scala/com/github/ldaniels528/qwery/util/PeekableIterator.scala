@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.util
 
+import scala.language.postfixOps
+
 /**
   * Peekable Iterator
   * @author lawrence.daniels@gmail.com
@@ -51,6 +53,11 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
     true
   }
 
-  override def toString: String = s"PeekableIterator(${values.toList})"
+  override def toString: String = s"PeekableIterator(${
+    values.zipWithIndex.map {
+      case (item, n) if n == position => s"[$item]"
+      case (item, _) => item
+    } mkString ", "
+  })"
 
 }

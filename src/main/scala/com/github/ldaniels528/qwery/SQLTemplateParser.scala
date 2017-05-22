@@ -45,8 +45,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     // repeat start/end tag? (e.g. "{{values VALUES ( @{values} ) }}" => "VALUES (123, 456) VALUES (345, 678)")
     case tag if tag.startsWith("{{") => Some(processRepeatedSequence(name = tag.drop(2), tags))
 
-    // conditional expression? (e.g. "@&{condition}" => "x = 1 and y = 2")
-    case tag if tag.startsWith("@&{") & tag.endsWith("}") => Some(extractCondition(tag.drop(3).dropRight(1)))
+    // conditional expression? (e.g. "@!{condition}" => "x = 1 and y = 2")
+    case tag if tag.startsWith("@!{") & tag.endsWith("}") => Some(extractCondition(tag.drop(3).dropRight(1)))
 
     // field names? (e.g. "@(fields)" => "field1, field2, ..., fieldN")
     case tag if tag.startsWith("@(") & tag.endsWith(")") => Some(extractListOfFields(tag.drop(2).dropRight(1)))
@@ -57,7 +57,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser {
     // ordered field list? (e.g. "@[orderedFields]" => "field1 DESC, field2 ASC")
     case tag if tag.startsWith("@[") & tag.endsWith("]") => Some(extractOrderedColumns(tag.drop(2).dropRight(1)))
 
-    // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." or "INSERT OVERWRITE ...")
+    // enumeration? (e.g. "@|mode|INTO|OVERWRITE|" => "INSERT INTO ..." || "INSERT OVERWRITE ...")
     case tag if tag.startsWith("@|") & tag.endsWith("|") => Some(extractEnumeratedItem(tag.drop(2).dropRight(1).split('|')))
 
     // regular expression match? (e.g. "@/\\d{3,4}S+/" => "123ABC")
