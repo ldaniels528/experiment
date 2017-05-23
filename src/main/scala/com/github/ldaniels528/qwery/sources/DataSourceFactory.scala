@@ -22,7 +22,7 @@ trait DataSourceFactory {
   }
 
   def getInputSource(path: String, hints: Option[Hints]): Option[InputSource] = {
-    inputSourceFactories.find(_.understands(path)).flatMap(_.apply(path))
+    inputSourceFactories.find(_.understands(path)).flatMap(_.apply(path, hints))
   }
 
   def getOutputSource(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {

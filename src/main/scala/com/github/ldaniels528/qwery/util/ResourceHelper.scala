@@ -20,7 +20,7 @@ object ResourceHelper {
     */
   implicit class AutoOpenClose[T <: OpenAndClose](val resource: T) extends AnyVal {
 
-    def igloo[S](block: T => S): S = try {
+    def manage[S](block: T => S): S = try {
       resource.open()
       block(resource)
     } finally resource.close()

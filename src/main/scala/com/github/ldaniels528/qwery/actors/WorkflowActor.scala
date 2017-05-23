@@ -4,9 +4,9 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.github.ldaniels528.qwery.actors.FileReadingActor.{DataReceived, EOF, ReadFile}
-import com.github.ldaniels528.qwery.actors.WorkflowActor.CopyProcess
+import com.github.ldaniels528.qwery.actors.WorkflowActor._
 import com.github.ldaniels528.qwery.ops.Row
-import com.github.ldaniels528.qwery.sources.{CSVOutputSource, OutputSource, TextFileOutputDevice}
+import com.github.ldaniels528.qwery.sources.{CSVOutputSource, DataResource, OutputSource, TextFileOutputDevice}
 
 import scala.collection.concurrent.TrieMap
 
@@ -15,7 +15,6 @@ import scala.collection.concurrent.TrieMap
   * @author lawrence.daniels@gmail.com
   */
 class WorkflowActor() extends Actor with ActorLogging {
-  private val jobs = TrieMap[UUID, CopyProcess]()
 
   override def receive: Receive = {
     case op@CopyProcess(inputPath, outputPath, pid) =>
@@ -39,6 +38,7 @@ class WorkflowActor() extends Actor with ActorLogging {
   * @author lawrence.daniels@gmail.com
   */
 object WorkflowActor {
+  private val jobs = TrieMap[UUID, CopyProcess]()
 
   case class CopyProcess(inputPath: String, outputPath: String, pid: UUID = UUID.randomUUID()) {
     private var output: OutputSource = _
@@ -53,7 +53,7 @@ object WorkflowActor {
 
       // start read from the input source
       reader = QweryActorSystem.createActor[FileReadingActor]
-      reader ! ReadFile(pid, inputPath, recipient = actor)
+      reader ! ReadFile(pid, DataResource(inputPath), recipient = actor)
       this
     }
 

@@ -21,5 +21,7 @@ case class DataResource(path: String, hints: Option[Hints] = None) extends Execu
     DataSourceFactory.getOutputSource(path, append, hints)
   }
 
+  override def toString: String = path
+
 }
 

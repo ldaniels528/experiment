@@ -14,14 +14,22 @@ case class Hints(delimiter: Option[String] = None,
 
   def usingFormat(format: String): Hints = {
     format.toUpperCase() match {
-      case "CSV" => copy(delimiter = ",", headers = true, quotedText = true, quotedNumbers = false)
-      case "JSON" => copy(isJson = true)
-      case "PSV" => copy(delimiter = "|", headers = true, quotedText = true, quotedNumbers = false)
-      case "TSV" => copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
+      case "CSV" => asCSV
+      case "JSON" => asJSON
+      case "PSV" => asPSV
+      case "TSV" => asTSV
       // TODO support user defined formats
       case _ => this
     }
   }
+
+  def asCSV: Hints = copy(delimiter = ",", headers = true, quotedText = true, quotedNumbers = false)
+
+  def asJSON: Hints = copy(isJson = true)
+
+  def asPSV: Hints = copy(delimiter = "|", headers = true, quotedText = true, quotedNumbers = false)
+
+  def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
 
   def isEmpty: Boolean = !nonEmpty
 

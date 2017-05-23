@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{ResultSet, Row}
+import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.language.postfixOps
@@ -9,7 +9,7 @@ import scala.language.postfixOps
   * Auto-Detecting Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class AutoDetectingInputSource(device: InputDevice) extends InputSource {
+case class AutoDetectingDelimitedInputSource(device: InputDevice, hints: Option[Hints]) extends InputSource {
   private var delimiter: Char = _
   private var headers: Seq[String] = Nil
   private var buffer: List[Row] = Nil

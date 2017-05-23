@@ -1,6 +1,8 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Row, Scope}
+import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
+import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**
   * Input Source
@@ -41,13 +43,19 @@ trait InputSource extends Executable {
   */
 object InputSource extends InputSourceFactory {
 
-  override def apply(path: String): Option[InputSource] = path.toLowerCase() match {
-    case file if file.endsWith(".csv") => Option(CSVInputSource(TextFileInputDevice(path)))
-    case file if file.endsWith(".json") => Option(JSONInputSource(TextFileInputDevice(path)))
-    case file if file.endsWith(".psv") => Option(CSVInputSource(TextFileInputDevice(path), delimiter = "|"))
-    case file if file.endsWith(".tsv") => Option(CSVInputSource(TextFileInputDevice(path), delimiter = "\t"))
-    case file if file.endsWith(".txt") => Option(AutoDetectingInputSource(TextFileInputDevice(path)))
-    case _ => Option(CSVInputSource(TextFileInputDevice(path)))
+  override def apply(path: String, hints: Option[Hints]): Option[InputSource] = {
+    (hints ?? Hints()) map {
+      case hint if hint.isJson.contains(true) => JSONInputSource(TextFileInputDevice(path), hint)
+      case hint if hint.delimiter.nonEmpty => DelimitedInputSource(TextFileInputDevice(path), hint)
+      case hint =>
+        path.toLowerCase() match {
+          case file if file.endsWith(".csv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asCSV))
+          case file if file.endsWith(".json") => JSONInputSource(TextFileInputDevice(path), hints = hint.map(_.asJSON))
+          case file if file.endsWith(".psv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asPSV))
+          case file if file.endsWith(".tsv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asTSV))
+          case _ => AutoDetectingDelimitedInputSource(TextFileInputDevice(path), hint)
+        }
+    }
   }
 
   override def understands(path: String): Boolean = path.toLowerCase() match {

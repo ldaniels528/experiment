@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.github.ldaniels528.qwery.actors.FileReadingActor.{DataReceived, EOF, ReadFile}
 import com.github.ldaniels528.qwery.ops.Row
-import com.github.ldaniels528.qwery.sources.{AutoDetectingInputSource, TextFileInputDevice}
+import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
 /**
@@ -14,17 +14,21 @@ import com.github.ldaniels528.qwery.util.ResourceHelper._
   */
 class FileReadingActor() extends Actor with ActorLogging {
   override def receive: Receive = {
-    case ReadFile(pid, path, recipient) =>
-      log.info(s"$pid: Reading file '$path'")
-      AutoDetectingInputSource(TextFileInputDevice(path)) use { device =>
-        device.open()
-        var record: Option[Row] = None
-        do {
-          record = device.read()
-          record.foreach(recipient ! DataReceived(pid, _))
-        } while (record.nonEmpty)
+    case ReadFile(pid, resource, recipient) =>
+      log.info(s"$pid: Reading file '$resource'")
+      resource.getInputSource match {
+        case Some(source) =>
+          source manage { device =>
+            var record: Option[Row] = None
+            do {
+              record = device.read()
+              record.foreach(recipient ! DataReceived(pid, _))
+            } while (record.nonEmpty)
+          }
+          recipient ! EOF(pid, resource)
+        case None =>
+          log.error(s"No device could be determined for '$resource'")
       }
-      recipient ! EOF(pid, path)
 
     case message =>
       unhandled(message)
@@ -37,10 +41,10 @@ class FileReadingActor() extends Actor with ActorLogging {
   */
 object FileReadingActor {
 
-  case class ReadFile(pid: UUID, path: String, recipient: ActorRef)
+  case class ReadFile(pid: UUID, resource: DataResource, recipient: ActorRef)
 
   case class DataReceived(pid: UUID, row: Row)
 
-  case class EOF(pid: UUID, path: String)
+  case class EOF(pid: UUID, resource: DataResource)
 
 }
