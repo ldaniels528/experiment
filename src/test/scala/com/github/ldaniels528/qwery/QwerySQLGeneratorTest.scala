@@ -22,6 +22,12 @@ class QwerySQLGeneratorTest extends FunSpec {
     assert(sql0 == sql1)
   }
 
+  it("supports DESCRIBE-SELECT") {
+    val sql0 = "DESCRIBE (SELECT ymbol, Name, Sector, Industry FROM 'companylist.csv')"
+    val sql1 = QweryCompiler(sql0).toSQL
+    assert(sql0 == sql1)
+  }
+
   it("supports SELECT-WHERE-LIMIT") {
     val sql0 =
       """

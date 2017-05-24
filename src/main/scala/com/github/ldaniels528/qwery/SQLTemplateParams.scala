@@ -9,6 +9,7 @@ import com.github.ldaniels528.qwery.ops._
   * @param expressions   the named collection of field/value expression arguments (e.g. "SELECT 1+(2*3), 'Hello', 123, symbol")
   * @param fields        the named collection of field references (e.g. "INSERT INTO (symbol, exchange, lastSale)")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
+  * @param sources       the named collection of queries
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
   */
 case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
@@ -16,6 +17,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
                              orderedFields: Map[String, List[OrderedColumn]] = Map.empty,
+                             sources: Map[String, Executable] = Map.empty,
                              repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty) {
 
   def +(that: SQLTemplateParams): SQLTemplateParams = {
@@ -25,6 +27,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
       orderedFields = this.orderedFields ++ that.orderedFields,
+      sources = this.sources ++ that.sources,
       repeatedSets = this.repeatedSets ++ that.repeatedSets)
   }
 
@@ -38,6 +41,6 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
     * Indicates whether at least one of the template mappings is not empty
     * @return true, if at least one of the template mappings is not empty
     */
-  def nonEmpty: Boolean = Seq(atoms, conditions, expressions, fields, orderedFields, repeatedSets).exists(_.nonEmpty)
+  def nonEmpty: Boolean = Seq(atoms, conditions, expressions, fields, orderedFields, sources, repeatedSets).exists(_.nonEmpty)
 
 }

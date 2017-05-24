@@ -22,6 +22,14 @@ $ sbt test
 
 **A**: Use back ticks (\`). 
 
+**Q**: Is ORDER BY supported?
+
+**A**: No, ORDER BY is not yet supported.
+
+**Q**: Is GROUP BY supported?
+
+**A**: Yes; however, only for a single column
+
 
 ```text
 SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
@@ -36,7 +44,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.2.2
+ Qwery CLI v0.2.3
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -69,10 +77,27 @@ Using UNIXCommandPrompt for input.
 + --------------------------------------------------------------------------------------- +
 ```
 
+##### Describe a SELECT query
+
+```text
+[2]> DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM 'companylist.csv');
+
++ -------------------------------------------- +
+| COLUMN     TYPE    SAMPLE                    |
++ -------------------------------------------- +
+| Symbol     String  XXII                      |
+| Name       String  22nd Century Group, Inc   |
+| Sector     String  Consumer Non-Durables     |
+| Industry   String  Farming/Seeds/Milling     |
+| LastSale   Double  1.4                       |
+| MarketCap  Double  1.269773582E8             |
++ -------------------------------------------- +
+```
+
 ##### Count the number of (non-blank) lines in the file:
 
 ```text
-[2]> SELECT COUNT(*) FROM './companylist.csv';
+[3]> SELECT COUNT(*) FROM './companylist.csv';
 
 + ---------- +
 | SYQWYsxb   |
@@ -84,7 +109,7 @@ Using UNIXCommandPrompt for input.
 ##### Count the number of lines that match a given set of criteria in the file:
 
 ```text
-[3]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
+[4]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
 
 + ---------- +
 | pUREGxhj   |
@@ -96,7 +121,7 @@ Using UNIXCommandPrompt for input.
 ##### Sum values (just like you normally do with SQL) in the file:
 
 ```text
-[4]> SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
+[5]> SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
 
 + --------------- +
 | total           |
@@ -108,7 +133,7 @@ Using UNIXCommandPrompt for input.
 ##### Type-casting and column name aliases are supported:
 
 ```text
-[5]>  SELECT CAST('1234' AS Double) AS number
+[6]>  SELECT CAST('1234' AS Double) AS number
 
 + -------- + 
 | number   | 
@@ -120,7 +145,7 @@ Using UNIXCommandPrompt for input.
 ##### Select fields from the file using criteria:
 
 ```text
-[5]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+[7]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
 
 + -------------------------------------------------------------------------------- +
 | Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
@@ -133,7 +158,7 @@ Using UNIXCommandPrompt for input.
 ##### Aggregating data via GROUP BY
 
 ```text
-[6]> SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
+[8]> SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
 
 + --------------------------------- + 
 | Sector                 Securities | 
@@ -157,7 +182,7 @@ Using UNIXCommandPrompt for input.
 ##### CASE-WHEN is also supported
 
 ```text
-[7]> SELECT
+[9]> SELECT
        CASE 'Hello World'
          WHEN 'HelloWorld' THEN 'Found 1'
          WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
@@ -174,9 +199,9 @@ Using UNIXCommandPrompt for input.
 ##### Copy a portion of one file to another (appending the target)
 
 ```text
-[8]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
-     SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-     WHERE Industry = 'Homebuilding'
+[10]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+      WHERE Industry = 'Homebuilding'
 
 + --------------- +
 | ROWS_INSERTED   |
@@ -188,9 +213,9 @@ Using UNIXCommandPrompt for input.
 ##### Copy a portion of one file to another (overwriting the target)
 
 ```text
-[9]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
-     SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-     WHERE Industry = 'Precious Metals'
+[11]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+      WHERE Industry = 'Precious Metals'
 
 + --------------- +
 | ROWS_INSERTED   |

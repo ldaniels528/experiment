@@ -100,7 +100,11 @@ object QwerySQLGenerator {
   }
 
   private def toDescribe(source: Executable, limit: Option[Int]) = {
-    val sb = new StringBuilder(s"DESCRIBE ${source.toSQL}")
+    val sb = new StringBuilder(s"DESCRIBE ")
+    source match {
+      case ds: DataResource => sb.append(ds.toSQL)
+      case exec: Executable => sb.append(s"(${exec.toSQL})")
+    }
     limit.foreach(n => sb.append(s" LIMIT $n"))
     sb.toString()
   }
