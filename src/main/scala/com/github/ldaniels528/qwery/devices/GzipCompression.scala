@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.devices
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.zip.{Deflater, GZIPInputStream, GZIPOutputStream}
@@ -71,9 +71,9 @@ object GzipCompression extends GzipCompression {
     */
   implicit class ByteCompressionHelper(data: Array[Byte]) {
 
-    def compress = self.compress(data)
+    def compress: Try[Array[Byte]] = self.compress(data)
 
-    def decompress = self.decompress(data)
+    def decompress: Try[Array[Byte]] = self.decompress(data)
 
   }
 
@@ -82,7 +82,7 @@ object GzipCompression extends GzipCompression {
     */
   implicit class StringCompressionHelper(data: String) {
 
-    def compress(encoding: String = "UTF8") = self.compress(data, encoding)
+    def compress(encoding: String = "UTF8"): Try[Array[Byte]] = self.compress(data, encoding)
 
   }
 

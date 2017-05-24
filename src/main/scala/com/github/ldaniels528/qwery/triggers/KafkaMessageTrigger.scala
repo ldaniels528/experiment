@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.triggers
 
 import java.util.Properties
 
-import com.github.ldaniels528.qwery.sources.{OutputDevice, Record}
+import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
 import com.github.ldaniels528.qwery.triggers.KafkaMessageTrigger.SSLOptions
 import com.github.ldaniels528.qwery.util.DurationHelper._
 import org.apache.kafka.clients.consumer.KafkaConsumer

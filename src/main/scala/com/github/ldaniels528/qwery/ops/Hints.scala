@@ -7,6 +7,7 @@ import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
   * @author lawrence.daniels@gmail.com
   */
 case class Hints(delimiter: Option[String] = None,
+                 gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
                  isJson: Option[Boolean] = None,
                  quotedNumbers: Option[Boolean] = None,

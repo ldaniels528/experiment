@@ -5,8 +5,9 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.github.ldaniels528.qwery.actors.FileReadingActor.{DataReceived, EOF, ReadFile}
 import com.github.ldaniels528.qwery.actors.WorkflowActor._
-import com.github.ldaniels528.qwery.ops.Row
-import com.github.ldaniels528.qwery.sources.{CSVOutputSource, DataResource, OutputSource, TextFileOutputDevice}
+import com.github.ldaniels528.qwery.devices.TextFileOutputDevice
+import com.github.ldaniels528.qwery.ops.{RootScope, Row}
+import com.github.ldaniels528.qwery.sources.{DataResource, DelimitedOutputSource, OutputSource}
 
 import scala.collection.concurrent.TrieMap
 
@@ -48,8 +49,8 @@ object WorkflowActor {
 
     def start(actor: ActorRef): this.type = {
       // open the output source
-      output = CSVOutputSource(TextFileOutputDevice(outputPath))
-      output.open()
+      output = DelimitedOutputSource(TextFileOutputDevice(outputPath))
+      output.open(RootScope())
 
       // start read from the input source
       reader = QweryActorSystem.createActor[FileReadingActor]

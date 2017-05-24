@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.devices
+
+import scala.io.Source
 
 /**
   * Input Device
@@ -9,7 +11,6 @@ trait InputDevice extends Device {
   def read(): Option[Record]
 
   def toIterator: Iterator[Record] = new Iterator[Record] {
-    open()
 
     private var nextRecord_? : Option[Record] = read()
 
@@ -23,6 +24,25 @@ trait InputDevice extends Device {
       case None =>
         throw new IllegalStateException("Empty iterator")
     }
+  }
+
+}
+
+/**
+  * Input Device Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object InputDevice {
+
+  /**
+    * Source Enrichment
+    * @param source the given [[Source]]
+    */
+  implicit class SourceEnrichment(val source: Source) extends AnyVal {
+
+    @inline
+    def getNonEmptyLines: Iterator[String] =  source.getLines().filter(_.trim.nonEmpty)
+
   }
 
 }

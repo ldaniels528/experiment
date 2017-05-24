@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.ops.{Hints, RootScope}
 import org.scalatest.FunSpec
 
 /**
@@ -8,12 +8,13 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class InputSourceTest extends FunSpec {
+  private val scope = RootScope()
 
   describe("InputSource") {
 
     it("should iterate over data") {
       InputSource("companylist.csv", hints = Option(Hints().asCSV)) foreach { source =>
-        source.open()
+        source.open(scope)
         var count = 0L
         source.toIterator foreach { row =>
           assert(row.size == 9)

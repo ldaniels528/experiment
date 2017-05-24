@@ -18,6 +18,11 @@ trait Scope {
 
   def +=(variable: Variable): Unit = variables(variable.name) = variable
 
+  def env(name: String): String = {
+    lookupVariable(name).flatMap(_.value).map(_.toString)
+      .getOrElse(throw new IllegalStateException(s"Environment variable '$name' is required"))
+  }
+
   def lookupFunction(name: String): Option[Function] = functions.get(name)
 
   def lookupVariable(name: String): Option[Variable] = variables.get(name)

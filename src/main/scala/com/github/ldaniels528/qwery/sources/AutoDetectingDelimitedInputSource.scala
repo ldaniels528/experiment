@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row}
+import com.github.ldaniels528.qwery.devices.InputDevice
+import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.language.postfixOps
@@ -32,7 +33,7 @@ case class AutoDetectingDelimitedInputSource(device: InputDevice, hints: Option[
     }
   }
 
-  override def open(): Unit = device.open()
+  override def open(scope: Scope): Unit = device.open(scope)
 
   override def close(): Unit = device.close()
 

@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.Row
+import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
+import com.github.ldaniels528.qwery.ops.{Row, Scope}
 import com.twitter.bijection.Injection
 import com.twitter.bijection.avro.GenericAvroCodecs
 import net.liftweb.json.JsonAST.JObject
@@ -19,6 +20,10 @@ case class AvroInputSource(device: InputDevice, schema: Schema) extends InputSou
   private lazy val converter: Injection[GenericRecord, Array[Byte]] = GenericAvroCodecs.toBinary(schema)
   private lazy val log = LoggerFactory.getLogger(getClass)
 
+  override def open(scope: Scope): Unit = device.open(scope)
+
+  override def close(): Unit = device.close()
+
   override def read(): Option[Row] = {
     device.read() map { case Record(offset, bytes) =>
       converter.invert(bytes)
@@ -31,9 +36,5 @@ case class AvroInputSource(device: InputDevice, schema: Schema) extends InputSou
       }
     }
   }
-
-  override def open(): Unit = device.open()
-
-  override def close(): Unit = device.close()
 
 }

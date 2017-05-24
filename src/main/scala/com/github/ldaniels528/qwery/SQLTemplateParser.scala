@@ -399,7 +399,7 @@ object SQLTemplateParser {
     val params = SQLTemplateParser(ts).process(
       """
         |SELECT ?TOP ?@top @{fields}
-        |?FROM ?@source
+        |?FROM ?@&source
         |?WITH ?@|withKey|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withValue
         |?WHERE ?@!{condition}
         |?GROUP +?BY ?@(groupBy)
@@ -407,7 +407,7 @@ object SQLTemplateParser {
         |?LIMIT ?@limit""".stripMargin.toSingleLine)
     Select(
       fields = params.expressions.getOrElse("fields", ts.die("Field arguments missing")),
-      source = params.atoms.get("source").map(DataResource.apply(_, processHints(ts, params))),
+      source = params.sources.get("source").map(_.withHints(processHints(ts, params))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
@@ -424,6 +424,7 @@ object SQLTemplateParser {
     } yield {
       key match {
         case "COLUMN" => Hints(headers = value.equalsIgnoreCase("HEADERS"))
+        case "COMPRESSION" => Hints(gzip = value.equalsIgnoreCase("GZIP"))
         case "DELIMITER" => Hints(delimiter = value)
         case "FORMAT" => Hints().usingFormat(value)
         case "QUOTED" => Hints(quotedNumbers = value.equalsIgnoreCase("NUNBERS"), quotedText = value.equalsIgnoreCase("TEXT"))

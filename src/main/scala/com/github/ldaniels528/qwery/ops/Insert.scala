@@ -17,7 +17,8 @@ case class Insert(target: DataResource,
     var count = 0L
     val outputSource = target.getOutputSource(append)
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
-    outputSource manage { device =>
+    outputSource.open(scope)
+    outputSource use { device =>
       source.execute(scope) foreach { data =>
         device.write(data)
         count += 1

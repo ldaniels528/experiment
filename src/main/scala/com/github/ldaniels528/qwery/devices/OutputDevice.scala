@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.sources
+package com.github.ldaniels528.qwery.devices
 
 /**
   * Output Device

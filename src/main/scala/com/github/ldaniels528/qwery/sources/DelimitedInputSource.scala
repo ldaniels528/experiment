@@ -1,18 +1,19 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Hints, Row}
+import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
+import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
   * Delimited Text Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
+case class DelimitedInputSource(device: InputDevice, hints: Option[Hints] = Some(Hints().asCSV))
   extends InputSource {
   private var headers: Seq[String] = Nil
   private val delimiterCh = hints.flatMap(_.delimiter).flatMap(_.headOption).getOrElse(',')
 
-  override def open(): Unit = device.open()
+  override def open(scope: Scope): Unit = device.open(scope)
 
   override def close(): Unit = device.close()
 

@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
+import com.github.ldaniels528.qwery.devices.TextFileInputDevice
 import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 import com.github.ldaniels528.qwery.util.OptionHelper._
@@ -8,18 +9,16 @@ import com.github.ldaniels528.qwery.util.OptionHelper._
   * Input Source
   * @author lawrence.daniels@gmail.com
   */
-trait InputSource extends Executable {
+trait InputSource extends IOSource with Executable {
 
-  def close(): Unit
-
-  override def execute(scope: Scope): ResultSet = toIterator
-
-  def open(): Unit
+  override def execute(scope: Scope): ResultSet = {
+    open(scope)
+    toIterator
+  }
 
   def read(): Option[Row]
 
   def toIterator: Iterator[Row] = new Iterator[Row] {
-    open()
 
     private var nextRow_? : Option[Row] = read()
 

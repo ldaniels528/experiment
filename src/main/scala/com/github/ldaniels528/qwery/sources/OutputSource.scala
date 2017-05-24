@@ -1,16 +1,15 @@
 package com.github.ldaniels528.qwery.sources
 
+import com.github.ldaniels528.qwery.devices.TextFileOutputDevice
 import com.github.ldaniels528.qwery.ops.{Hints, Row}
+import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
+import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**
   * Output Source
   * @author lawrence.daniels@gmail.com
   */
-trait OutputSource {
-
-  def close(): Unit
-
-  def open(): Unit
+trait OutputSource extends IOSource {
 
   def write(row: Row): Unit
 
@@ -22,13 +21,16 @@ trait OutputSource {
   */
 object OutputSource extends OutputSourceFactory {
 
-  override def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = path.toLowerCase() match {
-    case file if file.endsWith(".csv") => Option(CSVOutputSource(TextFileOutputDevice(path, append)))
-    case file if file.endsWith(".json") => Option(JSONOutputSource(TextFileOutputDevice(path, append)))
-    case file if file.endsWith(".psv") => Option(CSVOutputSource(TextFileOutputDevice(path, append), delimiter = "|"))
-    case file if file.endsWith(".tsv") => Option(CSVOutputSource(TextFileOutputDevice(path, append), delimiter = "\t"))
-    case file if file.endsWith(".txt") => Option(CSVOutputSource(TextFileOutputDevice(path, append)))
-    case _ => None
+  override def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
+    (hints ?? Hints()) map { hint =>
+      path.toLowerCase() match {
+        case file if file.endsWith(".csv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asCSV)
+        case file if file.endsWith(".json") => JSONOutputSource(TextFileOutputDevice(path, append), hint.asJSON)
+        case file if file.endsWith(".psv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asPSV)
+        case file if file.endsWith(".tsv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asTSV)
+        case file => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asCSV)
+      }
+    }
   }
 
   override def understands(path: String): Boolean = path.toLowerCase() match {

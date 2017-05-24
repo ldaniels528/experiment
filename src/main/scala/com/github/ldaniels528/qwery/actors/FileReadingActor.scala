@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.github.ldaniels528.qwery.actors.FileReadingActor.{DataReceived, EOF, ReadFile}
-import com.github.ldaniels528.qwery.ops.Row
+import com.github.ldaniels528.qwery.ops.{RootScope, Row}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
@@ -18,7 +18,8 @@ class FileReadingActor() extends Actor with ActorLogging {
       log.info(s"$pid: Reading file '$resource'")
       resource.getInputSource match {
         case Some(source) =>
-          source manage { device =>
+          source.open(RootScope())
+          source use { device =>
             var record: Option[Row] = None
             do {
               record = device.read()

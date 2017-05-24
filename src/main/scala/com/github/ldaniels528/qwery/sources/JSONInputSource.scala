@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Hints, Row}
+import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
+import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import net.liftweb.json.{JObject, parse}
 
 /**
@@ -21,7 +22,7 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) ext
     }
   }
 
-  override def open(): Unit = device.open()
+  override def open(scope: Scope): Unit = device.open(scope)
 
   override def close(): Unit = device.close()
 

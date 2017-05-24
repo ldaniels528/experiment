@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
+import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
 
@@ -18,7 +19,7 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
     device.write(Record(offset, bytes))
   }
 
-  override def open(): Unit = device.open()
+  override def open(scope: Scope): Unit = device.open(scope)
 
   override def close(): Unit = device.close()
 

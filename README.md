@@ -30,6 +30,9 @@ $ sbt test
 
 **A**: Yes; however, only for a single column
 
+**Q**: Are VIEWs supported?
+
+**A**: No. However, sub-queries can be used in place of views (e.g. SELECT name, date, age FROM (SELECT name, date, CAST(age AS DOUBLE) AS age))
 
 ```text
 SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
