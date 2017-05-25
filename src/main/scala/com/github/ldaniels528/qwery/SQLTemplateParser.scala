@@ -1,5 +1,8 @@
 package com.github.ldaniels528.qwery
 
+import java.io.FileInputStream
+import java.util.Properties
+
 import com.github.ldaniels528.qwery.ops.{Describe, Executable, Expression, Field, Hints, Insert, InsertValues, OrderedColumn, Select}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
@@ -336,6 +339,7 @@ object SQLTemplateParser {
     val withDelimiter = "WITH DELIMITER @delimiter"
     val withFormat = "WITH @|format|CSV|JSON|PSV|TSV| FORMAT"
     val withHeader = "WITH COLUMN @|column|HEADERS|"
+    val withProps = "WITH PROPERTIES @props"
     val withQuoted = "WITH QUOTED @|quoted|NUMBERS|TEXT|"
     val parser = SQLTemplateParser(stream)
     var hints = Hints()
@@ -356,6 +360,10 @@ object SQLTemplateParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH PROPERTIES [./myprops.properties]
+        case p if p.matches(withProps) =>
+          val params = p.process(withProps)
+          hints = hints.copy(properties = params.atoms.get("props").map(getProperties))
         // WITH QUOTED [NUMBERS|TEXT]
         case p if p.matches(withQuoted) =>
           val params = p.process(withQuoted)
@@ -371,6 +379,12 @@ object SQLTemplateParser {
       }
     }
     SQLTemplateParams(hints = if (hints.nonEmpty) Map(name -> hints) else Map.empty)
+  }
+
+  private def getProperties(path: String): Properties = {
+    val props = new Properties()
+    props.load(new FileInputStream(path))
+    props
   }
 
   /**

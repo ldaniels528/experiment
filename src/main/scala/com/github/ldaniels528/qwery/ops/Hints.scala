@@ -1,15 +1,19 @@
 package com.github.ldaniels528.qwery.ops
 
+import java.util.{Properties => JProperties}
+
 import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 
 /**
   * Represents the collection of SQL hints
   * @author lawrence.daniels@gmail.com
   */
-case class Hints(delimiter: Option[String] = None,
+case class Hints(avro: Option[String] = None,
+                 delimiter: Option[String] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
                  isJson: Option[Boolean] = None,
+                 properties: Option[JProperties] = None,
                  quotedNumbers: Option[Boolean] = None,
                  quotedText: Option[Boolean] = None) {
 
@@ -34,6 +38,6 @@ case class Hints(delimiter: Option[String] = None,
 
   def isEmpty: Boolean = !nonEmpty
 
-  def nonEmpty: Boolean = Seq(delimiter, gzip, headers, isJson, quotedNumbers, quotedText).exists(_.nonEmpty)
+  def nonEmpty: Boolean = Seq(avro, delimiter, gzip, headers, isJson, properties, quotedNumbers, quotedText).exists(_.nonEmpty)
 
 }

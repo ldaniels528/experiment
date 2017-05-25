@@ -1,42 +1,88 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
+
+import scala.language.postfixOps
 
 /**
   * Delimited Text Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class DelimitedInputSource(device: InputDevice, hints: Option[Hints] = Some(Hints().asCSV))
+case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   extends InputSource {
   private var headers: Seq[String] = Nil
-  private val delimiterCh = hints.flatMap(_.delimiter).flatMap(_.headOption).getOrElse(',')
-
-  override def open(scope: Scope): Unit = device.open(scope)
+  private var delimiter = hints.flatMap(_.delimiter).flatMap(_.headOption).getOrElse(',')
+  private var buffer: List[Row] = Nil
 
   override def close(): Unit = device.close()
 
+  override def open(scope: Scope): Unit = device.open(scope)
+
   override def read(): Option[Row] = {
-    headers match {
-      case h if h.isEmpty && hints.flatMap(_.headers).contains(true) =>
-        for {
-          headers <- device.read().map(r => parse(r.data))
-          _ = this.headers = headers
-          data <- device.read().map(r => parse(r.data))
-        } yield headers zip data
-      case h if h.isEmpty =>
-        device.read() map { case Record(_, bytes) =>
-          headers = parse(bytes).indices.map(n => s"field$n")
-          headers zip parse(bytes)
-        }
-      case _ =>
-        device.read() map { case Record(_, bytes) =>
-          headers zip parse(bytes)
-        }
+    // have the headers been set?
+    if (headers.isEmpty) setHeaders()
+
+    // read the next row
+    buffer match {
+      case Nil => readNext()
+      case row :: remaining => buffer = remaining; Option(row)
     }
   }
 
-  private def parse(bytes: Array[Byte]): List[String] = new String(bytes).delimitedSplit(delimiterCh)
+  @inline
+  def readNext(): Option[Row] = device.read() map { case Record(_, bytes) =>
+    headers zip parse(bytes)
+  }
+
+  @inline
+  private def autodetectDelimiter(): Option[(Char, List[String], ResultSet)] = {
+    val sampleLines = (1 to 5).flatMap(_ => device.read()).map(r => new String(r.data))
+
+    // identify the potential delimiters (from the header line)
+    val delimiters = sampleLines.headOption map { header =>
+      header.collect {
+        case c if !c.isLetterOrDigit & c != '"' => c
+      }.distinct
+    } map (_.toCharArray.toList) getOrElse Nil
+
+    // find a delimiter where splitting all lines results in the same number of elements
+    val delimiter_? = delimiters.find { delimiter =>
+      sampleLines.headOption.map(_.delimitedSplit(delimiter).length).exists { length =>
+        sampleLines.forall(_.delimitedSplit(delimiter).length == length)
+      }
+    }
+
+    for {
+      delimiter <- delimiter_?
+      headers <- sampleLines.headOption.map(_.delimitedSplit(delimiter))
+      rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter)) toIterator
+    } yield (delimiter, headers, rows)
+  }
+
+  @inline
+  private def parse(bytes: Array[Byte]): List[String] = new String(bytes).delimitedSplit(delimiter)
+
+  @inline
+  private def setHeaders() = hints match {
+    case h if h.flatMap(_.delimiter).isEmpty =>
+      autodetectDelimiter() match {
+        case Some((_delimiter, _headers, rows)) =>
+          this.delimiter = _delimiter
+          this.headers = _headers
+          this.buffer = rows.toList
+        case None =>
+          throw new IllegalStateException("The delimiter could not be automatically detected")
+      }
+    case h if h.flatMap(_.headers).contains(true) =>
+      device.read().map(r => parse(r.data)) foreach (headers => this.headers = headers)
+    case _ =>
+      val row_? = device.read() map { case Record(_, bytes) =>
+        headers = parse(bytes).indices.map(n => s"field$n")
+        headers zip parse(bytes)
+      }
+      row_?.foreach(row => buffer = row :: buffer)
+  }
 
 }

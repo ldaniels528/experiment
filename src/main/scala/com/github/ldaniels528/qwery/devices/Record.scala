@@ -26,10 +26,10 @@ trait Record {
   */
 object Record {
 
-  def apply(offset: Long, data: Array[Byte]) = SimpleRecord(offset, data)
+  def apply(offset: Long, data: Array[Byte]) = RecordImpl(offset, data)
 
   def unapply(record: Record): Option[(Long, Array[Byte])] = Some((record.offset, record.data))
 
-  case class SimpleRecord(offset: Long, data: Array[Byte]) extends Record
+  case class RecordImpl(offset: Long, data: Array[Byte]) extends Record
 
 }

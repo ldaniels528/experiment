@@ -10,6 +10,10 @@ import net.liftweb.json.{JObject, parse}
   */
 case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) extends InputSource {
 
+  override def close(): Unit = device.close()
+
+  override def open(scope: Scope): Unit = device.open(scope)
+
   override def read(): Option[Row] = {
     device.read() match {
       case Some(Record(_, bytes)) =>
@@ -21,9 +25,5 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) ext
       case None => None
     }
   }
-
-  override def open(scope: Scope): Unit = device.open(scope)
-
-  override def close(): Unit = device.close()
 
 }

@@ -13,9 +13,9 @@ case class JSONOutputSource(device: OutputDevice, hints: Option[Hints] = None) e
   private implicit val formats = net.liftweb.json.DefaultFormats
   private var offset = 0L
 
-  override def open(scope: Scope): Unit = device.open(scope)
-
   override def close(): Unit = device.close()
+
+  override def open(scope: Scope): Unit = device.open(scope)
 
   override def write(row: Row): Unit = {
     offset += 1

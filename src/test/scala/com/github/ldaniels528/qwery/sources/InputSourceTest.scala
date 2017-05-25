@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.ops.{Hints, RootScope}
+import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 import org.scalatest.FunSpec
 
 /**
@@ -12,17 +13,23 @@ class InputSourceTest extends FunSpec {
 
   describe("InputSource") {
 
-    it("should iterate over data") {
-      InputSource("companylist.csv", hints = Option(Hints().asCSV)) foreach { source =>
+    it("should auto-detect the delimiter and iterate over data") {
+      InputSource("companylist.csv") foreach { source =>
         source.open(scope)
-        var count = 0L
-        source.toIterator foreach { row =>
+        assert(source.toIterator.count { row =>
           assert(row.size == 9)
-          count += 1
-        }
-        source.close()
+          true
+        } == 359) // 360 - 1 (header)
+      }
+    }
 
-        assert(count == 359) // 360 - 1 (header)
+    it("should iterate over data with an explicit format") {
+      InputSource("companylist.csv", hints = Hints().asCSV) foreach { source =>
+        source.open(scope)
+        assert(source.toIterator.count { row =>
+          assert(row.size == 9)
+          true
+        } == 359) // 360 - 1 (header)
       }
     }
   }

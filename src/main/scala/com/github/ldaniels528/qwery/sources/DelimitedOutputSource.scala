@@ -19,6 +19,10 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
   private var headersApplied = false
   private var offset = 0L
 
+  override def close(): Unit = device.close()
+
+  override def open(scope: Scope): Unit = device.open(scope)
+
   override def write(row: Row): Unit = {
     // apply the headers?
     if (applyHeaders && !headersApplied) {
@@ -37,10 +41,6 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
     offset += 1
     device.write(Record(offset, line.getBytes()))
   }
-
-  override def open(scope: Scope): Unit = device.open(scope)
-
-  override def close(): Unit = device.close()
 
   private def asString(x: AnyRef) = if (quotedText) quoted(x.toString) else x.toString
 

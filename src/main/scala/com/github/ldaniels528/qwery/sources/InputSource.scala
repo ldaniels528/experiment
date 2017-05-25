@@ -42,17 +42,18 @@ trait InputSource extends IOSource with Executable {
   */
 object InputSource extends InputSourceFactory {
 
-  override def apply(path: String, hints: Option[Hints]): Option[InputSource] = {
+  override def apply(path: String, hints: Option[Hints] = None): Option[InputSource] = {
     (hints ?? Hints()) map {
       case hint if hint.isJson.contains(true) => JSONInputSource(TextFileInputDevice(path), hint)
       case hint if hint.delimiter.nonEmpty => DelimitedInputSource(TextFileInputDevice(path), hint)
       case hint =>
         path.toLowerCase() match {
+          case uri if uri.startsWith("kafka:avro://") => AvroInputSource.parseURI(path, hint)
           case file if file.endsWith(".csv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asCSV))
           case file if file.endsWith(".json") => JSONInputSource(TextFileInputDevice(path), hints = hint.map(_.asJSON))
           case file if file.endsWith(".psv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asPSV))
           case file if file.endsWith(".tsv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asTSV))
-          case _ => AutoDetectingDelimitedInputSource(TextFileInputDevice(path), hint)
+          case _ => DelimitedInputSource(TextFileInputDevice(path), hint)
         }
     }
   }

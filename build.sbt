@@ -6,6 +6,9 @@ import scala.language.postfixOps
 val apiVersion = "0.2.3"
 val appScalaVersion = "2.12.2"
 
+val kafkaVersion = "0.10.2.1"
+val apacheCurator = "3.1.0"
+
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
 
 lazy val cli = (project in file("./app/cli")).
@@ -79,13 +82,18 @@ lazy val core = (project in file(".")).
       "com.typesafe.akka" %% "akka-actor" % "2.5.1",
       "commons-io" % "commons-io" % "2.4",
       "log4j" % "log4j" % "1.2.17",
-      "org.apache.avro" % "avro" % "1.8.1",
-      "org.apache.kafka" %% "kafka" % "0.10.2.1",
       "org.scala-lang" % "scala-compiler" % appScalaVersion,
       "org.scala-lang" % "scala-reflect" % appScalaVersion,
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25",
-      "net.liftweb" %% "lift-json" % "3.0.1"
+      "net.liftweb" %% "lift-json" % "3.0.1",
+      //
+      // Kafka/Zookeeper
+      "org.apache.avro" % "avro" % "1.8.1",
+      "org.apache.curator" % "curator-framework" % apacheCurator exclude("org.slf4j", "slf4j-log4j12"),
+      "org.apache.curator" % "curator-test" % apacheCurator exclude("org.slf4j", "slf4j-log4j12"),
+      "org.apache.kafka" %% "kafka" % kafkaVersion,
+      "org.apache.kafka" % "kafka-clients" % kafkaVersion
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
