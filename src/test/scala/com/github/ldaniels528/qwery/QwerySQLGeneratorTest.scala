@@ -11,32 +11,38 @@ import org.scalatest.FunSpec
 class QwerySQLGeneratorTest extends FunSpec {
 
   it("supports DESCRIBE") {
-    val sql0 = "DESCRIBE 'companylist.csv'"
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    val sql = "DESCRIBE 'companylist.csv'"
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports DESCRIBE w/LIMIT") {
-    val sql0 = "DESCRIBE 'companylist.csv' LIMIT 100"
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    val sql = "DESCRIBE 'companylist.csv' LIMIT 100"
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports DESCRIBE-SELECT") {
-    val sql0 = "DESCRIBE (SELECT ymbol, Name, Sector, Industry FROM 'companylist.csv')"
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    val sql = "DESCRIBE (SELECT ymbol, Name, Sector, Industry FROM 'companylist.csv')"
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports SELECT-WHERE-LIMIT") {
-    val sql0 =
+    val sql =
       """
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
         |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties'
         |LIMIT 25""".stripMargin.toSingleLine
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    assert(sql == QweryCompiler(sql).toSQL)
+  }
+
+  it("supports SELECT-SUB-SELECT") {
+    val sql =
+      """
+        |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+        |FROM (SELECT * FROM 'companylist.csv' WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)')
+        |WHERE Sector = 'Consumer Specialties'
+        |LIMIT 25""".stripMargin.toSingleLine
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports SELECT-TOP-WHERE") {
@@ -44,16 +50,15 @@ class QwerySQLGeneratorTest extends FunSpec {
       """
         |SELECT TOP 25 Symbol, Name, Sector, Industry, LastSale, MarketCap
         |FROM 'companylist.csv'
-        |WHERE Industry = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
+        |WHERE Sector = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |""".stripMargin.toSingleLine
     val sql1 =
       """
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
         |FROM 'companylist.csv'
-        |WHERE Industry = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
+        |WHERE Sector = 'Consumer Specialties' AND Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |LIMIT 25""".stripMargin.toSingleLine
-    val sql2 = QweryCompiler(sql0).toSQL
-    assert(sql1 == sql2)
+    assert(sql1 == QweryCompiler(sql0).toSQL)
   }
 
   it("supports SELECT-CASE-WHEN") {
@@ -75,43 +80,64 @@ class QwerySQLGeneratorTest extends FunSpec {
         |     ELSE 'Not Found'
         |   END
       """.stripMargin.toSingleLine
-    val sql2 = QweryCompiler(sql0).toSQL
-    assert(sql1 == sql2)
+    assert(sql1 == QweryCompiler(sql0).toSQL)
   }
 
-  it("supports INSERT-INTO-SELECT-WITH-FORMAT") {
+  it("supports INSERT-INTO-SELECT-WITH-FORMATS") {
     val sql0 =
       """
-        |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
+        |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
         |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-        |FROM 'companylist.csv' WITH FORMAT CSV
+        |FROM 'companylist.csv' WITH CSV FORMAT
         |WHERE Industry = 'Oil/Gas Transmission'
-      """.stripMargin.toSingleLine
-    val sql2 = QweryCompiler(sql0).toSQL
-    info(sql2)
+        |""".stripMargin.toSingleLine
+    val sql1 =
+      """
+        |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+        |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        |FROM 'companylist.csv'
+        |WITH DELIMITER ','
+        |WITH COLUMN HEADERS
+        |WITH QUOTED TEXT
+        |WHERE Industry = 'Oil/Gas Transmission'
+        |""".stripMargin.toSingleLine
+    assert(sql1 == QweryCompiler(sql0).toSQL)
+  }
+
+  it("supports INSERT-INTO-SELECT-WITH-MULTIPLE") {
+    val sql =
+      """
+        |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+        |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        |FROM 'companylist.csv'
+        |WITH DELIMITER ','
+        |WITH COLUMN HEADERS
+        |WITH QUOTED NUMBERS
+        |WITH QUOTED TEXT
+        |WHERE Industry = 'Oil/Gas Transmission'
+        |""".stripMargin.toSingleLine
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports INSERT-INTO-SELECT") {
-    val sql0 =
+    val sql =
       """
         |INSERT INTO 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
         |FROM 'companylist.csv'
         |WHERE Industry = 'Consumer Specialties' OR Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'
         |LIMIT 1000""".stripMargin.toSingleLine
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
   it("supports INSERT-OVERWRITE-SELECT") {
-    val sql0 =
+    val sql =
       """
         |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
         |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
         |FROM 'companylist.csv'
         |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin.toSingleLine
-    val sql1 = QweryCompiler(sql0).toSQL
-    assert(sql0 == sql1)
+    assert(sql == QweryCompiler(sql).toSQL)
   }
 
 }

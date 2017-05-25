@@ -34,6 +34,6 @@ case class Hints(delimiter: Option[String] = None,
 
   def isEmpty: Boolean = !nonEmpty
 
-  def nonEmpty: Boolean = Seq(delimiter, isJson, headers, quotedNumbers, quotedText).exists(_.nonEmpty)
+  def nonEmpty: Boolean = Seq(delimiter, gzip, headers, isJson, quotedNumbers, quotedText).exists(_.nonEmpty)
 
 }

@@ -8,17 +8,19 @@ import com.github.ldaniels528.qwery.ops._
   * @param conditions    the named collection of conditions (e.g. "lastTradeDate >= now() + 1")
   * @param expressions   the named collection of field/value expression arguments (e.g. "SELECT 1+(2*3), 'Hello', 123, symbol")
   * @param fields        the named collection of field references (e.g. "INSERT INTO (symbol, exchange, lastSale)")
+  * @param hints         the named collection of hint references (e.g. "WITH GZIP COMPRESSION")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
-  * @param sources       the named collection of queries
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
+  * @param sources       the named collection of queries
   */
 case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
                              conditions: Map[String, Condition] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
+                             hints: Map[String, Hints] = Map.empty,
                              orderedFields: Map[String, List[OrderedColumn]] = Map.empty,
-                             sources: Map[String, Executable] = Map.empty,
-                             repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty) {
+                             repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty,
+                             sources: Map[String, Executable] = Map.empty) {
 
   def +(that: SQLTemplateParams): SQLTemplateParams = {
     this.copy(
@@ -26,6 +28,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       conditions = this.conditions ++ that.conditions,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
+      hints = this.hints ++ that.hints,
       orderedFields = this.orderedFields ++ that.orderedFields,
       sources = this.sources ++ that.sources,
       repeatedSets = this.repeatedSets ++ that.repeatedSets)

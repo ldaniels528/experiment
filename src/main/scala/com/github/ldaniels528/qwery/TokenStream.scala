@@ -1,6 +1,5 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 
 /**
@@ -11,7 +10,7 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def apply(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
 
-  def die[A](message: String): A = throw new SyntaxException(message, (peek ?? previous).orNull)
+  def die[A](message: String): A = throw SyntaxException(message, this)
 
   def dieEOS[A]: A = die("Unexpected end of statement")
 

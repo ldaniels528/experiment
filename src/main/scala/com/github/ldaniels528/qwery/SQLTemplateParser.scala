@@ -286,7 +286,8 @@ object SQLTemplateParser {
     * @example
     * {{{
     * INSERT INTO './tickers.csv' (symbol, exchange, lastSale)
-    * SELECT symbol, exchange, lastSale FROM './EOD-20170505.txt' WHERE exchange = 'NASDAQ'
+    * VALUES ('AAPL', 'NASDAQ', 145.67)
+    * VALUES ('AMD', 'NYSE', 5.66)
     * }}}
     * @example
     * {{{
@@ -296,7 +297,7 @@ object SQLTemplateParser {
     * }}}
     * @example
     * {{{
-    * INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
+    * INSERT INTO 'companylist.json' WITH FORMAT JSON (Symbol, Name, Sector, Industry)
     * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
     * FROM 'companylist.csv' WITH FORMAT CSV
     * WHERE Industry = 'Oil/Gas Transmission'
@@ -306,12 +307,9 @@ object SQLTemplateParser {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLTemplateParser(stream)
-    val params = parser.process(
-      """
-        |INSERT @|mode|INTO|OVERWRITE| @target ( @(fields) )
-        |?WITH ?@|withKey|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withValue""".stripMargin.toSingleLine)
-    val hints = processHints(stream, params)
-    val target = params.atoms.get("target").map(DataResource.apply(_, hints))
+    val params = parser.process("INSERT @|mode|INTO|OVERWRITE| @target") +
+      parseWithClause(name = "hints", stream) + parser.process("( @(fields) )")
+    val target = params.atoms.get("target").map(DataResource.apply(_, params.hints.get("hints")))
       .getOrElse(throw new SyntaxException("Output source is missing"))
     val fields = params.fields
       .getOrElse("fields", stream.die("Field arguments missing"))
@@ -326,44 +324,53 @@ object SQLTemplateParser {
 
   /**
     * Parses WITH clauses
-    * @example WITH ROWS AS CSV|PSV|TSV|JSON
+    * @example WITH CSV|PSV|TSV|JSON FORMAT
     * @example WITH DELIMITER ','
-    * @example WITH QUOTED TEXT
     * @example WITH QUOTED NUMBERS
+    * @example WITH GZIP COMPRESSION
+    * @param name   the name of the collection
     * @param stream the given [[TokenStream token stream]]
     */
-  private def parseWithClause(stream: TokenStream): Hints = {
-    val withDelimiter = "WITH DELIMITER @type"
-    val withQuotedNumbers = "WITH QUOTED NUMBERS"
-    val withQuotedText = "WITH QUOTED TEXT"
-    val withRowsAs = "WITH FORMAT @format"
+  private def parseWithClause(name: String, stream: TokenStream) = {
+    val withCompression = "WITH @|compression|GZIP| COMPRESSION"
+    val withDelimiter = "WITH DELIMITER @delimiter"
+    val withFormat = "WITH @|format|CSV|JSON|PSV|TSV| FORMAT"
+    val withHeader = "WITH COLUMN @|column|HEADERS|"
+    val withQuoted = "WITH QUOTED @|quoted|NUMBERS|TEXT|"
     val parser = SQLTemplateParser(stream)
     var hints = Hints()
+
+    def toOption(on: Boolean) = if (on) Some(true) else None
+
     while (stream.is("WITH")) {
       parser match {
-        // WITH DELIMITER ','
+        // WITH COLUMN [HEADERS]
+        case p if p.matches(withHeader) =>
+          val params = p.process(withHeader)
+          hints = hints.copy(headers = params.atoms.get("column").map(_.equalsIgnoreCase("HEADERS")))
+        // WITH [GZIP] COMPRESSION
+        case p if p.matches(withCompression) =>
+          val params = p.process(withCompression)
+          hints = hints.copy(gzip = params.atoms.get("compression").map(_.equalsIgnoreCase("GZIP")))
+        // WITH DELIMITER [,]
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
-          val delimiter = params.atoms.getOrElse("type", stream.die("A text delimiter was expected"))
-          hints = hints.copy(delimiter = Some(delimiter))
-        // WITH QUOTED NUMBERS
-        case p if p.matches(withQuotedNumbers) =>
-          p.process(withQuotedNumbers)
-          hints = hints.copy(quotedNumbers = Some(true))
-        // WITH QUOTED TEXT
-        case p if p.matches(withQuotedText) =>
-          p.process(withQuotedText)
-          hints = hints.copy(quotedText = Some(true))
-        // WITH ROWS AS CSV|PSV|TSV|JSON
-        case p if p.matches(withRowsAs) =>
-          val params = p.process(withRowsAs)
-          val format = params.atoms.getOrElse("format", stream.die("A format identifier was expected (CSV, JSON, PSV or TSV"))
-          hints = hints.usingFormat(format = format)
+          hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH QUOTED [NUMBERS|TEXT]
+        case p if p.matches(withQuoted) =>
+          val params = p.process(withQuoted)
+          hints = hints.copy(
+            quotedNumbers = toOption(params.atoms.get("quoted").exists(_.equalsIgnoreCase("NUMBERS"))) ?? hints.quotedNumbers,
+            quotedText = toOption(params.atoms.get("quoted").exists(_.equalsIgnoreCase("TEXT"))) ?? hints.quotedText)
+        // WITH [CSV|PSV|TSV|JSON] FORMAT
+        case p if p.matches(withFormat) =>
+          val params = p.process(withFormat)
+          params.atoms.get("format").foreach(format => hints = hints.usingFormat(format = format))
         case _ =>
           stream.die("Syntax error")
       }
     }
-    hints
+    SQLTemplateParams(hints = if (hints.nonEmpty) Map(name -> hints) else Map.empty)
   }
 
   /**
@@ -377,10 +384,10 @@ object SQLTemplateParser {
     val valueSets = parser.process("{{valueSet VALUES ( @{values} ) }}").repeatedSets.get("valueSet") match {
       case Some(sets) => sets.flatMap(_.expressions.get("values"))
       case None =>
-        throw new SyntaxException("VALUES clause could not be parsed", ts.previous.orNull)
+        throw SyntaxException("VALUES clause could not be parsed", ts)
     }
     if (!valueSets.forall(_.size == fields.size))
-      throw new SyntaxException("The number of fields must match the number of values", ts.previous.orNull)
+      throw SyntaxException("The number of fields must match the number of values", ts)
     InsertValues(fields, valueSets)
   }
 
@@ -396,41 +403,24 @@ object SQLTemplateParser {
     * @return an [[Select executable]]
     */
   private def parseSelect(ts: TokenStream): Select = {
-    val params = SQLTemplateParser(ts).process(
-      """
-        |SELECT ?TOP ?@top @{fields}
-        |?FROM ?@&source
-        |?WITH ?@|withKey|COLUMN|DELIMITER|FORMAT|QUOTED| ?@withValue
-        |?WHERE ?@!{condition}
-        |?GROUP +?BY ?@(groupBy)
-        |?ORDER +?BY ?@[orderBy]
-        |?LIMIT ?@limit""".stripMargin.toSingleLine)
+    val params = SQLTemplateParser(ts).process("SELECT ?TOP ?@top @{fields} ?FROM ?@&source") +
+      parseWithClause(name = "hints", ts) +
+      SQLTemplateParser(ts).process(
+        """
+          |?WHERE ?@!{condition}
+          |?GROUP +?BY ?@(groupBy)
+          |?ORDER +?BY ?@[orderBy]
+          |?LIMIT ?@limit""".stripMargin.toSingleLine)
+
     Select(
       fields = params.expressions.getOrElse("fields", ts.die("Field arguments missing")),
-      source = params.sources.get("source").map(_.withHints(processHints(ts, params))),
+      source = params.sources.get("source").map(_.withHints(params.hints.get("hints"))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.atoms.get("limit") ?? params.atoms.get("top"))
         .map(parseInteger(_, "Numeric value expected LIMIT or TOP"))
     )
-  }
-
-  private def processHints(ts: TokenStream, params: SQLTemplateParams): Option[Hints] = {
-    import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
-    for {
-      key <- params.atoms.get("withKey")
-      value <- params.atoms.get("withValue")
-    } yield {
-      key match {
-        case "COLUMN" => Hints(headers = value.equalsIgnoreCase("HEADERS"))
-        case "COMPRESSION" => Hints(gzip = value.equalsIgnoreCase("GZIP"))
-        case "DELIMITER" => Hints(delimiter = value)
-        case "FORMAT" => Hints().usingFormat(value)
-        case "QUOTED" => Hints(quotedNumbers = value.equalsIgnoreCase("NUNBERS"), quotedText = value.equalsIgnoreCase("TEXT"))
-        case _ => ts.die("Invalid verb for WITH")
-      }
-    }
   }
 
   /**

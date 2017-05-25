@@ -11,7 +11,7 @@ import com.github.ldaniels528.qwery.sources._
   */
 object QwerySQLGenerator {
 
-  private def makeSQL(value: AnyRef): String = value match {
+  def makeSQL(value: AnyRef): String = value match {
     case hints: Hints => toHint(hints)
     case OrderedColumn(name, ascending) => s"${nameOf(name)} ${if (ascending) "ASC" else "DESC"}"
     case condition: Condition => makeSQL(condition)
@@ -52,6 +52,7 @@ object QwerySQLGenerator {
     case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
     case NamedAggregation(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case Avg(expr) => s"AVG(${expr.toSQL})"
+    case AllFields => "*"
     case BasicField(name) => nameOf(name)
     case Case(conditions, otherwise) => toCase(conditions, otherwise)
     case Cast(expr, toType) => s"CAST(${expr.toSQL} AS $toType)"
@@ -112,11 +113,12 @@ object QwerySQLGenerator {
   private def toHint(hints: Hints) = {
     val sb = new StringBuilder(80)
     hints.delimiter.foreach(delimiter => sb.append(s" WITH DELIMITER '$delimiter'"))
-    hints.headers.foreach(_ => sb.append(s" WITH COLUMN HEADERS"))
-    hints.isJson.foreach(_ => sb.append(" WITH FORMAT JSON"))
-    hints.quotedNumbers.foreach(_ => sb.append(" WITH QUOTED NUMBERS"))
-    hints.quotedText.foreach(_ => sb.append(" WITH QUOTED TEXT"))
-    sb.drop(1).toString()
+    hints.gzip.foreach(on => if (on) sb.append(" WITH GZIP COMPRESSION"))
+    hints.headers.foreach(on => if (on) sb.append(" WITH COLUMN HEADERS"))
+    hints.isJson.foreach(on => if (on) sb.append(" WITH JSON FORMAT"))
+    hints.quotedNumbers.foreach(on => if (on) sb.append(" WITH QUOTED NUMBERS"))
+    hints.quotedText.foreach(on => if (on) sb.append(" WITH QUOTED TEXT"))
+    sb.toString().drop(1)
   }
 
   private def toInsert(target: DataResource, fields: Seq[Field], source: Executable, append: Boolean): String = {
@@ -130,7 +132,11 @@ object QwerySQLGenerator {
                        orderedColumns: Seq[OrderedColumn],
                        limit: Option[Int]): String = {
     val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
-    source.foreach(src => sb.append(s" FROM ${src.toSQL}"))
+    source match {
+      case Some(ds: DataResource) => sb.append(s" FROM ${ds.toSQL}")
+      case Some(exec) => sb.append(s" FROM (${exec.toSQL})")
+      case None =>
+    }
     condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
     if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
     if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")
