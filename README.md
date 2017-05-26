@@ -34,10 +34,6 @@ $ sbt test
 
 **A**: No. However, sub-queries can be used in place of views (e.g. SELECT name, date, age FROM (SELECT name, date, CAST(age AS DOUBLE) AS age))
 
-```text
-SELECT `last name`, `first name`, position, startDate FROM './personnel.csv'
-```
-
 ### CLI Examples
 
 Qwery offers a command line interface (CLI), which allows interactive querying or files, REST endpoints, etc.
@@ -47,7 +43,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.2.3
+ Qwery CLI v0.2.4
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----

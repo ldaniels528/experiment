@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.2.3"
+val apiVersion = "0.2.4"
 val appScalaVersion = "2.12.2"
 
 val kafkaVersion = "0.10.2.1"

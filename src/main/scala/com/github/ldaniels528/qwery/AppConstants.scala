@@ -5,7 +5,7 @@ package com.github.ldaniels528.qwery
   * @author lawrence.daniels@gmail.com
   */
 object AppConstants {
-  val Version = "0.2.3"
+  val Version = "0.2.4"
   val envHome = "QWERY_HOME"
 
   def welcome(module: String): String = {
