@@ -11,40 +11,38 @@ import scala.collection.JavaConverters._
 import scala.language.postfixOps
 
 /**
-  * Kafka Topic Input Device
+  * Kafka Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class KafkaHLConsumerInputDevice(topic: String, consumerProps: JProperties)
+case class KafkaInputDevice(topic: String, consumerProps: JProperties)
   extends InputDevice with AsyncInputDevice with RandomAccessInputDevice {
-  private var consumer: KafkaConsumer[String, Array[Byte]] = _
+  private var consumer: Option[KafkaConsumer[String, Array[Byte]]] = None
   private var buffer: List[Record] = Nil
-  var connected = false
 
   override def close(): Unit = {
-    connected = false
-    consumer.close()
+    consumer.foreach(_.close())
+    consumer = None
   }
 
   override def fastForward(partitions: Seq[Int]): Unit = {
-    consumer.seekToEnd(partitions.map(new TopicPartition(topic, _)).asJava)
+    consumer.foreach(_.seekToEnd(partitions.map(new TopicPartition(topic, _)).asJava))
   }
 
   override def open(scope: Scope): Unit = {
-    consumer = new KafkaConsumer[String, Array[Byte]](consumerProps)
-    consumer.subscribe(List(topic).asJava)
-    connected = true
+    consumer = Option(new KafkaConsumer[String, Array[Byte]](consumerProps))
+    consumer.foreach(_.subscribe(List(topic).asJava))
   }
 
   override def read(actor: ActorRef) {
-    consumer.poll(1).asScala foreach { rec =>
-      actor ! Record(rec.offset(), rec.value())
-    }
+    consumer.foreach(_.poll(1).asScala foreach { rec =>
+      actor ! Record(rec.value(), rec.offset())
+    })
   }
 
   override def read(): Option[Record] = {
-    if (buffer.isEmpty) {
-      consumer.poll(5000).asScala
-        .foreach(rec => buffer = buffer ::: Record(rec.offset, rec.value) :: Nil)
+    if (buffer.size < 100) {
+      consumer.foreach(_.poll(5000).asScala
+        .foreach(rec => buffer = buffer ::: Record(rec.value, rec.offset, rec.partition) :: Nil))
     }
 
     // read the next row
@@ -55,26 +53,26 @@ case class KafkaHLConsumerInputDevice(topic: String, consumerProps: JProperties)
   }
 
   override def rewind(partitions: Seq[Int]): Unit = {
-    consumer.seekToBeginning(partitions.map(new TopicPartition(topic, _)).asJava)
+    consumer.foreach(_.seekToBeginning(partitions.map(new TopicPartition(topic, _)).asJava))
   }
 
   override def seek(partition: Int, offset: Long): Unit = {
-    consumer.seek(new TopicPartition(topic, partition), offset)
+    consumer.foreach(_.seek(new TopicPartition(topic, partition), offset))
   }
 
 }
 
 /**
-  * Kafka Topic Input Device Companion
+  * Kafka Input Device Companion
   * @author lawrence.daniels@gmail.com
   */
-object KafkaHLConsumerInputDevice {
+object KafkaInputDevice {
 
   def apply(topic: String,
             groupId: String,
             bootstrapServers: String,
-            consumerProps: JProperties = null): KafkaHLConsumerInputDevice = {
-    KafkaHLConsumerInputDevice(topic, {
+            consumerProps: JProperties = null): KafkaInputDevice = {
+    KafkaInputDevice(topic, {
       val props = new JProperties()
       props.put("group.id", groupId)
       props.put("bootstrap.servers", bootstrapServers)

@@ -48,7 +48,7 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
     if (lines.hasNext) Option {
       val line = lines.next()
       offset += 1
-      Record(offset, line.getBytes())
+      Record(line.getBytes(), offset)
     } else None
   }
 

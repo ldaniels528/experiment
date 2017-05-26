@@ -29,7 +29,7 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
       headersApplied = true
       val headers = row.map(_._1).map(s => '"' + s + '"').mkString(delimiter)
       offset += 1
-      device.write(Record(offset, headers.getBytes()))
+      device.write(Record(headers.getBytes(), offset))
     }
 
     // apply a line of data
@@ -39,7 +39,7 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
       case x => asString(x)
     } mkString delimiter
     offset += 1
-    device.write(Record(offset, line.getBytes()))
+    device.write(Record(line.getBytes(), offset))
   }
 
   private def asString(x: AnyRef) = if (quotedText) quoted(x.toString) else x.toString

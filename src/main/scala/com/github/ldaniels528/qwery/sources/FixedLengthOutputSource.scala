@@ -16,7 +16,7 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
       sb.append(sizeTo(row.get(field.name), field.width))
     }.toString().getBytes()
     offset += 1
-    device.write(Record(offset, bytes))
+    device.write(Record(bytes, offset))
   }
 
   override def open(scope: Scope): Unit = device.open(scope)

@@ -7,6 +7,7 @@ import com.github.ldaniels528.qwery.ops.{Describe, Executable, Expression, Field
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
+import com.github.ldaniels528.qwery.util.ResourceHelper._
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.util.{Failure, Success, Try}
@@ -360,7 +361,7 @@ object SQLTemplateParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
-        // WITH PROPERTIES [./myprops.properties]
+        // WITH PROPERTIES [./settings.properties]
         case p if p.matches(withProps) =>
           val params = p.process(withProps)
           hints = hints.copy(properties = params.atoms.get("props").map(getProperties))
@@ -383,7 +384,7 @@ object SQLTemplateParser {
 
   private def getProperties(path: String): Properties = {
     val props = new Properties()
-    props.load(new FileInputStream(path))
+    new FileInputStream(path) use props.load
     props
   }
 

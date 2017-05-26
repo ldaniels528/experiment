@@ -33,7 +33,7 @@ class KafkaMessageTrigger(bootstrapServers: String,
     while (alive) {
       val records = consumer.poll(1.seconds).asScala
       for (record <- records) {
-        decoder.write(Record(record.offset, record.value))
+        decoder.write(Record(record.value, record.offset))
       }
     }
   }

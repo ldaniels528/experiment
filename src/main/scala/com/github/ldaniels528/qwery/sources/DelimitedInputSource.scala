@@ -32,7 +32,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   }
 
   @inline
-  def readNext(): Option[Row] = device.read() map { case Record(_, bytes) =>
+  def readNext(): Option[Row] = device.read() map { case Record(bytes, _, _) =>
     headers zip parse(bytes)
   }
 
@@ -78,7 +78,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
     case h if h.flatMap(_.headers).contains(true) =>
       device.read().map(r => parse(r.data)) foreach (headers => this.headers = headers)
     case _ =>
-      val row_? = device.read() map { case Record(_, bytes) =>
+      val row_? = device.read() map { case Record(bytes, _, _) =>
         headers = parse(bytes).indices.map(n => s"field$n")
         headers zip parse(bytes)
       }

@@ -29,7 +29,7 @@ case class TextFileInputDevice(path: String) extends InputDevice {
   override def read(): Option[Record] = {
     (if (lines.hasNext) Some(lines.next()) else None) map { line =>
       offset += 1
-      Record(offset, line.getBytes())
+      Record(line.getBytes(), offset)
     }
   }
 

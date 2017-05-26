@@ -11,7 +11,7 @@ import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
 case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) extends InputSource {
 
   override def read(): Option[Row] = {
-    device.read() map { case Record(_, bytes) =>
+    device.read() map { case Record(bytes, _, _) =>
       val line = new String(bytes)
       var position = 0
       fields.foldLeft[List[(String, String)]](Nil) { case (row, field) =>

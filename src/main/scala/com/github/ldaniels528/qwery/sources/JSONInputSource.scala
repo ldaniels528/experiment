@@ -16,7 +16,7 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) ext
 
   override def read(): Option[Row] = {
     device.read() match {
-      case Some(Record(_, bytes)) =>
+      case Some(Record(bytes, _, _)) =>
         parse(new String(bytes)) match {
           case jo: JObject => Some(jo.values.toSeq)
           case jx =>

@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.devices.{InputDevice, KafkaHLConsumerInputDevice, Record}
+import com.github.ldaniels528.qwery.devices.{InputDevice, KafkaInputDevice, Record}
 import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import com.twitter.bijection.Injection
 import com.twitter.bijection.avro.GenericAvroCodecs
@@ -26,7 +26,7 @@ case class AvroInputSource(device: InputDevice, schema: Schema, hints: Option[Hi
   override def open(scope: Scope): Unit = device.open(scope)
 
   override def read(): Option[Row] = {
-    device.read() map { case Record(offset, bytes) =>
+    device.read() map { case Record(bytes, offset, _) =>
       converter.invert(bytes).map(message => parse(message.toString)) match {
         case Success(jo: JObject) => jo.values.toSeq
         case Success(jv) =>
@@ -75,7 +75,7 @@ object AvroInputSource extends InputSourceFactory {
         val groupId = params.getOrElse("group_id", throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: group_id is missing"))
         val schemaPath = params.getOrElse("schema", throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: schema is missing"))
         val schemaString = Source.fromFile(schemaPath).mkString
-        AvroInputSource(KafkaHLConsumerInputDevice(
+        AvroInputSource(KafkaInputDevice(
           topic = topic, groupId = groupId, bootstrapServers = server, hints.flatMap(_.properties).orNull),
           schemaString = schemaString, hints = hints)
       case _ =>
