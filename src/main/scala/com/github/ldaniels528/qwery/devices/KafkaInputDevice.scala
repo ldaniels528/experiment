@@ -6,9 +6,9 @@ import akka.actor.ActorRef
 import com.github.ldaniels528.qwery.ops.Scope
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.language.postfixOps
 
 /**
   * Kafka Input Device
@@ -16,8 +16,10 @@ import scala.language.postfixOps
   */
 case class KafkaInputDevice(topic: String, config: JProperties)
   extends InputDevice with AsyncInputDevice with RandomAccessInputDevice {
+  private lazy val log = LoggerFactory.getLogger(getClass)
   private var consumer: Option[KafkaConsumer[String, Array[Byte]]] = None
   private var buffer: List[Record] = Nil
+  private var once = true
 
   override def close(): Unit = {
     consumer.foreach(_.close())
@@ -29,8 +31,11 @@ case class KafkaInputDevice(topic: String, config: JProperties)
   }
 
   override def open(scope: Scope): Unit = {
-    consumer = Option(new KafkaConsumer[String, Array[Byte]](config))
-    consumer.foreach(_.subscribe(List(topic).asJava))
+    consumer = Option {
+      val cons = new KafkaConsumer[String, Array[Byte]](config)
+      cons.subscribe(List(topic).asJava)
+      cons
+    }
   }
 
   override def read(actor: ActorRef) {
@@ -40,9 +45,14 @@ case class KafkaInputDevice(topic: String, config: JProperties)
   }
 
   override def read(): Option[Record] = {
+    if(once) {
+      once = !once
+      val timeout = System.currentTimeMillis() + 120000L
+      while(buffer.isEmpty && System.currentTimeMillis() < timeout) loadBuffer(5000L)
+    }
+
     if (buffer.size < 100) {
-      consumer.foreach(_.poll(5000).asScala
-        .foreach(rec => buffer = buffer ::: Record(rec.value, rec.offset, rec.partition) :: Nil))
+      loadBuffer(5000L)
     }
 
     // read the next row
@@ -60,6 +70,13 @@ case class KafkaInputDevice(topic: String, config: JProperties)
     consumer.foreach(_.seek(new TopicPartition(topic, partition), offset))
   }
 
+  private def loadBuffer(timeout: Long) = {
+    log.info(s"Loading buffer... $timeout msec timeout")
+    consumer.foreach(_.poll(timeout).asScala
+      .foreach(rec => buffer = buffer ::: Record(rec.value, rec.offset, rec.partition) :: Nil))
+    log.info(s"buffer: ${buffer.size}")
+  }
+
 }
 
 /**
@@ -71,14 +88,16 @@ object KafkaInputDevice {
   def apply(topic: String,
             groupId: String,
             bootstrapServers: String,
-            consumerProps: JProperties = null): KafkaInputDevice = {
+            consumerProps: Option[JProperties] = None): KafkaInputDevice = {
     KafkaInputDevice(topic, {
       val props = new JProperties()
       props.put("group.id", groupId)
       props.put("bootstrap.servers", bootstrapServers)
       props.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
       props.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
-      if (consumerProps != null) props.putAll(consumerProps)
+      props.put("auto.offset.reset", "latest")
+      props.put("enable.auto.commit", "false")
+      consumerProps foreach props.putAll
       props
     })
   }

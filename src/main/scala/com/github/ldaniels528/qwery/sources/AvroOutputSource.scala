@@ -63,7 +63,7 @@ object AvroOutputSource extends OutputSourceFactory {
         val schemaPath = params.getOrElse("schema", throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: schema is missing"))
         val schemaString = Source.fromFile(schemaPath).mkString
         AvroOutputSource(KafkaOutputDevice(
-          topic = topic, bootstrapServers = server, hints.flatMap(_.properties).orNull),
+          topic = topic, bootstrapServers = server, hints.flatMap(_.properties)),
           schemaString = schemaString, hints = hints)
       case _ =>
         throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: $uri")

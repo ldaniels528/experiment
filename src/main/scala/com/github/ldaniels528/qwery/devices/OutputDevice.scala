@@ -6,6 +6,6 @@ package com.github.ldaniels528.qwery.devices
   */
 trait OutputDevice extends Device {
 
-  def write(record: Record): Unit
+  def write(record: Record): Any
 
 }

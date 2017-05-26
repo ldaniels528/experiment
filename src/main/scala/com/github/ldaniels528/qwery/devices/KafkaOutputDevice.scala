@@ -1,11 +1,10 @@
 package com.github.ldaniels528.qwery.devices
 
+import java.util.concurrent.{Future => JFuture}
 import java.util.{Properties => JProperties}
 
 import com.github.ldaniels528.qwery.ops.Scope
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
-
-import scala.language.postfixOps
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord, RecordMetadata}
 
 /**
   * Kafka Output Device
@@ -23,8 +22,8 @@ case class KafkaOutputDevice(topic: String, config: JProperties) extends OutputD
     producer = None
   }
 
-  override def write(record: Record): Unit = {
-    producer.foreach(_.send(new ProducerRecord(topic, Array[Byte](0), record.data)))
+  override def write(record: Record): Option[JFuture[RecordMetadata]] = {
+    producer.map(_.send(new ProducerRecord(topic, Array[Byte](0), record.data)))
   }
 
 }
@@ -35,13 +34,13 @@ case class KafkaOutputDevice(topic: String, config: JProperties) extends OutputD
   */
 object KafkaOutputDevice {
 
-  def apply(topic: String, bootstrapServers: String, producerProps: JProperties = null): KafkaOutputDevice = {
+  def apply(topic: String, bootstrapServers: String, producerProps: Option[JProperties] = None): KafkaOutputDevice = {
     KafkaOutputDevice(topic, {
       val props = new JProperties()
       props.put("bootstrap.servers", bootstrapServers)
       props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
       props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-      if (producerProps != null) props.putAll(producerProps)
+      producerProps foreach props.putAll
       props
     })
   }

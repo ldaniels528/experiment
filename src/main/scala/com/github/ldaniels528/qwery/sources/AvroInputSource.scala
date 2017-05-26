@@ -46,7 +46,7 @@ case class AvroInputSource(device: InputDevice, schema: Schema, hints: Option[Hi
   * @author lawrence.daniels@gmail.com
   */
 object AvroInputSource extends InputSourceFactory {
-  private val header = "kafka:avro://"
+  private val kafkaAvroHeader = "kafka:avro://"
 
   def apply(device: InputDevice, schemaString: String, hints: Option[Hints]): AvroInputSource = {
     AvroInputSource(device, schema = new Schema.Parser().parse(schemaString), hints)
@@ -62,7 +62,7 @@ object AvroInputSource extends InputSourceFactory {
     * @return an [[AvroInputSource]] instance
     */
   def parseURI(uri: String, hints: Option[Hints]): AvroInputSource = {
-    uri.drop(header.length).split("[?]") match {
+    uri.drop(kafkaAvroHeader.length).split("[?]") match {
       case Array(server, queryString) =>
         val params = Map(queryString.split("[&]") map { param =>
           param.split("[=]") match {
@@ -76,13 +76,13 @@ object AvroInputSource extends InputSourceFactory {
         val schemaPath = params.getOrElse("schema", throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: schema is missing"))
         val schemaString = Source.fromFile(schemaPath).mkString
         AvroInputSource(KafkaInputDevice(
-          topic = topic, groupId = groupId, bootstrapServers = server, hints.flatMap(_.properties).orNull),
+          topic = topic, groupId = groupId, bootstrapServers = server, hints.flatMap(_.properties)),
           schemaString = schemaString, hints = hints)
       case _ =>
         throw new IllegalArgumentException(s"Invalid Kafka-Avro URL: $uri")
     }
   }
 
-  override def understands(url: String): Boolean = url.startsWith(header)
+  override def understands(url: String): Boolean = url.startsWith(kafkaAvroHeader)
 
 }
