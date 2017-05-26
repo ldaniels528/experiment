@@ -10,8 +10,6 @@ package object ops {
 
   type Row = Seq[Column]
 
-  type ResultSet = Iterator[Row]
-
   /**
     * Row Enrichmnent
     * @param row the given [[Row row]] of data

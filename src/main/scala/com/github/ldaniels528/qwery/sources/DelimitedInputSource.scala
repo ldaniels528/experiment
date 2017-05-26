@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.language.postfixOps
@@ -16,10 +16,6 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   private var delimiter = hints.flatMap(_.delimiter).flatMap(_.headOption).getOrElse(',')
   private var buffer: List[Row] = Nil
 
-  override def close(): Unit = device.close()
-
-  override def open(scope: Scope): Unit = device.open(scope)
-
   override def read(): Option[Row] = {
     // have the headers been set?
     if (headers.isEmpty) setHeaders()
@@ -32,7 +28,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   }
 
   @inline
-  def readNext(): Option[Row] = device.read() map { case Record(bytes, _, _) =>
+  private def readNext(): Option[Row] = device.read() map { case Record(bytes, _, _) =>
     headers zip parse(bytes)
   }
 
@@ -58,7 +54,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
       delimiter <- delimiter_?
       headers <- sampleLines.headOption.map(_.delimitedSplit(delimiter))
       rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter)) toIterator
-    } yield (delimiter, headers, rows)
+    } yield (delimiter, headers, ResultSet(rows))
   }
 
   @inline

@@ -10,12 +10,12 @@ import scala.language.postfixOps
 case class InsertValues(fields: Seq[Field], dataSets: Iterable[Seq[Expression]]) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
-    dataSets map { dataSet =>
+    ResultSet(rows = dataSets map { dataSet =>
       fields zip dataSet map { case (field, value) =>
         field.name -> value.evaluate(scope)
           .getOrElse(throw new RuntimeException(s"Could not resolve value for '${field.name}': $value"))
       }
-    } toIterator
+    } toIterator)
   }
 
 }

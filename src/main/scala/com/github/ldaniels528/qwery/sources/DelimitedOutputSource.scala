@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import java.text.DecimalFormat
 
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 
 /**
   * Delimited Output Source
@@ -18,10 +18,6 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
   private val quotedNumbers = hints.exists(_.quotedNumbers.contains(true))
   private var headersApplied = false
   private var offset = 0L
-
-  override def close(): Unit = device.close()
-
-  override def open(scope: Scope): Unit = device.open(scope)
 
   override def write(row: Row): Unit = {
     // apply the headers?

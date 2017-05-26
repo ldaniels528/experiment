@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.util
 
 import java.util.{Properties => JProperties}
 
-import net.liftweb.json.{JObject, JValue, parse, prettyRender}
+import net.liftweb.json.{JObject, JValue, parse}
 
 import scala.io.Source
 

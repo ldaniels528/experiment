@@ -1,11 +1,51 @@
 Qwery
 ===============
-
-#### Description
-
 Qwery exposes a SQL-like query language to extract structured data from a file or REST URL. Qwery can be used as
 an SDK or as a CLI application.
 
+### Table of Contents
+
+* <a href="#motivation">Motivation</a>
+* <a href="#features">Features</a>
+* <a href="#development">Build Requirements</a>
+* <a href="#etl">Qwery ETL</a>
+    * <a href="#how-it-works">How it works</a>
+        * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
+        * <a href="#sample-sql-script">Sample SQL script</a>
+        * <a href="#file-archival">File Archival</a>
+        * <a href="#building-etl">Building and running the ETL</a>
+* <a href="#repl">Qwery REPL</a>
+    * <a href="#repl_start">Start the REPL</a>
+    * <a href="#describe">DESCRIBE the layout of a local file</a>
+    * <a href="#describe_select">DESCRIBE a SELECT query</a>
+* <a href="sdk">Qwery SDK</a>
+* <a href="#faq">Frequently Asked Questions (FAQ)</a>
+
+<a name="motivation"></a>
+### Motivation
+
+Systems like [Apache Storm](http://storm.apache.org) or [Spark Streaming](http://spark.apache.org) are powerful 
+and flexible distributed processing engines, which are usually fed by a message-oriented middleware solution 
+(e.g. [Apache Kafka](http://kafka.apache.org) or [Twitter Kestrel](https://github.com/twitter/kestrel)). 
+
+The challenge that I've identified, is that organizations usually have to build a homegrown solution for the high-speed 
+data/file ingestion into Kafka or Kestrel, which distracts them from their core focus. I've built Broadway to help provide 
+a solution to that challenge.
+
+<a name="features"></a>
+### Features
+
+Qwery provides the capability of invoking SQL-like queries against:
+* Files (local, HTTP or S3)
+* Avro-encoded or JSON-based Kafka topics 
+* Database tables (Coming soon)
+
+Additionally, Qwery has three modes of operation:
+* ETL/Orchestration Server
+* REPL/CLI tool
+* Library/SDK
+
+<a name="development"></a>
 ### Build Requirements
 
 * [SBT v0.13.15](http://www.scala-sbt.org/download.html)
@@ -16,34 +56,194 @@ an SDK or as a CLI application.
 $ sbt test
 ```
 
-### Frequently Asked Questions (FAQ)
+<a href="#etl"></a>
+### Qwery ETL
 
-**Q**: How do I reference a field that contains spaces or special characters?
+<a name="how-it-works"></a>
+#### How it works
 
-**A**: Use back ticks (\`). 
+Qwery uses a convention-over-configuration model. 
 
-**Q**: Is ORDER BY supported?
+The root directory is defined using an environment variable QWERY_HOME. As long as the directory defined by this
+variable exists, Qwery will create any necessary sub-directories.
 
-**A**: No, ORDER BY is not yet supported.
+The directory structure is as follows:
 
-**Q**: Is GROUP BY supported?
+| Directory             | Purpose/Usage                                                 |
+|-----------------------|---------------------------------------------------------------|
+| $QWERY_HOME/archive   | The directory where Qwery stores processed files              |
+| $QWERY_HOME/config    | The directory where Qwery looks for configuration files       |
+| $QWERY_HOME/failed    | The directory where files that fail processing are moved to   |
+| $QWERY_HOME/inbox     | The directory where Qwery looks for input files               |
+| $QWERY_HOME/script    | The directory where Qwery looks for user-created SQL script files |
+| $QWERY_HOME/work      | The directory where Qwery processes files                     |
 
-**A**: Yes; however, only for a single column
+The ETL module two things to create a workflow; a trigger configuration and a SQL script. The trigger configuration defines
+which file(s) will be processed, and the SQL script describes how data will be extracted and where it will be written.
 
-**Q**: Are VIEWs supported?
+<a name="sample-trigger-file"></a>
+##### Sample Trigger Configuration File
 
-**A**: No. However, sub-queries can be used in place of views (e.g. SELECT name, date, age FROM (SELECT name, date, CAST(age AS DOUBLE) AS age))
+The following is an example of a simple trigger file configuration. This example essentially directs Qwery to look for 
+files (in $QWERY_HOME/inbox) starting with "companylist" (prefix) and ending in ".csv" (suffix), and processing them 
+using the script file.
 
-### CLI Examples
+```json
+[{
+    "name": "Company Lists",
+    "constraints": [{ "prefix": "companylist" }, { "suffix": ".csv" }],
+    "script": "companylist.sql"
+}]
+```
+
+<a name="sample-sql-script"></a>
+##### Sample SQL Script
+
+The following is script to execute ($QWERY_HOME/scripts/companylist.sql) when the file has been observed:
+
+```sql
+INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv' 
+WITH CSV FORMAT
+```
+
+The above SQL script is simple enough, it reads CSV records from 'companylist.csv', and writes four of the fields in
+JSON format to 'companylist.json'.
+
+Additionally, this script works well if the input and output files are known ahead of time, but often this is not the case.
+As a result, Qwery supports the substitution of pre-defined variables for the input file name. Consider the following
+script which is functionally identical to the one above.
+
+```sql
+INSERT INTO '{{ work.file.base }}.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM '{{ work.file.path }}'
+WITH CSV FORMAT
+```
+
+The following are the variables that are created by the Workflow Manager at the time of processing:
+
+| Variable name         | Purpose/Usage                                                         |
+|-----------------------|-----------------------------------------------------------------------|
+| work.file.base        | The base name of the input file being processed (e.g. "companylist")  |
+| work.file.name        | The name of the input file being processed (e.g. "companylist.csv")   |
+| work.file.path        | The full path of the input file being processed (e.g. "/full/path/to/companylist.csv")   |
+| work.file.size        | The size (in bytes) of the input file                                 |
+| work.path             | The full path of the processing sub-directory (underneath work)       |
+
+
+The follow is a sample of the input file:
+
+```csv
+"Symbol","Name","LastSale","MarketCap","ADR TSO","IPOyear","Sector","Industry","Summary Quote",
+"XXII","22nd Century Group, Inc","1.4","126977358.2","n/a","n/a","Consumer Non-Durables","Farming/Seeds/Milling","http://www.nasdaq.com/symbol/xxii",
+"FAX","Aberdeen Asia-Pacific Income Fund Inc","5","1266332595","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/fax",
+"IAF","Aberdeen Australia Equity Fund Inc","6.24","141912114.24","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/iaf",
+"CH","Aberdeen Chile Fund, Inc.","7.06","66065291.4","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/ch",
+"ABE           ","Aberdeen Emerging Markets Smaller Company Opportunities Fund I","13.63","131446834.05","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/abe",
+"FCO","Aberdeen Global Income Fund, Inc.","8.62","75376107.36","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/fco",
+"IF","Aberdeen Indonesia Fund, Inc.","7.4345","69173383.372","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/if",
+"ISL","Aberdeen Israel Fund, Inc.","18.4242","73659933.1758","n/a","n/a","n/a","n/a","http://www.nasdaq.com/symbol/isl",
+```
+
+And here's an example of the output file:
+
+```json
+{"Sector":"Consumer Non-Durables","Name":"22nd Century Group, Inc","Industry":"Farming/Seeds/Milling","Symbol":"XXII","Summary Quote":"http://www.nasdaq.com/symbol/xxii"}
+{"Sector":"n/a","Name":"Aberdeen Asia-Pacific Income Fund Inc","Industry":"n/a","Symbol":"FAX","Summary Quote":"http://www.nasdaq.com/symbol/fax"}
+{"Sector":"n/a","Name":"Aberdeen Australia Equity Fund Inc","Industry":"n/a","Symbol":"IAF","Summary Quote":"http://www.nasdaq.com/symbol/iaf"}
+{"Sector":"n/a","Name":"Aberdeen Chile Fund, Inc.","Industry":"n/a","Symbol":"CH","Summary Quote":"http://www.nasdaq.com/symbol/ch"}
+{"Sector":"n/a","Name":"Aberdeen Emerging Markets Smaller Company Opportunities Fund I","Industry":"n/a","Symbol":"ABE","Summary Quote":"http://www.nasdaq.com/symbol/abe"}
+{"Sector":"n/a","Name":"Aberdeen Global Income Fund, Inc.","Industry":"n/a","Symbol":"FCO","Summary Quote":"http://www.nasdaq.com/symbol/fco"}
+{"Sector":"n/a","Name":"Aberdeen Indonesia Fund, Inc.","Industry":"n/a","Symbol":"IF","Summary Quote":"http://www.nasdaq.com/symbol/if"}
+{"Sector":"n/a","Name":"Aberdeen Israel Fund, Inc.","Industry":"n/a","Symbol":"ISL","Summary Quote":"http://www.nasdaq.com/symbol/isl"}
+{"Sector":"Capital Goods","Name":"Acme United Corporation.","Industry":"Industrial Machinery/Components","Symbol":"ACU","Summary Quote":"http://www.nasdaq.com/symbol/acu"}
+{"Sector":"Consumer Services","Name":"ACRE Realty Investors, Inc.","Industry":"Real Estate Investment Trusts","Symbol":"AIII","Summary Quote":"http://www.nasdaq.com/symbol/aiii"}
+```
+
+<a name="file-archival"></a>
+##### File Archival
+
+By convention, on a file has been processed, Qwery stores the file in $QWERY_HOME/archive/_yyyy_/_mm_/_dd_/_hhmmss_/ where: 
+* _yyyy_ is the 4-digit current year (e.g. 2017)
+* _mm_ is the 2-digit current month (e.g. 05)
+* _dd_ is the 2-digit current day of the month (e.g. 28)
+* _hhmmss_ is the 6-digit current time (e.g. 061107)
+
+<a name="building-etl"></a>
+### Building and running the ETL
+
+Building (and assembling) the ETL is simple:
+
+```bash
+~/Downloads/qwery/> sbt "project etl" clean assembly 
+```
+
+After the compilation completes, you'll see a message like:
+
+```text
+[info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
+[info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.0.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.0.jar ...
+[info] Done packaging.
+[info] Done packaging.
+```
+
+Now, you can execute the ETL distributable:
+
+```bash
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.0.bin.jar
+```
+
+*NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
+where its "home" directory is. 
+
+On a Mac, Linux or UNIX system:
+
+```bash
+~/Downloads/qwery/> export QWERY_HOME=./example
+```
+
+On a Windows system:
+
+```bash
+C:\Downloads\qwery\> set QWERY_HOME=.\example
+```
+
+Once it's up and running, it should look something like the following:
+
+```text
+[info] Running com.github.ldaniels528.qwery.etl.QweryETL 
+
+ Qwery ETL v0.2.6
+         ,,,,,
+         (o o)
+-----oOOo-(_)-oOOo-----
+      
+2017-05-28 19:56:10 INFO  ETLConfig:81 - Loading triggers from '/Users/ldaniels/git/qwery/example/config/triggers.json'...
+2017-05-28 19:56:10 INFO  ETLConfig$:102 - [Company Lists] Compiling script 'companylist.sql'...
+2017-05-28 19:56:10 INFO  QweryETL$:61 - Hello.
+2017-05-28 19:56:51 INFO  QweryETL$:54 - [eebd64f1-5b95-458e-a2d3-745494718697] Company Lists ~> 'companylist.csv'
+[INFO] [05/28/2017 19:56:51.533] [qwery-akka.actor.default-dispatcher-2] [akka://qwery/user/$b] [eebd64f1-5b95-458e-a2d3-745494718697] Preparing to process Inbox:'companylist.csv'
+[INFO] [05/28/2017 19:56:51.706] [qwery-akka.actor.default-dispatcher-2] [akka://qwery/user/$b] [eebd64f1-5b95-458e-a2d3-745494718697] Process completed successfully in 173 msec
+[INFO] [05/28/2017 19:56:51.711] [qwery-akka.actor.default-dispatcher-2] [akka://qwery/user/$b] [eebd64f1-5b95-458e-a2d3-745494718697] 359 records, 0 failures, 358 batch (4917.8 records/sec, 758.66 KB/sec)
+[INFO] [05/28/2017 19:56:51.714] [qwery-akka.actor.default-dispatcher-4] [akka://qwery/user/$a] Moving 'eebd64f1-5b95-458e-a2d3-745494718697' to '/Users/ldaniels/git/qwery/example/archive/2017/05/28/075651/eebd64f1-5b95-458e-a2d3-745494718697'
+```
+
+<a name="repl"></a>
+### Qwery REPL 
 
 Qwery offers a command line interface (CLI), which allows interactive querying or files, REST endpoints, etc.
 
-##### Start the REPL/CLI
+<a name="repl_start"></a>
+##### Start the REPL
 
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.2.5
+ Qwery CLI v0.3.0
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -56,7 +256,8 @@ LIMIT 5;
 Using UNIXCommandPrompt for input.
 ```
 
-##### Describe the layout of a local file:
+<a name="describe"></a>
+##### DESCRIBE the layout of a local file:
 
 ```text
 [1]> DESCRIBE './companylist.csv';
@@ -76,7 +277,8 @@ Using UNIXCommandPrompt for input.
 + --------------------------------------------------------------------------------------- +
 ```
 
-##### Describe a SELECT query
+<a name="describe_select"></a>
+##### DESCRIBE a SELECT query
 
 ```text
 [2]> DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM 'companylist.csv');
@@ -223,9 +425,10 @@ Using UNIXCommandPrompt for input.
 + --------------- +
 ```
 
-### Code Examples
+<a name="sdk"></a>
+### Qwery SDK
 
-Qwery can also be used as a Library.
+Qwery can also be used as a Library/SDK.
 
 ##### Let's start with a local file (./companylist.csv)
 
@@ -470,3 +673,22 @@ new Tabular().transform(results) foreach println
 .
 .
 ```
+
+<a name="faq"></a>
+### Frequently Asked Questions (FAQ)
+
+**Q**: How do I reference a field that contains spaces or special characters?
+
+**A**: Use back ticks (\`). 
+
+**Q**: Is ORDER BY supported?
+
+**A**: No, ORDER BY is not yet supported.
+
+**Q**: Is GROUP BY supported?
+
+**A**: Yes; however, only for a single column
+
+**Q**: Are VIEWs supported?
+
+**A**: No. However, sub-queries can be used in place of views (e.g. SELECT name, date, age FROM (SELECT name, date, CAST(age AS DOUBLE) AS age))

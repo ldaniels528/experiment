@@ -15,7 +15,7 @@ import scala.collection.JavaConverters._
   * @author lawrence.daniels@gmail.com
   */
 case class KafkaInputDevice(topic: String, config: JProperties)
-  extends InputDevice with AsyncInputDevice with RandomAccessInputDevice {
+  extends InputDevice with AsyncInputDevice with RandomAccessDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var consumer: Option[KafkaConsumer[String, Array[Byte]]] = None
   private var buffer: List[Record] = Nil
@@ -29,6 +29,8 @@ case class KafkaInputDevice(topic: String, config: JProperties)
   override def fastForward(partitions: Seq[Int]): Unit = {
     consumer.foreach(_.seekToEnd(partitions.map(new TopicPartition(topic, _)).asJava))
   }
+
+  override def getSize: Option[Long] = None
 
   override def open(scope: Scope): Unit = {
     consumer = Option {
@@ -45,10 +47,10 @@ case class KafkaInputDevice(topic: String, config: JProperties)
   }
 
   override def read(): Option[Record] = {
-    if(once) {
+    if (once) {
       once = !once
       val timeout = System.currentTimeMillis() + 120000L
-      while(buffer.isEmpty && System.currentTimeMillis() < timeout) loadBuffer(5000L)
+      while (buffer.isEmpty && System.currentTimeMillis() < timeout) loadBuffer(5000L)
     }
 
     if (buffer.size < 100) {
@@ -74,7 +76,10 @@ case class KafkaInputDevice(topic: String, config: JProperties)
     log.info(s"Loading buffer... $timeout msec timeout")
     consumer.foreach(_.poll(timeout).asScala
       .foreach(rec => buffer = buffer ::: Record(rec.value, rec.offset, rec.partition) :: Nil))
-    log.info(s"buffer: ${buffer.size}")
+    for {
+      record <- buffer
+      stats <- statsGen.update(records = 1, bytesRead = record.data.length)
+    } log.info(stats.toString)
   }
 
 }

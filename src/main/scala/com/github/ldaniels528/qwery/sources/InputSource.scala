@@ -13,13 +13,12 @@ trait InputSource extends IOSource with Executable {
 
   override def execute(scope: Scope): ResultSet = {
     open(scope)
-    toIterator
+    ResultSet(rows = toIterator, statistics = getStatistics)
   }
 
   def read(): Option[Row]
 
   def toIterator: Iterator[Row] = new Iterator[Row] {
-
     private var nextRow_? : Option[Row] = read()
 
     override def hasNext: Boolean = nextRow_?.nonEmpty

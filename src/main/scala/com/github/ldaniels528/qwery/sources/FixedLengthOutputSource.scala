@@ -19,10 +19,6 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
     device.write(Record(bytes, offset))
   }
 
-  override def open(scope: Scope): Unit = device.open(scope)
-
-  override def close(): Unit = device.close()
-
   private def sizeTo(value: Option[Any], width: Int) = {
     value.map(_.toString) match {
       case Some(s) if s.length == width => s

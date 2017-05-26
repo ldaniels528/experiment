@@ -15,7 +15,7 @@ case class Insert(target: DataResource,
 
   override def execute(scope: Scope): ResultSet = {
     var count = 0L
-    val outputSource = target.getOutputSource(append)
+    val outputSource = target.getOutputSource(scope, append)
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
     outputSource.open(scope)
     outputSource use { device =>
@@ -24,7 +24,7 @@ case class Insert(target: DataResource,
         count += 1
       }
     }
-    Iterator(Seq("ROWS_INSERTED" -> count))
+    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> count)), statistics = outputSource.getStatistics)
   }
 
 }

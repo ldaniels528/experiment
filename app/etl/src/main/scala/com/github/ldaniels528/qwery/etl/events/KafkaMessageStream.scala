@@ -1,9 +1,9 @@
-package com.github.ldaniels528.qwery.triggers
+package com.github.ldaniels528.qwery.etl.events
 
 import java.util.Properties
 
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
-import com.github.ldaniels528.qwery.triggers.KafkaMessageTrigger.SSLOptions
+import com.github.ldaniels528.qwery.etl.events.KafkaMessageStream._
 import com.github.ldaniels528.qwery.util.DurationHelper._
 import org.apache.kafka.clients.consumer.KafkaConsumer
 
@@ -11,20 +11,18 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO Consider making a distinction between streaming and triggered events
-
 /**
-  * Kafka Message Trigger
+  * Kafka Message Stream
   * @author lawrence.daniels@gmail.com
   */
-class KafkaMessageTrigger(bootstrapServers: String,
-                          topic: String,
-                          groupId: String,
-                          decoder: OutputDevice,
-                          sslOptions: Option[SSLOptions] = None) extends Trigger {
+class KafkaMessageStream(bootstrapServers: String,
+                         topic: String,
+                         groupId: String,
+                         decoder: OutputDevice,
+                         sslOptions: Option[SSLOptions] = None) {
   private var alive: Boolean = _
 
-  override def start()(implicit ec: ExecutionContext): Unit = Future {
+  def start()(implicit ec: ExecutionContext): Unit = Future {
     // create the consumer for our topic, and subscribe to the topic
     val consumer = new KafkaConsumer[Array[Byte], Array[Byte]](getProperties(bootstrapServers, groupId, sslOptions))
     consumer.subscribe(List(topic).asJava)
@@ -38,7 +36,7 @@ class KafkaMessageTrigger(bootstrapServers: String,
     }
   }
 
-  override def stop(): Unit = alive = false
+  def stop(): Unit = alive = false
 
   /**
     * Returns the Kafka consumer properties
@@ -67,10 +65,10 @@ class KafkaMessageTrigger(bootstrapServers: String,
 }
 
 /**
-  * Kafka Message Trigger Companion
+  * Kafka Message Stream Companion
   * @author lawrence.daniels@gmail.com
   */
-object KafkaMessageTrigger {
+object KafkaMessageStream {
 
   case class SSLOptions(protocol: Option[String] = None, // SSL
                         sslKeyPassword: Option[String] = None,

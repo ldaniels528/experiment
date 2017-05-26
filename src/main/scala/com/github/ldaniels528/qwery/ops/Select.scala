@@ -25,11 +25,11 @@ case class Select(fields: Seq[Expression],
 
       // is this an aggregate query?
       if (isAggregate) doAggregation(scope, rows)
-      else if (fields.hasAllFields) rows.map(_.row)
-      else rows.map(row => fields.map(expand(row, _)))
+      else if (fields.hasAllFields) ResultSet(rows = rows.map(_.row))
+      else ResultSet(rows = rows.map(row => fields.map(expand(row, _))))
 
     case None =>
-      Iterator(fields.map(expand(scope, _)))
+      ResultSet(rows = Iterator(fields.map(expand(scope, _))))
   }
 
   /**
@@ -54,7 +54,7 @@ case class Select(fields: Seq[Expression],
     if (groupFields.nonEmpty) doAggregationByFields(scope, rows, aggregates, groupFieldNames)
     else {
       rows.foreach(rowScope => aggregates.foreach(_.update(rowScope)))
-      Iterator(aggregates.map(expand(scope, _)))
+      ResultSet(rows = Iterator(aggregates.map(expand(scope, _))))
     }
   }
 
@@ -64,11 +64,11 @@ case class Select(fields: Seq[Expression],
                                     groupFields: Seq[String]): ResultSet = {
     val groupField = groupFields.headOption.orNull
     val groupedResults = resultSets.toSeq.groupBy(_.row.find(_._1 == groupField).map(_._2).orNull)
-    groupedResults map { case (_, rows) =>
+    ResultSet(rows = groupedResults map { case (_, rows) =>
       rows.foreach(row => aggregates.foreach(_.update(row)))
       val scope = LocalScope(parentScope, row = Nil)
       aggregates.map(expand(scope, _))
-    } toIterator
+    } toIterator)
   }
 
   private def expand(scope: Scope, expression: Expression) = {

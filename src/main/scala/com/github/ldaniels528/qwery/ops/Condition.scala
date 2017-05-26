@@ -4,7 +4,7 @@ package com.github.ldaniels528.qwery.ops
   * Represents a conditional expression
   * @author lawrence.daniels@gmail.com
   */
-sealed trait Condition {
+trait Condition {
   def isSatisfied(scope: Scope): Boolean
 }
 

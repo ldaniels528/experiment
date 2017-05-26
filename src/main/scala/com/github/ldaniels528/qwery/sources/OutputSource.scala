@@ -23,12 +23,13 @@ object OutputSource extends OutputSourceFactory {
 
   override def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
     (hints ?? Hints()) map { hint =>
+      val compress = hint.gzip.contains(true)
       path.toLowerCase() match {
-        case file if file.endsWith(".csv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asCSV)
-        case file if file.endsWith(".json") => JSONOutputSource(TextFileOutputDevice(path, append), hint.asJSON)
-        case file if file.endsWith(".psv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asPSV)
-        case file if file.endsWith(".tsv") => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asTSV)
-        case file => DelimitedOutputSource(TextFileOutputDevice(path, append), hint.asCSV)
+        case file if file.endsWith(".csv") => DelimitedOutputSource(TextFileOutputDevice(path, append, compress), hint.asCSV)
+        case file if file.endsWith(".json") => JSONOutputSource(TextFileOutputDevice(path, append, compress), hint.asJSON)
+        case file if file.endsWith(".psv") => DelimitedOutputSource(TextFileOutputDevice(path, append, compress), hint.asPSV)
+        case file if file.endsWith(".tsv") => DelimitedOutputSource(TextFileOutputDevice(path, append, compress), hint.asTSV)
+        case file => DelimitedOutputSource(TextFileOutputDevice(path, append, compress), hint.asCSV)
       }
     }
   }

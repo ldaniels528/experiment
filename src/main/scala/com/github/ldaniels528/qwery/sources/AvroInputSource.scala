@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, KafkaInputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 import com.twitter.bijection.Injection
 import com.twitter.bijection.avro.GenericAvroCodecs
 import net.liftweb.json.JsonAST.JObject
@@ -20,10 +20,6 @@ import scala.util.{Failure, Success}
 case class AvroInputSource(device: InputDevice, schema: Schema, hints: Option[Hints]) extends InputSource {
   private lazy val converter: Injection[GenericRecord, Array[Byte]] = GenericAvroCodecs.toBinary(schema)
   private lazy val log = LoggerFactory.getLogger(getClass)
-
-  override def close(): Unit = device.close()
-
-  override def open(scope: Scope): Unit = device.open(scope)
 
   override def read(): Option[Row] = {
     device.read() map { case Record(bytes, offset, _) =>

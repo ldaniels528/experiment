@@ -8,17 +8,17 @@ import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Scope}
   */
 case class DataResource(path: String, hints: Option[Hints] = None) extends Executable {
 
-  override def execute(scope: Scope): ResultSet = getInputSource match {
-    case Some(device) => device.execute(scope)
-    case None => Iterator.empty
+  override def execute(scope: Scope): ResultSet = getInputSource(scope) match {
+    case Some(inputSource) => inputSource.execute(scope)
+    case None => ResultSet()
   }
 
-  def getInputSource: Option[InputSource] = {
-    DataSourceFactory.getInputSource(path, hints)
+  def getInputSource(scope: Scope): Option[InputSource] = {
+    DataSourceFactory.getInputSource(path = scope.expand(path), hints)
   }
 
-  def getOutputSource(append: Boolean): Option[OutputSource] = {
-    DataSourceFactory.getOutputSource(path, append, hints)
+  def getOutputSource(scope: Scope, append: Boolean): Option[OutputSource] = {
+    DataSourceFactory.getOutputSource(path = scope.expand(path), append, hints)
   }
 
   override def toString: String = path

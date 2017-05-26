@@ -34,7 +34,10 @@ project/boot/
 
 test*.*
 tickers.csv
-LISTINGS_20170327.txt.gz
-example/incoming/
-scratch/
 pixall**.*
+example/archive
+example/failed
+example/inbox
+example/outbox
+example/work
+companylist.json

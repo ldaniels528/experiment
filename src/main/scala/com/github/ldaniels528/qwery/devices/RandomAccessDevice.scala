@@ -1,10 +1,10 @@
 package com.github.ldaniels528.qwery.devices
 
 /**
-  * Random Access Input Device
+  * Random Access Device
   * @author lawrence.daniels@gmail.com
   */
-trait RandomAccessInputDevice extends InputDevice {
+trait RandomAccessDevice extends InputDevice {
 
   def fastForward(partitions: Seq[Int]): Unit
 

@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 import net.liftweb.json.{JObject, parse}
 
 /**
@@ -9,10 +9,6 @@ import net.liftweb.json.{JObject, parse}
   * @author lawrence.daniels@gmail.com
   */
 case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) extends InputSource {
-
-  override def close(): Unit = device.close()
-
-  override def open(scope: Scope): Unit = device.open(scope)
 
   override def read(): Option[Row] = {
     device.read() match {

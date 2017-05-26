@@ -4,7 +4,7 @@ import com.github.ldaniels528.qwery.util.BytesHelper._
 
 /**
   * Represents a statistical snapshot of processing activity
-  * @param totalInserted    the total number of records inserted
+  * @param totalRecords    the total number of records inserted
   * @param bytesRead        the current number of bytes retrieved
   * @param bytesPerSecond   the snapshot's bytes/second transfer rate
   * @param failures         the number of total failures
@@ -13,22 +13,24 @@ import com.github.ldaniels528.qwery.util.BytesHelper._
   * @param pctComplete      the percentage of completion
   * @param completionTime   the estimated completion time
   */
-class Statistics(val totalInserted: Long,
-                 val bytesRead: Long,
-                 val bytesPerSecond: Double,
-                 val failures: Long,
-                 val recordsDelta: Long,
-                 val recordsPerSecond: Double,
-                 val pctComplete: Double,
-                 val completionTime: Double) {
+case class Statistics(totalRecords: Long,
+                      bytesRead: Long,
+                      bytesPerSecond: Double,
+                      failures: Long,
+                      failuresPerSecond: Double,
+                      recordsDelta: Long,
+                      recordsPerSecond: Double,
+                      pctComplete: Option[Double],
+                      completionTime: Option[Double]) {
 
   override def toString: String = {
     // generate the estimate complete time
-    val etc = s"${completionTime / 60} hrs ${ completionTime % 60} mins"
+    val pct = pctComplete.map(p => f"$p%.1f%%")
+    val etc = completionTime.map(t => f"${t / 60}%.0f hrs, ${t % 60}%.0f mins")
+    val completion = if (pct.isEmpty && etc.isEmpty) "" else s" (${pct.getOrElse("N/A")} - ${etc.getOrElse("N/A")})"
 
     // return the statistics
-    f"$totalInserted total ($pctComplete%.1f%% - $etc), failures $failures, $recordsDelta batch " +
-      f"($recordsPerSecond%.1f records/sec, ${bytesPerSecond.bps})"
+    f"$totalRecords records$completion, $failures failures, $recordsDelta batch ($recordsPerSecond%.1f records/sec, ${bytesPerSecond.bps})"
   }
 
 }

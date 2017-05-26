@@ -3,9 +3,10 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.2.5"
+val apiVersion = "0.3.0"
 val appScalaVersion = "2.12.2"
 
+val akkaVersion = "2.5.2"
 val kafkaVersion = "0.10.2.1"
 val apacheCurator = "3.1.0"
 
@@ -17,7 +18,7 @@ lazy val cli = (project in file("./app/cli")).
   settings(
     name := "qwery-cli",
     organization := "com.github.ldaniels528",
-    description := "Qwery CLI: A SQL-like query language for performing ETL functions.",
+    description := "Qwery CLI Application",
     version := apiVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -32,10 +33,10 @@ lazy val cli = (project in file("./app/cli")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-compiler" % appScalaVersion,
-      "org.scala-lang" % "scala-reflect" % appScalaVersion,
+      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "org.scala-lang" % "jline" % "2.11.0-M3"
+      "org.scala-lang" % "jline" % "2.11.0-M3",
+      "org.slf4j" % "slf4j-api" % "1.7.25"
     ))
 
 lazy val etl = (project in file("./app/etl")).
@@ -44,7 +45,7 @@ lazy val etl = (project in file("./app/etl")).
   settings(
     name := "qwery-etl",
     organization := "com.github.ldaniels528",
-    description := "Qwery ETL: A SQL-like query language for performing ETL functions.",
+    description := "Qwery ETL and Orchestration Server",
     version := apiVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -59,8 +60,7 @@ lazy val etl = (project in file("./app/etl")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-compiler" % appScalaVersion,
-      "org.scala-lang" % "scala-reflect" % appScalaVersion,
+      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "net.liftweb" %% "lift-json" % "3.0.1"
@@ -79,14 +79,15 @@ lazy val core = (project in file(".")).
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
       "com.twitter" %% "bijection-avro" % "0.9.5",
-      "com.typesafe.akka" %% "akka-actor" % "2.5.1",
-      "commons-io" % "commons-io" % "2.4",
       "log4j" % "log4j" % "1.2.17",
-      "org.scala-lang" % "scala-compiler" % appScalaVersion,
-      "org.scala-lang" % "scala-reflect" % appScalaVersion,
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "net.liftweb" %% "lift-json" % "3.0.1",
+      //
+      // Akka
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
+      "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       //
       // Kafka/Zookeeper
       "org.apache.avro" % "avro" % "1.8.1",

@@ -2,16 +2,17 @@ DESIGN NOTES
 
 1. Result set, row and column-level Modifiers
 
-    a. Modifier Proposals
+    a. Modifier Proposals - Implemented
 
-        WITH FORMAT CSV|PSV|TSV|JSON|AUTO?
+        WITH CSV|PSV|TSV|JSON FORMAT
+        WITH GZIP COMPRESSION
         WITH DELIMITER ','
         WITH QUOTED TEXT
         WITH QUOTED NUMBERS
 
     b. Text Formatting Proposals
 
-        Proposal 1: CSV/PSV Format
+        Proposal 1: CSV/PSV/TSV Format - Implemented
 
             SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             FROM 'companylist.csv'
@@ -22,7 +23,7 @@ DESIGN NOTES
 
             SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             FROM 'companylist.csv'
-            WITH ROWS AS PSV
+            WITH PSV FORMAT
             WHERE Industry = 'Oil/Gas Transmission'
 
         Proposal 2: JSON Format

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Company Lists",
+    "constraints": [
+      {
+        "prefix": "companylist"
+      },
+      {
+        "suffix": ".csv"
+      }
+    ],
+    "script": "companylist.sql"
+  },
+  {
+    "name": "Listing Activity",
+    "constraints": [
+      {
+        "prefix": "LISTING_ACTIVITY_"
+      }
+    ],
+    "script": "listingactivity.sql"
+  }
+]

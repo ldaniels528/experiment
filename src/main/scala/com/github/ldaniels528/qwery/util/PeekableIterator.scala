@@ -1,7 +1,5 @@
 package com.github.ldaniels528.qwery.util
 
-import scala.language.postfixOps
-
 /**
   * Peekable Iterator
   * @author lawrence.daniels@gmail.com

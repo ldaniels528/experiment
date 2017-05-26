@@ -13,16 +13,18 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord, RecordM
 case class KafkaOutputDevice(topic: String, config: JProperties) extends OutputDevice {
   private var producer: Option[KafkaProducer[Array[Byte], Array[Byte]]] = None
 
-  override def open(scope: Scope): Unit = {
-    producer = Option(new KafkaProducer(config))
-  }
-
   override def close(): Unit = {
     producer.foreach(_.close())
     producer = None
   }
 
+  override def open(scope: Scope): Unit = {
+    super.open(scope)
+    producer = Option(new KafkaProducer(config))
+  }
+
   override def write(record: Record): Option[JFuture[RecordMetadata]] = {
+    statsGen.update(records = 1, bytesRead = record.data.length)
     producer.map(_.send(new ProducerRecord(topic, Array[Byte](0), record.data)))
   }
 

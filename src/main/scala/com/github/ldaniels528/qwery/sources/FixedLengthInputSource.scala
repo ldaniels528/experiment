@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Row, Scope}
+import com.github.ldaniels528.qwery.ops.Row
 import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
 
 /**
@@ -21,10 +21,6 @@ case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) 
       }
     }
   }
-
-  override def open(scope: Scope): Unit = device.open(scope)
-
-  override def close(): Unit = device.close()
 
   private def extract(line: String, position: Int, width: Int) = {
     if (position + width <= line.length) line.substring(position, position + width)

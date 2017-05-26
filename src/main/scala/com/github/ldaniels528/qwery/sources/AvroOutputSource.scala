@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices._
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Hints, Row}
 import net.liftweb.json.Extraction.decompose
 import net.liftweb.json.JsonAST.compactRender
 import org.apache.avro.Schema
@@ -16,10 +16,6 @@ case class AvroOutputSource(device: OutputDevice, schema: Schema, hints: Option[
   extends OutputSource with AvroTranscoding {
   private implicit val formats = net.liftweb.json.DefaultFormats
   private var offset = 0L
-
-  override def close(): Unit = device.close()
-
-  override def open(scope: Scope): Unit = device.open(scope)
 
   override def write(row: Row): Unit = {
     offset += 1

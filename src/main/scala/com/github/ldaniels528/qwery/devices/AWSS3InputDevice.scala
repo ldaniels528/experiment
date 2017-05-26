@@ -18,8 +18,8 @@ import scala.io.{BufferedSource, Source}
   * AWS S3 File Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: String)
-  extends InputDevice {
+case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: String) extends InputDevice {
+  private lazy val log = LoggerFactory.getLogger(getClass)
   private var s3Client: Option[AmazonS3] = None
   private var s3Object: Option[S3Object] = None
   private var source: Option[BufferedSource] = None
@@ -31,6 +31,8 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
     s3Object.foreach(_.close())
     lines = Iterator.empty
   }
+
+  override def getSize: Option[Long] = None
 
   override def open(scope: Scope): Unit = {
     val accessKeyID = scope.env("AWS_ACCESS_KEY_ID")
@@ -46,9 +48,12 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
 
   override def read(): Option[Record] = {
     if (lines.hasNext) Option {
-      val line = lines.next()
+      val bytes = lines.next().getBytes()
+      statsGen.update(records = 1, bytesRead = bytes.length) foreach { stats =>
+        log.info(stats.toString)
+      }
       offset += 1
-      Record(line.getBytes(), offset)
+      Record(bytes, offset)
     } else None
   }
 

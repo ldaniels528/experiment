@@ -8,10 +8,11 @@ import scala.io.Source
   */
 trait InputDevice extends Device {
 
+  def getSize: Option[Long]
+
   def read(): Option[Record]
 
   def toIterator: Iterator[Record] = new Iterator[Record] {
-
     private var nextRecord_? : Option[Record] = read()
 
     override def hasNext: Boolean = nextRecord_?.nonEmpty
@@ -41,7 +42,7 @@ object InputDevice {
   implicit class SourceEnrichment(val source: Source) extends AnyVal {
 
     @inline
-    def getNonEmptyLines: Iterator[String] =  source.getLines().filter(_.trim.nonEmpty)
+    def getNonEmptyLines: Iterator[String] = source.getLines().filter(_.trim.nonEmpty)
 
   }
 
