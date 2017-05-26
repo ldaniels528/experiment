@@ -43,7 +43,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.2.4
+ Qwery CLI v0.2.5
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----

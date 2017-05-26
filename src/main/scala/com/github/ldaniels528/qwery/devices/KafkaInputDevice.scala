@@ -14,7 +14,7 @@ import scala.language.postfixOps
   * Kafka Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class KafkaInputDevice(topic: String, consumerProps: JProperties)
+case class KafkaInputDevice(topic: String, config: JProperties)
   extends InputDevice with AsyncInputDevice with RandomAccessInputDevice {
   private var consumer: Option[KafkaConsumer[String, Array[Byte]]] = None
   private var buffer: List[Record] = Nil
@@ -29,7 +29,7 @@ case class KafkaInputDevice(topic: String, consumerProps: JProperties)
   }
 
   override def open(scope: Scope): Unit = {
-    consumer = Option(new KafkaConsumer[String, Array[Byte]](consumerProps))
+    consumer = Option(new KafkaConsumer[String, Array[Byte]](config))
     consumer.foreach(_.subscribe(List(topic).asJava))
   }
 
@@ -56,7 +56,7 @@ case class KafkaInputDevice(topic: String, consumerProps: JProperties)
     consumer.foreach(_.seekToBeginning(partitions.map(new TopicPartition(topic, _)).asJava))
   }
 
-  override def seek(partition: Int, offset: Long): Unit = {
+  override def seek(offset: Long, partition: Int = 0): Unit = {
     consumer.foreach(_.seek(new TopicPartition(topic, partition), offset))
   }
 

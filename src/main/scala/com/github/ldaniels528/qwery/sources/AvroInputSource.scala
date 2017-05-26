@@ -42,7 +42,7 @@ case class AvroInputSource(device: InputDevice, schema: Schema, hints: Option[Hi
 }
 
 /**
-  * Avro Input Source
+  * Avro Input Source Companion
   * @author lawrence.daniels@gmail.com
   */
 object AvroInputSource extends InputSourceFactory {

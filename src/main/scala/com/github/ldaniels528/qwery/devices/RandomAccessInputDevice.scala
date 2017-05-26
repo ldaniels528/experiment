@@ -10,6 +10,6 @@ trait RandomAccessInputDevice extends InputDevice {
 
   def rewind(partitions: Seq[Int]): Unit
 
-  def seek(partition: Int, offset: Long): Unit
+  def seek(offset: Long, partition: Int): Unit
 
 }

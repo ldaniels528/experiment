@@ -3,19 +3,19 @@ package com.github.ldaniels528.qwery.actors
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import com.github.ldaniels528.qwery.actors.FileReadingActor.{DataReceived, EOF, ReadFile}
+import com.github.ldaniels528.qwery.actors.ResourceReadingActor.{DataReceived, EOF, ReadFile}
 import com.github.ldaniels528.qwery.ops.{RootScope, Row}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
 /**
-  * File Reading Actor
+  * Resource Reading Actor
   * @author lawrence.daniels@gmail.com
   */
-class FileReadingActor() extends Actor with ActorLogging {
+class ResourceReadingActor() extends Actor with ActorLogging {
   override def receive: Receive = {
     case ReadFile(pid, resource, recipient) =>
-      log.info(s"$pid: Reading file '$resource'")
+      log.info(s"$pid: Reading resource '$resource'")
       resource.getInputSource match {
         case Some(source) =>
           source.open(RootScope())
@@ -37,10 +37,10 @@ class FileReadingActor() extends Actor with ActorLogging {
 }
 
 /**
-  * File Reading Actor Companion
+  * Resource Reading Actor Companion
   * @author lawrence.daniels@gmail.com
   */
-object FileReadingActor {
+object ResourceReadingActor {
 
   case class ReadFile(pid: UUID, resource: DataResource, recipient: ActorRef)
 
