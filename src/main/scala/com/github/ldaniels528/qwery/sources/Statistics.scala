@@ -26,7 +26,7 @@ case class Statistics(totalRecords: Long,
   override def toString: String = {
     // generate the estimate complete time
     val pct = pctComplete.map(p => f"$p%.1f%%")
-    val etc = completionTime.map(t => f"${t / 60}%.0f hrs, ${t % 60}%.0f mins")
+    val etc = completionTime.map(_ / 60).map(t => f"${t / 60}%.0f hrs, ${t % 60}%.0f mins")
     val completion = if (pct.isEmpty && etc.isEmpty) "" else s" (${pct.getOrElse("N/A")} - ${etc.getOrElse("N/A")})"
 
     // return the statistics

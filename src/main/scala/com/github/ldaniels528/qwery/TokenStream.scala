@@ -19,7 +19,14 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
     this
   }
 
-  def is(text: => String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
+  def is(text: => String): Boolean = {
+    if (text.contains(" ")) {
+      val words = text.trim.split("[ ]").map(_.trim)
+      val mappings = words.zipWithIndex map { case (word, offset) => word -> peekAhead(offset) }
+      mappings.forall { case (word, token) => token.exists(_.is(word)) }
+    }
+    else peek.exists(_.text.equalsIgnoreCase(text))
+  }
 
   def matches(pattern: => String): Boolean = peek.exists(_.text.matches(pattern))
 

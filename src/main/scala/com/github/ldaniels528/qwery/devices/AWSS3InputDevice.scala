@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.devices
 
+import java.util.{Properties => JProperties}
 import java.io.InputStream
 
 import com.amazonaws.ClientConfiguration
@@ -18,7 +19,7 @@ import scala.io.{BufferedSource, Source}
   * AWS S3 File Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: String) extends InputDevice {
+case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: String, config: JProperties) extends InputDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var s3Client: Option[AmazonS3] = None
   private var s3Object: Option[S3Object] = None
@@ -35,8 +36,8 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
   override def getSize: Option[Long] = None
 
   override def open(scope: Scope): Unit = {
-    val accessKeyID = scope.env("AWS_ACCESS_KEY_ID")
-    val secretAccessKey = scope.env("AWS_SECRET_ACCESS_KEY")
+    val accessKeyID = config.getProperty("AWS_ACCESS_KEY_ID")
+    val secretAccessKey = config.getProperty("AWS_SECRET_ACCESS_KEY")
     val clientConfiguration = new ClientConfiguration()
     clientConfiguration.setSignerOverride("AWSS3V4SignerType")
     s3Client = Option(getS3Client(accessKeyID, secretAccessKey, regionName))

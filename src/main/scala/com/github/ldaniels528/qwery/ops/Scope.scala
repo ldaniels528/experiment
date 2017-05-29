@@ -9,29 +9,47 @@ import scala.collection.concurrent.TrieMap
 trait Scope {
   private lazy val functions = TrieMap[String, Function]()
   private lazy val variables = TrieMap[String, Variable]()
+  private lazy val views = TrieMap[String, View]()
 
+  /**
+    * Returns the row that scope is currently referencing
+    * @return a row of data
+    */
   def row: Row
 
+  /**
+    * Returns a column value by name
+    * @param name the name of the desired column
+    * @return the option of a value
+    */
   def get(name: String): Option[Any]
 
   /////////////////////////////////////////////////////////////////
   //    Functions
   /////////////////////////////////////////////////////////////////
 
+  /**
+    * Adds a function to the scope
+    * @param function the given function
+    */
   def +=(function: Function): Unit = functions(function.name) = function
 
+  /**
+    * Looks up a function by name
+    * @param name the name of the desired function
+    * @return an option of a [[Function function]]
+    */
   def lookupFunction(name: String): Option[Function] = functions.get(name)
 
   /////////////////////////////////////////////////////////////////
   //    Variables
   /////////////////////////////////////////////////////////////////
 
+  /**
+    * Adds a variable to the scope
+    * @param variable the given variable
+    */
   def +=(variable: Variable): Unit = variables(variable.name) = variable
-
-  def env(name: String): String = {
-    lookupVariable(name).flatMap(_.value).map(_.toString)
-      .getOrElse(throw new IllegalStateException(s"Environment variable '$name' is required"))
-  }
 
   /**
     * Expands a handle bars expression
@@ -55,6 +73,28 @@ trait Scope {
     sb.toString
   }
 
+  /**
+    * Looks up a variable by name
+    * @param name the name of the desired variable
+    * @return an option of a [[Variable variable]]
+    */
   def lookupVariable(name: String): Option[Variable] = variables.get(name)
+
+  /////////////////////////////////////////////////////////////////
+  //    Views
+  /////////////////////////////////////////////////////////////////
+
+  /**
+    * Adds a view to the scope
+    * @param view the given view
+    */
+  def +=(view: View): Unit = views(view.name) = view
+
+  /**
+    * Looks up a view by name
+    * @param name the name of the desired view
+    * @return an option of a [[View view]]
+    */
+  def lookupView(name: String): Option[View] = views.get(name)
 
 }

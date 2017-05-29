@@ -37,13 +37,16 @@ object QwerySQLGenerator {
   }
 
   private def makeSQL(executable: Executable): String = executable match {
+    case Assignment(variableRef, expression) => s"SET $variableRef = ${expression.toSQL}"
     case DataResource(path, hints) => toDataResource(path, hints)
+    case Declare(variableRef, typeName) => s"DECLARE $variableRef $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Insert(target, fields, source, append) => toInsert(target, fields, source, append)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
       toSelect(fields, source, condition, groupFields, orderedColumns, limit)
+    case View(name, query) => s"CREATE VIEW $name AS ${query.toSQL}"
     case unknown =>
       throw new IllegalArgumentException(s"Executable '$unknown' was unhandled")
   }
@@ -58,7 +61,7 @@ object QwerySQLGenerator {
     case Cast(expr, toType) => s"CAST(${expr.toSQL} AS $toType)"
     case Count(expr) => s"COUNT(${expr.toSQL})"
     case Concat(a, b) => s"${a.toSQL} || ${b.toSQL}"
-    case ConstantValue(value) => s"'$value'"
+    case ConstantValue(value) => toConstantValue(value)
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
     case NamedAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
@@ -91,6 +94,11 @@ object QwerySQLGenerator {
     otherwise.foreach(expr => sb.append(s" ELSE ${expr.toSQL}"))
     sb.append(" END")
     sb.toString()
+  }
+
+  private def toConstantValue(value: Any) = value.asInstanceOf[AnyRef] match {
+    case n: Number => n.toString
+    case s => s"'$s'"
   }
 
   private def toDataResource(path: String, hints: Option[Hints]) = {

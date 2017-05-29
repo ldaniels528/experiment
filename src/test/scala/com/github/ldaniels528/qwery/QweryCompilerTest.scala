@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery
 import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
-import com.github.ldaniels528.qwery.ops.builtins.{Case, Cast, Concat}
+import com.github.ldaniels528.qwery.ops.builtins._
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec
 
@@ -14,6 +14,32 @@ import org.scalatest.FunSpec
 class QweryCompilerTest extends FunSpec {
 
   describe("QweryCompiler") {
+
+    it("should support variable assignments") {
+      val sql = "SET @x = 1"
+      assert(QweryCompiler(sql) == Assignment(VariableRef("x"), 1))
+    }
+
+    it("should support variable declarations") {
+      val sql = "DECLARE @counter DOUBLE"
+      assert(QweryCompiler(sql) == Declare(VariableRef("counter"), "DOUBLE"))
+    }
+
+    it("should support CREATE VIEW statements") {
+      val sql =
+        """
+          |CREATE VIEW OilAndGas AS
+          |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
+      assert(QweryCompiler(sql) ==
+        View(
+          name = "OilAndGas",
+          query = Select(
+            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            source = Some(DataResource("companylist.csv")),
+            condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission")))))
+    }
 
     it("should support creating named aliases") {
       val sql = "SELECT 1234 AS number"

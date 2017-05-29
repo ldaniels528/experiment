@@ -8,6 +8,9 @@ case class Variable(name: String, var value: Option[Any] = None) extends NamedEx
 
   override def evaluate(scope: Scope): Option[Any] = value
 
-  def set(scope: Scope, expression: Expression): Unit = value = expression.evaluate(scope)
+  def set(scope: Scope, expression: Expression): Option[Any] = {
+    this.value = expression.evaluate(scope)
+    this.value
+  }
 
 }

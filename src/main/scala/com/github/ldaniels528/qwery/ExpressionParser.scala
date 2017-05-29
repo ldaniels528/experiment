@@ -140,7 +140,9 @@ trait ExpressionParser {
       // is it a special function?
       case ts if ts.nextIf("Cast") => parseCast(ts)
       // is it an all fields reference?
-      case ts if ts.nextIf("*") => Option(AllFields)
+      case ts if ts nextIf "*" => Option(AllFields)
+      // is it a variable?
+      case ts if ts nextIf "@" => Option(VariableRef(ts.next().text))
       // is it a quantity (e.g. "(2 + (5 * 2))")?
       case ts if ts.nextIf("(") =>
         val expr = parseExpression(ts)

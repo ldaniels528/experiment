@@ -20,7 +20,7 @@ class QweryCompiler {
     * @param query the given query string (e.g. "SELECT * FROM './companylist.csv'")
     * @return an [[Executable executable]]
     */
-  def compile(query: String): Executable = SQLTemplateParser.parseNext(TokenStream(query))
+  def compile(query: String): Executable = SQLLanguageParser.parseNext(TokenStream(query))
 
 }
 

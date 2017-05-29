@@ -7,7 +7,6 @@ import scala.collection.JavaConverters._
   * @author lawrence.daniels@gmail.com
   */
 case class RootScope() extends Scope {
-
   // import the environment variables
   System.getenv().asScala foreach { case (name, value) =>
     this += Variable(name = s"env.$name", value = Option(value))

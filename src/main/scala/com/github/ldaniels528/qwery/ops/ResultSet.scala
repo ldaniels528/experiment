@@ -14,3 +14,13 @@ case class ResultSet(rows: Iterator[Seq[Column]] = Iterator.empty, statistics: O
   override def next(): Row = rows.next()
 
 }
+
+/**
+  * Result Set Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object ResultSet {
+
+  def ok() = ResultSet(rows = Iterator(Seq("ROWS_AFFECTED" -> 1)))
+
+}

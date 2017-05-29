@@ -52,10 +52,9 @@ class StatisticsGenerator(var fileSize: Option[Long] = None) {
     val diff = (now - lastUpdatedTime).toDouble
     if (diff >= 10.seconds || force) {
       // compute the rates
-      val totalElapsedTime = (System.currentTimeMillis() - startTime) / 1000d
-      val batchElapsedTime = (System.currentTimeMillis() - lastUpdatedTime) / 1000d
-      val bytesPerSecond = if (force) totalBytesRead / totalElapsedTime else (totalBytesRead - batchBytesRead) / batchElapsedTime
-
+      val totalElapsedTime = (System.currentTimeMillis() - startTime) / 1000d + 0.0001
+      val batchElapsedTime = (System.currentTimeMillis() - lastUpdatedTime) / 1000d + 0.0001
+      val bytesPerSecond = totalBytesRead / totalElapsedTime
       // capture the statistics
       val statistics = Some(Statistics(
         totalRecords = totalRecords,

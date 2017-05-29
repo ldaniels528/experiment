@@ -20,8 +20,8 @@ class SQLTemplateParserTest extends FunSpec {
           |WHERE Industry = 'Oil/Gas Transmission'
           |LIMIT 5""".stripMargin
 
-      val templateParser = SQLTemplateParser(query)
-      val templateParams = templateParser.process("SELECT @{fields} FROM @source ?WHERE ?@!{condition} ?LIMIT ?@limit")
+      val templateParser = SQLLanguageParser(query)
+      val templateParams = templateParser.process("SELECT %E:fields FROM %a:source ?WHERE ?%c:condition ?LIMIT ?%a:limit")
       assert(templateParams == SQLTemplateParams(
         atoms = Map("source" -> "companylist.csv", "limit" -> "5"),
         conditions = Map("condition" -> (Field("Industry") === "Oil/Gas Transmission")),
@@ -37,8 +37,8 @@ class SQLTemplateParserTest extends FunSpec {
           |VALUES ('EMX', 'Basic Industries', 'Precious Metals', 0.828)""".stripMargin
 
       val tokenStream = TokenStream(TokenIterator(query))
-      val templateParser = new SQLTemplateParser(tokenStream)
-      val templateParams = templateParser.process("INSERT INTO @target ( @(fields) ) {{valueSet VALUES ( @{values} ) }}")
+      val templateParser = new SQLLanguageParser(tokenStream)
+      val templateParams = templateParser.process("INSERT INTO %a:target ( %F:fields ) {{valueSet VALUES ( %E:values ) }}")
       assert(templateParams == SQLTemplateParams(
         atoms = Map("target" -> "test3.csv"),
         fields = Map("fields" -> List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)),

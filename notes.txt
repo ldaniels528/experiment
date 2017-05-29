@@ -77,4 +77,9 @@ DESIGN NOTES
             )
             WHERE Industry = 'Oil/Gas Transmission'
 
-2.
+2. VIEWs
+
+CREATE VIEW OilAndGas AS
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission';
