@@ -166,15 +166,15 @@ class QweryTest extends FunSpec {
       val query = QweryCompiler("DESCRIBE 'companylist.csv'")
       val results = query.execute(scope).toSeq
       assert(results == Vector(
-        List("COLUMN" -> "Symbol", "TYPE" -> "String", "SAMPLE" -> "XXII"),
-        List("COLUMN" -> "Name", "TYPE" -> "String", "SAMPLE" -> "22nd Century Group, Inc"),
-        List("COLUMN" -> "LastSale", "TYPE" -> "String", "SAMPLE" -> "1.4"),
-        List("COLUMN" -> "MarketCap", "TYPE" -> "String", "SAMPLE" -> "126977358.2"),
-        List("COLUMN" -> "ADR TSO", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "IPOyear", "TYPE" -> "String", "SAMPLE" -> "n/a"),
-        List("COLUMN" -> "Sector", "TYPE" -> "String", "SAMPLE" -> "Consumer Non-Durables"),
-        List("COLUMN" -> "Industry", "TYPE" -> "String", "SAMPLE" -> "Farming/Seeds/Milling"),
-        List("COLUMN" -> "Summary Quote", "TYPE" -> "String", "SAMPLE" -> "http://www.nasdaq.com/symbol/xxii")
+        List("Column" -> "Symbol", "Type" -> "String", "Sample" -> "XXII"),
+        List("Column" -> "Name", "Type" -> "String", "Sample" -> "22nd Century Group, Inc"),
+        List("Column" -> "LastSale", "Type" -> "String", "Sample" -> "1.4"),
+        List("Column" -> "MarketCap", "Type" -> "String", "Sample" -> "126977358.2"),
+        List("Column" -> "ADR TSO", "Type" -> "String", "Sample" -> "n/a"),
+        List("Column" -> "IPOyear", "Type" -> "String", "Sample" -> "n/a"),
+        List("Column" -> "Sector", "Type" -> "String", "Sample" -> "Consumer Non-Durables"),
+        List("Column" -> "Industry", "Type" -> "String", "Sample" -> "Farming/Seeds/Milling"),
+        List("Column" -> "Summary Quote", "Type" -> "String", "Sample" -> "http://www.nasdaq.com/symbol/xxii")
       ))
     }
 

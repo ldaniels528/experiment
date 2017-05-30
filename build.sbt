@@ -3,12 +3,13 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.3.2"
+val apiVersion = "0.3.3"
 val appScalaVersion = "2.12.2"
 
 val akkaVersion = "2.5.2"
+val curatorVersion = "3.1.0"
 val kafkaVersion = "0.10.2.1"
-val apacheCurator = "3.1.0"
+val slf4jVersion = "1.7.25"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
 
@@ -37,7 +38,7 @@ lazy val cli = (project in file("./app/cli")).
       "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.scala-lang" % "jline" % "2.11.0-M3",
-      "org.slf4j" % "slf4j-api" % "1.7.25"
+      "org.slf4j" % "slf4j-api" % slf4jVersion
     ))
 
 lazy val etl = (project in file("./app/etl")).
@@ -64,7 +65,7 @@ lazy val etl = (project in file("./app/etl")).
     libraryDependencies ++= Seq(
       "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1"
     ))
 
@@ -84,7 +85,7 @@ lazy val core = (project in file(".")).
       "com.twitter" %% "bijection-avro" % "0.9.5",
       "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",
       //
       // Akka
@@ -94,8 +95,8 @@ lazy val core = (project in file(".")).
       //
       // Kafka/Zookeeper
       "org.apache.avro" % "avro" % "1.8.1",
-      "org.apache.curator" % "curator-framework" % apacheCurator exclude("org.slf4j", "slf4j-log4j12"),
-      "org.apache.curator" % "curator-test" % apacheCurator exclude("org.slf4j", "slf4j-log4j12"),
+      "org.apache.curator" % "curator-framework" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
+      "org.apache.curator" % "curator-test" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
       "org.apache.kafka" %% "kafka" % kafkaVersion,
       "org.apache.kafka" % "kafka-clients" % kafkaVersion
     ))

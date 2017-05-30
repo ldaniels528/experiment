@@ -25,9 +25,11 @@ case class GE(a: Expression, b: Expression) extends Condition {
 }
 
 case class LIKE(a: Expression, b: Expression) extends Condition {
-  override def isSatisfied(scope: Scope): Boolean = a match {
-    case ConstantValue(s) => b.getAsString(scope).exists(s.toString.matches)
-    case _ => false
+  override def isSatisfied(scope: Scope): Boolean = {
+    (for {
+      string <- a.getAsString(scope)
+      pattern <- b.getAsString(scope).map(_.replaceAllLiterally("%", ".*"))
+    } yield string.matches(pattern)).contains(true)
   }
 }
 

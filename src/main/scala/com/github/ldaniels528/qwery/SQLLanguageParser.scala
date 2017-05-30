@@ -4,7 +4,7 @@ import java.io.FileInputStream
 import java.util.Properties
 
 import com.github.ldaniels528.qwery.SQLLanguageParser.SLPExtensions
-import com.github.ldaniels528.qwery.ops.{Assignment, Declare, Describe, Executable, Expression, Field, Hints, Insert, InsertValues, OrderedColumn, Select, VariableRef, View}
+import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
@@ -360,6 +360,7 @@ object SQLLanguageParser {
       case ts if ts is "INSERT" => parseInsert(ts)
       case ts if ts is "SELECT" => parseSelect(ts)
       case ts if ts is "SET" => parseSet(ts)
+      case ts if ts is "SHOW" => parseShow(ts)
       case ts => ts.die("Unexpected end of line")
     }
   }
@@ -382,8 +383,9 @@ object SQLLanguageParser {
     */
   private def parseDeclare(ts: TokenStream): Declare = {
     val params = SQLLanguageParser(ts).process("DECLARE %v:name %a:type")
-    // TODO validate the declared type
-    Declare(variableRef = params.variables("name"), `type` = params.atoms("type"))
+    val typeName = params.atoms("type")
+    if (!Expression.isValidType(typeName)) ts.die(s"Invalid type '$typeName'")
+    Declare(variableRef = params.variables("name"), typeName = typeName)
   }
 
   /**
@@ -564,7 +566,24 @@ object SQLLanguageParser {
     Assignment(variableRef = params.variables("name"), value = params.assignables("expression"))
   }
 
-  implicit class SLPExtensions(val tag: String) extends AnyVal {
+  /**
+    * Parses a SHOW command
+    * @example {{{ SHOW VIEWS }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return a [[Show executable]]
+    */
+  private def parseShow(ts: TokenStream): Show = {
+    val params = SQLLanguageParser(ts).process("SHOW %a:entityType")
+    val entityType = params.atoms("entityType")
+    if (!Show.isValidEntityType(entityType)) ts.die(s"Invalid entity type '$entityType'")
+    Show(entityType)
+  }
+
+  /**
+    * SQL Language Parser Extensions
+    * @param tag the given tag
+    */
+  final implicit class SLPExtensions(val tag: String) extends AnyVal {
 
     /**
       * Extracts the chooser parameters (e.g. "%C(mode,INTO,OVERWRITE)" => ["mode", "INTO", "OVERWRITE"])

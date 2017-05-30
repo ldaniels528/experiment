@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
+import java.io.File
+
 import scala.collection.concurrent.TrieMap
 
 /**
@@ -22,7 +24,18 @@ trait Scope {
     * @param name the name of the desired column
     * @return the option of a value
     */
-  def get(name: String): Option[Any]
+  def get(name: String): Option[Any] = row.find(_._1.equalsIgnoreCase(name)).map(_._2)
+
+  /**
+    * Returns the files in the currently directory
+    * @return a list of files
+    */
+  def getFiles(file: File = new File(".")): List[File] = {
+    file match {
+      case f if f.isDirectory => f.listFiles().flatMap(getFiles).toList
+      case f => f :: Nil
+    }
+  }
 
   /////////////////////////////////////////////////////////////////
   //    Functions
@@ -33,6 +46,12 @@ trait Scope {
     * @param function the given function
     */
   def +=(function: Function): Unit = functions(function.name) = function
+
+  /**
+    * Returns the collection of functions tied to this scope
+    * @return a collection of functions
+    */
+  def getFunctions: Iterable[Function] = functions.values
 
   /**
     * Looks up a function by name
@@ -74,6 +93,12 @@ trait Scope {
   }
 
   /**
+    * Returns the collection of variables tied to this scope
+    * @return a collection of variables
+    */
+  def getVariables: Iterable[Variable] = variables.values
+
+  /**
     * Looks up a variable by name
     * @param name the name of the desired variable
     * @return an option of a [[Variable variable]]
@@ -89,6 +114,12 @@ trait Scope {
     * @param view the given view
     */
   def +=(view: View): Unit = views(view.name) = view
+
+  /**
+    * Returns the collection of views tied to this scope
+    * @return a collection of views
+    */
+  def getViews: Iterable[View] = views.values
 
   /**
     * Looks up a view by name

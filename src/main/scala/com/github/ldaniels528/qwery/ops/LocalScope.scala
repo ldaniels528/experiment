@@ -7,9 +7,8 @@ import com.github.ldaniels528.qwery.util.OptionHelper._
   * @author lawrence.daniels@gmail.com
   */
 case class LocalScope(parent: Scope, row: Row) extends Scope {
-  private lazy val mapping = Map(row: _*)
 
-  override def get(name: String): Option[Any] = mapping.get(name) ?? parent.get(name)
+  override def get(name: String): Option[Any] = super.get(name) ?? parent.get(name)
 
   override def lookupFunction(name: String): Option[Function] = {
     super.lookupFunction(name) ?? parent.lookupFunction(name)

@@ -18,6 +18,7 @@ case class Cast(expression: Expression, toType: String) extends InternalFunction
       case s if s.equalsIgnoreCase("Long") => expression.getAsLong(scope)
       case s if s.equalsIgnoreCase("Short") => expression.getAsShort(scope)
       case s if s.equalsIgnoreCase("String") => expression.getAsString(scope)
+      case s if s.equalsIgnoreCase("UUID") => expression.getAsUUID(scope)
       case theType =>
         throw new IllegalStateException(s"Invalid conversion type $theType")
     }

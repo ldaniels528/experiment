@@ -1,13 +1,22 @@
 Qwery
 ===============
-Qwery exposes a SQL-like query language to extract structured data from a file or REST URL. Qwery can be used as
-an SDK or as a CLI application.
+Qwery exposes a powerful SQL-like query language to extract structured data from files (file system, HTTP, S3), 
+Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or library/SDK.
 
 ### Table of Contents
 
 * <a href="#motivation">Motivation</a>
 * <a href="#features">Features</a>
-* <a href="#development">Build Requirements</a>
+* <a href="#development">Development</a>
+    * <a href="#build-requirements">Build Requirements</a>
+    * <a href="#build-application">Building the applications</a>
+* <a href="#sql-commands">SQL Syntax and Grammar</a>
+    * <a href="#select">SELECT statement</a>
+    * <a href="#views">VIEWS</a>
+    * <a href="#insert">INSERT statement</a>
+    * <a href="#set">SET statement</a> 
+    * <a href="#show">SHOW statement</a>  
+    * <a href="#describe">DESCRIBE statement</a>
 * <a href="#etl">Qwery ETL</a>
     * <a href="#how-it-works">How it works</a>
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
@@ -16,12 +25,7 @@ an SDK or as a CLI application.
         * <a href="#building-etl">Building and running the ETL</a>
 * <a href="#repl">Qwery REPL</a>
     * <a href="#repl_start">Start the REPL</a>
-    * <a href="#describe">DESCRIBE the layout of a local file</a>
-    * <a href="#describe-select">DESCRIBE a SELECT query</a>
-    * <a href="#select-count-1">Count the number of lines of a file</a> 
-    * <a href="#select-count-2">Count lines of a file using criteria</a>
-    * <a href="#views">Creating and Using Views</a>
-* <a href="sdk">Qwery SDK</a>
+* <a href="#sdk">Qwery SDK</a>
 * <a href="#faq">Frequently Asked Questions (FAQ)</a>
 
 <a name="motivation"></a>
@@ -49,17 +53,444 @@ Additionally, Qwery has three modes of operation:
 * Library/SDK
 
 <a name="development"></a>
-### Build Requirements
+### Development
+
+<a name="build-requirements"></a>
+#### Build Requirements
 
 * [SBT v0.13.15](http://www.scala-sbt.org/download.html)
+
+<a name="build-application"></a>
+#### Building the applications
+
+This project contains of two distinct applications: the ETL and the REPL.
+
+To build the ETL:
+
+```bash
+sbt "project etl" clean assembly
+```
+
+```text
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar ...
+[info] Done packaging.
+[info] Done packaging.
+```
+
+To build the REPL:
+
+```bash
+sbt "project cli" clean assembly
+```
+
+```text
+[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.3.bin.jar ...
+[info] Done packaging.
+[info] Done packaging.
+```
 
 ### Running the tests
 
 ```bash
-$ sbt test
+$ sbt clean test
+```
+If you wish, you can also generate the code coverage report:
+
+```bash
+sbt clean coverage test coverageReport 
+```
+```text
+[info] Generating scoverage reports...
+[info] Written Cobertura report [/Users/ldaniels/git/qwery/target/scala-2.12/coverage-report/cobertura.xml]
+[info] Written XML coverage report [/Users/ldaniels/git/qwery/target/scala-2.12/scoverage-report/scoverage.xml]
+[info] Written HTML coverage report [/Users/ldaniels/git/qwery/target/scala-2.12/scoverage-report/index.html]
+[info] Statement coverage.: 54.66%
+[info] Branch coverage....: 65.79%
+[info] Coverage reports completed
+[info] All done. Coverage was [54.66%]
 ```
 
-<a href="#etl"></a>
+<a name="sql-commands"></a>
+### SQL Syntax and Grammar
+
+Qwery currently supports a powerful, but limited set of SQL statements, including:
+* CREATE VIEW - used to create views.
+* DESCRIBE - shows the layout/structure of files or query results.
+* INSERT - inserts (appends or overwrites) files, Kafka topics, etc.
+* SELECT - executes queries 
+* SET - used to sets the value of a variable
+* SHOW - returns lists of files, variables (in the current scope) or views (in the current session)
+
+<a name="select"></a>
+#### SELECT statement
+
+The _SELECT_ statement works as you would expect with a traditional SQL-like language, with one important difference...
+You can query structure files.
+
+Count the number of (non-blank) lines in the file:
+
+```sql
+SELECT COUNT(*) FROM './companylist.csv';
+```
+```text
++ ---------- +
+| SYQWYsxb   |
++ ---------- +
+| 359        |
++ ---------- +
+```
+
+Count the number of lines that match a given set of criteria in the file:
+
+```sql
+SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
+```
+```text
++ ---------- +
+| pUREGxhj   |
++ ---------- +
+| 44         |
++ ---------- +
+```
+
+Sum values (just like you normally do with SQL) in the file:
+
+```sql
+SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
+```
+```text
++ --------------- +
+| total           |
++ --------------- +
+| 77.1087         |
++ --------------- +
+```
+
+Type-casting and column name aliases are supported:
+
+```sql
+SELECT CAST('1234' AS Double) AS number;
+```
+```text
++ -------- + 
+| number   | 
++ -------- + 
+| 1234.0   | 
++ -------- + 
+```
+
+Select fields from the file using criteria (WHERE clause):
+
+```sql
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+```
+```text
++ -------------------------------------------------------------------------------- +
+| Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
++ -------------------------------------------------------------------------------- +
+| TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
+| WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
++ -------------------------------------------------------------------------------- +
+```
+
+Aggregate data via GROUP BY:
+
+```sql
+SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
+```
+```text
++ --------------------------------- + 
+| Sector                 Securities | 
++ --------------------------------- + 
+| Consumer Durables      4          | 
+| Consumer Non-Durables  13         | 
+| Energy                 30         | 
+| Consumer Services      27         | 
+| Transportation         1          | 
+| n/a                    120        | 
+| Health Care            48         | 
+| Basic Industries       44         | 
+| Public Utilities       11         | 
+| Capital Goods          24         | 
+| Finance                12         | 
+| Technology             20         | 
+| Miscellaneous          5          | 
++ --------------------------------- + 
+```
+
+CASE-WHEN is also supported
+
+```sql
+SELECT 
+CASE 'Hello World'
+ WHEN 'HelloWorld' THEN 'Found 1'
+ WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
+ ELSE 'Not Found'
+END;
+```       
+```text
++ ---------- +
+| JSOdavyb   |
++ ---------- +
+| Found 2    |
++ ---------- +
+```
+
+<a name="views"></a>
+#### VIEWS
+
+Creating a view works the same as with traditional RDBMSes, with one important difference, views are not persistent. 
+In Qwery, views are tied to the current session; thus, one you exit the application, the view no longer exists.
+
+```sql
+CREATE VIEW 'OilAndGas' AS
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission';
+``` 
+```text  
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 1               |
++ --------------- +      
+``` 
+
+Now you can query results from the view:
+
+```sql
+SELECT * FROM 'OilAndGas';
+``` 
+```text
++ ------------------------------------------------------------------------------------------------------------------------------ +
+| Symbol  Name                                       Sector            Industry              Summary Quote                       |
++ ------------------------------------------------------------------------------------------------------------------------------ +
+| CQH     Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqh    |
+| CQP     Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqp    |
+| LNG     Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/lng    |
+| EGAS    Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/egas   |
++ ------------------------------------------------------------------------------------------------------------------------------ +
+```
+
+<a name="insert"></a>
+#### INSERT statement
+
+The _INSERT_ statement behaves very much like its RDBMS counterparts, as you can directly insert collections
+of values, or insert the results of a query.
+
+Copy a portion of one file to another (appending the target):
+
+```sql
+INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+WHERE Industry = 'Homebuilding';
+``` 
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 1               |
++ --------------- +
+```
+
+Copy a portion of one file to another (overwriting the target):
+
+```sql
+INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
+WHERE Industry = 'Precious Metals';
+``` 
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 44              |
++ --------------- +
+```
+
+Moreover, _INSERT_ supports the notion of hints. You can provide "hints" to the compiler about the format you want to 
+read or write:
+
+```sql
+INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WITH CSV FORMAT
+```
+
+The above statement reads: retrieve records from the "companylist.csv" CSV file and write them to the "companylist.json" 
+file in JSON format. 
+
+Now, in this case, because the file extensions provide hints to Qwery about the format of the file, we could omit the 
+explicit hints as follows:
+
+```sql
+INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry)
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+```
+
+The two _INSERT_ statements above are functionally identical.
+
+*NOTE*: When processing files via the ETL module, it is recommend to provide hints as to the input and output formats.
+
+<a name="set"></a>
+#### SET statement
+
+The _SET_ statement is used to set the value or a variable. 
+*NOTE* You must declare the variable prior to using it.
+
+```sql
+DECLARE @myVariable DOUBLE
+```
+
+You can set simple constant values:
+
+```sql
+SET @myVariable = 1
+```
+
+```sql
+SET @myVariable = 'Hello World'
+```
+
+You can also set values from a result set:
+
+```sql
+SET @myVariable = (SELECT 1)
+```
+
+To display the contents of a variable, just _SELECT_ it.
+
+```sql
+SELECT @myVariable
+```
+
+<a name="show"></a>
+#### SHOW statement
+
+The _SHOW_ statement is used to retrieve:
+* lists of files in the current directory (`SHOW FILES`)
+* variables in the current scope (`SHOW VARIABLES`) 
+* or, views defined within the current session (`SHOW VIEWS`)
+
+Consider the following examples:
+
+```sql
+SHOW FILES
+```
+```text
++ ----------------------------------------------------------------------------------------------------------------- +
+| Name                        Size   LastModified           Path                                                    |
++ ----------------------------------------------------------------------------------------------------------------- +
+| awssdk_config_default.json  4058   05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/app/cli/target/streams/$...   |
+| endpoints.json              50843  05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/app/cli/target/streams/$...   |
+| awssdk_config_default.json  4058   05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/app/etl/target/streams/$...   |
+| endpoints.json              50843  05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/app/etl/target/streams/$...   |
+| companylist.csv             50166  04/29/17 05:23:22 PDT  /Users/ldaniels/git/qwery                               |
+| companylist.csv             50166  04/29/17 05:23:22 PDT  /Users/ldaniels/git/qwery/example/archive/2017/05/...   |
+| companylist.json            57070  05/29/17 09:57:35 PDT  /Users/ldaniels/git/qwery/example/archive/2017/05/...   |
+| pixall-v5.avsc.json         12805  05/25/17 10:02:07 PDT  /Users/ldaniels/git/qwery/example/config                |
+| triggers.json               349    05/30/17 03:09:49 PDT  /Users/ldaniels/git/qwery/example/config                |
+| awssdk_config_default.json  4058   05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/target/streams/$global/a...   |
+| endpoints.json              50843  05/16/17 01:33:18 PDT  /Users/ldaniels/git/qwery/target/streams/$global/a...   |
+| test1.csv                   3003   05/30/17 03:43:27 PDT  /Users/ldaniels/git/qwery                               |
+| test2.csv                   3837   05/30/17 03:43:28 PDT  /Users/ldaniels/git/qwery                               |
+| test3.json                  6863   05/30/17 03:43:28 PDT  /Users/ldaniels/git/qwery                               |
++ ----------------------------------------------------------------------------------------------------------------- +
+```
+
+Like all other commands that return a result set, it's results are composable (can be used as sub-queries). 
+
+```sql
+SELECT * FROM (SHOW FILES) WHERE Name LIKE '%.csv';
+```
+```text
++ ------------------------------------------------------------------------------------------------------ +
+| Name             Size   LastModified           Path                                                    |
++ ------------------------------------------------------------------------------------------------------ +
+| companylist.csv  50166  04/29/17 05:23:22 PDT  /Users/ldaniels/git/qwery                               |
+| companylist.csv  50166  04/29/17 05:23:22 PDT  /Users/ldaniels/git/qwery/example/archive/2017/05/...   |
+| test1.csv        3003   05/30/17 03:43:27 PDT  /Users/ldaniels/git/qwery                               |
+| test2.csv        3837   05/30/17 03:43:28 PDT  /Users/ldaniels/git/qwery                               |
++ ------------------------------------------------------------------------------------------------------ +
+```
+
+```sql
+DESCRIBE (SELECT * FROM (SHOW FILES) WHERE Name LIKE '%.csv');
+```
+```text
++ ------------------------------------------------- +
+| Column        Type    Sample                      |
++ ------------------------------------------------- +
+| Name          String  companylist.csv             |
+| Size          Long    50166                       |
+| LastModified  Date    04/29/17 05:23:22 PDT       |
+| Path          String  /Users/ldaniels/git/qwery   |
++ ------------------------------------------------- +
+```
+
+<a name="describe"></a>
+#### DESCRIBE statements
+
+The _DESCRIBE_ statement is used to display the structure of a result. 
+
+As such, it can be used to "describe" the layout of a local file:
+
+```sql
+DESCRIBE './companylist.csv';
+```
+```text
++ --------------------------------------------------------------------------------------- +
+| Column         Type    Sample                                                           |
++ --------------------------------------------------------------------------------------- +
+| Symbol         String  ABE                                                              |
+| Name           String  Aberdeen Emerging Markets Smaller Company Opportunities Fund I   |
+| LastSale       String  13.63                                                            |
+| MarketCap      String  131446834.05                                                     |
+| ADR TSO        String  n/a                                                              |
+| IPOyear        String  n/a                                                              |
+| Sector         String  n/a                                                              |
+| Industry       String  n/a                                                              |
+| Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 |
++ --------------------------------------------------------------------------------------- +
+```
+
+And as you would imagine, you can "describe" the result of a query:
+
+```sql
+DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM 'companylist.csv');
+```
+```text
++ -------------------------------------------- +
+| Column     Type    Sample                    |
++ -------------------------------------------- +
+| Symbol     String  XXII                      |
+| Name       String  22nd Century Group, Inc   |
+| Sector     String  Consumer Non-Durables     |
+| Industry   String  Farming/Seeds/Milling     |
+| LastSale   Double  1.4                       |
+| MarketCap  Double  1.269773582E8             |
++ -------------------------------------------- +
+```
+
+In fact, you can "describe" any result:
+
+```sql
+DESCRIBE (SHOW FILES);
+```
+```text
++ ------------------------------------------------- +
+| Column        Type    Sample                      |
++ ------------------------------------------------- +
+| Name          String  companylist.csv             |
+| Size          Long    50166                       |
+| LastModified  Date    04/29/17 05:23:22 PDT       |
+| Path          String  /Users/ldaniels/git/qwery   |
++ ------------------------------------------------- +
+```
+
+<a name="etl"></a>
 ### Qwery ETL
 
 <a name="how-it-works"></a>
@@ -168,11 +599,14 @@ And here's an example of the output file:
 <a name="file-archival"></a>
 ##### File Archival
 
-By convention, on a file has been processed, Qwery stores the file in $QWERY_HOME/archive/_yyyy_/_mm_/_dd_/_hhmmss_/ where: 
+By convention, on a file has been processed, Qwery stores the file in $QWERY_HOME/archive/_yyyy_/_mm_/_dd_/_hhmmss_/_pid_/ where: 
 * _yyyy_ is the 4-digit current year (e.g. 2017)
 * _mm_ is the 2-digit current month (e.g. 05)
 * _dd_ is the 2-digit current day of the month (e.g. 28)
 * _hhmmss_ is the 6-digit current time (e.g. 061107)
+* _pid_ is the unique processing ID assigned to the ETL job (e.g. "9bfc2e45-92bd-4fa4-b618-84ba554be1f8")
+
+Example: example/archive/2017/05/28/061107/9bfc2e45-92bd-4fa4-b618-84ba554be1f8/companylist.csv
 
 <a name="building-etl"></a>
 ### Building and running the ETL
@@ -188,8 +622,8 @@ After the compilation completes, you'll see a message like:
 ```text
 [info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
 [info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.2.bin.jar ...
-[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.2.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.3.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -197,7 +631,7 @@ After the compilation completes, you'll see a message like:
 Now, you can execute the ETL distributable:
 
 ```bash
-~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.2.bin.jar
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar
 ```
 
 *NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
@@ -220,7 +654,7 @@ Once it's up and running, it should look something like the following:
 ```text
 [info] Running com.github.ldaniels528.qwery.etl.QweryETL 
 
- Qwery ETL v0.2.6
+ Qwery ETL v0.3.3
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -246,7 +680,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.3.2
+ Qwery CLI v0.3.3
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -259,212 +693,14 @@ LIMIT 5;
 Using UNIXCommandPrompt for input.
 ```
 
-<a name="describe"></a>
-##### DESCRIBE the layout of a local file:
-
-```text
-[1]> DESCRIBE './companylist.csv';
-
-+ --------------------------------------------------------------------------------------- +
-| COLUMN         TYPE    SAMPLE                                                           |
-+ --------------------------------------------------------------------------------------- +
-| Symbol         String  ABE                                                              |
-| Name           String  Aberdeen Emerging Markets Smaller Company Opportunities Fund I   |
-| LastSale       String  13.63                                                            |
-| MarketCap      String  131446834.05                                                     |
-| ADR TSO        String  n/a                                                              |
-| IPOyear        String  n/a                                                              |
-| Sector         String  n/a                                                              |
-| Industry       String  n/a                                                              |
-| Summary Quote  String  http://www.nasdaq.com/symbol/abe                                 |
-+ --------------------------------------------------------------------------------------- +
-```
-
-<a name="describe-select"></a>
-##### DESCRIBE a SELECT query
-
-```text
-[2]> DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM 'companylist.csv');
-
-+ -------------------------------------------- +
-| COLUMN     TYPE    SAMPLE                    |
-+ -------------------------------------------- +
-| Symbol     String  XXII                      |
-| Name       String  22nd Century Group, Inc   |
-| Sector     String  Consumer Non-Durables     |
-| Industry   String  Farming/Seeds/Milling     |
-| LastSale   Double  1.4                       |
-| MarketCap  Double  1.269773582E8             |
-+ -------------------------------------------- +
-```
-
-<a name="select-count-1"></a>
-##### Count the number of (non-blank) lines in the file:
-
-```text
-[3]> SELECT COUNT(*) FROM './companylist.csv';
-
-+ ---------- +
-| SYQWYsxb   |
-+ ---------- +
-| 359        |
-+ ---------- +
-```
-
-<a name="select-count-2"></a>
-##### Count the number of lines that match a given set of criteria in the file:
-
-```text
-[4]> SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
-
-+ ---------- +
-| pUREGxhj   |
-+ ---------- +
-| 44         |
-+ ---------- +
-```
-
-##### Sum values (just like you normally do with SQL) in the file:
-
-```text
-[5]> SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
-
-+ --------------- +
-| total           |
-+ --------------- +
-| 77.1087         |
-+ --------------- +
-```
-
-##### Type-casting and column name aliases are supported:
-
-```text
-[6]>  SELECT CAST('1234' AS Double) AS number
-
-+ -------- + 
-| number   | 
-+ -------- + 
-| 1234.0   | 
-+ -------- + 
-```
-
-##### Select fields from the file using criteria:
-
-```text
-[7]> SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
-
-+ -------------------------------------------------------------------------------- +
-| Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
-+ -------------------------------------------------------------------------------- +
-| TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
-| WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
-+ -------------------------------------------------------------------------------- +
-```
-
-##### Aggregating data via GROUP BY
-
-```text
-[8]> SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
-
-+ --------------------------------- + 
-| Sector                 Securities | 
-+ --------------------------------- + 
-| Consumer Durables      4          | 
-| Consumer Non-Durables  13         | 
-| Energy                 30         | 
-| Consumer Services      27         | 
-| Transportation         1          | 
-| n/a                    120        | 
-| Health Care            48         | 
-| Basic Industries       44         | 
-| Public Utilities       11         | 
-| Capital Goods          24         | 
-| Finance                12         | 
-| Technology             20         | 
-| Miscellaneous          5          | 
-+ --------------------------------- + 
-```
-
-##### CASE-WHEN is also supported
-
-```text
-[9]> SELECT
-       CASE 'Hello World'
-         WHEN 'HelloWorld' THEN 'Found 1'
-         WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
-         ELSE 'Not Found'
-       END;
-
-+ ---------- +
-| JSOdavyb   |
-+ ---------- +
-| Found 2    |
-+ ---------- +
-```
-
-<a name="views"></a>
-##### Creating and Using Views
-
-```text
-[10]> CREATE VIEW 'OilAndGas' AS
-      SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-      FROM 'companylist.csv'
-      WHERE Industry = 'Oil/Gas Transmission';
-      
-+ --------------- +
-| ROWS_AFFECTED   |
-+ --------------- +
-| 1               |
-+ --------------- +      
-
-[11]> SELECT * FROM 'OilAndGas';
-
-+ ------------------------------------------------------------------------------------------------------------------------------ +
-| Symbol  Name                                       Sector            Industry              Summary Quote                       |
-+ ------------------------------------------------------------------------------------------------------------------------------ +
-| CQH     Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqh    |
-| CQP     Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqp    |
-| LNG     Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/lng    |
-| EGAS    Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/egas   |
-+ ------------------------------------------------------------------------------------------------------------------------------ +
-```
-
-*NOTE:* Views are not persistent.
-
-##### Copy a portion of one file to another (appending the target)
-
-```text
-[12]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
-      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-      WHERE Industry = 'Homebuilding'
-
-+ --------------- +
-| ROWS_INSERTED   |
-+ --------------- +
-| 1               |
-+ --------------- +
-```
-
-##### Copy a portion of one file to another (overwriting the target)
-
-```text
-[13]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
-      SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-      WHERE Industry = 'Precious Metals'
-
-+ --------------- +
-| ROWS_INSERTED   |
-+ --------------- +
-| 44              |
-+ --------------- +
-```
+From here you can input statements and queries. Just remember to end this with a semi-colon (;).
 
 <a name="sdk"></a>
 ### Qwery SDK
 
 Qwery can also be used as a Library/SDK.
 
-##### Let's start with a local file (./companylist.csv)
+Let's start with a local file (./companylist.csv)
 
 ```csv
 "Symbol","Name","LastSale","MarketCap","ADR TSO","IPOyear","Sector","Industry","Summary Quote",
@@ -480,7 +716,7 @@ Qwery can also be used as a Library/SDK.
 .
 ```
 
-##### Let's examine the columns and values of the file
+Let's examine the columns and values of the file
 
 ```scala
 import com.github.ldaniels528.qwery._
@@ -497,11 +733,11 @@ val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 new Tabular().transform(results) foreach println    
 ```
 
-##### The Results
+The Results
 
 ```text
 + --------------------------------------------------------------------------------------- + 
-| COLUMN         TYPE    SAMPLE                                                           | 
+| Column         Type    Sample                                                           | 
 + --------------------------------------------------------------------------------------- + 
 | Sector         String  n/a                                                              | 
 | Name           String  Aberdeen Emerging Markets Smaller Company Opportunities Fund I   | 
@@ -515,7 +751,7 @@ new Tabular().transform(results) foreach println
 + --------------------------------------------------------------------------------------- + 
 ```
 
-##### Execute a Query against thr local file
+Execute a Query against thr local file
 
 ```scala
 import com.github.ldaniels528.qwery._
@@ -536,7 +772,7 @@ val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 new Tabular().transform(results) foreach println
 ```
 
-##### The Results
+The Results
 
 ```text
 + ------------------------------------------------------------------------------------------------ + 
@@ -547,7 +783,7 @@ new Tabular().transform(results) foreach println
 + ------------------------------------------------------------------------------------------------ + 
 ```
 
-##### Or execute a Query against a REST-ful endpoint
+Or execute a Query against a REST-ful endpoint
 
 ```scala
 import com.github.ldaniels528.qwery._
@@ -568,7 +804,7 @@ val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
 new Tabular().transform(results) foreach println
 ```
 
-##### The Results
+The Results
 
 ```text
 + -------------------------------------------------------------------------------------------------------------------- +
@@ -581,7 +817,7 @@ new Tabular().transform(results) foreach println
 + -------------------------------------------------------------------------------------------------------------------- +
 ```
 
-##### Copy (append) filtered results from one source (csv) to another (csv)
+Copy (append) filtered results from one source (csv) to another (csv)
 
 The source file (./companylist.csv) contains 360 lines of CSV text. The following query will filter these for 
 records where the "Sector" field contains the text "Basic Industries", and write the results to the output file (./test1.csv)
@@ -606,7 +842,7 @@ val results = statement.execute(RootScope())
 new Tabular().transform(results) foreach println
 ```
 
-##### Output
+Output
 
 ```text
 + --------------- +
@@ -616,7 +852,7 @@ new Tabular().transform(results) foreach println
 + --------------- +
 ```
 
-##### Alternatively, you could overwrite the file instead of appending it...
+Alternatively, you could overwrite the file instead of appending it...
 
 ```scala
 import com.github.ldaniels528.qwery._
@@ -638,7 +874,7 @@ val results = statement.execute(RootScope())
 new Tabular().transform(results) foreach println
 ```
 
-##### Output
+Output
 
 ```text
 + --------------- +
@@ -648,7 +884,7 @@ new Tabular().transform(results) foreach println
 + --------------- +
 ```
 
-##### And the output file (./test1.csv) will contain:
+And the output file (./test1.csv) will contain:
 
 ```text
 "Symbol","Name","Sector","Industry","LastSale","MarketCap"
@@ -661,7 +897,7 @@ new Tabular().transform(results) foreach println
 .
 ```
 
-##### Copy filtered results from one source (csv) to another (json)
+Copy filtered results from one source (csv) to another (json)
 
 The source file (./companylist.csv) contains 360 lines of CSV text. The following query will filter these for 
 records where the "Sector" field contains the text "Basic Industries", and write the results to the output file (./test1.csv)
@@ -686,7 +922,7 @@ val results = statement.execute(RootScope())
 new Tabular().transform(results) foreach println
 ```
 
-##### Output
+Output
 
 ```text
 + --------------- +
@@ -696,7 +932,7 @@ new Tabular().transform(results) foreach println
 + --------------- +
 ```
 
-##### And the output file (./test1.json) will contain:
+And the output file (./test1.json) will contain:
 
 ```json
 {"Sector":"Basic Industries","Name":"Alexco Resource Corp","Industry":"Precious Metals","Symbol":"AXU","LastSale":"1.43","MarketCap":"138634117.05"}

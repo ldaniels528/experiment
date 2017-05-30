@@ -12,7 +12,7 @@ case class Describe(source: Executable, limit: Option[Int] = None) extends Execu
     val rows = source.execute(scope).take(1)
     val header = if (rows.hasNext) rows.next() else Map.empty
     ResultSet(rows = header.take(limit getOrElse Int.MaxValue).toSeq map { case (name, value) =>
-      Seq("COLUMN" -> name, "TYPE" -> value.getClass.getSimpleName, "SAMPLE" -> value)
+      Seq("Column" -> name, "Type" -> value.getClass.getSimpleName, "Sample" -> value)
     } toIterator)
   }
 

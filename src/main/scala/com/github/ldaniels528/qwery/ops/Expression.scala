@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
+import java.util.UUID
+
 import com.github.ldaniels528.qwery._
 
 import scala.util.Try
@@ -64,6 +66,11 @@ trait Expression {
     case value => value.toString
   }
 
+  def getAsUUID(scope: Scope): Option[UUID] = evaluate(scope) flatMap {
+    case value: UUID => Some(value)
+    case value => Try(UUID.fromString(value.toString)).toOption
+  }
+
 }
 
 /**
@@ -71,6 +78,9 @@ trait Expression {
   * @author lawrence.daniels@gmail.com
   */
 object Expression {
+  val validTypes = Seq("Boolean", "Byte", "Double", "Float", "Int", "Long", "Short", "String", "UUID")
+
+  def isValidType(typeName: String): Boolean = validTypes.exists(_.equalsIgnoreCase(typeName))
 
   /**
     * Returns a [[Expression]] implementation for the given raw value

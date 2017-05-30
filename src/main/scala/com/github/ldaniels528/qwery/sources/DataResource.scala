@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Scope}
 
 /**
-  * Represents a data source resource path
+  * Represents a data resource path
   * @author lawrence.daniels@gmail.com
   */
 case class DataResource(path: String, hints: Option[Hints] = None) extends Executable {
