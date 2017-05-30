@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.3.1"
+val apiVersion = "0.3.2"
 val appScalaVersion = "2.12.2"
 
 val akkaVersion = "2.5.2"
@@ -24,6 +24,7 @@ lazy val cli = (project in file("./app/cli")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
+    coverageEnabled := true,
     mainClass in assembly := Some("com.github.ldaniels528.qwery.cli.QweryCLI"),
     test in assembly := {},
     assemblyJarName in assembly := s"${name.value}-${version.value}.bin.jar",
@@ -51,6 +52,7 @@ lazy val etl = (project in file("./app/etl")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
+    coverageEnabled := true,
     mainClass in assembly := Some("com.github.ldaniels528.qwery.etl.QweryETL"),
     test in assembly := {},
     assemblyJarName in assembly := s"${name.value}-${version.value}.bin.jar",
@@ -70,12 +72,13 @@ lazy val core = (project in file(".")).
   settings(
     name := "qwery-core",
     organization := "com.github.ldaniels528",
-    description := "A SQL-like query language for performing ETL functions.",
+    description := "A SQL-like query language for performing ETL",
     version := apiVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
+    coverageEnabled := true,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
       "com.twitter" %% "bijection-avro" % "0.9.5",

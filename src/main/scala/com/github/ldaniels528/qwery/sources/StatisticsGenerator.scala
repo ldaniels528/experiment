@@ -17,7 +17,6 @@ class StatisticsGenerator(var fileSize: Option[Long] = None) {
 
   // snapshots
   private var batchRecords: Long = _
-  private var batchBytesRead: Long = _
   private var batchFailures: Long = _
   private var lastUpdatedTime: Long = _
 
@@ -69,7 +68,6 @@ class StatisticsGenerator(var fileSize: Option[Long] = None) {
 
       // reset the counters
       batchRecords = totalRecords
-      batchBytesRead = totalBytesRead
       batchFailures = totalFailures
       lastUpdatedTime = now
       statistics

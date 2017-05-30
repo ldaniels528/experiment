@@ -17,7 +17,10 @@ an SDK or as a CLI application.
 * <a href="#repl">Qwery REPL</a>
     * <a href="#repl_start">Start the REPL</a>
     * <a href="#describe">DESCRIBE the layout of a local file</a>
-    * <a href="#describe_select">DESCRIBE a SELECT query</a>
+    * <a href="#describe-select">DESCRIBE a SELECT query</a>
+    * <a href="#select-count-1">Count the number of lines of a file</a> 
+    * <a href="#select-count-2">Count lines of a file using criteria</a>
+    * <a href="#views">Creating and Using Views</a>
 * <a href="sdk">Qwery SDK</a>
 * <a href="#faq">Frequently Asked Questions (FAQ)</a>
 
@@ -185,8 +188,8 @@ After the compilation completes, you'll see a message like:
 ```text
 [info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
 [info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.1.bin.jar ...
-[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.1.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.2.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.2.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -194,7 +197,7 @@ After the compilation completes, you'll see a message like:
 Now, you can execute the ETL distributable:
 
 ```bash
-~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.1.bin.jar
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.2.bin.jar
 ```
 
 *NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
@@ -243,7 +246,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.3.1
+ Qwery CLI v0.3.2
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -277,7 +280,7 @@ Using UNIXCommandPrompt for input.
 + --------------------------------------------------------------------------------------- +
 ```
 
-<a name="describe_select"></a>
+<a name="describe-select"></a>
 ##### DESCRIBE a SELECT query
 
 ```text
@@ -295,6 +298,7 @@ Using UNIXCommandPrompt for input.
 + -------------------------------------------- +
 ```
 
+<a name="select-count-1"></a>
 ##### Count the number of (non-blank) lines in the file:
 
 ```text
@@ -307,6 +311,7 @@ Using UNIXCommandPrompt for input.
 + ---------- +
 ```
 
+<a name="select-count-2"></a>
 ##### Count the number of lines that match a given set of criteria in the file:
 
 ```text
@@ -397,10 +402,39 @@ Using UNIXCommandPrompt for input.
 + ---------- +
 ```
 
+<a name="views"></a>
+##### Creating and Using Views
+
+```text
+[10]> CREATE VIEW 'OilAndGas' AS
+      SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+      FROM 'companylist.csv'
+      WHERE Industry = 'Oil/Gas Transmission';
+      
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 1               |
++ --------------- +      
+
+[11]> SELECT * FROM 'OilAndGas';
+
++ ------------------------------------------------------------------------------------------------------------------------------ +
+| Symbol  Name                                       Sector            Industry              Summary Quote                       |
++ ------------------------------------------------------------------------------------------------------------------------------ +
+| CQH     Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqh    |
+| CQP     Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/cqp    |
+| LNG     Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/lng    |
+| EGAS    Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/egas   |
++ ------------------------------------------------------------------------------------------------------------------------------ +
+```
+
+*NOTE:* Views are not persistent.
+
 ##### Copy a portion of one file to another (appending the target)
 
 ```text
-[10]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
+[12]> INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
       SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
       WHERE Industry = 'Homebuilding'
 
@@ -414,7 +448,7 @@ Using UNIXCommandPrompt for input.
 ##### Copy a portion of one file to another (overwriting the target)
 
 ```text
-[11]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
+[13]> INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
       SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
       WHERE Industry = 'Precious Metals'
 
@@ -691,4 +725,5 @@ new Tabular().transform(results) foreach println
 
 **Q**: Are VIEWs supported?
 
-**A**: No. However, sub-queries can be used in place of views (e.g. SELECT name, date, age FROM (SELECT name, date, CAST(age AS DOUBLE) AS age))
+**A**: Yes, but they are not persistent.
+

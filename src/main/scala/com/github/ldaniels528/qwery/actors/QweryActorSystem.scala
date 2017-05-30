@@ -26,7 +26,7 @@ class QweryActorSystem {
 
   def createActor[T <: Actor : ClassTag](factory: () => T): ActorRef = system.actorOf(Props(factory()))
 
-  def createActor[T <: Actor : ClassTag](name: String)(factory: () => T): ActorRef = {
+  def createActor[T <: Actor : ClassTag](name: String, factory: () => T): ActorRef = {
     system.actorOf(Props(factory()), name = name)
   }
 

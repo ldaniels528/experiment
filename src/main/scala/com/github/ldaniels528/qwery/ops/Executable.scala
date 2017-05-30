@@ -26,6 +26,13 @@ object Executable {
   implicit class ExecutableEnrichment(val executable: Executable) extends AnyVal {
 
     @inline
+    def toExpression = new Expression {
+      override def evaluate(scope: Scope): Option[Any] = {
+        executable.execute(scope).toSeq.headOption.flatMap(_.headOption).map(_._2)
+      }
+    }
+
+    @inline
     def withHints(newHints: Option[Hints]): Executable = executable match {
       case DataResource(path, hints) => DataResource(path, newHints ?? hints)
       case exec => exec

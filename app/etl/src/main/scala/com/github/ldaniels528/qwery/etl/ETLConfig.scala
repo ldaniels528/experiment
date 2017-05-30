@@ -31,8 +31,8 @@ class ETLConfig(val baseDir: File) {
   val workDir: File = new File(baseDir, "work")
 
   // create the support actors
-  val fileManager: ActorRef = QweryActorSystem.createActor(() => new FileManagementActor(this))
-  val workflowManager: ActorRef = QweryActorSystem.createActor(() => new WorkflowManagementActor(this))
+  val fileManager: ActorRef = QweryActorSystem.createActor(name = "fm", () => new FileManagementActor(this))
+  val workflowManager: ActorRef = QweryActorSystem.createActor(name = "wm", () => new WorkflowManagementActor(this))
 
   // installation checks
   ensureSubdirectories(baseDir)
@@ -93,6 +93,12 @@ class ETLConfig(val baseDir: File) {
 object ETLConfig {
   private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
+  /**
+    * Represents a trigger JSON object
+    * @param name        the name of the trigger
+    * @param constraints the given [[ConstraintRaw constraints]]
+    * @param script      the given script to execute when triggered
+    */
   case class TriggerRaw(name: String, constraints: Seq[ConstraintRaw], script: String) {
 
     def toModel(config: ETLConfig) = FileTrigger(name, constraints.flatMap(_.toModel), compileScript(config))
@@ -104,6 +110,15 @@ object ETLConfig {
     }
   }
 
+  /**
+    * Represents a constraint JSON object
+    * @param contains   represents a "contains" constraint (e.g. "constraints": [{"prefix": "companylist"}])
+    * @param equals     represents a "equals" constraint (e.g. "constraints": [{"equals": "companylist.csv"}])
+    * @param prefix     represents a "prefix" constraint (e.g. "constraints": [{"prefix": "company"}])
+    * @param regex      represents a "regex" constraint (e.g. "constraints": [{"regex": "company*.csv"}])
+    * @param suffix     represents a "suffix" constraint (e.g. "constraints": [{"suffix": ".csv"}])
+    * @param ignoreCase represents a "ignoreCase" constraint (e.g. "constraints": [{"ignoreCase": true}])
+    */
   case class ConstraintRaw(contains: Option[String],
                            equals: Option[String],
                            prefix: Option[String],

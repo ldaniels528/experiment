@@ -3,7 +3,8 @@ package com.github.ldaniels528.qwery
 import java.io.FileInputStream
 import java.util.Properties
 
-import com.github.ldaniels528.qwery.ops.{Assignment, Declare, Describe, Executable, Expression, Field, Hints, Insert, InsertValues, OrderedColumn, Scope, Select, VariableRef, View}
+import com.github.ldaniels528.qwery.SQLLanguageParser.SLPExtensions
+import com.github.ldaniels528.qwery.ops.{Assignment, Declare, Describe, Executable, Expression, Field, Hints, Insert, InsertValues, OrderedColumn, Select, VariableRef, View}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
@@ -60,8 +61,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // conditional expression? (e.g. "%c:condition" => "x = 1 and y = 2")
     case tag if tag.startsWith("%c:") => Some(extractCondition(tag.drop(3)))
 
-    // enumeration? (e.g. "%C(mode|INTO|OVERWRITE)" => "INSERT INTO ..." || "INSERT OVERWRITE ...")
-    case tag if tag.startsWith("%C(") & tag.endsWith(")") => Some(extractEnumeratedItem(tag.drop(3).dropRight(1).split('|')))
+    // chooser? (e.g. "%C(mode,INTO,OVERWRITE)" => "INSERT INTO ..." || "INSERT OVERWRITE ...")
+    case tag if tag.startsWith("%C(") & tag.endsWith(")") => Some(extractChosenItem(tag.chooserParams))
 
     // assignable expression? (e.g. "%e:expression" => "2 * (x + 1)")
     case tag if tag.startsWith("%e:") => Some(extractAssignableExpression(tag.drop(3)))
@@ -90,8 +91,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => Some(extractVariableReference(tag.drop(3)))
 
-    // regular expression match? (e.g. "%r|\\d{3,4}S+|" => "123ABC")
-    case tag if tag.startsWith("%r|") & tag.endsWith("|") =>
+    // regular expression match? (e.g. "%r`\\d{3,4}S+`" => "123ABC")
+    case tag if tag.startsWith("%r`") & tag.endsWith("`") =>
       val pattern = tag.drop(3).dropRight(1)
       if (stream.matches(pattern)) None else stream.die(s"Did not match the expected pattern '$pattern'")
 
@@ -133,7 +134,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param values the values
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractEnumeratedItem(values: Seq[String]) = {
+  private def extractChosenItem(values: Seq[String]) = {
     def error[A](items: List[String]) = stream.die[A](s"One of the following '${items.mkString(", ")}' identifiers is expected")
 
     values.toList match {
@@ -228,9 +229,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractSubQueryOrExpression(name: String) = {
-    val expression = (extractSubQueryOption.map(query => new Expression {
-      override def evaluate(scope: Scope): Option[Any] = query.execute(scope).toSeq.headOption.flatMap(_.headOption).map(_._2)
-    }) ?? parseExpression(stream)).getOrElse(stream.die("Expression or sub-query was expected"))
+    val expression = (extractSubQueryOption.map(_.toExpression) ?? parseExpression(stream))
+      .getOrElse(stream.die("Expression or sub-query was expected"))
     SQLTemplateParams(assignables = Map(name -> expression))
   }
 
@@ -426,7 +426,7 @@ object SQLLanguageParser {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLLanguageParser(stream)
-    val params = parser.process("INSERT %C(mode|INTO|OVERWRITE) %a:target") +
+    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target") +
       parseWithClause(name = "hints", stream) + parser.process("( %F:fields )")
     val target = params.atoms.get("target").map(DataResource.apply(_, params.hints.get("hints")))
       .getOrElse(throw new SyntaxException("Output source is missing"))
@@ -451,12 +451,12 @@ object SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     */
   private def parseWithClause(name: String, stream: TokenStream) = {
-    val withCompression = "WITH %C(compression|GZIP) COMPRESSION"
+    val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
-    val withFormat = "WITH %C(format|CSV|JSON|PSV|TSV) FORMAT"
-    val withHeader = "WITH COLUMN %C(column|HEADERS)"
+    val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
+    val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
-    val withQuoted = "WITH QUOTED %C(quoted|NUMBERS|TEXT)"
+    val withQuoted = "WITH QUOTED %C(quoted,NUMBERS,TEXT)"
     val parser = SQLLanguageParser(stream)
     var hints = Hints()
 
@@ -562,6 +562,15 @@ object SQLLanguageParser {
   private def parseSet(ts: TokenStream): Assignment = {
     val params = SQLLanguageParser(ts).process("SET %v:name = %q:expression")
     Assignment(variableRef = params.variables("name"), value = params.assignables("expression"))
+  }
+
+  implicit class SLPExtensions(val tag: String) extends AnyVal {
+
+    /**
+      * Extracts the chooser parameters (e.g. "%C(mode,INTO,OVERWRITE)" => ["mode", "INTO", "OVERWRITE"])
+      */
+    @inline
+    def chooserParams: Array[String] = tag.drop(3).dropRight(1).filterNot(_ == ' ').split(',').map(_.trim)
   }
 
 }
