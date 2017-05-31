@@ -41,6 +41,15 @@ case class LE(a: Expression, b: Expression) extends Condition {
   override def isSatisfied(scope: Scope): Boolean = a.compare(b, scope) >= 0
 }
 
+case class MATCHES(a: Expression, b: Expression) extends Condition {
+  override def isSatisfied(scope: Scope): Boolean = {
+    (for {
+      string <- a.getAsString(scope)
+      pattern <- b.getAsString(scope)
+    } yield string.matches(pattern)).contains(true)
+  }
+}
+
 case class NE(a: Expression, b: Expression) extends Condition {
   override def isSatisfied(scope: Scope): Boolean = a.compare(b, scope) != 0
 }

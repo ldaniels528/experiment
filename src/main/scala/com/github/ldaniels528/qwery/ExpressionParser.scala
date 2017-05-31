@@ -297,7 +297,8 @@ object ExpressionParser {
     "<" -> LT.apply _,
     "<>" -> NE.apply _,
     "!=" -> NE.apply _,
-    "LIKE" -> LIKE.apply _
+    "LIKE" -> LIKE.apply _,
+    "MATCHES" -> MATCHES.apply _
   )
 
   /**
