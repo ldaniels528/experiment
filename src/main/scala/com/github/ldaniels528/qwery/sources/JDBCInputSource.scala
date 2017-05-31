@@ -1,15 +1,15 @@
-package com.github.ldaniels528.qwery.devices
+package com.github.ldaniels528.qwery.sources
 
 import java.sql.{Connection, DriverManager, ResultSet}
 
+import com.github.ldaniels528.qwery.devices.Device
 import com.github.ldaniels528.qwery.ops.{Row, Scope}
-import com.github.ldaniels528.qwery.sources.InputSource
 
 /**
   * JDBC Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class JDBCInputSource(query: String, allocate: () => Connection) extends InputSource {
+case class JDBCInputSource(query: String, connect: () => Connection) extends InputSource {
   private var conn: Option[Connection] = None
   private var resultSet: Option[ResultSet] = None
   private var columnNames: Seq[String] = Nil
@@ -22,7 +22,7 @@ case class JDBCInputSource(query: String, allocate: () => Connection) extends In
 
   override def open(scope: Scope): Unit = {
     super.open(scope)
-    conn = Option(allocate())
+    conn = Option(connect())
   }
 
   override def read(): Option[Row] = {

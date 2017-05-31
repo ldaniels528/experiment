@@ -6,10 +6,10 @@ import com.github.ldaniels528.qwery.ops.builtins._
 import com.github.ldaniels528.qwery.sources._
 
 /**
-  * Qwery SQL Generator
+  * Qwery SQL Conversion
   * @author lawrence.daniels@gmail.com
   */
-object QwerySQLGenerator {
+object QwerySQLConversion {
 
   def makeSQL(value: AnyRef): String = value match {
     case hints: Hints => toHint(hints)

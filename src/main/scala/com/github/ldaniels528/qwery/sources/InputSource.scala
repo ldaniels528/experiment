@@ -41,6 +41,19 @@ trait InputSource extends IOSource with Executable {
   */
 object InputSource extends InputSourceFactory {
 
+  /**
+    * URLs:
+    * kafka:avro://server?topic=X&group_id=Y&schema=/path/to/schema.json
+    * s3:csv:companylist.csv?bucket=ldaniels3&region=us-west-1
+    * fs:csv:/path/to/companylist.csv
+    */
+
+  /**
+    * Determines the appropriate input source based on the given path and hints
+    * @param path  the given path
+    * @param hints the given [[Hints hints]]
+    * @return an option of an [[InputSource input source]]
+    */
   override def apply(path: String, hints: Option[Hints] = None): Option[InputSource] = {
     (hints ?? Hints()) map {
       case hint if hint.isJson.contains(true) => JSONInputSource(TextFileInputDevice(path), hint)

@@ -1,16 +1,16 @@
 package com.github.ldaniels528.qwery.devices
 
-import java.util.{Properties => JProperties}
 import java.io.InputStream
+import java.util.{Properties => JProperties}
 
 import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicSessionCredentials}
 import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder, S3ClientOptions}
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.github.ldaniels528.qwery.devices.AWSS3InputDevice._
 import com.github.ldaniels528.qwery.devices.InputDevice._
 import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.util.OptionHelper._
 import org.slf4j.LoggerFactory
 
 import scala.io.{BufferedSource, Source}
@@ -19,7 +19,8 @@ import scala.io.{BufferedSource, Source}
   * AWS S3 File Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: String, config: JProperties) extends InputDevice {
+case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Option[String] = None, config: JProperties)
+  extends InputDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var s3Client: Option[AmazonS3] = None
   private var s3Object: Option[S3Object] = None
@@ -38,9 +39,11 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
   override def open(scope: Scope): Unit = {
     val accessKeyID = config.getProperty("AWS_ACCESS_KEY_ID")
     val secretAccessKey = config.getProperty("AWS_SECRET_ACCESS_KEY")
+    val sessionKey = config.getProperty("AWS_SESSION_TOKEN")
+    val regionName_? = Option(config.getProperty("AWS_REGION"))
     val clientConfiguration = new ClientConfiguration()
     clientConfiguration.setSignerOverride("AWSS3V4SignerType")
-    s3Client = Option(getS3Client(accessKeyID, secretAccessKey, regionName))
+    s3Client = Option(getS3Client(accessKeyID, secretAccessKey, sessionKey, regionName ?? regionName_?))
     s3Object = s3Client map (getS3Object(_, bucketName, keyName))
     source = s3Object map getS3Content
     lines = source.map(_.getNonEmptyLines) getOrElse Iterator.empty
@@ -67,18 +70,21 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Str
 object AWSS3InputDevice {
   private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
-  def getS3Client(accessKeyID: String, secretAccessKey: String, regionName: String): AmazonS3 = {
+  def getS3Client(accessKeyID: String,
+                  secretAccessKey: String,
+                  sessionKey: String,
+                  regionName: Option[String] = None): AmazonS3 = {
     // create the S3 client
     val s3Client = AmazonS3ClientBuilder.standard()
-      .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKeyID, secretAccessKey)))
+      .withCredentials(new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKeyID, secretAccessKey, sessionKey)))
+      .withRegion(regionName getOrElse "us-west-2")
       .build()
-    val regions = Option(Regions.fromName(regionName))
-      .getOrElse(throw new IllegalArgumentException(s"Region '$regionName' not found"))
-    val region = Region.getRegion(regions) // Region.getRegion(Regions.US_EAST_1)
-    s3Client.setRegion(region)
+    //val regions = Option(Regions.fromName(regionName)).getOrElse(throw new IllegalArgumentException(s"Region '$regionName' not found"))
+    //val region = /*Region.getRegion(regions)*/ Region.getRegion(Regions.US_WEST_2)
+    //s3Client.setRegion(region)
     //s3Client.setEndpoint("http://localhost:9000")
-    val clientOptions = S3ClientOptions.builder().setPathStyleAccess(true).build()
-    s3Client.setS3ClientOptions(clientOptions)
+    //val clientOptions = S3ClientOptions.builder().setPathStyleAccess(true).build()
+    //s3Client.setS3ClientOptions(clientOptions)
     s3Client
   }
 

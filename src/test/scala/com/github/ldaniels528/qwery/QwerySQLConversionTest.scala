@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.QwerySQLGenerator._
+import com.github.ldaniels528.qwery.QwerySQLConversion._
 import com.github.ldaniels528.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
@@ -8,7 +8,7 @@ import org.scalatest.FunSpec
   * Qwery SQL Generator Test
   * @author lawrence.daniels@gmail.com
   */
-class QwerySQLGeneratorTest extends FunSpec {
+class QwerySQLConversionTest extends FunSpec {
 
   describe("QwerySQLGenerator") {
 

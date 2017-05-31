@@ -34,10 +34,14 @@ project/boot/
 
 test*.*
 tickers.csv
-pixall**.*
+pixall-config.properties
 example/archive
 example/failed
 example/inbox
 example/outbox
 example/work
 companylist.json
+example/incoming/
+scratch/
+s3.properties
+example/scripts/pixall.sql

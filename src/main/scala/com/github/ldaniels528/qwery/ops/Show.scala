@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.ops
 
 import java.util.Date
 
-import com.github.ldaniels528.qwery.QwerySQLGenerator._
+import com.github.ldaniels528.qwery.QwerySQLConversion._
 
 /**
   * Show Statement

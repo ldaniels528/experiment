@@ -1,0 +1,594 @@
+{
+  "type" : "record",
+  "name" : "ParsedPixAllHit",
+  "namespace" : "com.dealer.analytics.pixall.processing",
+  "fields" : [ {
+    "name" : "visitorId",
+    "type" : {
+      "type" : "string",
+      "avro.java.string" : "String"
+    }
+  }, {
+    "name" : "hitUuid",
+    "type" : {
+      "type" : "string",
+      "avro.java.string" : "String",
+      "java_class" : "java.util.UUID"
+    }
+  }, {
+    "name" : "eventTimestamp",
+    "type" : {
+      "type" : "long",
+      "java_class" : "java.util.Date"
+    }
+  }, {
+    "name" : "url",
+    "type" : {
+      "type" : "string",
+      "avro.java.string" : "String"
+    }
+  }, {
+    "name" : "dealerCode",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "referrerUrl",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "wspCode",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "headers",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "payload",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "ipv4",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "ipv6",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "domain",
+    "type" : {
+      "type" : "string",
+      "avro.java.string" : "String"
+    }
+  }, {
+    "name" : "userAgent",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "referrerDomain",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "pageType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "program",
+    "type" : {
+      "type" : "string",
+      "avro.java.string" : "String"
+    },
+    "default" : "DealerDotCom"
+  }, {
+    "name" : "formConversion",
+    "type" : "boolean"
+  }, {
+    "name" : "formId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "formType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "campaignId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "adId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "advertisingProviderId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "advertisingNetworkId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "keywordId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "advertisingMedium",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "tcdCampaignId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "tcdAdId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "tcdKeywordId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "ddcref",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laCampaignId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laAdId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laProviderId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laAdNetworkId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laKeywordId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "laAdMedium",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "pixallEventType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "contentId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "eventType",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "userProfileId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "universalUserId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "userType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "notificationsEnabled",
+    "type" : [ "null", "boolean" ],
+    "default" : null
+  }, {
+    "name" : "vehicleId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleType",
+    "type" : [ "null", {
+      "type" : "enum",
+      "name" : "VehicleType",
+      "symbols" : [ "NEW", "USED" ]
+    } ],
+    "default" : null
+  }, {
+    "name" : "vin",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleModelYear",
+    "type" : [ "null", "long" ],
+    "default" : null
+  }, {
+    "name" : "vehicleMake",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleModel",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleBodyStyle",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleStockNumber",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "pageLoadTime",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "pageId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "contentType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "category",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "label",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "description",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "vehicleTypeString",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "acceptsHeader",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "r1QueryParam",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "titleTag",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "adGroup",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "categoryId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "esmUserId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "googleUserId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "pageLabel",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "listingAccountId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "listingDomain",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "impressionId",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "akamaiBotClassification",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "akamaiBotCategory",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "applicationType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "calculatorType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "feature",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "incentiveType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "leadContext",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "leadType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "mediaType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "protectionPlan",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "socialChannel",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "listingType",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  }, {
+    "name" : "price",
+    "type" : [ "null", "double" ],
+    "default" : null
+  }, {
+    "name" : "mpgCity",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "mpgHighway",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "mpgeCity",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "mpgeHighway",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "odometerMiles",
+    "type" : [ "null", "int" ],
+    "default" : null
+  }, {
+    "name" : "latitude",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String",
+      "java_class" : "java.math.BigDecimal"
+    } ],
+    "default" : null
+  }, {
+    "name" : "longitude",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String",
+      "java_class" : "java.math.BigDecimal"
+    } ],
+    "default" : null
+  }, {
+    "name" : "zipCode",
+    "type" : [ "null", {
+      "type" : "string",
+      "avro.java.string" : "String"
+    } ],
+    "default" : null
+  } ]
+}
