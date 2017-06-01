@@ -20,7 +20,7 @@ class SQLTemplateParserTest extends FunSpec {
           |WHERE Industry = 'Oil/Gas Transmission'
           |LIMIT 5""".stripMargin
 
-      val templateParser = SQLLanguageParser(query)
+      val templateParser = SQLLanguageParser(TokenStream(query))
       val templateParams = templateParser.process("SELECT %E:fields FROM %a:source ?WHERE ?%c:condition ?LIMIT ?%a:limit")
       assert(templateParams == SQLTemplateParams(
         atoms = Map("source" -> "companylist.csv", "limit" -> "5"),

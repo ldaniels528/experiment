@@ -96,6 +96,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       val pattern = tag.drop(3).dropRight(1)
       if (stream.matches(pattern)) None else stream.die(s"Did not match the expected pattern '$pattern'")
 
+    // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
+    case tag if tag.startsWith("%w:") => Some(extractWithClause(tag.drop(3)))
+
     // optionally required tag? (e.g. "?TOP ?%a:top" => "TOP 100")
     case tag if tag.startsWith("?%") | tag.startsWith("?{{") => processNextTag(tag.drop(1), tags)
 
@@ -325,134 +328,16 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     SQLTemplateParams(variables = Map(name -> reference))
   }
 
-}
-
-/**
-  * SQL Language Parser Singleton
-  * @author lawrence.daniels@gmail.com
-  */
-object SQLLanguageParser {
-
   /**
-    * Creates a new SQL Language Parser instance
-    * @param query the given query string
-    * @return the [[SQLLanguageParser language parser]]
-    */
-  def apply(query: String): SQLLanguageParser = new SQLLanguageParser(TokenStream(query))
-
-  /**
-    * Creates a new SQL Language Parser instance
-    * @param ts the given [[TokenStream token stream]]
-    * @return the [[SQLLanguageParser language parser]]
-    */
-  def apply(ts: TokenStream): SQLLanguageParser = new SQLLanguageParser(ts)
-
-  /**
-    * Parses the next query or statement from the stream
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Executable]]
-    */
-  def parseNext(stream: TokenStream): Executable = {
-    stream match {
-      case ts if ts is "CREATE VIEW" => parseCreateView(ts)
-      case ts if ts is "DECLARE" => parseDeclare(ts)
-      case ts if ts is "DESCRIBE" => parseDescribe(ts)
-      case ts if ts is "INSERT" => parseInsert(ts)
-      case ts if ts is "SELECT" => parseSelect(ts)
-      case ts if ts is "SET" => parseSet(ts)
-      case ts if ts is "SHOW" => parseShow(ts)
-      case ts => ts.die("Unexpected end of line")
-    }
-  }
-
-  /**
-    * Parses a CREATE VIEW statement
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[View executable]]
-    */
-  private def parseCreateView(ts: TokenStream): View = {
-    val params = SQLLanguageParser(ts).process("CREATE VIEW %a:name AS %S:query")
-    View(name = params.atoms("name"), query = params.sources("query"))
-  }
-
-  /**
-    * Parses a DECLARE statement
-    * @example {{{ DECLARE @counter DOUBLE }}}
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Declare executable]]
-    */
-  private def parseDeclare(ts: TokenStream): Declare = {
-    val params = SQLLanguageParser(ts).process("DECLARE %v:name %a:type")
-    val typeName = params.atoms("type")
-    if (!Expression.isValidType(typeName)) ts.die(s"Invalid type '$typeName'")
-    Declare(variableRef = params.variables("name"), typeName = typeName)
-  }
-
-  /**
-    * Parses a DESCRIBE statement
-    * @example {{{ DESCRIBE './companylist.csv' }}}
-    * @example {{{ DESCRIBE './companylist.csv' LIMIT 5 }}}
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Describe executable]]
-    */
-  private def parseDescribe(ts: TokenStream): Describe = {
-    val params = SQLLanguageParser(ts).process("DESCRIBE %s:source ?LIMIT ?%n:limit")
-    Describe(
-      source = params.sources.getOrElse("source", ts.die("No source provided")),
-      limit = params.numerics.get("limit").map(_.toInt))
-  }
-
-  /**
-    * Parses an INSERT statement
-    * @example
-    * {{{
-    * INSERT INTO './tickers.csv' (symbol, exchange, lastSale)
-    * VALUES ('AAPL', 'NASDAQ', 145.67)
-    * VALUES ('AMD', 'NYSE', 5.66)
-    * }}}
-    * @example
-    * {{{
-    * INSERT OVERWRITE './companyinfo.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
-    * SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-    * FROM './companylist.csv' WHERE Industry = 'EDP Services'
-    * }}}
-    * @example
-    * {{{
-    * INSERT INTO 'companylist.json' WITH FORMAT JSON (Symbol, Name, Sector, Industry)
-    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-    * FROM 'companylist.csv' WITH FORMAT CSV
-    * WHERE Industry = 'Oil/Gas Transmission'
-    * }}}
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Insert executable]]
-    */
-  private def parseInsert(stream: TokenStream): Insert = {
-    val parser = SQLLanguageParser(stream)
-    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target") +
-      parseWithClause(name = "hints", stream) + parser.process("( %F:fields )")
-    val target = params.atoms.get("target").map(DataResource.apply(_, params.hints.get("hints")))
-      .getOrElse(throw new SyntaxException("Output source is missing"))
-    val fields = params.fields
-      .getOrElse("fields", stream.die("Field arguments missing"))
-    val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
-    // VALUES or SELECT
-    val source = stream match {
-      case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
-      case ts => parseNext(ts)
-    }
-    Insert(target, fields, source, append)
-  }
-
-  /**
-    * Parses WITH clauses
+    * Extracts WITH clauses
     * @example WITH CSV|PSV|TSV|JSON FORMAT
     * @example WITH DELIMITER ','
     * @example WITH QUOTED NUMBERS
     * @example WITH GZIP COMPRESSION
-    * @param name   the name of the collection
-    * @param stream the given [[TokenStream token stream]]
+    * @param name the name of the collection
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def parseWithClause(name: String, stream: TokenStream) = {
+  private def extractWithClause(name: String) = {
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
@@ -505,6 +390,138 @@ object SQLLanguageParser {
     props
   }
 
+}
+
+/**
+  * SQL Language Parser Singleton
+  * @author lawrence.daniels@gmail.com
+  */
+object SQLLanguageParser {
+
+  /**
+    * Creates a new SQL Language Parser instance
+    * @param ts the given [[TokenStream token stream]]
+    * @return the [[SQLLanguageParser language parser]]
+    */
+  def apply(ts: TokenStream): SQLLanguageParser = new SQLLanguageParser(ts)
+
+  /**
+    * Parses the next query or statement from the stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Executable]]
+    */
+  def parseNext(stream: TokenStream): Executable = {
+    stream match {
+      case ts if ts is "CONNECT" => parseConnect(ts)
+      case ts if ts is "CREATE" => parseCreateView(ts)
+      case ts if ts is "DECLARE" => parseDeclare(ts)
+      case ts if ts is "DESCRIBE" => parseDescribe(ts)
+      case ts if ts is "DISCONNECT" => parseDisconnect(ts)
+      case ts if ts is "INSERT" => parseInsert(ts)
+      case ts if ts is "SELECT" => parseSelect(ts)
+      case ts if ts is "SET" => parseSet(ts)
+      case ts if ts is "SHOW" => parseShow(ts)
+      case ts => ts.die("Unexpected end of line")
+    }
+  }
+
+  /**
+    * Parses a CONNECT statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Connect executable]]
+    */
+  private def parseConnect(ts: TokenStream): Connect = {
+    val params = SQLTemplateParams(ts, "CONNECT TO %a:type %w:hints AS %a:name")
+    Connect(name = params.atoms("name"), typeName = params.atoms("type"), hints = params.hints.get("hints"))
+  }
+
+  /**
+    * Parses a CREATE VIEW statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[View executable]]
+    */
+  private def parseCreateView(ts: TokenStream): View = {
+    val params = SQLTemplateParams(ts, "CREATE VIEW %a:name AS %S:query")
+    View(name = params.atoms("name"), query = params.sources("query"))
+  }
+
+  /**
+    * Parses a DECLARE statement
+    * @example {{{ DECLARE @counter DOUBLE }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Declare executable]]
+    */
+  private def parseDeclare(ts: TokenStream): Declare = {
+    val params = SQLTemplateParams(ts, "DECLARE %v:name %a:type")
+    val typeName = params.atoms("type")
+    if (!Expression.isValidType(typeName)) ts.die(s"Invalid type '$typeName'")
+    Declare(variableRef = params.variables("name"), typeName = typeName)
+  }
+
+  /**
+    * Parses a DESCRIBE statement
+    * @example {{{ DESCRIBE './companylist.csv' }}}
+    * @example {{{ DESCRIBE './companylist.csv' LIMIT 5 }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Describe executable]]
+    */
+  private def parseDescribe(ts: TokenStream): Describe = {
+    val params = SQLTemplateParams(ts, "DESCRIBE %s:source ?LIMIT ?%n:limit")
+    Describe(
+      source = params.sources.getOrElse("source", ts.die("No source provided")),
+      limit = params.numerics.get("limit").map(_.toInt))
+  }
+
+  /**
+    * Parses a Disconnect statement
+    * @example {{{ DISCONNECT FROM 'weblogs' }}}
+    * @param ts the given [[TokenStream token stream]]
+    */
+  private def parseDisconnect(ts: TokenStream): Disconnect = {
+    val params = SQLTemplateParams(ts, "DISCONNECT FROM %a:handle")
+    Disconnect(params.atoms("handle"))
+  }
+
+  /**
+    * Parses an INSERT statement
+    * @example
+    * {{{
+    * INSERT INTO './tickers.csv' (symbol, exchange, lastSale)
+    * VALUES ('AAPL', 'NASDAQ', 145.67)
+    * VALUES ('AMD', 'NYSE', 5.66)
+    * }}}
+    * @example
+    * {{{
+    * INSERT OVERWRITE './companyinfo.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    * SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+    * FROM './companylist.csv' WHERE Industry = 'EDP Services'
+    * }}}
+    * @example
+    * {{{
+    * INSERT INTO 'companylist.json' WITH FORMAT JSON (Symbol, Name, Sector, Industry)
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM 'companylist.csv' WITH FORMAT CSV
+    * WHERE Industry = 'Oil/Gas Transmission'
+    * }}}
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Insert executable]]
+    */
+  private def parseInsert(stream: TokenStream): Insert = {
+    val parser = SQLLanguageParser(stream)
+    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target %w:hints ( %F:fields )")
+    val target = params.atoms.get("target").map(DataResource.apply(_, params.hints.get("hints")))
+      .getOrElse(throw new SyntaxException("Output source is missing"))
+    val fields = params.fields
+      .getOrElse("fields", stream.die("Field arguments missing"))
+    val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
+    // VALUES or SELECT
+    val source = stream match {
+      case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
+      case ts => parseNext(ts)
+    }
+    Insert(target, fields, source, append)
+  }
+
   /**
     * Parses an INSERT VALUES clause
     * @param fields the corresponding fields
@@ -535,17 +552,16 @@ object SQLLanguageParser {
     * @return an [[Select executable]]
     */
   private def parseSelect(ts: TokenStream): Select = {
-    val params = SQLLanguageParser(ts).process("SELECT ?TOP ?%n:top %E:fields ?FROM ?%s:source") +
-      parseWithClause(name = "hints", ts) +
-      SQLLanguageParser(ts).process(
-        """
-          |?WHERE ?%c:condition
-          |?GROUP +?BY ?%F:groupBy
-          |?ORDER +?BY ?%o:orderBy
-          |?LIMIT ?%n:limit""".stripMargin.toSingleLine)
+    val params = SQLTemplateParams(ts,
+      """
+        |SELECT ?TOP ?%n:top %E:fields ?FROM ?%s:source %w:hints
+        |?WHERE ?%c:condition
+        |?GROUP +?BY ?%F:groupBy
+        |?ORDER +?BY ?%o:orderBy
+        |?LIMIT ?%n:limit""".stripMargin.toSingleLine)
 
     Select(
-      fields = params.expressions.getOrElse("fields", ts.die("Field arguments missing")),
+      fields = params.expressions("fields"),
       source = params.sources.get("source").map(_.withHints(params.hints.get("hints"))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
@@ -562,7 +578,7 @@ object SQLLanguageParser {
     * @return a [[Assignment variable assignment]]
     */
   private def parseSet(ts: TokenStream): Assignment = {
-    val params = SQLLanguageParser(ts).process("SET %v:name = %q:expression")
+    val params = SQLTemplateParams(ts, "SET %v:name = %q:expression")
     Assignment(variableRef = params.variables("name"), value = params.assignables("expression"))
   }
 
@@ -573,7 +589,7 @@ object SQLLanguageParser {
     * @return a [[Show executable]]
     */
   private def parseShow(ts: TokenStream): Show = {
-    val params = SQLLanguageParser(ts).process("SHOW %a:entityType")
+    val params = SQLTemplateParams(ts, "SHOW %a:entityType")
     val entityType = params.atoms("entityType")
     if (!Show.isValidEntityType(entityType)) ts.die(s"Invalid entity type '$entityType'")
     Show(entityType)

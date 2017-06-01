@@ -61,6 +61,7 @@ object InputSource extends InputSourceFactory {
       case hint =>
         path.toLowerCase() match {
           case uri if uri.startsWith("kafka:avro://") => AvroInputSource.parseURI(path, hint)
+          case uri if uri.startsWith("kafka:json://") => JSONInputSource.parseURI(path, hint)
           case file if file.endsWith(".csv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asCSV))
           case file if file.endsWith(".json") => JSONInputSource(TextFileInputDevice(path), hints = hint.map(_.asJSON))
           case file if file.endsWith(".psv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asPSV))

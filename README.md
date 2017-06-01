@@ -16,7 +16,7 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#built-in-functions">Built-in Functions</a>
     * <a href="#views">VIEWS</a>
     * <a href="#insert">INSERT statement</a>
-    * <a href="#set">SET statement</a> 
+    * <a href="#declare-set">DECLARE & SET statements</a> 
     * <a href="#show">SHOW statement</a>  
     * <a href="#describe">DESCRIBE statement</a>
 * <a href="#etl">Qwery ETL</a>
@@ -133,7 +133,7 @@ You can query structure files.
 Count the number of (non-blank) lines in the file:
 
 ```sql
-SELECT COUNT(*) FROM './companylist.csv';
+SELECT COUNT(*) FROM "./companylist.csv";
 ```
 ```text
 + ---------- +
@@ -146,7 +146,7 @@ SELECT COUNT(*) FROM './companylist.csv';
 Count the number of lines that match a given set of criteria in the file:
 
 ```sql
-SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
+SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
 ```
 ```text
 + ---------- +
@@ -159,7 +159,7 @@ SELECT COUNT(*) FROM './companylist.csv' WHERE Sector = 'Basic Industries';
 Sum values (just like you normally do with SQL) in the file:
 
 ```sql
-SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
+SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
 ```
 ```text
 + --------------- +
@@ -172,7 +172,7 @@ SELECT SUM(LastSale) AS total FROM './companylist.csv' LIMIT 5;
 Type-casting and column name aliases are supported:
 
 ```sql
-SELECT CAST('1234' AS Double) AS number;
+SELECT CAST("1234" AS Double) AS number;
 ```
 ```text
 + -------- + 
@@ -185,7 +185,7 @@ SELECT CAST('1234' AS Double) AS number;
 Select fields from the file using criteria (WHERE clause):
 
 ```sql
-SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.csv' WHERE Industry = 'EDP Services';
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM "./companylist.csv" WHERE Industry = "EDP Services";
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -199,7 +199,7 @@ SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM './companylist.c
 Aggregate data via GROUP BY:
 
 ```sql
-SELECT Sector, COUNT(*) AS Securities FROM './companylist.csv' GROUP BY Sector
+SELECT Sector, COUNT(*) AS Securities FROM "./companylist.csv" GROUP BY Sector
 ```
 ```text
 + --------------------------------- + 
@@ -225,10 +225,10 @@ CASE-WHEN is also supported
 
 ```sql
 SELECT 
-CASE 'Hello World'
- WHEN 'HelloWorld' THEN 'Found 1'
- WHEN 'Hello' || ' ' || 'World' THEN 'Found 2'
- ELSE 'Not Found'
+CASE "Hello World"
+ WHEN "HelloWorld" THEN "Found 1"
+ WHEN "Hello" || " " || "World" THEN "Found 2"
+ ELSE "Not Found"
 END;
 ```       
 ```text
@@ -239,6 +239,73 @@ END;
 + ---------- +
 ```
 
+Query Kafka topics: 
+
+```sql
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5;
+```
+```text
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+| visitorId                 adGroup                       program       pageLabel                          categoryId                         referrerDomain                  |
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+| 53992737-1688-4983-ad671  adgroup_a123                  QweryDotCom   inventory_listing_no_results_auto  inventory_listing_no_results_auto  google.com                      |
+| 53992737-1688-4983-ad672  adgroup_a123                  QweryDotCom   styletisell_zip                    styletisell_zip                    bing.com                        |
+| 53992737-1688-4983-ad673  adgroup_a123                  QweryDotCom   InventoryListingAutoAllSubaru      InventoryListingAutoAllSubaru      yahoo.com                       |
+| 53992737-1688-4983-ad674  adgroup_a123                  QweryDotCom                                                                                                         |
+| 53992737-1688-4983-ad675  adgroup_a123                  QweryDotCom                                                                                                         |
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+```
+
+You can also query Avro-encoded Kafka topics: 
+
+```sql
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM "kafka:avro://dev001:9093?topic=weblogs_avro&group_id=ldtest2&schema=./weblogs-v1.avsc"
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5;
+```
+```text
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+| visitorId                 adGroup                       program       pageLabel                          categoryId                         referrerDomain                  |
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+| 53992737-1688-4983-ad671  adgroup_a123                  QweryDotCom   inventory_listing_no_results_auto  inventory_listing_no_results_auto  google.com                      |
+| 53992737-1688-4983-ad672  adgroup_a123                  QweryDotCom   styletisell_zip                    styletisell_zip                    bing.com                        |
+| 53992737-1688-4983-ad673  adgroup_a123                  QweryDotCom   InventoryListingAutoAllSubaru      InventoryListingAutoAllSubaru      yahoo.com                       |
+| 53992737-1688-4983-ad674  adgroup_a123                  QweryDotCom                                                                                                         |
+| 53992737-1688-4983-ad675  adgroup_a123                  QweryDotCom                                                                                                         |
++ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+```
+
+<a name="built-in-functions"></a>
+#### Built-in Functions
+
+| Function                  | Purpose                                       |
+|---------------------------|-----------------------------------------------|
+| AVG(expression)           | Returns the average of an expression  |
+| CONCAT(string1, string2)  | Returns the concatenation of two strings  |
+| COUNT(expression)         | Returns the count of an expression  |
+| LEFT(string, number)      | Returns the specified number of characters from the left of the string |
+| LEN(string)               | Returns the length of a given string. |
+| MAX(expression)           | Returns the maximum value of a given field |
+| MIN(expression)           | Returns the minimum value of a given field |
+| NOW()                     | Returns the current date/time. |
+| PADLEFT(string, width)    | Returns a copy of the given string right-justified by the given width. |
+| PADRIGHT(string, width)   | Returns a copy of the given string left-justified by the given width. |
+| POW(base, exponent)       | Returns a number representing the given base taken to the power of the given exponent. |
+| RAND()                    | Return a random floating-point value. |
+| RIGHT(string, number)     | Returns the specified number of characters from the right of the string |
+| SIGN(expression)          | Returns the sign of the argument as -1, 0, or 1, depending on whether X is negative, zero, or positive. |
+| SPLIT(string, delimiter)  | Splits a string by a delimiting character (or string) and returns an array of strings. |
+| SQRT(expression)          | Returns the square root of a given number. |
+| SUBSTRING(string, start, length)| Returns a specified number of characters from a particular position of a given string. |
+| SUM(expression)           | Returns the sum of a given field. |
+| TRIM(string)              | Returns a string after removing all prefixes or suffixes from the given string. |
+| UUID()                    | Returns a random UUID. |
+
+
 <a name="views"></a>
 #### VIEWS
 
@@ -246,10 +313,10 @@ Creating a view works the same as with traditional RDBMSes, with one important d
 In Qwery, views are tied to the current session; thus, one you exit the application, the view no longer exists.
 
 ```sql
-CREATE VIEW 'OilAndGas' AS
+CREATE VIEW "OilAndGas" AS
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv'
-WHERE Industry = 'Oil/Gas Transmission';
+FROM "companylist.csv"
+WHERE Industry = "Oil/Gas Transmission";
 ``` 
 ```text  
 + --------------- +
@@ -262,7 +329,7 @@ WHERE Industry = 'Oil/Gas Transmission';
 Now you can query results from the view:
 
 ```sql
-SELECT * FROM 'OilAndGas';
+SELECT * FROM "OilAndGas";
 ``` 
 ```text
 + ------------------------------------------------------------------------------------------------------------------------------ +
@@ -275,31 +342,6 @@ SELECT * FROM 'OilAndGas';
 + ------------------------------------------------------------------------------------------------------------------------------ +
 ```
 
-<a name="built-in-functions"></a>
-#### Built-in Functions
-
-| Function                  | Purpose                                       |
-|---------------------------|-----------------------------------------------|
-| AVG(expression)           | Returns the average of an expression  |
-| CONCAT(string1, string2)  | Returns the concatenation of two strings  |
-| COUNT(expression)         | Returns the count of an expression  |
-| LEFT(string, n)           | Returns the specified number of characters from the left of the string |
-| LEN(string)               | Returns the length of a given string. |
-| MAX(expression)           | Returns the maximum value of a given field |
-| MIN(expression)           | Returns the minimum value of a given field |
-| NOW()                     | Returns the current date/time. |
-| PADLEFT(string, width)    | Returns a copy of the given string right-justified by the given width. |
-| PADRIGHT(string, width)   | Returns a copy of the given string left-justified by the given width. |
-| POW(base, exponent)       | Returns a number representing the given base taken to the power of the given exponent. |
-| RIGHT(string, n)          | Returns the specified number of characters from the right of the string |
-| SPLIT(string, delimiter)  | Splits a string by a delimiting character (or string) and returns an array of strings. |
-| SQRT(expression)          | Returns the square root of a given number. |
-| SUBSTRING(string, start, length)| Returns a specified number of characters from a particular position of a given string. |
-| SUM(expression)           | Returns the sum of a given field. |
-| TRIM(string)              | Returns a string after removing all prefixes or suffixes from the given string. |
-| UUID()                    | Returns a random UUID. |
-
-
 <a name="insert"></a>
 #### INSERT statement
 
@@ -309,9 +351,9 @@ of values, or insert the results of a query.
 Copy a portion of one file to another (appending the target):
 
 ```sql
-INSERT INTO './test2.csv' (Symbol, Sector, Industry, LastSale)
-SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-WHERE Industry = 'Homebuilding';
+INSERT INTO "./test2.csv" (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
+WHERE Industry = "Homebuilding";
 ``` 
 ```text
 + --------------- +
@@ -324,9 +366,9 @@ WHERE Industry = 'Homebuilding';
 Copy a portion of one file to another (overwriting the target):
 
 ```sql
-INSERT OVERWRITE './test2.csv' (Symbol, Sector, Industry, LastSale)
-SELECT Symbol, Sector, Industry, LastSale FROM './companylist.csv'
-WHERE Industry = 'Precious Metals';
+INSERT OVERWRITE "./test2.csv" (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
+WHERE Industry = "Precious Metals";
 ``` 
 ```text
 + --------------- +
@@ -340,9 +382,9 @@ Moreover, _INSERT_ supports the notion of hints. You can provide "hints" to the 
 read or write:
 
 ```sql
-INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv'
+FROM "companylist.csv"
 WITH CSV FORMAT
 ```
 
@@ -353,17 +395,17 @@ Now, in this case, because the file extensions provide hints to Qwery about the 
 explicit hints as follows:
 
 ```sql
-INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" (Symbol, Name, Sector, Industry)
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv'
+FROM "companylist.csv"
 ```
 
 The two _INSERT_ statements above are functionally identical.
 
 *NOTE*: When processing files via the ETL module, it is recommend to provide hints as to the input and output formats.
 
-<a name="set"></a>
-#### SET statement
+<a name="declare-set"></a>
+#### DECLARE & SET statements
 
 The _SET_ statement is used to set the value or a variable. 
 *NOTE* You must declare the variable prior to using it.
@@ -379,7 +421,7 @@ SET @myVariable = 1
 ```
 
 ```sql
-SET @myVariable = 'Hello World'
+SET @myVariable = "Hello World"
 ```
 
 You can also set values from a result set:
@@ -431,7 +473,7 @@ SHOW FILES
 Like all other commands that return a result set, it's results are composable (can be used as sub-queries). 
 
 ```sql
-SELECT * FROM (SHOW FILES) WHERE Name LIKE '%.csv';
+SELECT * FROM (SHOW FILES) WHERE Name LIKE "%.csv";
 ```
 ```text
 + ------------------------------------------------------------------------------------------------------ +
@@ -445,7 +487,7 @@ SELECT * FROM (SHOW FILES) WHERE Name LIKE '%.csv';
 ```
 
 ```sql
-DESCRIBE (SELECT * FROM (SHOW FILES) WHERE Name LIKE '%.csv');
+DESCRIBE (SELECT * FROM (SHOW FILES) WHERE Name LIKE "%.csv");
 ```
 ```text
 + ------------------------------------------------- +
@@ -466,7 +508,7 @@ The _DESCRIBE_ statement is used to display the structure of a result.
 As such, it can be used to "describe" the layout of a local file:
 
 ```sql
-DESCRIBE './companylist.csv';
+DESCRIBE "./companylist.csv";
 ```
 ```text
 + --------------------------------------------------------------------------------------- +
@@ -487,7 +529,7 @@ DESCRIBE './companylist.csv';
 And as you would imagine, you can "describe" the result of a query:
 
 ```sql
-DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM 'companylist.csv');
+DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM "companylist.csv");
 ```
 ```text
 + -------------------------------------------- +
@@ -564,23 +606,23 @@ using the script file.
 The following is script to execute ($QWERY_HOME/scripts/companylist.sql) when the file has been observed:
 
 ```sql
-INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv' 
+FROM "companylist.csv" 
 WITH CSV FORMAT
 ```
 
-The above SQL script is simple enough, it reads CSV records from 'companylist.csv', and writes four of the fields in
-JSON format to 'companylist.json'.
+The above SQL script is simple enough, it reads CSV records from "companylist.csv", and writes four of the fields in
+JSON format to "companylist.json".
 
 Additionally, this script works well if the input and output files are known ahead of time, but often this is not the case.
 As a result, Qwery supports the substitution of pre-defined variables for the input file name. Consider the following
 script which is functionally identical to the one above.
 
 ```sql
-INSERT INTO '{{ work.file.base }}.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "{{ work.file.base }}.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM '{{ work.file.path }}'
+FROM "{{ work.file.path }}"
 WITH CSV FORMAT
 ```
 

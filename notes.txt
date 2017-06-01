@@ -26,13 +26,6 @@ DESIGN NOTES
             WITH PSV FORMAT
             WHERE Industry = 'Oil/Gas Transmission'
 
-        Proposal 2: JSON Format
-
-            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-            FROM 'companylist.csv'
-            WITH ROWS AS JSON
-            WHERE Industry = 'Oil/Gas Transmission'
-
         Proposal 3: Fixed-length Format
 
             SELECT
@@ -83,3 +76,59 @@ CREATE VIEW 'OilAndGas' AS
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission';
+
+Qwery URLs
+
+current:
+
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+proposal #1:
+------------
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+WITH JSON FORMAT
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+WITH AVRO SCHEMA('schema.avsc')
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+WITH AVRO IDL('schema.avsc')
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+WITH CSV FORMAT
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+proposal #2:
+------------
+CONNECT TO 'S3'
+WITH PROPERTIES './kafka-auth.properties'
+AS 'weblogs'
+
+CONNECT TO 'KAFKA'
+WITH PROPERTIES './kafka-auth.properties'
+AS 'weblogs'
+
+DISCONNECT FROM 'weblogs'
+
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM 'weblogs'
+WITH JSON FORMAT
+WITH PROPERTIES "./kafka-auth.properties"
+LIMIT 5
+
+
+

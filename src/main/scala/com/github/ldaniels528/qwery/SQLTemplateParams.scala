@@ -57,3 +57,18 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
   }
 
 }
+
+/**
+  * SQLTemplate Params Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object SQLTemplateParams {
+
+  /**
+    * Creates a new SQL Language Parser instance
+    * @param ts the given [[TokenStream token stream]]
+    * @return the [[SQLLanguageParser language parser]]
+    */
+  def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLLanguageParser(ts).process(template)
+
+}

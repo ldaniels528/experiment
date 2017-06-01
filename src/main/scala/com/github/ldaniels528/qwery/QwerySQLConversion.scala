@@ -41,6 +41,7 @@ object QwerySQLConversion {
     case DataResource(path, hints) => toDataResource(path, hints)
     case Declare(variableRef, typeName) => s"DECLARE $variableRef $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
+    case Disconnect(handle) => toDisconnect(handle)
     case Insert(target, fields, source, append) => toInsert(target, fields, source, append)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
@@ -117,6 +118,8 @@ object QwerySQLConversion {
     limit.foreach(n => sb.append(s" LIMIT $n"))
     sb.toString()
   }
+
+  private def toDisconnect(handle: String) = s"DISCONNECT FROM '$handle'"
 
   private def toHint(hints: Hints) = {
     val sb = new StringBuilder(80)

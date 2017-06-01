@@ -266,15 +266,14 @@ trait ExpressionParser {
   */
 object ExpressionParser {
   private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
-  private val function0s = Seq(
-    Now, Uuid
-  )
+  private val function0s = Seq(Now, Rand, Uuid)
   private val function1s = Map(
     "AVG" -> Avg.apply _,
     "COUNT" -> Count.apply _,
     "LEN" -> Len.apply _,
     "MAX" -> Max.apply _,
     "MIN" -> Min.apply _,
+    "SIGN" -> Sign.apply _,
     "SQRT" -> Sqrt.apply _,
     "SUM" -> Sum.apply _,
     "TRIM" -> Trim.apply _
