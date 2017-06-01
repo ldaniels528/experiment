@@ -10,8 +10,10 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
 * <a href="#development">Development</a>
     * <a href="#build-requirements">Build Requirements</a>
     * <a href="#build-application">Building the applications</a>
+    * <a href="#run-tests">Running the tests</a>
 * <a href="#sql-commands">SQL Syntax and Grammar</a>
     * <a href="#select">SELECT statement</a>
+    * <a href="#built-in-functions">Built-in Functions</a>
     * <a href="#views">VIEWS</a>
     * <a href="#insert">INSERT statement</a>
     * <a href="#set">SET statement</a> 
@@ -89,7 +91,8 @@ sbt "project cli" clean assembly
 [info] Done packaging.
 ```
 
-### Running the tests
+<a name="run-tests"></a>
+#### Running the tests
 
 ```bash
 $ sbt clean test
@@ -271,6 +274,31 @@ SELECT * FROM 'OilAndGas';
 | EGAS    Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  http://www.nasdaq.com/symbol/egas   |
 + ------------------------------------------------------------------------------------------------------------------------------ +
 ```
+
+<a name="built-in-functions"></a>
+#### Built-in Functions
+
+| Function                  | Purpose                                       |
+|---------------------------|-----------------------------------------------|
+| AVG(expression)           | Returns the average of an expression  |
+| CONCAT(string1, string2)  | Returns the concatenation of two strings  |
+| COUNT(expression)         | Returns the count of an expression  |
+| LEFT(string, n)           | Returns the specified number of characters from the left of the string |
+| LEN(string)               | Returns the length of a given string. |
+| MAX(expression)           | Returns the maximum value of a given field |
+| MIN(expression)           | Returns the minimum value of a given field |
+| NOW()                     | Returns the current date/time. |
+| PADLEFT(string, width)    | Returns a copy of the given string right-justified by the given width. |
+| PADRIGHT(string, width)   | Returns a copy of the given string left-justified by the given width. |
+| POW(base, exponent)       | Returns a number representing the given base taken to the power of the given exponent. |
+| RIGHT(string, n)          | Returns the specified number of characters from the right of the string |
+| SPLIT(string, delimiter)  | Splits a string by a delimiting character (or string) and returns an array of strings. |
+| SQRT(expression)          | Returns the square root of a given number. |
+| SUBSTRING(string, start, length)| Returns a specified number of characters from a particular position of a given string. |
+| SUM(expression)           | Returns the sum of a given field. |
+| TRIM(string)              | Returns a string after removing all prefixes or suffixes from the given string. |
+| UUID()                    | Returns a random UUID. |
+
 
 <a name="insert"></a>
 #### INSERT statement
