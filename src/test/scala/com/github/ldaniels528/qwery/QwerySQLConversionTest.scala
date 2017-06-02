@@ -47,6 +47,24 @@ class QwerySQLConversionTest extends FunSpec {
       assert(sql == QweryCompiler(sql).toSQL)
     }
 
+    it("supports SELECT-INTO-WHERE-LIMIT") {
+      val sql0 =
+        """
+          |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |INTO 'companylist.json'
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Consumer Specialties'
+          |LIMIT 25""".stripMargin.toSingleLine
+      val sql1 =
+        """
+          |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Consumer Specialties'
+          |LIMIT 25""".stripMargin.toSingleLine
+      assert(sql1 == QweryCompiler(sql0).toSQL)
+    }
+
     it("supports SELECT-WHERE-LIMIT") {
       val sql =
         """

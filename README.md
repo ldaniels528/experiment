@@ -221,7 +221,25 @@ SELECT Sector, COUNT(*) AS Securities FROM "./companylist.csv" GROUP BY Sector
 + --------------------------------- + 
 ```
 
-CASE-WHEN is also supported
+You can also choose to "pipe" the results of a query to an output source:
+
+```sql
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+INTO "companylist.json" WITH JSON FORMAT 
+FROM "companylist.csv"
+WITH CSV FORMAT;
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 359             |
++ --------------- +
+```
+
+*NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the much more verbose INSERT-SELECT grammar.
+
+CASE-WHEN is also supported:
 
 ```sql
 SELECT 

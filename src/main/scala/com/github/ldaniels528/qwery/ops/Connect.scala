@@ -1,11 +1,19 @@
 package com.github.ldaniels528.qwery.ops
 
 /**
-  * Created by ldaniels3 on 6/1/2017.
+  * Connect statement
+  * @example {{{ CONNECT TO 'KAFKA' WITH PROPERTIES './kafka-auth.properties' AS 'weblogs' }}}
   * @see [[Disconnect]]
   */
-case class Connect(name: String, typeName: String, hints: Option[Hints]) extends Executable {
+case class Connect(name: String, serviceName: String, hints: Option[Hints]) extends Executable {
 
-  override def execute(scope: Scope): ResultSet = ???
+  override def execute(scope: Scope): ResultSet = {
+    ConnectionManager.lookup(serviceName) match {
+      case Some(provider) =>
+      case None =>
+        throw new IllegalStateException(s"'$name' is not a registered service")
+    }
+    ResultSet.ok()
+  }
 
 }

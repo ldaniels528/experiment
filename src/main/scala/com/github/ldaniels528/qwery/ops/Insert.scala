@@ -19,8 +19,9 @@ case class Insert(target: DataResource,
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
     outputSource.open(scope)
     outputSource use { device =>
-      source.execute(scope) foreach { data =>
-        device.write(data)
+      source.execute(scope) foreach { row =>
+        // TODO perform filtering of the row?
+        device.write(row)
         count += 1
       }
     }

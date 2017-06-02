@@ -4,12 +4,12 @@ import java.io.FileInputStream
 import java.util.Properties
 
 import com.github.ldaniels528.qwery.SQLLanguageParser.SLPExtensions
-import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.ops.NamedExpression._
+import com.github.ldaniels528.qwery.ops.{Expression, _}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
-import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.util.{Failure, Success, Try}
 
@@ -431,8 +431,8 @@ object SQLLanguageParser {
     * @return an [[Connect executable]]
     */
   private def parseConnect(ts: TokenStream): Connect = {
-    val params = SQLTemplateParams(ts, "CONNECT TO %a:type %w:hints AS %a:name")
-    Connect(name = params.atoms("name"), typeName = params.atoms("type"), hints = params.hints.get("hints"))
+    val params = SQLTemplateParams(ts, "CONNECT TO %a:service %w:hints AS %a:name")
+    Connect(name = params.atoms("name"), serviceName = params.atoms("service"), hints = params.hints.get("hints"))
   }
 
   /**
@@ -509,17 +509,14 @@ object SQLLanguageParser {
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLLanguageParser(stream)
     val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target %w:hints ( %F:fields )")
-    val target = params.atoms.get("target").map(DataResource.apply(_, params.hints.get("hints")))
-      .getOrElse(throw new SyntaxException("Output source is missing"))
-    val fields = params.fields
-      .getOrElse("fields", stream.die("Field arguments missing"))
-    val append = params.atoms.get("mode").exists(_.equalsIgnoreCase("INTO"))
-    // VALUES or SELECT
-    val source = stream match {
-      case ts if ts.is("VALUES") => parseInsertValues(fields, ts, parser)
-      case ts => parseNext(ts)
-    }
-    Insert(target, fields, source, append)
+    Insert(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      fields = params.fields("fields"),
+      source = stream match {
+        case ts if ts.is("VALUES") => parseInsertValues(params.fields("fields"), ts, parser)
+        case ts => parseNext(ts)
+      },
+      append = params.atoms("mode").equalsIgnoreCase("INTO"))
   }
 
   /**
@@ -548,26 +545,42 @@ object SQLLanguageParser {
     * WHERE exchange = 'NASDAQ'
     * LIMIT 5
     * }}}
-    * @param ts the given [[TokenStream token stream]]
+    * @param stream the given [[TokenStream token stream]]
     * @return an [[Select executable]]
     */
-  private def parseSelect(ts: TokenStream): Select = {
-    val params = SQLTemplateParams(ts,
+  private def parseSelect(stream: TokenStream): Executable = {
+    val params = SQLTemplateParams(stream,
       """
-        |SELECT ?TOP ?%n:top %E:fields ?FROM ?%s:source %w:hints
+        |SELECT ?TOP ?%n:top %E:fields
+        |?INTO ?%a:target ?%w:targetHints
+        |?FROM ?%s:source %w:sourceHints
         |?WHERE ?%c:condition
         |?GROUP +?BY ?%F:groupBy
         |?ORDER +?BY ?%o:orderBy
-        |?LIMIT ?%n:limit""".stripMargin.toSingleLine)
+        |?LIMIT ?%n:limit""".stripMargin)
 
-    Select(
+    // create the SELECT statement
+    val select = Select(
       fields = params.expressions("fields"),
-      source = params.sources.get("source").map(_.withHints(params.hints.get("hints"))),
+      source = params.sources.get("source").map(_.withHints(params.hints.get("sourceHints"))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
-      limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt)
-    )
+      limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
+
+    // determine whether SELECT INTO was requested
+    if (params.atoms.contains("target")) {
+      Insert(
+        target = DataResource(params.atoms("target"), params.hints.get("targetHints")),
+        fields = params.expressions("fields") map {
+          case field: Field => field
+          case named: NamedExpression => Field(named.name)
+          case expr => Field(expr.getName)
+        },
+        source = select,
+        append = true)
+    }
+    else select
   }
 
   /**

@@ -8,6 +8,7 @@ case class View(name: String, query: Executable) extends Executable {
   private var once = true
 
   override def execute(scope: Scope): ResultSet = {
+    // called first on creation
     if (once) {
       once = !once
       scope += this

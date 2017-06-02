@@ -115,7 +115,7 @@ LIMIT 5
 proposal #2:
 ------------
 CONNECT TO 'S3'
-WITH PROPERTIES './kafka-auth.properties'
+WITH PROPERTIES './aws-s3.properties'
 AS 'weblogs'
 
 CONNECT TO 'KAFKA'
@@ -131,4 +131,9 @@ WITH PROPERTIES "./kafka-auth.properties"
 LIMIT 5
 
 
-
+SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+FROM 'weblogs.json'
+WITH JSON FORMAT
+WITH PROPERTIES "./kafka-auth.properties"
+WITH CONNECTION 'weblogs'
+LIMIT 5

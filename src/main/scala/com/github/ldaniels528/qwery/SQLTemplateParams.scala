@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
   * Represents the extracted SQL template properties
@@ -69,6 +70,6 @@ object SQLTemplateParams {
     * @param ts the given [[TokenStream token stream]]
     * @return the [[SQLLanguageParser language parser]]
     */
-  def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLLanguageParser(ts).process(template)
+  def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLLanguageParser(ts).process(template.toSingleLine)
 
 }

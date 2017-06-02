@@ -43,5 +43,5 @@ example/work
 companylist.json
 example/incoming/
 scratch/
-s3.properties
+aws-s3.properties
 example/scripts/pixall.sql
