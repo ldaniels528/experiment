@@ -8,7 +8,7 @@ import com.github.ldaniels528.qwery.ops.{Expression, Scope}
   * @param delimiter the delimiter to use for splitting the string
   */
 case class Split(string: Expression, delimiter: Expression) extends InternalFunction {
-  override def evaluate(scope: Scope): Option[Any] = {
+  override def evaluate(scope: Scope): Option[List[String]] = {
     for {
       str <- string.getAsString(scope)
       delim <- delimiter.getAsString(scope)

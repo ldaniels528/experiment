@@ -74,7 +74,7 @@ sbt "project etl" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.4.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -86,7 +86,7 @@ sbt "project cli" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.3.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.4.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -710,8 +710,8 @@ After the compilation completes, you'll see a message like:
 ```text
 [info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
 [info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar ...
-[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.3.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.4.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.4.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -719,7 +719,7 @@ After the compilation completes, you'll see a message like:
 Now, you can execute the ETL distributable:
 
 ```bash
-~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.3.bin.jar
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.4.bin.jar
 ```
 
 *NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
@@ -742,7 +742,7 @@ Once it's up and running, it should look something like the following:
 ```text
 [info] Running com.github.ldaniels528.qwery.etl.QweryETL 
 
- Qwery ETL v0.3.3
+ Qwery ETL v0.3.4
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -768,7 +768,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.3.3
+ Qwery CLI v0.3.4
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
