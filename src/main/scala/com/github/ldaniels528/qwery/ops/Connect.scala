@@ -9,7 +9,7 @@ case class Connect(name: String, serviceName: String, hints: Option[Hints]) exte
 
   override def execute(scope: Scope): ResultSet = {
     ConnectionManager.lookup(serviceName) match {
-      case Some(provider) => //scope += provider
+      case Some(provider) => scope += provider.create(name, hints)
       case None =>
         throw new IllegalStateException(s"'$name' is not a registered service")
     }

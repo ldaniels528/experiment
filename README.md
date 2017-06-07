@@ -13,6 +13,8 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#run-tests">Running the tests</a>
 * <a href="#sql-commands">SQL Syntax and Grammar</a>
     * <a href="#select">SELECT statement</a>
+        * <a href="#select-kafka">Querying Kafka topics</a>
+        * <a href="#select-s3">Querying files on S3</a>
     * <a href="#built-in-functions">Built-in Functions</a>
     * <a href="#views">VIEWS</a>
     * <a href="#insert">INSERT statement</a>
@@ -257,6 +259,7 @@ END;
 + ---------- +
 ```
 
+<a name="select-kafka"></a>
 Query Kafka topics: 
 
 ```sql
@@ -295,6 +298,24 @@ LIMIT 5;
 | 53992737-1688-4983-ad674  adgroup_a123                  QweryDotCom                                                                                                         |
 | 53992737-1688-4983-ad675  adgroup_a123                  QweryDotCom                                                                                                         |
 + --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- +
+```
+
+<a name="select-s3"></a>
+Query files on S3:
+
+```sql
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
+FROM "s3:csv://ldaniels3/companylist.csv"
+WITH PROPERTIES "./aws-s3.properties"
+WHERE Industry = "EDP Services";
+```
+```text
++ -------------------------------------------------------------------------------- +
+| Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
++ -------------------------------------------------------------------------------- +
+| TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
+| WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
++ -------------------------------------------------------------------------------- +
 ```
 
 <a name="built-in-functions"></a>

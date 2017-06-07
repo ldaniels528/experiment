@@ -1,4 +1,4 @@
-DESIGN NOTES
+DESIGN NOTES / IDEAS
 
 1. Result set, row and column-level Modifiers
 
@@ -72,66 +72,69 @@ DESIGN NOTES
 
 2. VIEWs
 
-CREATE VIEW 'OilAndGas' AS
-SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv'
-WHERE Industry = 'Oil/Gas Transmission';
+    CREATE VIEW 'OilAndGas' AS
+    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    FROM 'companylist.csv'
+    WHERE Industry = 'Oil/Gas Transmission';
 
-Qwery URLs
+3. Qwery URLs
 
-current:
+    current:
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5
 
-proposal #1:
-------------
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-WITH JSON FORMAT
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-WITH AVRO SCHEMA('schema.avsc')
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-WITH AVRO IDL('schema.avsc')
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-WITH CSV FORMAT
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
 
-proposal #2:
-------------
-CONNECT TO 'S3'
-WITH PROPERTIES './aws-s3.properties'
-AS 'weblogs'
+    Proposals to change the device/source interface:
 
-CONNECT TO 'KAFKA'
-WITH PROPERTIES './kafka-auth.properties'
-AS 'weblogs'
+    proposal #1:
+    ------------
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+    WITH JSON FORMAT
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5
 
-DISCONNECT FROM 'weblogs'
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+    WITH AVRO SCHEMA('schema.avsc')
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM 'weblogs'
-WITH JSON FORMAT
-WITH PROPERTIES "./kafka-auth.properties"
-LIMIT 5
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+    WITH AVRO IDL('schema.avsc')
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5
 
-SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM 'weblogs.json'
-WITH JSON FORMAT
-WITH CONNECTION 'weblogs'
-LIMIT 5
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
+    WITH CSV FORMAT
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5
+
+    proposal #2:
+    ------------
+    CONNECT TO 'S3'
+    WITH PROPERTIES './aws-s3.properties'
+    AS 'weblogs'
+
+    CONNECT TO 'KAFKA'
+    WITH PROPERTIES './kafka-auth.properties'
+    AS 'weblogs'
+
+    DISCONNECT FROM 'weblogs'
+
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM 'weblogs.json'
+    WITH JSON FORMAT
+    WITH CONNECTION 'weblogs'
+    LIMIT 5
+
+
+

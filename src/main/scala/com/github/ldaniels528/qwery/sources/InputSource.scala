@@ -44,7 +44,7 @@ object InputSource extends InputSourceFactory {
   /**
     * URLs:
     * kafka:avro://server?topic=X&group_id=Y&schema=/path/to/schema.json
-    * s3:csv:companylist.csv?bucket=ldaniels3&region=us-west-1
+    * s3:csv://ldaniels3/companylist.csv?region=us-west-1
     * fs:csv:/path/to/companylist.csv
     */
 
