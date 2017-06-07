@@ -31,10 +31,6 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints] = None) ext
 object JSONInputSource extends InputSourceFactory {
   private val kafkaJsonHeader = "kafka:json://"
 
-  def apply(device: InputDevice, schemaString: String, hints: Option[Hints]): JSONInputSource = {
-    JSONInputSource(device, hints)
-  }
-
   override def apply(path: String, hints: Option[Hints]): Option[JSONInputSource] = {
     Option(parseURI(path, hints))
   }

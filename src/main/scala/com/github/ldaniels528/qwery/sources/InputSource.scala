@@ -1,9 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.devices.TextFileInputDevice
 import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Row, Scope}
-import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
-import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**
   * Input Source
@@ -39,14 +36,7 @@ trait InputSource extends IOSource with Executable {
   * Input Source Factory
   * @author lawrence.daniels@gmail.com
   */
-object InputSource extends InputSourceFactory {
-
-  /**
-    * URLs:
-    * kafka:avro://server?topic=X&group_id=Y&schema=/path/to/schema.json
-    * s3:csv://ldaniels3/companylist.csv?region=us-west-1
-    * fs:csv:/path/to/companylist.csv
-    */
+object InputSource extends InputSourceFactory with SourceUrlParser {
 
   /**
     * Determines the appropriate input source based on the given path and hints
@@ -54,24 +44,10 @@ object InputSource extends InputSourceFactory {
     * @param hints the given [[Hints hints]]
     * @return an option of an [[InputSource input source]]
     */
-  override def apply(path: String, hints: Option[Hints] = None): Option[InputSource] = {
-    (hints ?? Hints()) map {
-      case hint if hint.isJson.contains(true) => JSONInputSource(TextFileInputDevice(path), hint)
-      case hint if hint.delimiter.nonEmpty => DelimitedInputSource(TextFileInputDevice(path), hint)
-      case hint =>
-        path.toLowerCase() match {
-          case uri if uri.startsWith("kafka:avro://") => AvroInputSource.parseURI(path, hint)
-          case uri if uri.startsWith("kafka:json://") => JSONInputSource.parseURI(path, hint)
-          case file if file.endsWith(".csv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asCSV))
-          case file if file.endsWith(".json") => JSONInputSource(TextFileInputDevice(path), hints = hint.map(_.asJSON))
-          case file if file.endsWith(".psv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asPSV))
-          case file if file.endsWith(".tsv") => DelimitedInputSource(TextFileInputDevice(path), hints = hint.map(_.asTSV))
-          case _ => DelimitedInputSource(TextFileInputDevice(path), hint)
-        }
-    }
-  }
+  override def apply(path: String, hints: Option[Hints] = None): Option[InputSource] = parseInputSource(path, hints)
 
   override def understands(path: String): Boolean = path.toLowerCase() match {
+    case s if s.matches("^\\S+:\\S+:.*") => true
     case s if s.startsWith("http://") | s.startsWith("https://") => true
     case s if s.endsWith(".csv") | s.endsWith(".psv") | s.endsWith(".tsv") => true
     case s if s.endsWith(".txt") | s.endsWith(".json") => true
