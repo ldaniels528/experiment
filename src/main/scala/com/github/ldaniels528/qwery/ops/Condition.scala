@@ -24,6 +24,10 @@ case class GE(a: Expression, b: Expression) extends Condition {
   override def isSatisfied(scope: Scope): Boolean = a.compare(b, scope) >= 0
 }
 
+case class IsNull(a: Expression) extends Condition {
+  override def isSatisfied(scope: Scope): Boolean = a.evaluate(scope).isEmpty
+}
+
 case class LIKE(a: Expression, b: Expression) extends Condition {
   override def isSatisfied(scope: Scope): Boolean = {
     (for {

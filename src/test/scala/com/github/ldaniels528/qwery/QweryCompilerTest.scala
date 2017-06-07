@@ -9,6 +9,7 @@ import org.scalatest.FunSpec
 
 /**
   * Qwery Compiler Test
+  *
   * @author lawrence.daniels@gmail.com
   */
 class QweryCompilerTest extends FunSpec {
@@ -45,6 +46,24 @@ class QweryCompilerTest extends FunSpec {
       val sql = "SELECT 1234 AS number"
       assert(QweryCompiler(sql) ==
         Select(fields = List(NamedExpression(name = "number", 1234))))
+    }
+
+    it("should support IS NULL conditions") {
+      val sql = "SELECT * FROM 'companylist.csv' WHERE exchange IS NULL"
+      assert(QweryCompiler(sql) ==
+        Select(
+          fields = List(AllFields),
+          source = Some(DataResource("companylist.csv")),
+          condition = Some(IsNull(Field("exchange")))))
+    }
+
+    it("should support IS NOT NULL conditions") {
+      val sql = "SELECT * FROM 'companylist.csv' WHERE exchange IS NOT NULL"
+      assert(QweryCompiler(sql) ==
+        Select(
+          fields = List(AllFields),
+          source = Some(DataResource("companylist.csv")),
+          condition = Some(NOT(IsNull(Field("exchange"))))))
     }
 
     it("should CAST values from one type to another") {

@@ -130,10 +130,8 @@ WITH JSON FORMAT
 WITH PROPERTIES "./kafka-auth.properties"
 LIMIT 5
 
-
 SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
 FROM 'weblogs.json'
 WITH JSON FORMAT
-WITH PROPERTIES "./kafka-auth.properties"
 WITH CONNECTION 'weblogs'
 LIMIT 5

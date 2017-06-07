@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.ops
 
 import java.util.{Properties => JProperties}
 
-import com.github.ldaniels528.qwery.devices.{InputDevice, KafkaInputDevice, OutputDevice}
+import com.github.ldaniels528.qwery.devices.{InputDevice, KafkaInputDevice, KafkaOutputDevice, OutputDevice}
 
 import scala.collection.concurrent.TrieMap
 
@@ -36,9 +36,9 @@ trait Connection {
 
   def name: String
 
-  def getInputSource(scope: Scope, path: String, hints: Option[Hints]): Option[InputDevice]
+  def getInputDevice(scope: Scope, path: String, hints: Option[Hints]): Option[InputDevice]
 
-  def getOutputSource(scope: Scope, path: String, hints: Option[Hints]): Option[OutputDevice]
+  def getOutputDevice(scope: Scope, path: String, hints: Option[Hints]): Option[OutputDevice]
 
 }
 
@@ -64,9 +64,11 @@ case class KafkaConnectionProvider(serviceName: String) extends ConnectionProvid
   */
 case class KafkaConnection(name: String) extends Connection {
 
-  override def getInputSource(scope: Scope, path: String, hints: Option[Hints]): Option[InputDevice] = {
+  override def getInputDevice(scope: Scope, path: String, hints: Option[Hints]): Option[InputDevice] = {
     Option(KafkaInputDevice(topic = path, config = hints.flatMap(_.properties).getOrElse(new JProperties())))
   }
 
-  override def getOutputSource(scope: Scope, path: String, hints: Option[Hints]): Option[OutputDevice] = ???
+  override def getOutputDevice(scope: Scope, path: String, hints: Option[Hints]): Option[OutputDevice] = {
+    Option(KafkaOutputDevice(topic = path, config = hints.flatMap(_.properties).getOrElse(new JProperties())))
+  }
 }
