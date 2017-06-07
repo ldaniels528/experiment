@@ -8,6 +8,7 @@ import com.github.ldaniels528.qwery.ops.builtins._
 
 /**
   * Expression Parser
+  *
   * @author lawrence.daniels@gmail.com
   */
 trait ExpressionParser {
@@ -53,6 +54,7 @@ trait ExpressionParser {
 
   /**
     * Parses an internal function (e.g. "LEN('Hello World')")
+    *
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Expression internal function]]
     */
@@ -120,6 +122,13 @@ trait ExpressionParser {
 
         do {
           if (expression.isEmpty) expression = parseExpression(ts)
+          else if (ts.nextIf("IS")) {
+            if (condition.nonEmpty) ts.die("Illegal start of expression")
+            val useNot = ts.nextIf("NOT")
+            ts.expect("NULL")
+            condition = expression map IsNull
+            if (useNot) condition = condition.map(NOT)
+          }
           else {
             val result = for {
               (_, op) <- conditionalOps.find { case (symbol, _) => ts.nextIf(symbol) }
@@ -159,6 +168,7 @@ trait ExpressionParser {
 
   /**
     * Parses an expression alias (e.g. "(1 + 3) * 2 AS qty")
+    *
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Expression CAST expression]]
     */
@@ -189,6 +199,7 @@ trait ExpressionParser {
     *   ELSE expr3
     * END
     * }}}
+    *
     * @param ts the given [[TokenStream token stream]]
     * @return
     */
@@ -232,6 +243,7 @@ trait ExpressionParser {
 
   /**
     * Parses a CAST expression (e.g. "CAST(1234 as String)")
+    *
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Expression CAST expression]]
     */
@@ -249,6 +261,7 @@ trait ExpressionParser {
 
   /**
     * Parses a NOT condition (e.g. "NOT X = 1")
+    *
     * @param ts the given [[TokenStream token stream]]
     * @return a [[Condition condition]]
     */
@@ -262,6 +275,7 @@ trait ExpressionParser {
 
 /**
   * Expression Parser Singleton
+  *
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
@@ -303,6 +317,7 @@ object ExpressionParser {
 
   /**
     * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
+    *
     * @param name the given name
     * @return true, if the given name qualifies as an identifier
     */
