@@ -118,7 +118,7 @@ sbt clean coverage test coverageReport
 <a name="sql-commands"></a>
 ### SQL Syntax and Grammar
 
-Qwery currently supports a powerful, but limited set of SQL statements, including:
+Qwery currently supports a limited, but powerful set of SQL statements, including:
 * CREATE VIEW - used to create views.
 * DESCRIBE - shows the layout/structure of files or query results.
 * INSERT - inserts (appends or overwrites) files, Kafka topics, etc.
@@ -676,7 +676,7 @@ The following are the variables that are created by the Workflow Manager at the 
 | work.path             | The full path of the processing sub-directory (underneath work)       |
 
 
-The follow is a sample of the input file:
+The following is a sample of the input file:
 
 ```csv
 "Symbol","Name","LastSale","MarketCap","ADR TSO","IPOyear","Sector","Industry","Summary Quote",
