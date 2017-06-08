@@ -19,3 +19,15 @@ case class JSONOutputSource(device: OutputDevice, hints: Option[Hints] = None) e
   }
 
 }
+
+/**
+  * JSON Output Source Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object JSONOutputSource extends OutputSourceFactory {
+
+  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
+    if (hints.exists(_.isJson.contains(true))) Option(JSONOutputSource(device, hints)) else None
+  }
+
+}

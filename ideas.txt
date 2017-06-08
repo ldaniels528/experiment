@@ -84,10 +84,21 @@ DESIGN NOTES / IDEAS
     SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
     FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
     WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5
+    LIMIT 5;
 
+    future:
 
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM "kafka://dev001:9093?topic=weblogs&group_id=ldtest1"
+    WITH JSON FORMAT
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5;
 
+    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
+    FROM "kafka://dev001:9093?topic=weblogs&group_id=ldtest1"
+    WITH AVRO './pixall-v5.avsc'
+    WITH PROPERTIES "./kafka-auth.properties"
+    LIMIT 5;
 
 
     Proposals to change the device/source interface:

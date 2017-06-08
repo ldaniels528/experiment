@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
+import com.github.ldaniels528.qwery.devices.OutputDevice
 import com.github.ldaniels528.qwery.ops.Hints
 
 /**
@@ -8,6 +9,6 @@ import com.github.ldaniels528.qwery.ops.Hints
   */
 trait OutputSourceFactory extends IOSourceFactory {
 
-  def apply(path: String, append: Boolean, hints: Option[Hints]): Option[OutputSource]
+  def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource]
 
 }

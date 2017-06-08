@@ -11,6 +11,7 @@ import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
+import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -338,6 +339,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
   private def extractWithClause(name: String) = {
+    val withAvro = "WITH AVRO %a:avro"
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
@@ -351,6 +353,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
 
     while (stream.is("WITH")) {
       parser match {
+        // WITH AVRO ['./twitter.avsc']
+        case p if p.matches(withAvro) =>
+          val params = p.process(withAvro)
+          hints = hints.copy(avro = params.atoms.get("avro").map(getContents))
         // WITH COLUMN [HEADERS]
         case p if p.matches(withHeader) =>
           val params = p.process(withHeader)
@@ -363,7 +369,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
-        // WITH PROPERTIES [./settings.properties]
+        // WITH PROPERTIES ['./settings.properties']
         case p if p.matches(withProps) =>
           val params = p.process(withProps)
           hints = hints.copy(properties = params.atoms.get("props").map(getProperties))
@@ -383,6 +389,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     }
     SQLTemplateParams(hints = if (hints.nonEmpty) Map(name -> hints) else Map.empty)
   }
+
+  private def getContents(path: String): String = Source.fromFile(path).mkString
 
   private def getProperties(path: String): Properties = {
     val props = new Properties()

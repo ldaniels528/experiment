@@ -7,7 +7,7 @@ import com.github.ldaniels528.qwery.util.StringHelper._
 import scala.language.postfixOps
 
 /**
-  * Delimited Text Input Source
+  * Delimited Input Source
   * @author lawrence.daniels@gmail.com
   */
 case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
@@ -79,6 +79,18 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
         headers zip parse(bytes)
       }
       row_?.foreach(row => buffer = row :: buffer)
+  }
+
+}
+
+/**
+  * Delimited Input Source Singleton
+  * @author lawrence.daniels@gmail.com
+  */
+object DelimitedInputSource extends InputSourceFactory {
+
+  override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
+    if (hints.exists(_.delimiter.nonEmpty)) Option(DelimitedInputSource(device, hints)) else None
   }
 
 }

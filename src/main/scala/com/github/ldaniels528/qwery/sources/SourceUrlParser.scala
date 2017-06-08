@@ -15,7 +15,7 @@ trait SourceUrlParser {
 
   /**
     * Parses the path or URL and returns an input source
-    * @param path the given URL (e.g. "kafka:avro://server?topic=X&group_id=Y&schema=/path/to/schema.json")
+    * @param path the given URL (e.g. "kafka://server?topic=X&group_id=Y&schema=/path/to/schema.json")
     * @return the option of an [[InputSource input source]]
     */
   def parseInputSource(path: String, hints: Option[Hints]): Option[InputSource] = {
@@ -89,7 +89,7 @@ trait SourceUrlParser {
     }
   }
 
-  private def parseURI(uri: String): URLComps = {
+  def parseURI(uri: String): URLComps = {
     // are there parameters?
     uri.indexOf('?') match {
       case -1 =>

@@ -6,6 +6,4 @@ package com.github.ldaniels528.qwery.sources
   */
 trait IOSourceFactory {
 
-  def understands(url: String): Boolean
-
 }

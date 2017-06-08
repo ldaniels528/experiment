@@ -45,3 +45,15 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
   }
 
 }
+
+/**
+  * Delimited Output Source Singleton
+  * @author lawrence.daniels@gmail.com
+  */
+object DelimitedOutputSource extends OutputSourceFactory {
+
+  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
+    if (hints.exists(_.delimiter.nonEmpty)) Option(DelimitedOutputSource(device, hints)) else None
+  }
+
+}

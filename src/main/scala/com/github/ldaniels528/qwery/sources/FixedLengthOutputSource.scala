@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
+import com.github.ldaniels528.qwery.sources.FixedLengthOutputSource.FixedField
 
 /**
   * Fixed-length Output Source
@@ -27,5 +27,20 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
       case None => " " * width
     }
   }
+
+}
+
+/**
+  * Fixed-length Output Source Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object FixedLengthOutputSource extends OutputSourceFactory {
+
+  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
+    //if (hints.exists(_.avro.nonEmpty)) Option(FixedLengthOutputSource(device, hints)) else None
+    None
+  }
+
+  case class FixedField(name: String, width: Int)
 
 }
