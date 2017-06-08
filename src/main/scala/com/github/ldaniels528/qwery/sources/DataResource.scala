@@ -20,19 +20,14 @@ case class DataResource(path: String, hints: Option[Hints] = None) extends Execu
     * @param scope the given [[Scope scope]]
     * @return an option of an [[InputSource input source]]
     */
-  def getInputSource(scope: Scope): Option[InputSource] = {
-    DataSourceFactory.getInputSource(path = scope.expand(path), hints)
-  }
+  def getInputSource(scope: Scope): Option[InputSource] = InputSource(path = scope.expand(path), hints)
 
   /**
     * Retrieves the output source that corresponds to the path
-    * @param scope  the given [[Scope scope]]
-    * @param append indicates whether output source should append data (or conversely overwrite the data)
+    * @param scope the given [[Scope scope]]
     * @return an option of an [[OutputSource output source]]
     */
-  def getOutputSource(scope: Scope, append: Boolean): Option[OutputSource] = {
-    DataSourceFactory.getOutputSource(path = scope.expand(path), append, hints)
-  }
+  def getOutputSource(scope: Scope): Option[OutputSource] = OutputSource(path = scope.expand(path), hints)
 
   override def toString: String = path
 

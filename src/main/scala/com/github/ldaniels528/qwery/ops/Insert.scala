@@ -7,15 +7,11 @@ import com.github.ldaniels528.qwery.util.ResourceHelper._
   * Represents an INSERT statement
   * @author lawrence.daniels@gmail.com
   */
-case class Insert(target: DataResource,
-                  fields: Seq[Field],
-                  source: Executable,
-                  append: Boolean = false)
-  extends Executable {
+case class Insert(target: DataResource, fields: Seq[Field], source: Executable) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
     var count = 0L
-    val outputSource = target.getOutputSource(scope, append)
+    val outputSource = target.getOutputSource(scope)
       .getOrElse(throw new IllegalStateException(s"No device found for ${target.path}"))
     outputSource.open(scope)
     outputSource use { device =>

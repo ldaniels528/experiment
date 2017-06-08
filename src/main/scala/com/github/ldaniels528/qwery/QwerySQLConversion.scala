@@ -42,7 +42,7 @@ object QwerySQLConversion {
     case Declare(variableRef, typeName) => s"DECLARE $variableRef $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Disconnect(handle) => toDisconnect(handle)
-    case Insert(target, fields, source, append) => toInsert(target, fields, source, append)
+    case Insert(target, fields, source) => toInsert(target, fields, source)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
@@ -132,8 +132,8 @@ object QwerySQLConversion {
     sb.toString().drop(1)
   }
 
-  private def toInsert(target: DataResource, fields: Seq[Field], source: Executable, append: Boolean): String = {
-    s"""INSERT ${if (append) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")}) ${source.toSQL}"""
+  private def toInsert(target: DataResource, fields: Seq[Field], source: Executable): String = {
+    s"""INSERT ${if (target.hints.exists(_.isAppend)) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")}) ${source.toSQL}"""
   }
 
   private def toSelect(fields: Seq[Expression],

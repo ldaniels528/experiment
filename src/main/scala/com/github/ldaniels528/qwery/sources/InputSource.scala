@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Row, Scope}
+import com.github.ldaniels528.qwery.devices.SourceUrlParser
+import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Row, Scope}
 
 /**
   * Input Source
@@ -29,5 +30,15 @@ trait InputSource extends IOSource with Executable {
         throw new IllegalStateException("Empty iterator")
     }
   }
+
+}
+
+/**
+  * Input Source Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object InputSource extends SourceUrlParser {
+
+  def apply(path: String, hints: Option[Hints] = None): Option[InputSource] = parseInputSource(path, hints)
 
 }

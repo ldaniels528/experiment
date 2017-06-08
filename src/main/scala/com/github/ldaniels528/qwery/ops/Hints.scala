@@ -8,7 +8,8 @@ import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
   * Represents the collection of SQL hints
   * @author lawrence.daniels@gmail.com
   */
-case class Hints(avro: Option[String] = None,
+case class Hints(append: Option[Boolean] = None,
+                 avro: Option[String] = None,
                  delimiter: Option[String] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
@@ -16,6 +17,22 @@ case class Hints(avro: Option[String] = None,
                  properties: Option[JProperties] = None,
                  quotedNumbers: Option[Boolean] = None,
                  quotedText: Option[Boolean] = None) {
+
+  def asCSV: Hints = copy(delimiter = ",", headers = true, quotedText = true, quotedNumbers = false)
+
+  def asJSON: Hints = copy(isJson = true)
+
+  def asPSV: Hints = copy(delimiter = "|", headers = true, quotedText = true, quotedNumbers = false)
+
+  def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
+
+  def isAppend: Boolean = append.contains(true)
+
+  def isEmpty: Boolean = !nonEmpty
+
+  def isGzip: Boolean = gzip.contains(true)
+
+  lazy val nonEmpty: Boolean = Seq(append, avro, delimiter, gzip, headers, isJson, properties, quotedNumbers, quotedText).exists(_.nonEmpty)
 
   def usingFormat(format: String): Hints = {
     format.toUpperCase() match {
@@ -27,17 +44,5 @@ case class Hints(avro: Option[String] = None,
       case _ => this
     }
   }
-
-  def asCSV: Hints = copy(delimiter = ",", headers = true, quotedText = true, quotedNumbers = false)
-
-  def asJSON: Hints = copy(isJson = true)
-
-  def asPSV: Hints = copy(delimiter = "|", headers = true, quotedText = true, quotedNumbers = false)
-
-  def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
-
-  def isEmpty: Boolean = !nonEmpty
-
-  def nonEmpty: Boolean = Seq(avro, delimiter, gzip, headers, isJson, properties, quotedNumbers, quotedText).exists(_.nonEmpty)
 
 }

@@ -2,26 +2,24 @@ package com.github.ldaniels528.qwery.sources
 
 import java.sql.{Connection, DriverManager, ResultSet}
 
-import com.github.ldaniels528.qwery.devices.InputDevice
+import com.github.ldaniels528.qwery.devices._
 import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 
 /**
   * JDBC Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class JDBCInputSource(query: String, url: String, hints: Option[Hints]) extends InputSource with InputDevice {
+case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) extends InputSource {
   private var conn: Option[Connection] = None
   private var resultSet: Option[ResultSet] = None
   private var columnNames: Seq[String] = Nil
 
   override def close(): Unit = conn.foreach(_.close())
 
-  override def device: JDBCInputSource = this
-
-  override def getSize: Option[Long] = None
+  override lazy val device = JDBCInputDevice(url, query, hints)
 
   override def open(scope: Scope): Unit = {
-    statsGen.reset()
+    super.open(scope)
     conn = Option(DriverManager.getConnection(url))
   }
 
@@ -44,17 +42,17 @@ case class JDBCInputSource(query: String, url: String, hints: Option[Hints]) ext
 }
 
 /**
-  * JDBC Input Device Companion
+  * JDBC Input Source Companion
   * @author lawrence.daniels@gmail.com
   */
-object JDBCInputSource extends InputSourceFactory with SourceUrlParser {
+object JDBCInputSource extends InputDeviceFactory with InputSourceFactory with SourceUrlParser {
 
   /**
     * Parses a JDBC URL
     * @param path the given URL (e.g. "jdbc:mysql://localhost/test")
     * @return an option of the [[JDBCInputSource JDBC input source]]
     */
-  def parse(path: String, hints: Option[Hints]): Option[JDBCInputSource] = {
+  override def parseInputURL(path: String, hints: Option[Hints]): Option[JDBCInputDevice] = {
     if (path.startsWith("jdbc:")) {
       val comps = parseURI(path)
       for {
@@ -63,13 +61,16 @@ object JDBCInputSource extends InputSourceFactory with SourceUrlParser {
           case -1 => path
           case index => path.substring(0, index)
         }
-      } yield JDBCInputSource(query, url, hints)
+      } yield JDBCInputDevice(url = url, query = query, hints)
     }
     else None
   }
 
   override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
-    if (hints.exists(_.avro.nonEmpty)) Option(JDBCInputSource(query = s"SELECT * FROM $tableName", hints)) else None
+    device match {
+      case jdbc: JDBCInputSource => Some(jdbc)
+      case _ => None
+    }
   }
 
 }

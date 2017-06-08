@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.devices
 import java.util.{Properties => JProperties}
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
 import org.slf4j.LoggerFactory
@@ -88,7 +88,7 @@ case class KafkaInputDevice(topic: String, config: JProperties)
   * Kafka Input Device Companion
   * @author lawrence.daniels@gmail.com
   */
-object KafkaInputDevice {
+object KafkaInputDevice extends InputDeviceFactory with SourceUrlParser {
 
   def apply(topic: String,
             groupId: String,
@@ -106,4 +106,20 @@ object KafkaInputDevice {
       props
     })
   }
+
+  /**
+    * Returns a compatible input device for the given URL.
+    * @param url the given URL (e.g. "kafka://server?topic=X&group_id=Y")
+    * @return an option of the [[InputDevice input device]]
+    */
+  override def parseInputURL(url: String, hints: Option[Hints]): Option[InputDevice] = {
+    val comps = parseURI(url)
+    for {
+      bootstrapServers <- comps.host if url.toLowerCase.startsWith("kafka:")
+      topic <- comps.params.get("topic")
+      groupId <- comps.params.get("group_id")
+      config = hints.flatMap(_.properties)
+    } yield KafkaInputDevice(bootstrapServers = bootstrapServers, topic = topic, groupId = groupId, consumerProps = config)
+  }
+
 }

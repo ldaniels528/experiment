@@ -29,7 +29,7 @@ class QweryCompilerTest extends FunSpec {
     it("should support CREATE VIEW statements") {
       val sql =
         """
-          |CREATE VIEW OilAndGas AS
+          |CREATE VIEW 'OilAndGas' AS
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin
@@ -159,7 +159,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test2.csv"),
+          target = DataResource("test2.csv", hints = Some(Hints(append = Some(false)))),
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             source = Option(DataResource(path = "companylist.csv")),
@@ -177,8 +177,7 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test3.csv"),
-          append = true,
+          target = DataResource("test3.csv", hints = Some(Hints(append = Some(true)))),
           source = InsertValues(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(

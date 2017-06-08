@@ -9,7 +9,7 @@ import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.github.ldaniels528.qwery.devices.AWSS3InputDevice._
 import com.github.ldaniels528.qwery.devices.InputDevice._
-import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import org.slf4j.LoggerFactory
 
@@ -40,7 +40,7 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Opt
     val accessKeyID = config.getProperty("AWS_ACCESS_KEY_ID")
     val secretAccessKey = config.getProperty("AWS_SECRET_ACCESS_KEY")
     val sessionKey = config.getProperty("AWS_SESSION_TOKEN")
-    val regionName_? = Option(config.getProperty("AWS_REGION"))
+    val regionName_? = regionName ?? Option(config.getProperty("AWS_REGION"))
     val clientConfiguration = new ClientConfiguration()
     clientConfiguration.setSignerOverride("AWSS3V4SignerType")
     s3Client = Option(getS3Client(accessKeyID, secretAccessKey, sessionKey, regionName ?? regionName_?))
@@ -67,13 +67,28 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Opt
   * AWS S3 File Input Device Companion
   * @author lawrence.daniels@gmail.com
   */
-object AWSS3InputDevice {
+object AWSS3InputDevice extends InputDeviceFactory with SourceUrlParser {
   private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
-  def getS3Client(accessKeyID: String,
-                  secretAccessKey: String,
-                  sessionKey: String,
-                  regionName: Option[String] = None): AmazonS3 = {
+  /**
+    * Returns a compatible input device for the given URL.
+    * @param url the given URL (e.g. "s3://ldaniels3/companylist.csv?region=us-west-1")
+    * @return an option of the [[InputDevice input device]]
+    */
+  override def parseInputURL(url: String, hints: Option[Hints]): Option[InputDevice] = {
+    val comps = parseURI(url)
+    for {
+      bucket <- comps.host if url.toLowerCase.startsWith("s3:")
+      key <- comps.path
+      region = comps.params.get("region")
+      config <- hints.flatMap(_.properties)
+    } yield AWSS3InputDevice(bucketName = bucket, keyName = key, regionName = region, config = config)
+  }
+
+  private def getS3Client(accessKeyID: String,
+                          secretAccessKey: String,
+                          sessionKey: String,
+                          regionName: Option[String] = None): AmazonS3 = {
     // create the S3 client
     val s3Client = AmazonS3ClientBuilder.standard()
       .withCredentials(new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKeyID, secretAccessKey, sessionKey)))
@@ -88,13 +103,13 @@ object AWSS3InputDevice {
     s3Client
   }
 
-  def getS3Object(s3Client: AmazonS3, bucketName: String, keyName: String): S3Object = {
+  private def getS3Object(s3Client: AmazonS3, bucketName: String, keyName: String): S3Object = {
     val s3Object = s3Client.getObject(new GetObjectRequest(bucketName, keyName))
     log.info(s"Content-Type: ${s3Object.getObjectMetadata.getContentType}")
     s3Object
   }
 
-  def getS3Content(s3Object: S3Object): BufferedSource = {
+  private def getS3Content(s3Object: S3Object): BufferedSource = {
     val input = s3Object.getObjectContent.asInstanceOf[InputStream]
     Source.fromInputStream(input)
   }

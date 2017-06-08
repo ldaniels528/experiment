@@ -10,6 +10,7 @@ import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
+import org.slf4j.LoggerFactory
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -19,6 +20,7 @@ import scala.util.{Failure, Success, Try}
   * @author lawrence.daniels@gmail.com
   */
 class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Indicates whether the given stream matches the given template
@@ -100,17 +102,14 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
     case tag if tag.startsWith("%w:") => Some(extractWithClause(tag.drop(3)))
 
-    // optionally required tag? (e.g. "?TOP ?%a:top" => "TOP 100")
-    case tag if tag.startsWith("?%") | tag.startsWith("?{{") => processNextTag(tag.drop(1), tags)
+    // optionally required atom? (e.g. "?ORDER +?BY +?%o:sortFields|" => "ORDER BY Symbol DESC")
+    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
 
-    // optionally required atom? (e.g. "?ORDER +?BY ?%o:sortFields|" => "ORDER BY Symbol DESC")
-    case tag if tag.startsWith("+?") => stream.expect(tag.drop(2)); None
-
-    // optional tag? (e.g. "?LIMIT ?%n:limit" => "LIMIT 100")
-    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags); None
+    // optional tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
+    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
 
     // must be literal text
-    case text => stream.expect(text); None
+    case text => stream.expect(text); Some(SQLTemplateParams())
   }
 
   /**
@@ -201,7 +200,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     }
 
     var expressions: List[Expression] = Nil
-    do expressions = expressions ::: fetchNext(stream) :: Nil while (stream.nextIf(","))
+    do expressions = expressions ::: fetchNext(stream) :: Nil while (stream nextIf ",")
     SQLTemplateParams(expressions = Map(name -> expressions))
   }
 
@@ -210,10 +209,17 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param name the named identifier
     * @param tags the [[PeekableIterator iterator]]
     */
-  private def extractOptional(name: String, tags: PeekableIterator[String]): Unit = {
-    if (!stream.nextIf(name)) {
-      // if the option tag wasn't matched, skip any associated arguments
-      while (tags.hasNext && tags.peek.exists(tag => tag.startsWith("+?") || tag.startsWith("?%"))) tags.next()
+  private def extractOptional(name: String, tags: PeekableIterator[String]) = {
+    def skipOptionals() = while (tags.hasNext && tags.peek.exists(_.startsWith("+?"))) tags.next()
+
+    logger.info(s"$name : ${stream.peek}")
+    Try(processNextTag(aTag = name, tags)) match {
+      case Success(None) => skipOptionals(); None
+      case Success(result) => result
+      case Failure(_) =>
+        stream.previous
+        skipOptionals()
+        None
     }
   }
 
@@ -474,7 +480,7 @@ object SQLLanguageParser {
     * @return an [[Describe executable]]
     */
   private def parseDescribe(ts: TokenStream): Describe = {
-    val params = SQLTemplateParams(ts, "DESCRIBE %s:source ?LIMIT ?%n:limit")
+    val params = SQLTemplateParams(ts, "DESCRIBE %s:source ?LIMIT +?%n:limit")
     Describe(
       source = params.sources.getOrElse("source", ts.die("No source provided")),
       limit = params.numerics.get("limit").map(_.toInt))
@@ -517,14 +523,15 @@ object SQLLanguageParser {
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLLanguageParser(stream)
     val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target %w:hints ( %F:fields )")
+    val append = params.atoms("mode").equalsIgnoreCase("INTO")
+    val hints = params.hints.get("hints") ?? Option(Hints()).map(_.copy(append = Some(append)))
     Insert(
-      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      target = DataResource(params.atoms("target"), hints),
       fields = params.fields("fields"),
       source = stream match {
         case ts if ts.is("VALUES") => parseInsertValues(params.fields("fields"), ts, parser)
         case ts => parseNext(ts)
-      },
-      append = params.atoms("mode").equalsIgnoreCase("INTO"))
+      })
   }
 
   /**
@@ -559,13 +566,13 @@ object SQLLanguageParser {
   private def parseSelect(stream: TokenStream): Executable = {
     val params = SQLTemplateParams(stream,
       """
-        |SELECT ?TOP ?%n:top %E:fields
-        |?INTO ?%a:target ?%w:targetHints
-        |?FROM ?%s:source %w:sourceHints
-        |?WHERE ?%c:condition
-        |?GROUP +?BY ?%F:groupBy
-        |?ORDER +?BY ?%o:orderBy
-        |?LIMIT ?%n:limit""".stripMargin)
+        |SELECT ?TOP +?%n:top %E:fields
+        |?%C(mode,INTO,OVERWRITE) +?%a:target +?%w:targetHints
+        |?FROM +?%s:source +?%w:sourceHints
+        |?WHERE +?%c:condition
+        |?GROUP +?BY +?%F:groupBy
+        |?ORDER +?BY +?%o:orderBy
+        |?LIMIT +?%n:limit""".stripMargin)
 
     // create the SELECT statement
     val select = Select(
@@ -576,19 +583,21 @@ object SQLLanguageParser {
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
-    // determine whether SELECT INTO was requested
-    if (params.atoms.contains("target")) {
-      Insert(
-        target = DataResource(params.atoms("target"), params.hints.get("targetHints")),
-        fields = params.expressions("fields") map {
-          case field: Field => field
-          case named: NamedExpression => Field(named.name)
-          case expr => Field(expr.getName)
-        },
-        source = select,
-        append = true)
+    // determine whether 'SELECT INTO' or 'SELECT OVERWRITE' was requested
+    params.atoms.get("mode") match {
+      case Some(mode) =>
+        val append = mode.equalsIgnoreCase("INTO")
+        val hints = params.hints.get("targetHints") ?? Option(Hints()) map (_.copy(append = Some(append)))
+        Insert(
+          target = DataResource(params.atoms("target"), hints),
+          source = select,
+          fields = params.expressions("fields") map {
+            case field: Field => field
+            case named: NamedExpression => Field(named.name)
+            case expr => Field(expr.getName)
+          })
+      case None => select
     }
-    else select
   }
 
   /**

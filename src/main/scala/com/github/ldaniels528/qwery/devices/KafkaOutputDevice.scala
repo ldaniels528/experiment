@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.devices
 import java.util.concurrent.{Future => JFuture}
 import java.util.{Properties => JProperties}
 
-import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord, RecordMetadata}
 
 /**
@@ -31,10 +31,10 @@ case class KafkaOutputDevice(topic: String, config: JProperties) extends OutputD
 }
 
 /**
-  * Kafka Input Device Companion
+  * Kafka Output Device Companion
   * @author lawrence.daniels@gmail.com
   */
-object KafkaOutputDevice {
+object KafkaOutputDevice extends OutputDeviceFactory with SourceUrlParser {
 
   def apply(topic: String, bootstrapServers: String, producerProps: Option[JProperties] = None): KafkaOutputDevice = {
     KafkaOutputDevice(topic, {
@@ -47,4 +47,19 @@ object KafkaOutputDevice {
     })
   }
 
-} 
+  /**
+    * Returns a compatible output device for the given URL.
+    * @param url the given URL (e.g. "kafka://server?topic=X&group_id=Y")
+    * @return an option of the [[OutputDevice output device]]
+    */
+  override def parseOutputURL(url: String, hints: Option[Hints]): Option[OutputDevice] = {
+    val comps = parseURI(url)
+    for {
+      bootstrapServers <- comps.host if url.toLowerCase.startsWith("kafka:")
+      topic <- comps.params.get("topic")
+      groupId <- comps.params.get("group_id")
+      config = hints.flatMap(_.properties)
+    } yield KafkaOutputDevice(topic = topic, bootstrapServers = bootstrapServers, producerProps = config)
+  }
+
+}

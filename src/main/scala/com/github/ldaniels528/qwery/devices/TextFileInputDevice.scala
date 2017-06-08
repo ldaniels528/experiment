@@ -5,7 +5,7 @@ import java.util.zip.GZIPInputStream
 
 import com.github.ldaniels528.qwery.devices.DeviceHelper._
 import com.github.ldaniels528.qwery.devices.InputDevice._
-import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import org.slf4j.LoggerFactory
 
 import scala.io.{BufferedSource, Source}
@@ -51,3 +51,23 @@ case class TextFileInputDevice(path: String) extends InputDevice {
 
 }
 
+/**
+  * Text File Input Device Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object TextFileInputDevice extends InputDeviceFactory with SourceUrlParser {
+
+  /**
+    * Returns a compatible input device for the given URL.
+    * @param path the given URL (e.g. "./companylist.csv")
+    * @return an option of the [[InputDevice input device]]
+    */
+  override def parseInputURL(path: String, hints: Option[Hints]): Option[InputDevice] = {
+    path.toLowerCase() match {
+      case _ if new File(path).exists() => Option(TextFileInputDevice(path))
+      case uri if uri.startsWith("http://") | uri.startsWith("https://") => Option(TextFileInputDevice(path))
+      case _ => None
+    }
+  }
+
+}
