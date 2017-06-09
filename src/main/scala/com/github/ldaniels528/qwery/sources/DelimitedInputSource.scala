@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row}
+import com.github.ldaniels528.qwery.ops.{Hints, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.language.postfixOps
@@ -16,7 +16,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   private var delimiter = hints.flatMap(_.delimiter).flatMap(_.headOption).getOrElse(',')
   private var buffer: List[Row] = Nil
 
-  override def read(): Option[Row] = {
+  override def read(scope: Scope): Option[Row] = {
     // have the headers been set?
     if (headers.isEmpty) setHeaders()
 

@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row}
+import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
 
 /**
@@ -10,7 +10,7 @@ import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
   */
 case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) extends InputSource {
 
-  override def read(): Option[Row] = {
+  override def read(scope: Scope): Option[Row] = {
     device.read() map { case Record(bytes, _, _) =>
       val line = new String(bytes)
       var position = 0

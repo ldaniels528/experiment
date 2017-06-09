@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
+import com.github.ldaniels528.qwery.util.StringHelper._
 import scala.language.postfixOps
 
 /**
@@ -12,7 +13,10 @@ case class Describe(source: Executable, limit: Option[Int] = None) extends Execu
     val rows = source.execute(scope).take(1)
     val header = if (rows.hasNext) rows.next() else Map.empty
     ResultSet(rows = header.take(limit getOrElse Int.MaxValue).toSeq map { case (name, value) =>
-      Seq("Column" -> name, "Type" -> value.getClass.getSimpleName, "Sample" -> value)
+      Seq(
+        "Column" -> name,
+        "Type" -> Option(value).map(_.getClass.getSimpleName).orNull,
+        "Sample" -> Option(value).map(_.toString.toSingleLine).orNull)
     } toIterator)
   }
 

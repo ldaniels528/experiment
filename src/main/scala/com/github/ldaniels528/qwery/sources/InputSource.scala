@@ -11,19 +11,19 @@ trait InputSource extends IOSource with Executable {
 
   override def execute(scope: Scope): ResultSet = {
     open(scope)
-    ResultSet(rows = toIterator, statistics = getStatistics)
+    ResultSet(rows = toIterator(scope), statistics = getStatistics)
   }
 
-  def read(): Option[Row]
+  def read(scope: Scope): Option[Row]
 
-  def toIterator: Iterator[Row] = new Iterator[Row] {
-    private var nextRow_? : Option[Row] = read()
+  def toIterator(scope: Scope): Iterator[Row] = new Iterator[Row] {
+    private var nextRow_? : Option[Row] = read(scope)
 
     override def hasNext: Boolean = nextRow_?.nonEmpty
 
     override def next(): Row = nextRow_? match {
       case Some(row) =>
-        nextRow_? = read()
+        nextRow_? = read(scope)
         if (nextRow_?.isEmpty) close()
         row
       case None =>

@@ -23,7 +23,7 @@ case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) ext
     conn = Option(DriverManager.getConnection(url))
   }
 
-  override def read(): Option[Row] = {
+  override def read(scope: Scope): Option[Row] = {
     resultSet match {
       case Some(rs) =>
         if (rs.next()) Some(columnNames.map(name => name -> rs.getObject(name))) else None
@@ -35,7 +35,7 @@ case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) ext
         }).getOrElse(throw new IllegalStateException("Column names could not be determined"))
 
         // read the next record
-        read()
+        read(scope)
     }
   }
 

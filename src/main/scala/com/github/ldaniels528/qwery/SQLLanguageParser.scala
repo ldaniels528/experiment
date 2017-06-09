@@ -359,6 +359,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
+    val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
     val withQuoted = "WITH QUOTED %C(quoted,NUMBERS,TEXT)"
@@ -385,6 +386,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH JSON PATH ( elem1, elem2, .., elemN )
+        case p if p.matches(withJsonPath) =>
+          val params = p.process(withJsonPath)
+          hints = hints.copy(jsonPath = params.expressions("jsonPath"))
         // WITH PROPERTIES ['./settings.properties']
         case p if p.matches(withProps) =>
           val params = p.process(withProps)

@@ -14,6 +14,7 @@ case class Hints(append: Option[Boolean] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
                  isJson: Option[Boolean] = None,
+                 jsonPath: List[Expression] = Nil,
                  properties: Option[JProperties] = None,
                  quotedNumbers: Option[Boolean] = None,
                  quotedText: Option[Boolean] = None) {
@@ -34,7 +35,9 @@ case class Hints(append: Option[Boolean] = None,
 
   def isGzip: Boolean = gzip.contains(true)
 
-  lazy val nonEmpty: Boolean = Seq(append, avro, delimiter, gzip, headers, isJson, properties, quotedNumbers, quotedText).exists(_.nonEmpty)
+  lazy val nonEmpty: Boolean = Seq(
+    append, avro, delimiter, gzip, headers, isJson, jsonPath, properties, quotedNumbers, quotedText
+  ).exists(_.nonEmpty)
 
   def usingFormat(format: String): Hints = {
     format.toUpperCase() match {
