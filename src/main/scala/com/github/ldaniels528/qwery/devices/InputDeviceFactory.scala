@@ -49,11 +49,8 @@ object InputDeviceFactory extends InputDeviceFactory {
   def parseInputURL(url: String, hints: Option[Hints]): Option[InputDevice] = {
     (for {
       prefix <- url.split("[:]", 2).headOption.map(_.toLowerCase())
-      _ = println(s"prefix = '$prefix'")
       factory <- factories.get(prefix)
-      _ = println(s"factory = '$factory'")
       device <- factory.parseInputURL(url, hints)
-      _ = println(s"device = '$device'")
     } yield device) ?? TextFileInputDevice.parseInputURL(url, hints)
   }
 

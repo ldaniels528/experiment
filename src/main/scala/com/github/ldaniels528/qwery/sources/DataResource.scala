@@ -9,7 +9,7 @@ import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Scope}
 case class DataResource(path: String, hints: Option[Hints] = None) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
-    scope.lookupView(path) match {
+    scope.lookupView(scope.expand(path)) match {
       case Some(view) => view.execute(scope)
       case None => getInputSource(scope).map(_.execute(scope)) getOrElse ResultSet()
     }
@@ -29,6 +29,10 @@ case class DataResource(path: String, hints: Option[Hints] = None) extends Execu
     */
   def getOutputSource(scope: Scope): Option[OutputSource] = OutputSource(path = scope.expand(path), hints)
 
+  /**
+    * Returns the string representation of the data resource
+    * @return the string representation of the data resource
+    */
   override def toString: String = path
 
 }

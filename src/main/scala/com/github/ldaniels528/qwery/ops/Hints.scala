@@ -26,9 +26,11 @@ case class Hints(append: Option[Boolean] = None,
 
   def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
 
-  def isAppend: Boolean = append.contains(true)
+  def isAppend: Boolean = !isOverwrite
 
   def isEmpty: Boolean = !nonEmpty
+
+  def isOverwrite: Boolean = append.contains(false)
 
   def isGzip: Boolean = gzip.contains(true)
 

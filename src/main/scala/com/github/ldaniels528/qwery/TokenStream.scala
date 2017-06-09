@@ -12,7 +12,11 @@ class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
   def die[A](message: String): A = throw SyntaxException(message, this)
 
-  def dieEOS[A]: A = die("Unexpected end of statement")
+  def makeCopy: TokenStream = {
+    val ts = new TokenStream(tokens)
+    ts.position = position
+    ts
+  }
 
   def expect(text: => String): this.type = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected $text")

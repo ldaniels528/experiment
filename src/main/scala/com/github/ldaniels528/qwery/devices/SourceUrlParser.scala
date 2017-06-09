@@ -66,18 +66,20 @@ trait SourceUrlParser {
   }
 
   private def findInputSource(device: InputDevice, path: String, hints: Option[Hints]) = {
-    hints map {
-      case h if h.avro.nonEmpty => AvroInputSource(device, hints)
-      case h if h.isJson.contains(true) => JSONInputSource(device, hints)
-      case h if h.delimiter.nonEmpty => DelimitedInputSource(device, hints)
+    hints flatMap {
+      case h if h.avro.nonEmpty => Option(AvroInputSource(device, hints))
+      case h if h.isJson.contains(true) => Option(JSONInputSource(device, hints))
+      case h if h.delimiter.nonEmpty => Option(DelimitedInputSource(device, hints))
+      case _ => None
     }
   }
 
   private def findOutputSource(device: OutputDevice, path: String, hints: Option[Hints]) = {
-    hints map {
-      case h if h.avro.nonEmpty => AvroOutputSource(device, hints)
-      case h if h.isJson.contains(true) => JSONOutputSource(device, hints)
-      case h if h.delimiter.nonEmpty => DelimitedOutputSource(device, hints)
+    hints flatMap {
+      case h if h.avro.nonEmpty => Option(AvroOutputSource(device, hints))
+      case h if h.isJson.contains(true) => Option(JSONOutputSource(device, hints))
+      case h if h.delimiter.nonEmpty => Option(DelimitedOutputSource(device, hints))
+      case _ => None
     }
   }
 

@@ -105,7 +105,7 @@ object QwerySQLConversion {
   private def toDataResource(path: String, hints: Option[Hints]) = {
     val sb = new StringBuilder(80)
     sb.append(s"'$path'")
-    hints.foreach(hints => sb.append(' ').append(hints.toSQL))
+    hints.foreach(hints => sb.append(hints.toSQL))
     sb.toString()
   }
 
@@ -129,11 +129,15 @@ object QwerySQLConversion {
     hints.isJson.foreach(on => if (on) sb.append(" WITH JSON FORMAT"))
     hints.quotedNumbers.foreach(on => if (on) sb.append(" WITH QUOTED NUMBERS"))
     hints.quotedText.foreach(on => if (on) sb.append(" WITH QUOTED TEXT"))
-    sb.toString().drop(1)
+    sb.toString()
   }
 
   private def toInsert(target: DataResource, fields: Seq[Field], source: Executable): String = {
-    s"""INSERT ${if (target.hints.exists(_.isAppend)) "INTO" else "OVERWRITE"} ${target.toSQL} (${fields.map(_.toSQL).mkString(", ")}) ${source.toSQL}"""
+    s"""INSERT ${
+      if (target.hints.exists(_.isAppend)) "INTO" else "OVERWRITE"
+    } ${target.toSQL} (${
+      fields.map(_.toSQL).mkString(", ")
+    }) ${source.toSQL}"""
   }
 
   private def toSelect(fields: Seq[Expression],

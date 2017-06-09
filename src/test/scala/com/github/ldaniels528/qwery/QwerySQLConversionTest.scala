@@ -15,7 +15,7 @@ class QwerySQLConversionTest extends FunSpec {
     it("should decompile CREATE VIEW statements") {
       val sql =
         """
-          |CREATE VIEW 'OilAndGas' AS
+          |CREATE VIEW OilAndGas AS
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM 'companylist.csv'
           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin.toSingleLine

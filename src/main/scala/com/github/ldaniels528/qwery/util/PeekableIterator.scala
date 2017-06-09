@@ -8,6 +8,11 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
   private var marks: List[Int] = Nil
   protected var position = 0
 
+  def discard(): Boolean = marks.headOption exists { markedPos =>
+    marks = marks.tail
+    true
+  }
+
   override def hasNext: Boolean = position < values.length
 
   def mark(): Unit = marks = position :: marks
