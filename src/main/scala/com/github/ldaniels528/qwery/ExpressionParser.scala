@@ -61,12 +61,12 @@ trait ExpressionParser {
   private def parseInternalFunction(stream: TokenStream): Option[Expression] = {
     stream match {
       // is it a parameter-less function? (e.g. "Now()")
-      case ts if function0s.exists(fx => ts.is(fx.name)) =>
+      case ts if function0s.exists(fx => ts is fx.name) =>
         function0s.find(f => ts.nextIf(f.name)) map { fx =>
           ts.expect("(").expect(")"); fx
         }
       // is it a single-parameter function? (e.g. "Trim('Hello ')")
-      case ts if function1s.exists { case (name, _) => ts.is(name) } =>
+      case ts if function1s.exists { case (name, _) => ts is name } =>
         function1s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 1) match {
             case a :: Nil => fx(a)
@@ -74,7 +74,7 @@ trait ExpressionParser {
           }
         }
       // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
-      case ts if function2s.exists { case (name, _) => ts.is(name) } =>
+      case ts if function2s.exists { case (name, _) => ts is name } =>
         function2s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 2) match {
             case a :: b :: Nil => fx(a, b)
@@ -82,7 +82,7 @@ trait ExpressionParser {
           }
         }
       // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
-      case ts if function3s.exists { case (name, _) => ts.is(name) } =>
+      case ts if function3s.exists { case (name, _) => ts is name } =>
         function3s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
           parseParameters(ts, name, 3) match {
             case a :: b :: c :: Nil => fx(a, b, c)
@@ -114,7 +114,7 @@ trait ExpressionParser {
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
     stream match {
-      case ts if ts.nextIf("NOT") => parseNOT(ts)
+      case ts if ts nextIf "NOT" => parseNOT(ts)
       case ts =>
         var condition: Option[Condition] = None
         var expression: Option[Expression] = None
@@ -122,10 +122,10 @@ trait ExpressionParser {
 
         do {
           if (expression.isEmpty) expression = parseExpression(ts)
-          else if (ts.nextIf("IS")) {
+          else if (ts nextIf "IS") {
             if (condition.nonEmpty) ts.die("Illegal start of expression")
-            val useNot = ts.nextIf("NOT")
-            ts.expect("NULL")
+            val useNot = ts nextIf "NOT"
+            ts expect "NULL"
             condition = expression map IsNull
             if (useNot) condition = condition.map(NOT)
           }
@@ -145,20 +145,20 @@ trait ExpressionParser {
   private def parseNextExpression(stream: TokenStream): Option[Expression] = {
     stream match {
       // is it a Case expression?
-      case ts if ts.nextIf("Case") => parseCase(ts)
+      case ts if ts nextIf "Case" => parseCase(ts)
       // is it a special function?
-      case ts if ts.nextIf("Cast") => parseCast(ts)
+      case ts if ts nextIf "Cast" => parseCast(ts)
       // is it an all fields reference?
       case ts if ts nextIf "*" => Option(AllFields)
       // is it a variable?
       case ts if ts nextIf "@" => Option(VariableRef(ts.next().text))
       // is it a quantity (e.g. "(2 + (5 * 2))")?
-      case ts if ts.nextIf("(") =>
+      case ts if ts nextIf "(" =>
         val expr = parseExpression(ts)
-        ts.expect(")")
+        ts expect ")"
         expr
       // is it a function?
-      case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_.is("(")) => parseInternalFunction(stream)
+      case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseInternalFunction(stream)
       // is it a field or constant value?
       case ts if ts.isNumeric | ts.isQuoted => Option(Expression(ts.next()))
       case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
@@ -228,7 +228,7 @@ trait ExpressionParser {
       val result = parseExpression(ts) getOrElse ts.die("Results expression expected")
 
       // else case?
-      if (ts.nextIf("ELSE")) {
+      if (ts nextIf "ELSE") {
         otherwise = parseExpression(ts)
         if (otherwise.isEmpty) ts.die("Else expression expected")
         done = true
