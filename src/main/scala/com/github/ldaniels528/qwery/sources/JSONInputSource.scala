@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.sources
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
 import com.github.ldaniels528.qwery.ops.{Hints, NamedExpression, Row, Scope}
 import com.github.ldaniels528.qwery.util.JSONHelper._
-import net.liftweb.json.JsonAST.{JArray, JObject}
+import net.liftweb.json.JsonAST.{JArray, JObject, JValue}
 import net.liftweb.json.parse
 import org.slf4j.LoggerFactory
 
@@ -19,12 +19,9 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends In
   override def read(scope: Scope): Option[Row] = {
     device.read() match {
       case Some(Record(bytes, _, _)) =>
-        var json = parse(new String(bytes))
-        for {
-          path <- jsonPath
-          elem <- path.getAsString(scope)
-        } json = json \ elem
-
+        val json = jsonPath.map(_.getAsString(scope)).foldLeft[JValue](parse(new String(bytes))) { (jv, elem) =>
+          elem.map(jv \ _) getOrElse jv
+        }
         val rows = json match {
           case jo: JObject => List(unwrap(jo))
           case ja: JArray => unwrap(ja)
@@ -32,14 +29,17 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends In
             logger.info(s"Unhandled JSON value '$jv' (${jv.getClass.getName})")
             Seq(NamedExpression.randomName() -> unwrap(jv)) :: Nil
         }
-
         buffer = buffer ::: rows
-        if (buffer.isEmpty) None else {
-          val row = buffer.headOption
-          buffer = buffer.tail
-          row
-        }
-      case None => None
+        readNext
+      case None => readNext
+    }
+  }
+
+  private def readNext: Option[Row] = {
+    if (buffer.isEmpty) None else {
+      val row = buffer.headOption
+      buffer = buffer.tail
+      row
     }
   }
 
