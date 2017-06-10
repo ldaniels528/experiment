@@ -2,6 +2,7 @@ package com.github.ldaniels528.qwery.devices
 
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.sources.JDBCOutputSource
 
 import scala.collection.concurrent.TrieMap
 
@@ -29,6 +30,7 @@ object OutputDeviceFactory extends OutputDeviceFactory {
 
   // add the built-in device types
   add("file", TextFileOutputDevice)
+  add("jdbc", JDBCOutputSource)
   add("kafka", KafkaOutputDevice)
 
   /**

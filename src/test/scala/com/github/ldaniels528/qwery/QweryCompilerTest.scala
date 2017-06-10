@@ -149,6 +149,30 @@ class QweryCompilerTest extends FunSpec {
         ))
     }
 
+    it("should compile SELECT queries with UNION") {
+      val sql =
+        """
+          |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Oil/Gas Transmission'
+          |UNION
+          |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Integrated oil Companies'""".stripMargin
+      assert(QweryCompiler(sql) ==
+        Union(
+          Select(
+            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            source = Option(DataResource(path = "companylist.csv")),
+            condition = Some(EQ(Field("Industry"), "Oil/Gas Transmission"))
+          ),
+          Select(
+            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            source = Option(DataResource(path = "companylist.csv")),
+            condition = Some(EQ(Field("Industry"), "Integrated oil Companies"))
+          )))
+    }
+
     it("should compile INSERT-SELECT statements") {
       val sql =
         """

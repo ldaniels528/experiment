@@ -178,11 +178,21 @@ class QweryTest extends FunSpec {
       ))
     }
 
+    it("should write direct data to a file") {
+      val query = QweryCompiler(
+        """
+          |INSERT OVERWRITE 'test1.csv' (Symbol, Name, LastSale, MarketCap)
+          |VALUES ("XXII", "22nd Century Group, Inc", 1.4, 126977358.2)
+          |VALUES ("FAX", "Aberdeen Asia-Pacific Income Fund Inc", 5, 1266332595)
+          |VALUES ("ACU", "Acme United Corporation.", 29, 96496195)""".stripMargin)
+      val results = query.execute(scope).toSeq
+      assert(results == Stream(Seq(("ROWS_INSERTED", 3))))
+    }
 
     it("should write filtered results from one source (CSV) to another (CSV)") {
       val query = QweryCompiler(
         """
-          |INSERT OVERWRITE 'test1.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap
           |FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
@@ -194,13 +204,13 @@ class QweryTest extends FunSpec {
       val queries = Seq(
         QweryCompiler(
           """
-            |INSERT OVERWRITE 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |INSERT OVERWRITE 'test3.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
             |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
             |FROM 'companylist.csv'
             |WHERE Industry = 'Precious Metals'""".stripMargin),
         QweryCompiler(
           """
-            |INSERT INTO 'test2.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+            |INSERT INTO 'test3.csv' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
             |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
             |FROM 'companylist.csv'
             |WHERE Industry = 'Mining & Quarrying of Nonmetallic Minerals (No Fuels)'""".stripMargin)
@@ -215,7 +225,7 @@ class QweryTest extends FunSpec {
     it("should write filtered results from one source (CSV) to another (JSON)") {
       val query = QweryCompiler(
         """
-          |INSERT OVERWRITE 'test3.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+          |INSERT OVERWRITE 'test4.json' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
           |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
           |FROM 'companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)

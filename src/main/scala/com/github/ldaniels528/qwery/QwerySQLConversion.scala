@@ -47,6 +47,7 @@ object QwerySQLConversion {
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
       toSelect(fields, source, condition, groupFields, orderedColumns, limit)
+    case Union(a, b) => toUnion(a, b)
     case View(name, query) => s"CREATE VIEW $name AS ${query.toSQL}"
     case unknown =>
       throw new IllegalArgumentException(s"Executable '$unknown' was unhandled")
@@ -158,6 +159,8 @@ object QwerySQLConversion {
     limit.foreach(n => sb.append(s" LIMIT $n"))
     sb.toString
   }
+
+  private def toUnion(a: Executable, b: Executable) = s"${a.toSQL} UNION ${b.toSQL}"
 
   final implicit class SQLExtensions(val value: AnyRef) extends AnyVal {
     def toSQL: String = makeSQL(value)

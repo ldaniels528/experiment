@@ -34,13 +34,13 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
   * Fixed-length Output Source Companion
   * @author lawrence.daniels@gmail.com
   */
-object FixedLengthOutputSource extends OutputSourceFactory {
+object FixedLengthOutputSource {
 
-  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
-    //if (hints.exists(_.avro.nonEmpty)) Option(FixedLengthOutputSource(device, hints)) else None
-    None
-  }
-
+  /**
+    * Represents a fixed-length field
+    * @param name  the field name
+    * @param width the field width
+    */
   case class FixedField(name: String, width: Int)
 
 }

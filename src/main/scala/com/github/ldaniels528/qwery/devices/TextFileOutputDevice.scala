@@ -42,11 +42,12 @@ object TextFileOutputDevice extends OutputDeviceFactory with SourceUrlParser {
 
   /**
     * Returns a compatible Output device for the given URL.
-    * @param path the given URL (e.g. "./companylist.csv")
+    * @param url the given URL (e.g. "./companylist.csv")
     * @return an option of the [[OutputDevice Output device]]
     */
-  override def parseOutputURL(path: String, hints: Option[Hints]): Option[OutputDevice] = {
-    if (new File(path).exists()) Option(TextFileOutputDevice(path, hints)) else None
+  override def parseOutputURL(url: String, hints: Option[Hints]): Option[OutputDevice] = {
+    val path = if(url.startsWith("file://")) url.drop(7) else url
+    Option(TextFileOutputDevice(path, hints))
   }
 
 }

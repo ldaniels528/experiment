@@ -13,6 +13,7 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#run-tests">Running the tests</a>
 * <a href="#sql-commands">SQL Syntax and Grammar</a>
     * <a href="#select">SELECT statement</a>
+        * <a href="#union">UNION clause</a>
         * <a href="#select-kafka">Querying Kafka topics</a>
         * <a href="#select-s3">Querying files on S3</a>
     * <a href="#built-in-functions">Built-in Functions</a>
@@ -76,7 +77,7 @@ sbt "project etl" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.5.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -88,7 +89,7 @@ sbt "project cli" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.5.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.6.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -158,32 +159,6 @@ SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
 + ---------- +
 ```
 
-Sum values (just like you normally do with SQL) in the file:
-
-```sql
-SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
-```
-```text
-+ --------------- +
-| total           |
-+ --------------- +
-| 77.1087         |
-+ --------------- +
-```
-
-Type-casting and column name aliases are supported:
-
-```sql
-SELECT CAST("1234" AS Double) AS number;
-```
-```text
-+ -------- + 
-| number   | 
-+ -------- + 
-| 1234.0   | 
-+ -------- + 
-```
-
 Select fields from the file using criteria (WHERE clause):
 
 ```sql
@@ -223,24 +198,6 @@ SELECT Sector, COUNT(*) AS Securities FROM "./companylist.csv" GROUP BY Sector
 + --------------------------------- + 
 ```
 
-You can also choose to "pipe" the results of a query to an output source:
-
-```sql
-SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-INTO "companylist.json" WITH JSON FORMAT 
-FROM "companylist.csv"
-WITH CSV FORMAT;
-```
-```text
-+ --------------- +
-| ROWS_INSERTED   |
-+ --------------- +
-| 359             |
-+ --------------- +
-```
-
-*NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the much more verbose INSERT-SELECT grammar.
-
 CASE-WHEN is also supported:
 
 ```sql
@@ -257,6 +214,30 @@ END;
 + ---------- +
 | Found 2    |
 + ---------- +
+```
+
+<a name="union"></a>
+UNION clauses are also supported:
+
+```sql
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+UNION
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Integrated oil Companies';
+```
+```text
++ ---------------------------------------------------------------------------------------------------------------------------------- +
+| Symbol  Name                                       Sector            Industry                  Summary Quote                       |
++ ---------------------------------------------------------------------------------------------------------------------------------- +
+| CQH     Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission      http://www.nasdaq.com/symbol/cqh    |
+| CQP     Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission      http://www.nasdaq.com/symbol/cqp    |
+| LNG     Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission      http://www.nasdaq.com/symbol/lng    |
+| EGAS    Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission      http://www.nasdaq.com/symbol/egas   |
+| IMO     Imperial Oil Limited                       Energy            Integrated oil Companies  http://www.nasdaq.com/symbol/imo    |
++ ---------------------------------------------------------------------------------------------------------------------------------- +
 ```
 
 <a name="select-kafka"></a>
@@ -318,6 +299,14 @@ WHERE Industry = "EDP Services";
 + -------------------------------------------------------------------------------- +
 ```
 
+*NOTE*: The properties file may contain the following properties:
+```properties
+AWS_ACCESS_KEY_ID=[YOUR AWS ACCESS KEY]
+AWS_SECRET_ACCESS_KEY=[YOUR AWS SECRET ACCESS KEY]
+AWS_SESSION_TOKEN=[YOUR AWS SESSION TOKEN]
+AWS_REGION=[YOUR AWS REGION]
+```
+
 <a name="built-in-functions"></a>
 #### Built-in Functions
 
@@ -344,6 +333,32 @@ WHERE Industry = "EDP Services";
 | TRIM(string)              | Returns a string after removing all prefixes or suffixes from the given string. |
 | UUID()                    | Returns a random UUID. |
 
+
+Sum values (just like you normally do with SQL) in the file:
+
+```sql
+SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
+```
+```text
++ --------------- +
+| total           |
++ --------------- +
+| 77.1087         |
++ --------------- +
+```
+
+Type-casting and column name aliases are supported:
+
+```sql
+SELECT CAST("1234" AS Double) AS number;
+```
+```text
++ -------- + 
+| number   | 
++ -------- + 
+| 1234.0   | 
++ -------- + 
+```
 
 <a name="views"></a>
 #### VIEWS
@@ -387,6 +402,20 @@ SELECT * FROM "OilAndGas";
 The _INSERT_ statement behaves very much like its RDBMS counterparts, as you can directly insert collections
 of values, or insert the results of a query.
 
+```sql
+INSERT OVERWRITE 'test1.csv' (Symbol, Name, LastSale, MarketCap)
+VALUES ("XXII", "22nd Century Group, Inc", 1.4, 126977358.2)
+VALUES ("FAX", "Aberdeen Asia-Pacific Income Fund Inc", 5, 1266332595)
+VALUES ("ACU", "Acme United Corporation.", 29, 96496195);
+``` 
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 3               |
++ --------------- +
+```
+ 
 Copy a portion of one file to another (appending the target):
 
 ```sql
@@ -405,7 +434,7 @@ WHERE Industry = "Homebuilding";
 Copy a portion of one file to another (overwriting the target):
 
 ```sql
-INSERT OVERWRITE "./test2.csv" (Symbol, Sector, Industry, LastSale)
+INSERT OVERWRITE "./test3.csv" (Symbol, Sector, Industry, LastSale)
 SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
 WHERE Industry = "Precious Metals";
 ``` 
@@ -442,6 +471,24 @@ FROM "companylist.csv"
 The two _INSERT_ statements above are functionally identical.
 
 *NOTE*: When processing files via the ETL module, it is recommend to provide hints as to the input and output formats.
+
+You can also choose to "pipe" the results of a query to an output source:
+
+```sql
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+INTO "companylist.json" WITH JSON FORMAT 
+FROM "companylist.csv"
+WITH CSV FORMAT;
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 359             |
++ --------------- +
+```
+
+*NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
 
 <a name="declare-set"></a>
 #### DECLARE & SET statements
@@ -731,8 +778,8 @@ After the compilation completes, you'll see a message like:
 ```text
 [info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
 [info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.5.bin.jar ...
-[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.5.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.6.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -740,7 +787,7 @@ After the compilation completes, you'll see a message like:
 Now, you can execute the ETL distributable:
 
 ```bash
-~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.5.bin.jar
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar
 ```
 
 *NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
@@ -763,7 +810,7 @@ Once it's up and running, it should look something like the following:
 ```text
 [info] Running com.github.ldaniels528.qwery.etl.QweryETL 
 
- Qwery ETL v0.3.5
+ Qwery ETL v0.3.6
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -789,7 +836,7 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.3.5
+ Qwery CLI v0.3.6
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----

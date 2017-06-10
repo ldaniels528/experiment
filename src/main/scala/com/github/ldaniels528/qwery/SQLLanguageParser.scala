@@ -58,6 +58,12 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return the option of the resultant [[SQLTemplateParams template parameters]]
     */
   private def processNextTag(aTag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
+    // optional tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
+    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
+
+    // optionally required atom? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
+    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
+
     // repeat start/end tag? (e.g. "{{values VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
     case tag if tag.startsWith("{{") => processRepeatedSequence(name = tag.drop(2), tags)
 
@@ -85,8 +91,11 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // ordered field list? (e.g. "%o:orderedFields" => "field1 DESC, field2 ASC")
     case tag if tag.startsWith("%o:") => extractOrderedColumns(tag.drop(3))
 
-    // query or expression? (e.g. "%q:query" => "x + 1" | "( SELECT firstName, lastName FROM AddressBook )")
+    // query or expression? (e.g. "%q:queryExpr" => "x + 1" | "( SELECT firstName, lastName FROM AddressBook )")
     case tag if tag.startsWith("%q:") => extractSubQueryOrExpression(tag.drop(3))
+
+    // query? (e.g. "%Q:query" => "SELECT firstName, lastName FROM AddressBook")
+    case tag if tag.startsWith("%Q:") => extractSubQuery(tag.drop(3))
 
     // regular expression match? (e.g. "%r`\\d{3,4}S+`" => "123ABC")
     case tag if tag.startsWith("%r`") & tag.endsWith("`") => Try {
@@ -94,23 +103,14 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       if (stream.matches(pattern)) SQLTemplateParams() else die(s"Did not match the expected pattern '$pattern'")
     }
 
-    // source/sub-query? (e.g. "%s:query" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
+    // source or sub-query? (e.g. "%s:source" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
     case tag if tag.startsWith("%s:") => extractSubQueryOrSource(tag.drop(3))
-
-    // sub-query? (e.g. "%S:source" => "( SELECT firstName, lastName FROM AddressBook )")
-    case tag if tag.startsWith("%S:") => extractSubQuery(tag.drop(3))
 
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => extractVariableReference(tag.drop(3))
 
     // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
     case tag if tag.startsWith("%w:") => extractWithClause(tag.drop(3))
-
-    // optionally required atom? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
-    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
-
-    // optional tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
-    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
 
     // must be literal text
     case text => extractKeyWord(text)
@@ -233,6 +233,23 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     }
   }
 
+  /**
+    * Parses a source expression; either a direct or via query
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractSubQuery(name: String) = Try {
+    val executable = stream match {
+      case ts if ts is "SELECT" => SQLLanguageParser.parseSelect(ts)
+      case ts if ts nextIf "(" =>
+        val result = SQLLanguageParser.parseNext(stream)
+        stream expect ")"
+        result
+      case _ => die("Sub-query expected")
+    }
+    SQLTemplateParams(sources = Map(name -> executable))
+  }
+
   def extractSubQueryOption: Option[Executable] = stream match {
     case ts if ts is "SELECT" =>
       Option(SQLLanguageParser.parseSelect(stream))
@@ -266,24 +283,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         stream expect ")"
         result
       case ts if ts.isQuoted => DataResource(ts.next().text)
-      case ts => die("Source or sub-query expected")
-    }
-    SQLTemplateParams(sources = Map(name -> executable))
-  }
-
-  /**
-    * Parses a source expression; either a direct or via query
-    * @param name the named identifier
-    * @return the [[SQLTemplateParams SQL template parameters]]
-    */
-  private def extractSubQuery(name: String) = Try {
-    val executable = stream match {
-      case ts if ts is "SELECT" => SQLLanguageParser.parseSelect(ts)
-      case ts if ts nextIf "(" =>
-        val result = SQLLanguageParser.parseNext(stream)
-        stream expect ")"
-        result
-      case _ => die("Sub-query expected")
+      case _ => die("Source or sub-query expected")
     }
     SQLTemplateParams(sources = Map(name -> executable))
   }
@@ -450,7 +450,7 @@ object SQLLanguageParser {
       case ts if ts is "SELECT" => parseSelect(ts)
       case ts if ts is "SET" => parseSet(ts)
       case ts if ts is "SHOW" => parseShow(ts)
-      case ts => die("Unexpected end of line")
+      case _ => die("Unexpected end of line")
     }
   }
 
@@ -472,7 +472,7 @@ object SQLLanguageParser {
     * @return an [[View executable]]
     */
   private def parseCreateView(ts: TokenStream): View = {
-    val params = SQLTemplateParams(ts, "CREATE VIEW %a:name AS %S:query")
+    val params = SQLTemplateParams(ts, "CREATE VIEW %a:name AS %Q:query")
     View(name = params.atoms("name"), query = params.sources("query"))
   }
 
@@ -592,13 +592,19 @@ object SQLLanguageParser {
         |?LIMIT +?%n:limit""".stripMargin)
 
     // create the SELECT statement
-    val select = Select(
+    var select: Executable = Select(
       fields = params.expressions("fields"),
       source = params.sources.get("source").map(_.withHints(params.hints.get("sourceHints"))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
+
+    // is it a union?
+    while (stream is "UNION") {
+      val params = SQLTemplateParams(stream, "UNION %Q:union")
+      select = Union(select, params.sources("union"))
+    }
 
     // determine whether 'SELECT INTO' or 'SELECT OVERWRITE' was requested
     params.atoms.get("mode") match {

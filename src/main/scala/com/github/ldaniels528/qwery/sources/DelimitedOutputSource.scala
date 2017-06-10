@@ -41,19 +41,7 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
   private def asString(x: AnyRef) = if (quotedText) quoted(x.toString) else x.toString
 
   private def quoted(s: String) = {
-    new StringBuilder(s.length + 2).append('\'').append(s).append('\'').toString()
-  }
-
-}
-
-/**
-  * Delimited Output Source Singleton
-  * @author lawrence.daniels@gmail.com
-  */
-object DelimitedOutputSource extends OutputSourceFactory {
-
-  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
-    if (hints.exists(_.delimiter.nonEmpty)) Option(DelimitedOutputSource(device, hints)) else None
+    new StringBuilder(s.length + 2).append('"').append(s).append('"').toString()
   }
 
 }

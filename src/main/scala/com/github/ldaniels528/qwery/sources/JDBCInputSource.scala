@@ -51,7 +51,7 @@ case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) ext
   * JDBC Input Source Companion
   * @author lawrence.daniels@gmail.com
   */
-object JDBCInputSource extends InputDeviceFactory with InputSourceFactory with SourceUrlParser {
+object JDBCInputSource extends InputDeviceFactory with SourceUrlParser {
 
   /**
     * Parses a JDBC URL
@@ -70,13 +70,6 @@ object JDBCInputSource extends InputDeviceFactory with InputSourceFactory with S
       } yield JDBCInputSource(url = url, query = query, hints)
     }
     else None
-  }
-
-  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
-    device match {
-      case device: JDBCInputSource => Some(device)
-      case _ => None
-    }
   }
 
 }

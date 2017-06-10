@@ -2,73 +2,49 @@ DESIGN NOTES / IDEAS
 
 1. Result set, row and column-level Modifiers
 
-    a. Modifier Proposals - Implemented
+    Proposal 1: Fixed-length Format
 
-        WITH CSV|PSV|TSV|JSON FORMAT
-        WITH GZIP COMPRESSION
-        WITH DELIMITER ','
-        WITH QUOTED TEXT
-        WITH QUOTED NUMBERS
+        SELECT
+            WIDTH(Symbol, 10) AS Symbol,
+            WIDTH(Name, 64) AS Name,
+            WIDTH(Sector, 30) AS Sector,
+            WIDTH(Industry, 30) AS Industry,
+            WIDTH(`Summary Quote`, 128) AS `Summary Quote`
+        FROM 'companylist.csv'
+        WHERE Industry = 'Oil/Gas Transmission'
 
-    b. Text Formatting Proposals
+        Comments: This works for writing fixed-length fields, but what about reading?
 
-        Proposal 1: CSV/PSV/TSV Format - Implemented
+    Proposal 2: Fixed-length Format
 
-            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-            FROM 'companylist.csv'
-            WITH DELIMITER ','
-            WITH QUOTED TEXT
-            WITH QUOTED NUMBERS
-            WHERE Industry = 'Oil/Gas Transmission'
+        SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        FROM 'companylist.csv'
+        WHERE Industry = 'Oil/Gas Transmission'
+        WITH FIXED COLUMNS (
+            Symbol WIDTH 10,
+            Name WIDTH 64,
+            Sector WIDTH 30,
+            Industry WIDTH 30,
+            `Summary Quote` WIDTH 128
+        )
 
-            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-            FROM 'companylist.csv'
-            WITH PSV FORMAT
-            WHERE Industry = 'Oil/Gas Transmission'
-
-        Proposal 3: Fixed-length Format
-
-            SELECT
-                WIDTH(Symbol, 10) AS Symbol,
-                WIDTH(Name, 64) AS Name,
-                WIDTH(Sector, 30) AS Sector,
-                WIDTH(Industry, 30) AS Industry,
-                WIDTH(`Summary Quote`, 128) AS `Summary Quote`
-            FROM 'companylist.csv'
-            WHERE Industry = 'Oil/Gas Transmission'
-
-            Comments: This works for writing fixed-length fields, but what about reading?
-
-        Proposal 4: Fixed-length Format
-
-            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-            FROM 'companylist.csv'
-            WHERE Industry = 'Oil/Gas Transmission'
-            WITH FIXED COLUMNS (
-                Symbol WIDTH 10,
-                Name WIDTH 64,
-                Sector WIDTH 30,
-                Industry WIDTH 30,
-                `Summary Quote` WIDTH 128
-            )
-
-            INSERT INTO 'fixed-data.txt' (Symbol, Name, Sector, Industry)
-            WITH FIXED COLUMNS (
-                Symbol WIDTH 8,
-                Name WIDTH 32,
-                Sector WIDTH 20,
-                Industry WIDTH 20
-            )
-            SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-            FROM 'companylist.csv'
-            WITH FIXED COLUMNS (
-                Symbol WIDTH 10,
-                Name WIDTH 64,
-                Sector WIDTH 30,
-                Industry WIDTH 30,
-                `Summary Quote` WIDTH 128
-            )
-            WHERE Industry = 'Oil/Gas Transmission'
+        INSERT INTO 'fixed-data.txt' (Symbol, Name, Sector, Industry)
+        WITH FIXED COLUMNS (
+            Symbol WIDTH 8,
+            Name WIDTH 32,
+            Sector WIDTH 20,
+            Industry WIDTH 20
+        )
+        SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        FROM 'companylist.csv'
+        WITH FIXED COLUMNS (
+            Symbol WIDTH 10,
+            Name WIDTH 64,
+            Sector WIDTH 30,
+            Industry WIDTH 30,
+            `Summary Quote` WIDTH 128
+        )
+        WHERE Industry = 'Oil/Gas Transmission'
 
 2. VIEWs
 
@@ -78,15 +54,6 @@ DESIGN NOTES / IDEAS
     WHERE Industry = 'Oil/Gas Transmission';
 
 3. Qwery URLs
-
-    current:
-
-    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-    FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
-    WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5;
-
-    future:
 
     SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
     FROM "kafka://dev001:9093?topic=weblogs&group_id=ldtest1"
@@ -104,32 +71,6 @@ DESIGN NOTES / IDEAS
     Proposals to change the device/source interface:
 
     proposal #1:
-    ------------
-    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-    WITH JSON FORMAT
-    WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5
-
-    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-    WITH AVRO SCHEMA('schema.avsc')
-    WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5
-
-    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-    WITH AVRO IDL('schema.avsc')
-    WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5
-
-    SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-    FROM KAFKA("dev001:9093?topic=weblogs&group_id=ldtest1")
-    WITH CSV FORMAT
-    WITH PROPERTIES "./kafka-auth.properties"
-    LIMIT 5
-
-    proposal #2:
     ------------
     CONNECT TO 'S3'
     WITH PROPERTIES './aws-s3.properties'
@@ -151,8 +92,39 @@ DESIGN NOTES / IDEAS
 
 SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
 
+SELECT `data.Id`, `data.CreatedById`, `data.city`, `data.state`, `data.AnnualRevenue`, `data.Type`, `data.SystemModstamp` FROM '1495582154423.json';
+
 SELECT Id, CreatedById, city, state, AnnualRevenue, Type, SystemModstamp FROM '1495582154423.json' WITH JSON PATH ('data');
 
 DESCRIBE (SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
 
 DESCRIBE (SELECT * FROM '1495582154423.json' LIMIT 1);
+
+DESCRIBE (SELECT * FROM '1495582940879.json' LIMIT 1);
+
+
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+UNION
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Integrated oil Companies'
+UNION
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+FROM 'companylist.csv'
+WHERE Industry = 'Integrated oil Companies';
+
+
+SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+INTO "./companylist.json"
+FROM "companylist.csv"
+WITH CSV FORMAT;
+
+INSERT OVERWRITE "file://test2.json" (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
+WHERE Industry = "Precious Metals";
+
+INSERT OVERWRITE "test2.json" (Symbol, Sector, Industry, LastSale)
+SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
+WHERE Industry = "Precious Metals";

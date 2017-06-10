@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Row, Scope}
 import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
 
 /**
@@ -34,13 +34,13 @@ case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) 
   * Fixed-length Input Source Companion
   * @author lawrence.daniels@gmail.com
   */
-object FixedLengthInputSource extends InputSourceFactory {
+object FixedLengthInputSource {
 
-  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
-    //if (hints.exists(_.avro.nonEmpty)) Option(FixedLengthInputSource(device, hints)) else None
-    None
-  }
-
+  /**
+    * Represents a fixed-length field
+    * @param name  the field name
+    * @param width the field width
+    */
   case class FixedField(name: String, width: Int)
 
 }

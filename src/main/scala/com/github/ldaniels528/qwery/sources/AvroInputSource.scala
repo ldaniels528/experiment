@@ -37,15 +37,3 @@ case class AvroInputSource(device: InputDevice, hints: Option[Hints]) extends In
   }
 
 }
-
-/**
-  * Avro Input Source Singleton
-  * @author lawrence.daniels@gmail.com
-  */
-object AvroInputSource extends InputSourceFactory {
-
-  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
-    if (hints.exists(_.avro.nonEmpty)) Option(AvroInputSource(device, hints)) else None
-  }
-
-}

@@ -25,14 +25,3 @@ case class AvroOutputSource(device: OutputDevice, hints: Option[Hints])
 
 }
 
-/**
-  * Avro Output Source Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object AvroOutputSource extends OutputSourceFactory {
-
-  override def findOutputSource(device: OutputDevice, append: Boolean, hints: Option[Hints]): Option[OutputSource] = {
-    if (hints.exists(_.avro.nonEmpty)) Option(AvroOutputSource(device, hints)) else None
-  }
-
-}
