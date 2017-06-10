@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
   * Kafka Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class KafkaInputDevice(topic: String, config: JProperties)
+case class KafkaInputDevice(topic: String, config: JProperties, hints: Option[Hints])
   extends InputDevice with AsyncInputDevice with RandomAccessDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var consumer: Option[KafkaConsumer[String, Array[Byte]]] = None
@@ -93,7 +93,8 @@ object KafkaInputDevice extends InputDeviceFactory with SourceUrlParser {
   def apply(topic: String,
             groupId: String,
             bootstrapServers: String,
-            consumerProps: Option[JProperties] = None): KafkaInputDevice = {
+            consumerProps: Option[JProperties] = None,
+            hints: Option[Hints] = None): KafkaInputDevice = {
     KafkaInputDevice(topic, {
       val props = new JProperties()
       props.put("group.id", groupId)
@@ -104,7 +105,7 @@ object KafkaInputDevice extends InputDeviceFactory with SourceUrlParser {
       props.put("enable.auto.commit", "false")
       consumerProps foreach props.putAll
       props
-    })
+    }, hints)
   }
 
   /**
@@ -119,7 +120,7 @@ object KafkaInputDevice extends InputDeviceFactory with SourceUrlParser {
       topic <- comps.params.get("topic")
       groupId <- comps.params.get("group_id")
       config = hints.flatMap(_.properties)
-    } yield KafkaInputDevice(bootstrapServers = bootstrapServers, topic = topic, groupId = groupId, consumerProps = config)
+    } yield KafkaInputDevice(bootstrapServers = bootstrapServers, topic = topic, groupId = groupId, consumerProps = config, hints = hints)
   }
 
 }

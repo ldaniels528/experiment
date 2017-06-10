@@ -3,7 +3,6 @@ package com.github.ldaniels528.qwery.util
 import com.github.ldaniels528.qwery.ops.{NamedExpression, Row}
 import net.liftweb.json.JsonAST._
 import net.liftweb.json.{JObject, JValue}
-import org.slf4j.LoggerFactory
 
 import scala.language.postfixOps
 
@@ -12,7 +11,6 @@ import scala.language.postfixOps
   * @author lawrence.daniels@gmail.com
   */
 object JSONHelper {
-  private[this] lazy val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Converts the given [[JObject]] into Row object

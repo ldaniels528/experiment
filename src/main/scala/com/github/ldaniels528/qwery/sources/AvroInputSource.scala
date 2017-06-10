@@ -44,7 +44,7 @@ case class AvroInputSource(device: InputDevice, hints: Option[Hints]) extends In
   */
 object AvroInputSource extends InputSourceFactory {
 
-  override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
+  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
     if (hints.exists(_.avro.nonEmpty)) Option(AvroInputSource(device, hints)) else None
   }
 

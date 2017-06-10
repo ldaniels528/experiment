@@ -9,7 +9,6 @@ import org.scalatest.FunSpec
 
 /**
   * Qwery Compiler Test
-  *
   * @author lawrence.daniels@gmail.com
   */
 class QweryCompilerTest extends FunSpec {

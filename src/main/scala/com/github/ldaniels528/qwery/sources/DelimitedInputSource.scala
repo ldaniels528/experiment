@@ -89,7 +89,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
   */
 object DelimitedInputSource extends InputSourceFactory {
 
-  override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
+  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
     if (hints.exists(_.delimiter.nonEmpty)) Option(DelimitedInputSource(device, hints)) else None
   }
 

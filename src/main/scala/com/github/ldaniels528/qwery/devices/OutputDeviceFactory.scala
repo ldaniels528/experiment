@@ -28,7 +28,7 @@ object OutputDeviceFactory extends OutputDeviceFactory {
   private[this] val factories = TrieMap[String, OutputDeviceFactory]()
 
   // add the built-in device types
-  add("fs", TextFileOutputDevice)
+  add("file", TextFileOutputDevice)
   add("kafka", KafkaOutputDevice)
 
   /**

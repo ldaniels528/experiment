@@ -151,7 +151,7 @@ DESIGN NOTES / IDEAS
 
 SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
 
-SELECT Id, CreatedById, city, stateCode FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
+SELECT Id, CreatedById, city, state, AnnualRevenue, Type, SystemModstamp FROM '1495582154423.json' WITH JSON PATH ('data');
 
 DESCRIBE (SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
 

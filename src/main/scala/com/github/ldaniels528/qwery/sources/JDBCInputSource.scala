@@ -9,19 +9,25 @@ import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
   * JDBC Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) extends InputSource {
+case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) extends InputSource with InputDevice {
   private var conn: Option[Connection] = None
   private var resultSet: Option[ResultSet] = None
   private var columnNames: Seq[String] = Nil
 
   override def close(): Unit = conn.foreach(_.close())
 
-  override lazy val device = JDBCInputDevice(url, query, hints)
+  override def device: JDBCInputSource = this
+
+  override def getSize: Option[Long] = None
+
+  override def getStatistics: Option[Statistics] = statsGen.update(force = true)
 
   override def open(scope: Scope): Unit = {
     super.open(scope)
     conn = Option(DriverManager.getConnection(url))
   }
+
+  override def read(): Option[Record] = None
 
   override def read(scope: Scope): Option[Row] = {
     resultSet match {
@@ -52,7 +58,7 @@ object JDBCInputSource extends InputDeviceFactory with InputSourceFactory with S
     * @param path the given URL (e.g. "jdbc:mysql://localhost/test")
     * @return an option of the [[JDBCInputSource JDBC input source]]
     */
-  override def parseInputURL(path: String, hints: Option[Hints]): Option[JDBCInputDevice] = {
+  override def parseInputURL(path: String, hints: Option[Hints]): Option[JDBCInputSource] = {
     if (path.startsWith("jdbc:")) {
       val comps = parseURI(path)
       for {
@@ -61,14 +67,14 @@ object JDBCInputSource extends InputDeviceFactory with InputSourceFactory with S
           case -1 => path
           case index => path.substring(0, index)
         }
-      } yield JDBCInputDevice(url = url, query = query, hints)
+      } yield JDBCInputSource(url = url, query = query, hints)
     }
     else None
   }
 
-  override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
+  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
     device match {
-      case jdbc: JDBCInputSource => Some(jdbc)
+      case device: JDBCInputSource => Some(device)
       case _ => None
     }
   }

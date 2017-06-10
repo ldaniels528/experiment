@@ -23,7 +23,7 @@ class ResourceReadingActor() extends Actor with ActorLogging {
           source use { device =>
             var record: Option[Row] = None
             do {
-              record = device.read()
+              record = device.read(scope)
               record.foreach(recipient ! DataReceived(pid, _))
             } while (record.nonEmpty)
           }

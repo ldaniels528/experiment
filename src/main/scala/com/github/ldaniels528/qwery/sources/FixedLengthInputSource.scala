@@ -36,7 +36,7 @@ case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) 
   */
 object FixedLengthInputSource extends InputSourceFactory {
 
-  override def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
+  override def create(device: InputDevice, hints: Option[Hints]): Option[InputSource] = {
     //if (hints.exists(_.avro.nonEmpty)) Option(FixedLengthInputSource(device, hints)) else None
     None
   }

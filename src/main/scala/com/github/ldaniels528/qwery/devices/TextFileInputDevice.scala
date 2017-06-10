@@ -14,7 +14,7 @@ import scala.io.{BufferedSource, Source}
   * Text File Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class TextFileInputDevice(path: String) extends InputDevice {
+case class TextFileInputDevice(path: String, hints: Option[Hints]) extends InputDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var reader: Option[BufferedSource] = None
   private var lines: Iterator[String] = Iterator.empty
@@ -44,7 +44,7 @@ case class TextFileInputDevice(path: String) extends InputDevice {
   }
 
   private def getSource(path: String) = path.toLowerCase match {
-    case s if s.endsWith(".gz") => Source.fromInputStream(new GZIPInputStream(new FileInputStream(path)))
+    case s if s.endsWith(".gz") | hints.exists(_.isGzip) => Source.fromInputStream(new GZIPInputStream(new FileInputStream(path)))
     case s if s.startsWith("http://") | s.startsWith("https://") => Source.fromURL(path)
     case _ => Source.fromFile(path)
   }
@@ -64,8 +64,8 @@ object TextFileInputDevice extends InputDeviceFactory with SourceUrlParser {
     */
   override def parseInputURL(path: String, hints: Option[Hints]): Option[InputDevice] = {
     path.toLowerCase() match {
-      case _ if new File(path).exists() => Option(TextFileInputDevice(path))
-      case uri if uri.startsWith("http://") | uri.startsWith("https://") => Option(TextFileInputDevice(path))
+      case _ if new File(path).exists() => Option(TextFileInputDevice(path, hints))
+      case uri if uri.startsWith("http://") | uri.startsWith("https://") => Option(TextFileInputDevice(path, hints))
       case _ => None
     }
   }

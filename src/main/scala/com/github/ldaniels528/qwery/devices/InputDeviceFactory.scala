@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.devices
 
 import com.github.ldaniels528.qwery.ops.Hints
+import com.github.ldaniels528.qwery.sources.JDBCInputSource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
 import scala.collection.concurrent.TrieMap
@@ -28,9 +29,9 @@ object InputDeviceFactory extends InputDeviceFactory {
   private[this] val factories = TrieMap[String, InputDeviceFactory]()
 
   // add the built-in device types
-  add("fs", TextFileInputDevice)
+  add("file", TextFileInputDevice)
   add("http", TextFileInputDevice)
-  add("jdbc", JDBCInputDevice)
+  add("jdbc", JDBCInputSource)
   add("kafka", KafkaInputDevice)
   add("s3", AWSS3InputDevice)
 

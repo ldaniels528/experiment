@@ -29,7 +29,7 @@ case class PointToPoint(pid: UUID, source: DataResource, target: DataResource, s
   override def start(actor: ActorRef): Future[Option[Statistics]] = {
     // open the output source
     output = Option {
-      val out = target.getOutputSource(scope, append = false)
+      val out = target.getOutputSource(scope)
         .getOrElse(throw new IllegalArgumentException(s"[$pid] No output device found for '$target'"))
       out.open(RootScope())
       out

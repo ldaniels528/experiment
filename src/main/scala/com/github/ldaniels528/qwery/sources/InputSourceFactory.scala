@@ -9,6 +9,6 @@ import com.github.ldaniels528.qwery.ops.Hints
   */
 trait InputSourceFactory extends IOSourceFactory {
 
-  def findInputSource(device: InputDevice, hints: Option[Hints]): Option[InputSource]
+  def create(device: InputDevice, hints: Option[Hints]): Option[InputSource]
 
 }

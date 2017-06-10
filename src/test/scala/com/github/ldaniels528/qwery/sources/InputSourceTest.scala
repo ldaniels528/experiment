@@ -16,7 +16,7 @@ class InputSourceTest extends FunSpec {
     it("should auto-detect the delimiter and iterate over data") {
       InputSource("companylist.csv") foreach { source =>
         source.open(scope)
-        assert(source.toIterator.count { row =>
+        assert(source.toIterator(scope).count { row =>
           assert(row.size == 9)
           true
         } == 359) // 360 - 1 (header)
@@ -26,7 +26,7 @@ class InputSourceTest extends FunSpec {
     it("should iterate over data with an explicit format") {
       InputSource("companylist.csv", hints = Hints().asCSV) foreach { source =>
         source.open(scope)
-        assert(source.toIterator.count { row =>
+        assert(source.toIterator(scope).count { row =>
           assert(row.size == 9)
           true
         } == 359) // 360 - 1 (header)
