@@ -11,6 +11,7 @@ import com.github.ldaniels528.qwery.devices.AWSS3InputDevice._
 import com.github.ldaniels528.qwery.devices.InputDevice._
 import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper._
+import com.github.ldaniels528.qwery.util.PropertiesHelper._
 import org.slf4j.LoggerFactory
 
 import scala.io.{BufferedSource, Source}
@@ -37,8 +38,8 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Opt
   override def getSize: Option[Long] = None
 
   override def open(scope: Scope): Unit = {
-    val accessKeyID = config.getProperty("AWS_ACCESS_KEY_ID")
-    val secretAccessKey = config.getProperty("AWS_SECRET_ACCESS_KEY")
+    val accessKeyID = config.require("AWS_ACCESS_KEY_ID")
+    val secretAccessKey = config.require("AWS_SECRET_ACCESS_KEY")
     val sessionKey = config.getProperty("AWS_SESSION_TOKEN")
     val regionName_? = regionName ?? Option(config.getProperty("AWS_REGION"))
     val clientConfiguration = new ClientConfiguration()

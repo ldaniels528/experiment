@@ -58,14 +58,11 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return the option of the resultant [[SQLTemplateParams template parameters]]
     */
   private def processNextTag(aTag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
-    // optional tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
+    // optionally required tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
     case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
 
-    // optionally required atom? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
+    // optionally required child-tag? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
     case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
-
-    // repeat start/end tag? (e.g. "{{values VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
-    case tag if tag.startsWith("{{") => processRepeatedSequence(name = tag.drop(2), tags)
 
     // atom? (e.g. "%a:table" => "'./tickers.csv'")
     case tag if tag.startsWith("%a:") => extractIdentifier(tag.drop(3))
@@ -92,10 +89,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     case tag if tag.startsWith("%o:") => extractOrderedColumns(tag.drop(3))
 
     // query or expression? (e.g. "%q:queryExpr" => "x + 1" | "( SELECT firstName, lastName FROM AddressBook )")
-    case tag if tag.startsWith("%q:") => extractSubQueryOrExpression(tag.drop(3))
+    case tag if tag.startsWith("%q:") => extractQueryOrExpression(tag.drop(3))
 
     // query? (e.g. "%Q:query" => "SELECT firstName, lastName FROM AddressBook")
-    case tag if tag.startsWith("%Q:") => extractSubQuery(tag.drop(3))
+    case tag if tag.startsWith("%Q:") => extractQuery(tag.drop(3))
 
     // regular expression match? (e.g. "%r`\\d{3,4}S+`" => "123ABC")
     case tag if tag.startsWith("%r`") & tag.endsWith("`") => Try {
@@ -103,8 +100,13 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       if (stream.matches(pattern)) SQLTemplateParams() else die(s"Did not match the expected pattern '$pattern'")
     }
 
+    // repeat start/end tag? (e.g. "%R:valueSet {{ VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
+    case tag if tag.startsWith("%R:") =>
+      if (!tags.nextOption.contains("{{")) throw new IllegalArgumentException("Start of sequence '{{' expected")
+      processRepeatedSequence(name = tag.drop(3), tags)
+
     // source or sub-query? (e.g. "%s:source" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
-    case tag if tag.startsWith("%s:") => extractSubQueryOrSource(tag.drop(3))
+    case tag if tag.startsWith("%s:") => extractSourceOrQuery(tag.drop(3))
 
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => extractVariableReference(tag.drop(3))
@@ -112,12 +114,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
     case tag if tag.startsWith("%w:") => extractWithClause(tag.drop(3))
 
-    // must be literal text
+    // must be literal text (e.g. "FROM")
     case text => extractKeyWord(text)
-  }
-
-  private def extractKeyWord(keyword: String) = Try {
-    if (!stream.nextIf(keyword)) die(s"$keyword expected") else SQLTemplateParams()
   }
 
   /**
@@ -170,19 +168,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     SQLTemplateParams(atoms = Map(name -> value))
   }
 
-  /**
-    * Extracts a numeric value from the token stream
-    * @param name the given identifier name (e.g. "limit")
-    * @return a [[SQLTemplateParams template]] representing the parsed outcome
-    */
-  private def extractNumericValue(name: String) = Try {
-    val text = stream.peek.map(_.text).getOrElse(die(s"'$name' numeric expected"))
-    Try(text.toDouble) match {
-      case Success(value) =>
-        stream.next()
-        SQLTemplateParams(numerics = Map(name -> value))
-      case Failure(_) => die(s"'$name' expected a numeric value")
-    }
+  private def extractKeyWord(keyword: String) = Try {
+    if (!stream.nextIf(keyword)) die(s"$keyword expected") else SQLTemplateParams()
   }
 
   /**
@@ -217,6 +204,21 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
   }
 
   /**
+    * Extracts a numeric value from the token stream
+    * @param name the given identifier name (e.g. "limit")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractNumericValue(name: String) = Try {
+    val text = stream.peek.map(_.text).getOrElse(die(s"'$name' numeric expected"))
+    Try(text.toDouble) match {
+      case Success(value) =>
+        stream.next()
+        SQLTemplateParams(numerics = Map(name -> value))
+      case Failure(_) => die(s"'$name' expected a numeric value")
+    }
+  }
+
+  /**
     * Extracts an optional tag expression
     * @param tag  the tag to be executed (e.g. "%a:name")
     * @param tags the [[PeekableIterator iterator]]
@@ -234,11 +236,30 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
   }
 
   /**
+    * Extracts a list of sort columns from the token stream
+    * @param name the given identifier name (e.g. "sortedColumns")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractOrderedColumns(name: String) = Try {
+    var sortFields: List[OrderedColumn] = Nil
+    do {
+      val name = stream.nextOption.map(_.text).getOrElse(die("Unexpected end of statement"))
+      val direction = stream match {
+        case ts if ts nextIf "ASC" => true
+        case ts if ts nextIf "DESC" => false
+        case _ => true
+      }
+      sortFields = sortFields ::: OrderedColumn(name, direction) :: Nil
+    } while (stream nextIf ",")
+    SQLTemplateParams(orderedFields = Map(name -> sortFields))
+  }
+
+  /**
     * Parses a source expression; either a direct or via query
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractSubQuery(name: String) = Try {
+  private def extractQuery(name: String) = Try {
     val executable = stream match {
       case ts if ts is "SELECT" => SQLLanguageParser.parseSelect(ts)
       case ts if ts nextIf "(" =>
@@ -250,7 +271,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     SQLTemplateParams(sources = Map(name -> executable))
   }
 
-  def extractSubQueryOption: Option[Executable] = stream match {
+  def extractQueryOption: Option[Executable] = stream match {
     case ts if ts is "SELECT" =>
       Option(SQLLanguageParser.parseSelect(stream))
     case ts if ts nextIf "(" =>
@@ -265,18 +286,18 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractSubQueryOrExpression(name: String) = Try {
-    val expression = (extractSubQueryOption.map(_.toExpression) ?? parseExpression(stream))
+  private def extractQueryOrExpression(name: String) = Try {
+    val expression = (extractQueryOption.map(_.toExpression) ?? parseExpression(stream))
       .getOrElse(die("Expression or sub-query was expected"))
     SQLTemplateParams(assignables = Map(name -> expression))
   }
 
   /**
-    * Parses a source expression; either a direct or via query
+    * Parses a source expression; either direct (e.g. 'customers') or via query ("SELECT * FROM customers")
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractSubQueryOrSource(name: String) = Try {
+  private def extractSourceOrQuery(name: String) = Try {
     val executable = stream match {
       case ts if ts nextIf "(" =>
         val result = SQLLanguageParser.parseNext(stream)
@@ -316,25 +337,6 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
 
   private def extractRepeatedSequence(tags: Iterator[String]) = {
     tags.takeWhile(_ != "}}").toSeq
-  }
-
-  /**
-    * Extracts a list of sort columns from the token stream
-    * @param name the given identifier name (e.g. "sortedColumns")
-    * @return a [[SQLTemplateParams template]] representing the parsed outcome
-    */
-  private def extractOrderedColumns(name: String) = Try {
-    var sortFields: List[OrderedColumn] = Nil
-    do {
-      val name = stream.nextOption.map(_.text).getOrElse(die("Unexpected end of statement"))
-      val direction = stream match {
-        case ts if ts nextIf "ASC" => true
-        case ts if ts nextIf "DESC" => false
-        case _ => true
-      }
-      sortFields = sortFields ::: OrderedColumn(name, direction) :: Nil
-    } while (stream nextIf ",")
-    SQLTemplateParams(orderedFields = Map(name -> sortFields))
   }
 
   private def extractVariableReference(name: String) = Try {
@@ -559,7 +561,7 @@ object SQLLanguageParser {
     * @return the resulting [[InsertValues modifications]]
     */
   private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLLanguageParser): InsertValues = {
-    val valueSets = parser.process("{{valueSet VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
+    val valueSets = parser.process("%R:valueSet {{ VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
       case Some(sets) => sets.flatMap(_.expressions.get("values"))
       case None =>
         throw SyntaxException("VALUES clause could not be parsed", ts)
