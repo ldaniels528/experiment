@@ -128,3 +128,26 @@ WHERE Industry = "Precious Metals";
 INSERT OVERWRITE "test2.json" (Symbol, Sector, Industry, LastSale)
 SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
 WHERE Industry = "Precious Metals";
+
+CREATE PROCEDURE copyData AS
+BEGIN
+   SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+   FROM 'companylist.csv'
+   WHERE Industry = 'Consumer Specialties'
+END;
+
+CREATE PROCEDURE copyData() AS
+BEGIN
+   SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+   FROM 'companylist.csv'
+   WHERE Industry = 'Consumer Specialties'
+END;
+
+CREATE PROCEDURE copyData(OUT name String) AS
+BEGIN
+   SELECT @name
+END;
+
+CALL copyData('Hello World');
+
+SHOW PROCEDURES;

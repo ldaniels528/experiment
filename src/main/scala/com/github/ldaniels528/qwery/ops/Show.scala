@@ -21,6 +21,10 @@ case class Show(entityType: String) extends Executable {
           "Path" -> file.getCanonicalFile.getParent
         )).toIterator)
 
+      case "PROCEDURES" =>
+        ResultSet(scope.getProcedures.map(procedure =>
+          Seq("Name" -> procedure.name, "Value" -> procedure.executable.toSQL)).toIterator)
+
       case "VARIABLES" =>
         ResultSet(scope.getVariables.map(variable =>
           Seq("Name" -> variable.name, "Value" -> variable.value)).toIterator)
@@ -41,7 +45,7 @@ case class Show(entityType: String) extends Executable {
   * @author lawrence.daniels@gmail.com
   */
 object Show {
-  private val entityTypes = Seq("FILES", "VARIABLES", "VIEWS")
+  private val entityTypes = Seq("FILES", "PROCEDURES", "VARIABLES", "VIEWS")
 
   def isValidEntityType(entityType: String): Boolean = entityTypes.exists(_.equalsIgnoreCase(entityType))
 

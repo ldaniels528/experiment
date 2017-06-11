@@ -25,6 +25,25 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) == Declare(VariableRef("counter"), "DOUBLE"))
     }
 
+    it("should support CREATE PROCEDURE statements") {
+      val sql =
+        """
+          |CREATE PROCEDURE copyData AS
+          |BEGIN
+          |   SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
+          |   FROM 'companylist.csv'
+          |   WHERE Industry = 'Consumer Specialties'
+          |END
+        """.stripMargin
+
+      assert(QweryCompiler(sql) == Procedure(name = "copyData", parameters = Nil, executable = CodeBlock(Seq(
+        Select(
+          fields = List("Symbol", "Name", "Sector", "Industry", "LastSale", "MarketCap").map(Field.apply),
+          source = Some(DataResource("companylist.csv")),
+          condition = Some(EQ(Field("Industry"), "Consumer Specialties")))
+      ))))
+    }
+
     it("should support CREATE VIEW statements") {
       val sql =
         """

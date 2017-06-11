@@ -10,7 +10,7 @@ import scala.collection.concurrent.TrieMap
   */
 trait Scope {
   private lazy val functions = TrieMap[String, Function]()
-  private lazy val services = TrieMap[String, Connection]()
+  private lazy val procedures = TrieMap[String, Procedure]()
   private lazy val variables = TrieMap[String, Variable]()
   private lazy val views = TrieMap[String, View]()
 
@@ -62,27 +62,27 @@ trait Scope {
   def lookupFunction(name: String): Option[Function] = functions.get(name)
 
   /////////////////////////////////////////////////////////////////
-  //    Services
+  //    Procedures
   /////////////////////////////////////////////////////////////////
 
   /**
-    * Adds a function to the scope
-    * @param service the given function
+    * Adds a procedure to the scope
+    * @param procedure the given procedure
     */
-  def +=(service: Connection): Unit = services(service.name) = service
+  def +=(procedure: Procedure): Unit = procedures(procedure.name) = procedure
 
   /**
-    * Returns the collection of functions tied to this scope
-    * @return a collection of functions
+    * Returns the collection of procedures tied to this scope
+    * @return a collection of procedures
     */
-  def getServices: Iterable[Connection] = services.values
+  def getProcedures: Iterable[Procedure] = procedures.values
 
   /**
-    * Looks up a function by name
-    * @param name the name of the desired function
-    * @return an option of a [[Function function]]
+    * Looks up a procedure by name
+    * @param name the name of the desired procedure
+    * @return an option of a [[Procedure procedure]]
     */
-  def lookupService(name: String): Option[Connection] = services.get(name)
+  def lookupProcedure(name: String): Option[Procedure] = procedures.get(name)
 
   /////////////////////////////////////////////////////////////////
   //    Variables

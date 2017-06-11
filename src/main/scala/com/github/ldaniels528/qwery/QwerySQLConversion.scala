@@ -29,6 +29,7 @@ object QwerySQLConversion {
     case LE(a, b) => s"${a.toSQL} <= ${b.toSQL}"
     case LIKE(a, b) => s"${a.toSQL} LIKE ${b.toSQL}"
     case LT(a, b) => s"${a.toSQL} < ${b.toSQL}"
+    case MATCHES(a, b) => s"${a.toSQL} MATCHES ${b.toSQL}"
     case NE(a, b) => s"${a.toSQL} <> ${b.toSQL}"
     case NOT(cond) => s"NOT ${cond.toSQL}"
     case OR(a, b) => s"${a.toSQL} OR ${b.toSQL}"
@@ -38,13 +39,15 @@ object QwerySQLConversion {
 
   private def makeSQL(executable: Executable): String = executable match {
     case Assignment(variableRef, expression) => s"SET $variableRef = ${expression.toSQL}"
+    case CodeBlock(operations) => s"BEGIN ${operations.map(_.toSQL).mkString("; ")} END"
     case DataResource(path, hints) => toDataResource(path, hints)
     case Declare(variableRef, typeName) => s"DECLARE $variableRef $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
-    case Disconnect(handle) => toDisconnect(handle)
     case Insert(target, fields, source) => toInsert(target, fields, source)
     case InsertValues(_, dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
+    case Procedure(name, params, operation) =>
+      s"CREATE PROCEDURE $name(${params.map(_.toSQL).mkString(",")}) AS ${operation.toSQL}"
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
       toSelect(fields, source, condition, groupFields, orderedColumns, limit)
     case Union(a, b) => toUnion(a, b)
@@ -55,30 +58,30 @@ object QwerySQLConversion {
 
   private def makeSQL(expression: Expression): String = expression match {
     case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
-    case NamedAggregation(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
-    case Avg(expr) => s"AVG(${expr.toSQL})"
     case AllFields => "*"
+    case Avg(expr) => s"AVG(${expr.toSQL})"
     case BasicField(name) => nameOf(name)
     case Case(conditions, otherwise) => toCase(conditions, otherwise)
     case Cast(expr, toType) => s"CAST(${expr.toSQL} AS $toType)"
-    case Count(expr) => s"COUNT(${expr.toSQL})"
     case Concat(a, b) => s"${a.toSQL} || ${b.toSQL}"
+    case Count(expr) => s"COUNT(${expr.toSQL})"
     case ConstantValue(value) => toConstantValue(value)
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
-    case NamedAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
     case Left(a, b) => s"LEFT(${a.toSQL}, ${b.toSQL})"
     case Len(expr) => s"LEN(${expr.toSQL})"
     case Max(expr) => s"MAX(${expr.toSQL})"
     case Min(expr) => s"MIN(${expr.toSQL})"
     case Multiply(a, b) => s"${a.toSQL} * ${b.toSQL}"
+    case NamedAggregation(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
+    case NamedAlias(name, expr) => s"${expr.toSQL} AS ${nameOf(name)}"
     case Now => "NOW()"
     case Pow(a, b) => s"${a.toSQL} ** ${b.toSQL}"
     case Right(a, b) => s"RIGHT(${a.toSQL}, ${b.toSQL})"
     case Split(a, b) => s"SPLIT(${a.toSQL},${b.toSQL})"
     case Sqrt(expr) => s"SQRT(${expr.toSQL})"
-    case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
     case Substring(a, b, c) => s"SUBSTRING(${a.toSQL},${b.toSQL},${c.toSQL})"
+    case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
     case Sum(expr) => s"SUM(${expr.toSQL})"
     case Trim(expr) => s"TRIM(${expr.toSQL})"
     case Uuid => "UUID()"

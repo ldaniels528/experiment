@@ -22,6 +22,8 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#declare-set">DECLARE & SET statements</a> 
     * <a href="#show">SHOW statement</a>  
     * <a href="#describe">DESCRIBE statement</a>
+    * <a href="#user-defined-functions">User-defined Functions</a>
+    * <a href="#stored-procedures">Stored Procedures</a>
 * <a href="#etl">Qwery ETL</a>
     * <a href="#how-it-works">How it works</a>
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
@@ -644,6 +646,74 @@ DESCRIBE (SHOW FILES);
 | LastModified  Date    04/29/17 05:23:22 PDT       |
 | Path          String  /Users/ldaniels/git/qwery   |
 + ------------------------------------------------- +
+```
+
+<a name="user-defined-functions"></a>
+#### User-defined Functions
+
+Qwery supports user-defined functions.
+
+First let's define a simple stored procedure:
+
+```sql
+CREATE FUNCTION simpleMath(x Integer, y Integer) AS
+BEGIN
+   RETURN @x + @y
+END;
+```
+```text
++ ---------- +
+| LXBmkOjd   |
++ ---------- +
+| 10.0       |
++ ---------- +
+```
+
+Next, let's execute the function:
+
+```sql
+SELECT simpleMath(5, 2);
+```
+```text
++ -------------------- +
+| fFIpVQqP  wcSPbASe   |
++ -------------------- +
+| 5.0       2.0        |
++ -------------------- +
+```
+
+<a name="stored-procedures"></a>
+#### Stored Procedures
+
+Qwery also supports Stored Procedures.
+
+First let's define a simple stored procedure:
+
+```sql
+CREATE PROCEDURE copyData(OUT name String) AS
+BEGIN
+   SELECT @name
+END;
+```
+```text
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 1               |
++ --------------- +
+```
+
+Next, let's invoke the procedure:
+
+```sql
+CALL copyData('Hello World');
+```
+```text
++ ------------- +
+| name          |
++ ------------- +
+| Hello World   |
++ ------------- +
 ```
 
 <a name="etl"></a>
