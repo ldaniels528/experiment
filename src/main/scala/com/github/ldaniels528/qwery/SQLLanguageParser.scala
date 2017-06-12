@@ -153,7 +153,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     values.toList match {
       case name :: items =>
         val item = stream.peek.map(_.text).getOrElse(error(items))
-        if (!items.contains(item)) error(items)
+        if (!items.exists(_.equalsIgnoreCase(item))) error(items)
         stream.next() // must skip the token
         SQLTemplateParams(atoms = Map(name -> item))
       case _ =>
@@ -525,10 +525,24 @@ object SQLLanguageParser {
     */
   private def parseCreate(stream: TokenStream): Executable = {
     stream match {
+      case ts if ts is "CREATE FUNCTION" => parseCreateFunction(ts)
       case ts if ts is "CREATE PROCEDURE" => parseCreateProcedure(ts)
       case ts if ts is "CREATE VIEW" => parseCreateView(ts)
-      case _ => throw new IllegalArgumentException("Expected PROCEDURE or VIEW")
+      case _ => throw new IllegalArgumentException("Expected keyword FUNCTION, PROCEDURE or VIEW")
     }
+  }
+
+  /**
+    * Parses a CREATE FUNCTION statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Procedure executable]]
+    */
+  private def parseCreateFunction(ts: TokenStream): Function = {
+    val params = SQLTemplateParams(ts, "CREATE FUNCTION %a:name ?( +?%P:params +?) AS %X:code")
+    Function(
+      name = params.atoms("name"),
+      parameters = params.fields.getOrElse("params", Nil),
+      executable = params.sources("code"))
   }
 
   /**

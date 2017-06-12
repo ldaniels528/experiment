@@ -34,7 +34,7 @@ object NamedExpression {
   /**
     * For pattern matching
     */
-  def unapply(expression: NamedExpression): Option[String] = Some(expression.name)
+  def unapply(expression: NamedExpression): Option[String] = Option(expression.name)
 
   /**
     * Represents a named alias for an aggregate field or expression

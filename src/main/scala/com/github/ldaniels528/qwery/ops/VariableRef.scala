@@ -12,6 +12,4 @@ case class VariableRef(name: String) extends NamedExpression {
     variable.evaluate(scope)
   }
 
-  override def toString = s"@$name"
-
 }

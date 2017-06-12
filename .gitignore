@@ -47,3 +47,6 @@ aws-s3.properties
 example/scripts/pixall.sql
 1495582154423.json
 1495582940879.json
+report-data.csv
+report-info.csv
+report-info.xlsx
