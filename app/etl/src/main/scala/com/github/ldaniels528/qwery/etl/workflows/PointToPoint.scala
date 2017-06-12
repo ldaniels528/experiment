@@ -30,7 +30,7 @@ case class PointToPoint(pid: UUID, source: DataResource, target: DataResource, s
     // open the output source
     output = Option {
       val out = target.getOutputSource(scope)
-        .getOrElse(throw new IllegalArgumentException(s"[$pid] No output device found for '$target'"))
+        .getOrElse(throw new IllegalArgumentException(s"[$pid] No output source found for '$target'"))
       out.open(RootScope())
       out
     }

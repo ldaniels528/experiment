@@ -11,7 +11,8 @@ case class DataResource(path: String, hints: Option[Hints] = Some(Hints())) exte
   override def execute(scope: Scope): ResultSet = {
     scope.lookupView(scope.expand(path)) match {
       case Some(view) => view.execute(scope)
-      case None => getInputSource(scope).map(_.execute(scope)) getOrElse ResultSet()
+      case None => getInputSource(scope).map(_.execute(scope))
+        .getOrElse(throw new IllegalStateException(s"No input source found for path '$path'"))
     }
   }
 
