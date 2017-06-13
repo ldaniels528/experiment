@@ -132,9 +132,6 @@ SELECT getData('Hello World');
 
 SHOW FUNCTIONS;
 
-SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd');
-SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
-
 ************************************************************************
 *       Procedures
 ************************************************************************

@@ -473,24 +473,37 @@ object SQLLanguageParser {
   def apply(ts: TokenStream): SQLLanguageParser = new SQLLanguageParser(ts)
 
   /**
+    * Returns an iterator of executables
+    * @param stream the given [[TokenStream token stream]]
+    * @return an iterator of [[Executable executables]]
+    */
+  def parseFully(stream: TokenStream) = new Iterator[Executable] {
+
+    override def hasNext: Boolean = {
+      while (stream.hasNext && stream.is(";")) stream.next()
+      stream.hasNext
+    }
+
+    override def next(): Executable = parseNext(stream)
+  }
+
+  /**
     * Parses the next query or statement from the stream
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Executable]]
     */
-  def parseNext(stream: TokenStream): Executable = {
-    stream match {
-      case ts if ts is "BEGIN" => parseBegin(ts)
-      case ts if ts is "CALL" => parseCallProcedure(ts)
-      case ts if ts is "CREATE" => parseCreate(ts)
-      case ts if ts is "DECLARE" => parseDeclare(ts)
-      case ts if ts is "DESCRIBE" => parseDescribe(ts)
-      case ts if ts is "INSERT" => parseInsert(ts)
-      case ts if ts is "RETURN" => parseReturn(ts)
-      case ts if ts is "SELECT" => parseSelect(ts)
-      case ts if ts is "SET" => parseSet(ts)
-      case ts if ts is "SHOW" => parseShow(ts)
-      case _ => die("Unrecognized command")
-    }
+  def parseNext(stream: TokenStream): Executable = stream match {
+    case ts if ts is "BEGIN" => parseBegin(ts)
+    case ts if ts is "CALL" => parseCallProcedure(ts)
+    case ts if ts is "CREATE" => parseCreate(ts)
+    case ts if ts is "DECLARE" => parseDeclare(ts)
+    case ts if ts is "DESCRIBE" => parseDescribe(ts)
+    case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "RETURN" => parseReturn(ts)
+    case ts if ts is "SELECT" => parseSelect(ts)
+    case ts if ts is "SET" => parseSet(ts)
+    case ts if ts is "SHOW" => parseShow(ts)
+    case _ => die("Unrecognized command")
   }
 
   /**

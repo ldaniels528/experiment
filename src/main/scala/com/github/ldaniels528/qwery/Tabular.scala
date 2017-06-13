@@ -1,4 +1,4 @@
-package com.github.ldaniels528.tabular
+package com.github.ldaniels528.qwery
 
 import java.text.SimpleDateFormat
 import java.util.Date

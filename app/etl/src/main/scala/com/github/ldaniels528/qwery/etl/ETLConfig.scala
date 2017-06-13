@@ -8,7 +8,7 @@ import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.ETLConfig.TriggerRaw
 import com.github.ldaniels528.qwery.etl.actors.{FileManagementActor, WorkflowManagementActor}
 import com.github.ldaniels528.qwery.etl.triggers._
-import com.github.ldaniels528.qwery.ops.{Executable, Scope}
+import com.github.ldaniels528.qwery.ops.{CodeBlock, Executable, Scope}
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -106,7 +106,7 @@ object ETLConfig {
     private def compileScript(config: ETLConfig): Executable = {
       val scriptFile = new File(config.scriptsDir, script)
       log.info(s"[$name] Compiling script '${scriptFile.getName}'...")
-      QweryCompiler(Source.fromFile(scriptFile).mkString)
+      CodeBlock(operations = QweryCompiler.compileFully(Source.fromFile(scriptFile).mkString).toSeq)
     }
   }
 

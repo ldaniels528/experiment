@@ -15,6 +15,15 @@ class QweryCompilerTest extends FunSpec {
 
   describe("QweryCompiler") {
 
+    it("should support execution multi-line statements") {
+      val results = QweryCompiler.compileFully("SELECT 1;SELECT 2;SELECT 3").toSeq
+      assert(results == Seq(
+        Select(fields = List(1)),
+        Select(fields = List(2)),
+        Select(fields = List(3))
+      ))
+    }
+
     it("should support variable assignments") {
       val sql = "SET @x = 1"
       assert(QweryCompiler(sql) == Assignment(VariableRef("x"), 1))

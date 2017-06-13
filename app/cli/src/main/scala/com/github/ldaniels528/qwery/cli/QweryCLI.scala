@@ -3,7 +3,6 @@ package cli
 
 import com.github.ldaniels528.qwery.AppConstants._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular._
 
 /**
   * Qwery CLI Application
@@ -22,7 +21,7 @@ object QweryCLI {
     * The interactive REPL
     */
   def repl(): Unit = {
-    println(welcome)
+    println(welcome("CLI"))
     val commandPrompt = CommandPrompt()
     println(s"Using ${commandPrompt.getClass.getSimpleName} for input.")
 
@@ -40,16 +39,9 @@ object QweryCLI {
         commandPrompt.readLine(prompt).map(_.trim) foreach { line =>
           sb.append(line).append('\n')
 
-          if (line.isEmpty || line.endsWith(";")) {
-            val input = sb.toString().trim match {
-              case s if s.endsWith(";") => s.dropRight(1)
-              case s => s
-            }
-            if (input.nonEmpty) {
-              val results = interpret(input)
-              println()
-              handleResults(results)
-            }
+          if (line.isEmpty || line.equalsIgnoreCase("exit") || line.contains(";")) {
+            val input = sb.toString().trim
+            if (input.nonEmpty) interpret(input)
             reset()
           }
         }
@@ -66,38 +58,20 @@ object QweryCLI {
 
   def die(): Unit = alive = false
 
-  private def handleResults(results: Any): Unit = {
-    results match {
-      case results: ResultSet => tabular.transform(results) foreach println
-      case _: Unit => println("Ok")
-      case _ =>
-    }
-  }
-
   private def interpret(input: String) = {
     input match {
       case "exit" => alive = false
-      case query => compiler.compile(query).execute(globalScope)
+      case sql =>
+        for {
+          op <- compiler.compileFully(sql)
+          line <- tabular.transform(op.execute(globalScope))
+        } println(line)
     }
   }
 
   private def prompt: String = {
     ticker += 1
-    s"[$ticker]> "
-  }
-
-  private def welcome: String = {
-    s"""
-       | Qwery CLI v$Version
-       |         ,,,,,
-       |         (o o)
-       |-----oOOo-(_)-oOOo-----
-       |You can executes multi-line queries here like:
-       |
-       |SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, `Summary Quote` FROM './companylist.csv'
-       |WHERE Sector = 'Basic Industries'
-       |LIMIT 5;
-      """.stripMargin
+    f"[$ticker%02d]> "
   }
 
 }

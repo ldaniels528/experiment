@@ -5,12 +5,12 @@ import com.github.ldaniels528.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
 /**
-  * Qwery SQL Generator Test
+  * Qwery Decompiler Test
   * @author lawrence.daniels@gmail.com
   */
 class QweryDecompilerTest extends FunSpec {
 
-  describe("QwerySQLConversion") {
+  describe("QweryDecompiler") {
 
     it("should decompile CREATE VIEW statements") {
       val sql =

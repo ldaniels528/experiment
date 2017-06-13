@@ -10,17 +10,24 @@ class QweryCompiler {
 
   /**
     * Compiles the given query (or statement) into an executable
-    * @param query the given query string (e.g. "SELECT * FROM './companylist.csv'")
+    * @param sql the given query string (e.g. "SELECT * FROM './companylist.csv'")
     * @return an [[Executable executable]]
     */
-  def apply(query: String): Executable = compile(query)
+  def apply(sql: String): Executable = compile(sql)
 
   /**
     * Compiles the given query (or statement) into an executable
-    * @param query the given query string (e.g. "SELECT * FROM './companylist.csv'")
+    * @param sql the given query string (e.g. "SELECT * FROM './companylist.csv'")
     * @return an [[Executable executable]]
     */
-  def compile(query: String): Executable = SQLLanguageParser.parseNext(TokenStream(query))
+  def compile(sql: String): Executable = SQLLanguageParser.parseNext(TokenStream(sql))
+
+  /**
+    * Compiles the given query (or statement) into an executable
+    * @param sql the given query string (e.g. "SELECT * FROM './companylist.csv'")
+    * @return an [[Executable executable]]
+    */
+  def compileFully(sql: String): Iterator[Executable] = SQLLanguageParser.parseFully(TokenStream(sql))
 
 }
 
