@@ -1,0 +1,18 @@
+.tab_border {
+    margin-bottom: 10px;
+}
+
+.tab_font {
+    font-weight: bold;
+    font-size: 13pt;
+}
+
+.tab_active {
+    padding: 2px 2px 2px 2px;
+    vertical-align: middle;
+}
+
+.tab_inactive {
+    padding: 2px 2px 2px 2px;
+    vertical-align: middle;
+}

@@ -1,10 +1,14 @@
-import sbt.Keys.{libraryDependencies, _}
+import org.scalajs.sbtplugin.ScalaJSPlugin
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import sbt.Keys._
+import sbt.Project.projectToRef
 import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.3.6"
+val appVersion = "0.3.6"
 val appScalaVersion = "2.12.2"
+val scalaJsIOVersion = "0.4.0-pre5"
 
 val akkaVersion = "2.5.2"
 val curatorVersion = "3.1.0"
@@ -13,6 +17,10 @@ val slf4jVersion = "1.7.25"
 
 homepage := Some(url("https://github.com/ldaniels528/qwery"))
 
+/////////////////////////////////////////////////////////////////////////////////
+//      Scala (JVM)
+/////////////////////////////////////////////////////////////////////////////////
+
 lazy val cli = (project in file("./app/cli")).
   aggregate(core).
   dependsOn(core).
@@ -20,7 +28,7 @@ lazy val cli = (project in file("./app/cli")).
     name := "qwery-cli",
     organization := "com.github.ldaniels528",
     description := "Qwery CLI Application",
-    version := apiVersion,
+    version := appVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
@@ -48,7 +56,7 @@ lazy val etl = (project in file("./app/etl")).
     name := "qwery-etl",
     organization := "com.github.ldaniels528",
     description := "Qwery ETL and Orchestration Server",
-    version := apiVersion,
+    version := appVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
@@ -74,7 +82,7 @@ lazy val core = (project in file(".")).
     name := "qwery-core",
     organization := "com.github.ldaniels528",
     description := "A SQL-like query language for performing ETL",
-    version := apiVersion,
+    version := appVersion,
     scalaVersion := appScalaVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
@@ -99,6 +107,128 @@ lazy val core = (project in file(".")).
       "org.apache.curator" % "curator-test" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
       "org.apache.kafka" %% "kafka" % kafkaVersion,
       "org.apache.kafka" % "kafka-clients" % kafkaVersion
+    ))
+
+/////////////////////////////////////////////////////////////////////////////////
+//      Scala.js (JavaScript/Node)
+/////////////////////////////////////////////////////////////////////////////////
+
+lazy val copyJS = TaskKey[Unit]("copyJS", "Copy JavaScript files to root directory")
+copyJS := {
+  val out_dir = baseDirectory.value
+  val cli_dir = out_dir / "app" / "cli" / "target" / "scala-2.12"
+  val supervisor_dir = out_dir / "app" / "supervisor" / "target" / "scala-2.12"
+  val watcher_dir = out_dir / "app" / "watcher" / "target" / "scala-2.12"
+  val worker_dir = out_dir / "app" / "worker" / "target" / "scala-2.12"
+
+  val files1 = Seq("", ".map") map ("broadway-cli-fastopt.js" + _) map (s => (cli_dir / s, out_dir / s))
+  val files2 = Seq("", ".map") map ("broadway-supervisor-fastopt.js" + _) map (s => (supervisor_dir / s, out_dir / s))
+  val files3 = Seq("", ".map") map ("broadway-watcher-fastopt.js" + _) map (s => (watcher_dir / s, out_dir / s))
+  val files4 = Seq("", ".map") map ("broadway-worker-fastopt.js" + _) map (s => (worker_dir / s, out_dir / s))
+  IO.copy(files1 ++ files2 ++ files3 ++ files4, overwrite = true)
+}
+
+lazy val commonSettings = Seq(
+  scalacOptions ++= Seq("-feature", "-deprecation"),
+  scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+  scalaVersion := appScalaVersion,
+  autoCompilerPlugins := true,
+  relativeSourceMaps := true,
+  homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
+  resolvers += Resolver.sonatypeRepo("releases"))
+
+lazy val appSettings = Seq(
+  scalacOptions ++= Seq("-feature", "-deprecation"),
+  scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+  scalaVersion := appScalaVersion,
+  scalaJSModuleKind := ModuleKind.CommonJSModule,
+  autoCompilerPlugins := true,
+  relativeSourceMaps := true,
+  homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
+  resolvers += Resolver.sonatypeRepo("releases"))
+
+lazy val uiSettings = Seq(
+  scalacOptions ++= Seq("-feature", "-deprecation"),
+  scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+  scalaVersion := appScalaVersion,
+  autoCompilerPlugins := true,
+  relativeSourceMaps := true,
+  homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
+  resolvers += Resolver.sonatypeRepo("releases"))
+
+lazy val testDependencies = Seq(
+  libraryDependencies ++= Seq(
+    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
+    "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
+  ))
+
+lazy val common_core = (project in file("./app/common/core"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings: _*)
+  .settings(testDependencies: _*)
+  .settings(
+    name := "broadway-common-core",
+    organization := "com.github.ldaniels528",
+    version := appVersion,
+    libraryDependencies ++= Seq(
+      "io.scalajs" %%% "core" % scalaJsIOVersion
+    ))
+
+lazy val common_cli = (project in file("./app/common/cli"))
+  .dependsOn(common_core)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings: _*)
+  .settings(testDependencies: _*)
+  .settings(
+    name := "broadway-common-cli",
+    organization := "com.github.ldaniels528",
+    version := appVersion,
+    libraryDependencies ++= Seq(
+      "io.scalajs" %%% "core" % scalaJsIOVersion,
+      "io.scalajs" %%% "nodejs" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "moment" % scalaJsIOVersion
+    ))
+
+lazy val client = (project in file("./app/client"))
+  .aggregate(common_core)
+  .dependsOn(common_core)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(uiSettings: _*)
+  .settings(testDependencies: _*)
+  .settings(
+    name := "broadway-web-client",
+    organization := "com.github.ldaniels528",
+    version := appVersion,
+    scalaJSUseMainModuleInitializer := true,
+    libraryDependencies ++= Seq(
+      "io.scalajs" %%% "core" % scalaJsIOVersion,
+      "io.scalajs" %%% "dom-html" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "angular" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "angular-ui-router" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "angularjs-toaster" % scalaJsIOVersion
+    ))
+
+lazy val supervisor = (project in file("./app/supervisor"))
+  .aggregate(common_core, client, common_cli)
+  .dependsOn(common_core, common_cli)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(appSettings: _*)
+  .settings(testDependencies: _*)
+  .settings(
+    name := "broadway-supervisor",
+    organization := "com.github.ldaniels528",
+    version := appVersion,
+    scalaJSUseMainModuleInitializer := true,
+    libraryDependencies ++= Seq(
+      "io.scalajs" %%% "core" % scalaJsIOVersion,
+      "io.scalajs" %%% "nodejs" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "body-parser" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "express" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "express-fileupload" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "express-ws" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "mongodb" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "request" % scalaJsIOVersion,
+      "io.scalajs.npm" %%% "splitargs" % scalaJsIOVersion
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +273,9 @@ lazy val publishingSettings = Seq(
         </developer>
       </developers>
 )
+
+// add the alias
+addCommandAlias("fastOptJSCopy", ";fastOptJS;copyJS")
 
 // loads the Scalajs-io root project at sbt startup
 onLoad in Global := (Command.process("project cli", _: State)) compose (onLoad in Global).value

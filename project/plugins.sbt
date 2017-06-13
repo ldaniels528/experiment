@@ -2,6 +2,10 @@
 
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.0")
 
+// Scala.js
+
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.15")
+
 // Publishing
 
 addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")

@@ -1,0 +1,81 @@
+<div ng-controller="ActivityController" ng-init="init()">
+    <div class="col-md-12">
+        <div class="row">
+            <div class="col-md-2 slave_header">ID</div>
+            <div class="col-md-6 slave_header">Host</div>
+            <div class="col-md-1 slave_header">Jobs</div>
+            <div class="col-md-1 slave_header">Utilization</div>
+            <div class="col-md-2 slave_header">Last Updated</div>
+        </div>
+
+        <div class="row" ng-repeat="slave in slaves">
+            <div class="col-md-2 center">
+                <i class="fa clickable" ng-class="slave.expanded ? 'fa-minus-square-o' : 'fa-plus-square-o'" ng-click="collapseExpand(slave)"></i>
+                {{ slave._id }}
+            </div>
+            <div class="col-md-6 center">
+                <span ng-show="slave.name">{{ slave.name }} (<span class="small">{{ slave.host }}:{{ slave.port }}</span>)</span>
+                <span ng-hide="slave.name">{{ slave.host }}:{{ slave.port }}</span>
+            </div>
+            <div class="col-md-1 center">{{ slave.concurrency | number }} / {{ slave.maxConcurrency | number }}</div>
+            <div class="col-md-1 center">{{ utilization(slave) | number:1 }}%</div>
+            <div class="col-md-2 center">{{ slave.lastUpdated | date:'MM/dd/yyyy HH:mm:ss' }}</div>
+
+            <!-- Slave's activity -->
+            <div class="col-md-12" style="padding: 5px 32px 0px 32px" ng-show="slave.expanded && slave.jobs.length">
+                <div class="col-md-12 slave_border">
+                    <table class="col-md-12">
+                        <tr>
+                            <th class="col-md-3 stats_header">File</th>
+                            <th class="col-md-2 stats_header">Status</th>
+                            <th class="col-md-2 stats_header right">Records</th>
+                            <th class="col-md-2 stats_header right">Record/sec</th>
+                            <th class="col-md-2 stats_header right">Bytes Read</th>
+                            <th class="col-md-1 stats_header right">Bytes/sec</th>
+                        </tr>
+                        <tr ng-repeat="job in slave.jobs"
+                            ng-click="selectJob(job)"
+                            ng-class="selectedJob == job ? 'highlight' : ''"
+                            class="clickable">
+                            <td class="col-md-3 stats"><img ng-src="{{ getJobStatusBulb(job) }}"> {{ job.name }}</td>
+                            <td class="col-md-2 stats">
+                                <span ng-show="job.statistics">
+                                    <span ng-show="isRunning(job)">{{ job.statistics.completionTime | duration }}</span>
+                                    <span ng-hide="isRunning(job)" ng-class="getJobStatusClass(job)">{{ job.state }}</span>
+                                </span>
+                                <span ng-hide="job.statistics" class="null">&#8212;</span>
+                            </td>
+                            <td class="col-md-2 stats right">
+                                <span ng-show="job.statistics">
+                                    <span ng-show="job.statistics.recordsDelta" style="color: #00aa00">
+                                        {{ job.statistics.recordsDelta | number }} <i class="fa fa-arrow-up"></i>
+                                    </span>
+                                    {{ job.statistics.totalInserted | number }}
+                                </span>
+                                <span ng-hide="job.statistics" class="null">&#8212;</span>
+                            </td>
+                            <td class="col-md-2 stats right">
+                                <span ng-show="job.statistics">
+                                    <span ng-show="isRunning(job)">{{ job.statistics.recordsPerSecond | number:1 }}</span>
+                                    <span ng-hide="isRunning(job)" class="null">&#8212;</span>
+                                </span>
+                                <span ng-hide="job.statistics" class="null">&#8212;</span>
+                            </td>
+                            <td class="col-md-2 stats right">
+                                <span ng-show="job.statistics">{{ job.statistics.bytesRead | bytes }} ({{ job.statistics.pctComplete | number:1 }}%)</span>
+                                <span ng-hide="job.statistics" class="null">&#8212;</span>
+                            </td>
+                            <td class="col-md-1 stats right">
+                                <span ng-show="job.statistics">
+                                    <span ng-show="isRunning(job)">{{ job.statistics.bytesPerSecond | bps }}</span>
+                                    <span ng-hide="isRunning(job)" class="null">&#8212;</span>
+                                </span>
+                                <span class="null" ng-hide="job.statistics">&#8212;</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

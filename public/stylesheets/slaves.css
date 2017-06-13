@@ -1,0 +1,13 @@
+.slave_border {
+    background-color: #f0f0f0;
+    border: 1px solid #bbbbbb;
+    border-radius: 10px;
+    padding: 10px 10px 10px 10px;
+}
+
+.slave_header {
+    color: #000080;
+    font-weight: bold;
+    text-align: left;
+}
+

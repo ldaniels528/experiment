@@ -1,0 +1,41 @@
+<script>hljs.initHighlightingOnLoad();</script>
+<div ng-controller="WorkflowController" ng-init="init()">
+    <div  class="col-md-4">
+        <div ng-repeat="workflow in workflows"
+             class="clickable"
+             ng-click="selectWorkflow(workflow)">
+            <div ng-class="selectedWorkflow === workflow ? 'highlight' : ''">
+                <i class="fa clickable" ng-class="workflow.expanded ? 'fa-minus-square-o' : 'fa-plus-square-o'" ng-click="collapseExpand(workflow)"></i>
+                <i class="fa fa-gear workflow_icon"></i> {{ workflow.name }}
+            </div>
+
+            <div ng-show="workflow.expanded">
+                <!-- input -->
+                <div class="item_ident">
+                    <i class="fa fa-usb source_icon"></i> {{ workflow.input.name }}
+                </div>
+
+                <!-- outputs -->
+                <div class="item_ident" ng-repeat="output in workflow.outputs">
+                    <i class="fa fa-usb source_icon"></i> {{ output.name }}
+                </div>
+
+                <!-- events -->
+                <div class="item_ident" ng-repeat="event in workflow.events">
+                    <i class="fa fa-usb event_icon"></i> {{ event.name }}
+                </div>
+
+                <!-- variables -->
+                <div class="item_ident" ng-repeat="variable in workflow.variables">
+                    <i class="fa fa-at variable_icon"></i> {{ variable.name }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <pre ng-hide="editing" hljs source="toJSON(selectedWorkflow)"></pre>
+        <textarea ng-show="editing" ng-model="workflowJson" style="width: 100%; height: 500px">
+            {{ workflowJson }}
+        </textarea>
+    </div>
+</div>

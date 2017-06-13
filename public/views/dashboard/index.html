@@ -1,0 +1,128 @@
+<div ng-controller="DashboardController" ng-init="init()">
+    <div>
+        <div class="jobs_shown">{{ jobs.length }} jobs shown (<span style="color: #00ffcc">{{ getRunningJobs().length || 0}} active</span>)</div>
+        <div ng-class="selectedJob ? 'col-md-6' : 'col-md-12'">
+            <div class="row">
+                <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'" class="bold left">Workflow</div>
+                <div ng-class="selectedJob ? 'col-md-7' : 'col-md-4'" class="bold left">File / Input</div>
+                <div ng-hide="selectedJob" class="col-md-4 bold center">Host</div>
+                <div ng-hide="selectedJob" class="col-md-2 bold center">State</div>
+            </div>
+            <div ng-repeat="job in jobs"
+                 ng-click="selectJob(job)"
+                 ng-class="selectedJob == job ? 'highlight' : ''" class="row">
+                <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'">
+                    <img ng-src="{{ getJobStatusBulb(job) }}"> {{ job.workflowName }}
+                </div>
+                <div ng-class="selectedJob ? 'col-md-7' : 'col-md-4'">{{ job.name }}</div>
+                <div ng-hide="selectedJob" class="col-md-4">
+                    <span ng-show="job.processingHost">
+                        <span ng-show="getSlaveForJob(job).name">{{ getSlaveForJob(job).name }}</span>
+                        <span ng-hide="getSlaveForJob(job).name">{{ job.processingHost }}</span>
+                    </span>
+                    <span ng-hide="job.processingHost" class="null">(UNCLAIMED)</span>
+                </div>
+                <div ng-hide="selectedJob" class="col-md-2">
+                    <span ng-hide="job.message">
+                        <span ng-class="getJobStatusClass(job)">{{ job.state }}</span>
+                        <span ng-show="isRunning(job) && job.statistics.completionTime">
+                            <span class="null">&#8212;</span>
+                            {{ job.statistics.completionTime | duration }}
+                        </span>
+                    </span>
+                    <span ng-show="job.message" class="error">{{ job.message }}</span>
+                </div>
+            </div>
+        </div>
+        <div ng-show="selectedJob" ng-class="selectedJob ? 'col-md-6' : ''" class="dashboard_border">
+            <table class="col-md-12">
+                <tr>
+                    <th>Workflow</th>
+                    <td>{{ selectedJob.workflowName }}</td>
+                </tr>
+                <tr>
+                    <th>File</th>
+                    <td>{{ selectedJob.name }}</td>
+                </tr>
+                <tr>
+                    <th>File Size</th>
+                    <td>{{ selectedJob.inputSize | bytes }}</td>
+                </tr>
+                <tr>
+                    <th>Host</th>
+                    <td>
+                        <span ng-show="getSlaveForJob(selectedJob).name">
+                            {{ getSlaveForJob(selectedJob).name }} (<span class="small">{{ selectedJob.processingHost }}</span>)
+                        </span>
+                        <span ng-hide="getSlaveForJob(selectedJob).name">{{ job.processingHost }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>State</th>
+                    <td ng-class="getJobStatusClass(selectedJob)">{{ selectedJob.state }}</td>
+                </tr>
+                <tr>
+                    <th>CPU Load</th>
+                    <td>
+                        <span ng-show="selectedJob.statistics.cpuLoad">{{ selectedJob.statistics.cpuLoad }}%</span>
+                        <span ng-hide="selectedJob.statistics.cpuLoad" class="null">N/A</span>
+                    </td>
+                </tr>
+                <tr ng-show="selectedJob.statistics">
+                    <th>Records</th>
+                    <td>
+                        {{ selectedJob.statistics.totalInserted | number }}
+                        <span style="color: #00aa00">
+                            <i class="fa fa-arrow-up"></i> {{ selectedJob.statistics.recordsDelta | number }}
+                        </span>
+                    </td>
+                </tr>
+                <tr ng-show="selectedJob.statistics">
+                    <th>Record/sec</th>
+                    <td>{{ selectedJob.statistics.recordsPerSecond | number:1 }}</td>
+                </tr>
+                <tr ng-show="selectedJob.statistics">
+                    <th>Bytes Read</th>
+                    <td>{{ selectedJob.statistics.bytesRead | bytes }}</td>
+                </tr>
+                <tr ng-show="selectedJob.statistics">
+                    <th>Bytes/sec</th>
+                    <td>{{ selectedJob.statistics.bytesPerSecond | bps }}</td>
+                </tr>
+                <tr>
+                    <th>Estimated Completion</th>
+                    <td>
+                        <span ng-show="selectedJob.statistics.completionTime">{{ selectedJob.statistics.completionTime | duration }}</span>
+                        <span ng-hide="selectedJob.statistics.completionTime" class="null">N/A</span>
+                    </td>
+                </tr>
+                <tr ng-show="selectedJob.message">
+                    <th>Error</th>
+                    <td><span class="error">{{ selectedJob.message }}</span></td>
+                </tr>
+                <tr>
+                    <th>Last Updated</th>
+                    <td>{{ selectedJob.lastUpdated | date:'MM/dd/yyyy hh:mm:ss' }}</td>
+                </tr>
+                <tr>
+                    <td ng-click="selectJob(null)" class="clickable">
+                        <i class="fa fa-arrow-left bold" style="color: #00cc00"> Back</i>
+                    </td>
+                    <td>
+                        <i ng-show="isResumable(selectedJob) && !resuming" ng-click="resumeJob(selectedJob)" title="Resume job" class="fa fa-2x fa-play-circle play_button clickable"></i>
+                        <i ng-show="!isResumable(selectedJob) && !resuming" class="fa fa-2x fa-play-circle null"></i>
+                        <img ng-show="resuming" src="/images/statuses/loading24.gif" style="vertical-align: top">
+
+                        <i ng-show="isPausable(selectedJob) && !pausing" ng-click="pauseJob(selectedJob)" title="Pause job" class="fa fa-2x fa-pause-circle pause_button clickable"></i>
+                        <i ng-show="!isPausable(selectedJob) && !pausing" class="fa fa-2x fa-pause-circle null"></i>
+                        <img ng-show="pausing" src="/images/statuses/loading24.gif" style="vertical-align: top">
+
+                        <i ng-show="isStoppable(selectedJob) && !stopping" ng-click="stopJob(selectedJob)" title="Stop job" class="fa fa-2x fa-stop-circle stop_button clickable"></i>
+                        <i ng-show="!isStoppable(selectedJob) && !stopping" class="fa fa-2x fa-stop-circle null"></i>
+                        <img ng-show="stopping" src="/images/statuses/loading24.gif" style="vertical-align: top">
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>

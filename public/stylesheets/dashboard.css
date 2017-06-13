@@ -1,0 +1,54 @@
+.dashboard_border {
+    background-color: #f7f7f7;
+    border: 1px solid #8c8c8c;
+    border-radius: 4px;
+    margin-top: 15px;
+    padding: 10px;
+}
+
+.jobs_shown {
+    font-size: 12pt;
+    background-color: #6699ff;
+    color: #eeeeee;
+    padding-left: 2px;
+}
+
+.pause_button {
+    color: #ffaa00;
+}
+
+.play_button {
+    color: #00bb00;
+}
+
+.stop_button {
+    color: #dd0000;
+}
+
+.status_claimed {
+    color: #4466ff;
+}
+
+.status_new {
+    color: #aaaaaa;
+}
+
+.status_paused {
+    color: #ffaa00;
+}
+
+.status_queued {
+    color: #4466ff;
+}
+
+.status_running {
+    color: #00bb00;
+}
+
+.status_stopped {
+    color: #ff0000;
+}
+
+.status_success {
+    color: #00bb00;
+}
