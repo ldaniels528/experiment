@@ -304,6 +304,8 @@ object ExpressionParser {
   )
   private val function2s = Map(
     "CONCAT" -> Concat.apply _,
+    "DATE_FORMAT" -> DateFormat.apply _,
+    "DATE_PARSE" -> DateParse.apply _,
     "LEFT" -> Left.apply _,
     "PADLEFT" -> PadLeft.apply _,
     "PADRIGHT" -> PadRight.apply _,

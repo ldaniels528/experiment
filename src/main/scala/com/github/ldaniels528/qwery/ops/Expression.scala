@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
-import java.util.UUID
+import java.util.{Date, UUID}
 
 import com.github.ldaniels528.qwery._
 
@@ -29,6 +29,13 @@ trait Expression {
     case value: Number => Option(value.byteValue())
     case value: String => Try(value.toByte).toOption
     case value => Try(value.toString.toByte).toOption
+  }
+
+  def getAsDate(scope: Scope): Option[Date] = evaluate(scope) flatMap {
+    case value: Double => Option(new Date(value.toLong))
+    case value: Long => Option(new Date(value))
+    case value: Date => Option(value)
+    case _ => None
   }
 
   def getAsDouble(scope: Scope): Option[Double] = evaluate(scope).map(_.asInstanceOf[Object]) flatMap {

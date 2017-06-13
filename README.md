@@ -317,6 +317,8 @@ AWS_REGION=[YOUR AWS REGION]
 | AVG(expression)           | Returns the average of an expression  |
 | CONCAT(string1, string2)  | Returns the concatenation of two strings  |
 | COUNT(expression)         | Returns the count of an expression  |
+| DATE_FORMAT(date, format) | Returns a string representation of a date in the specified format. |
+| DATE_PARSE(string, format)| Returns a date parsed from the given string in the specified format.  |
 | LEFT(string, number)      | Returns the specified number of characters from the left of the string |
 | LEN(string)               | Returns the length of a given string. |
 | MAX(expression)           | Returns the maximum value of a given field |
@@ -335,6 +337,30 @@ AWS_REGION=[YOUR AWS REGION]
 | TRIM(string)              | Returns a string after removing all prefixes or suffixes from the given string. |
 | UUID()                    | Returns a random UUID. |
 
+
+Perform date conversions:
+
+```sql
+SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd');
+```
+```text
++ ----------------------- +
+| WsbLhYNC                |
++ ----------------------- +
+| 05/12/17 12:00:00 PDT   |
++ ----------------------- +
+```
+
+```sql
+SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
+```
+```text
++ ------------ +
+| wFJMOFgd     |
++ ------------ +
+| 05-12-2017   |
++ ------------ +
+```
 
 Sum values (just like you normally do with SQL) in the file:
 
