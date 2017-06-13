@@ -489,7 +489,7 @@ object SQLLanguageParser {
       case ts if ts is "SELECT" => parseSelect(ts)
       case ts if ts is "SET" => parseSet(ts)
       case ts if ts is "SHOW" => parseShow(ts)
-      case _ => die("Unexpected end of line")
+      case _ => die("Unrecognized command")
     }
   }
 

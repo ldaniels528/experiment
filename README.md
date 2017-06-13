@@ -653,7 +653,7 @@ DESCRIBE (SHOW FILES);
 
 Qwery supports user-defined functions.
 
-First let's define a simple stored procedure:
+First, let's define a simple function:
 
 ```sql
 CREATE FUNCTION simpleMath(x Integer, y Integer) AS
@@ -662,24 +662,24 @@ BEGIN
 END;
 ```
 ```text
-+ ---------- +
-| LXBmkOjd   |
-+ ---------- +
-| 10.0       |
-+ ---------- +
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 1               |
++ --------------- +
 ```
 
 Next, let's execute the function:
 
 ```sql
-SELECT simpleMath(5, 2);
+SELECT simpleMath(7, 3);
 ```
 ```text
-+ -------------------- +
-| fFIpVQqP  wcSPbASe   |
-+ -------------------- +
-| 5.0       2.0        |
-+ -------------------- +
++ ---------- +
+| simpleMath |
++ ---------- +
+| 10.0       |
++ ---------- +
 ```
 
 <a name="stored-procedures"></a>

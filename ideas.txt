@@ -121,10 +121,14 @@ WHERE Industry = 'Integrated oil Companies';
 *       Functions
 ************************************************************************
 
+CREATE FUNCTION getData(name String) AS RETURN @name;
+
 CREATE FUNCTION getData(name String) AS
 BEGIN
    RETURN @name
 END;
+
+SELECT getData('Hello World');
 
 SHOW FUNCTIONS;
 

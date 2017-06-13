@@ -78,7 +78,7 @@ trait Expression {
   * @author lawrence.daniels@gmail.com
   */
 object Expression {
-  val validTypes = Seq("Boolean", "Byte", "Double", "Float", "Int", "Long", "Short", "String", "UUID")
+  val validTypes = Seq("Boolean", "Byte", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
 
   def isValidType(typeName: String): Boolean = validTypes.exists(_.equalsIgnoreCase(typeName))
 
