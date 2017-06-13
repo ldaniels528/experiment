@@ -11,7 +11,6 @@ import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -21,7 +20,6 @@ import scala.util.{Failure, Success, Try}
   * @author lawrence.daniels@gmail.com
   */
 class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
-  private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Indicates whether the given stream matches the given template
@@ -67,6 +65,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
 
     // atom? (e.g. "%a:table" => "'./tickers.csv'")
     case tag if tag.startsWith("%a:") => extractIdentifier(tag.drop(3))
+
+    // list of arguments? (e.g. "%A:args" => "(1,2,3)")
+    case tag if tag.startsWith("%A:") => extractListOfArguments(tag.drop(3))
 
     // conditional expression? (e.g. "%c:condition" => "x = 1 and y = 2")
     case tag if tag.startsWith("%c:") => extractCondition(tag.drop(3))
@@ -174,6 +175,24 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
 
   private def extractKeyWord(keyword: String) = Try {
     if (!stream.nextIf(keyword)) die(s"$keyword expected") else SQLTemplateParams()
+  }
+
+  /**
+    * Extracts an arguments list from the token stream
+    * @param name the given identifier name (e.g. "(customerId, 192, 'A')")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractListOfArguments(name: String) = Try {
+    var expressions: List[Expression] = Nil
+    var done = false
+    do {
+      done = stream.is(")")
+      if (!done) {
+        expressions = parseExpression(stream).getOrElse(stream.die("Expression expected")) :: expressions
+        if (!stream.is(")")) stream.expect(",")
+      }
+    } while (!done)
+    SQLTemplateParams(expressions = Map(name -> expressions.reverse))
   }
 
   /**
@@ -494,7 +513,7 @@ object SQLLanguageParser {
     */
   def parseNext(stream: TokenStream): Executable = stream match {
     case ts if ts is "BEGIN" => parseBegin(ts)
-    case ts if ts is "CALL" => parseCallProcedure(ts)
+    case ts if ts is "CALL" => parseCall(ts)
     case ts if ts is "CREATE" => parseCreate(ts)
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
@@ -516,6 +535,7 @@ object SQLLanguageParser {
     if (ts.nextIf("BEGIN")) {
       while (ts.hasNext && !ts.nextIf("END")) {
         operations = operations ::: parseNext(ts) :: Nil
+        if (!ts.is("END")) ts.expect(";")
       }
     }
     CodeBlock(operations)
@@ -526,8 +546,8 @@ object SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[CallProcedure executable]]
     */
-  private def parseCallProcedure(ts: TokenStream): CallProcedure = {
-    val params = SQLTemplateParams(ts, "CALL %a:name ?( +?%E:args +?)")
+  private def parseCall(ts: TokenStream): CallProcedure = {
+    val params = SQLTemplateParams(ts, "CALL %a:name ?( +?%A:args +?)")
     CallProcedure(name = params.atoms("name"), args = params.expressions.getOrElse("args", Nil))
   }
 

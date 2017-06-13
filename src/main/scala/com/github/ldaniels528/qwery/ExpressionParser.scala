@@ -166,7 +166,7 @@ trait ExpressionParser {
       // is it an all fields reference?
       case ts if ts nextIf "*" => Option(AllFields)
       // is it a variable?
-      case ts if ts nextIf "@" => Option(VariableRef(ts.next().text))
+      case ts if ts is "@" => parseVariableRef(ts)
       // is it a quantity (e.g. "(2 + (5 * 2))")?
       case ts if ts nextIf "(" =>
         val expr = parseExpression(ts)
@@ -179,6 +179,15 @@ trait ExpressionParser {
       case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
       case _ => None
     }
+  }
+
+  def parseVariableRef(ts: TokenStream): Option[VariableRef] = {
+    if (ts nextIf "@") {
+      val name = ts.next().text
+      if (isIdentifier(name)) Option(VariableRef(name))
+      else ts.die("Variable identifier expected")
+    }
+    else None
   }
 
   /**

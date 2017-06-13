@@ -40,6 +40,24 @@ class QweryTest extends FunSpec {
       assert(results == List(List("ItemNo" -> "2")))
     }
 
+    it("should support stored procedures") {
+      val query = QweryCompiler(
+        """
+          |CREATE PROCEDURE doIt() AS
+          |BEGIN
+          |   declare @n int;
+          |   set @n = 1;
+          |   set @n = @n + 1;
+          |   set @n = @n + 1;
+          |   select @n
+          |END;
+          |
+          |CALL doIt()
+        """.stripMargin)
+      val results = query.execute(scope).toSeq
+      assert(results == List(List("n" -> 3)))
+    }
+
     it("should support extracting filtered results from a file") {
       val query = QweryCompiler(
         """

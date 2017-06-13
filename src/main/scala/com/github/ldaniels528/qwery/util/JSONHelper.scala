@@ -54,7 +54,7 @@ object JSONHelper {
 
   private def asKey(path: List[String]): String = path.reverse.mkString(".")
 
-  private def flattenList(list: List[Any], path: List[String] = Nil): Row = {
+  private def flattenList(list: List[Any], path: List[String]): Row = {
     list.zipWithIndex flatMap {
       case (jo: JObject, index) => flattenMap(jo.values, asIndex(index) :: path)
       case (jv: JValue, index) => Seq(asKey(asIndex(index) :: path) -> unwrap(jv))

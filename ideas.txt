@@ -159,6 +159,15 @@ CALL copyData('Hello World');
 
 SHOW PROCEDURES;
 
+CREATE PROCEDURE doIt() AS
+BEGIN
+   declare @n int;
+   set @n = 1;
+   set @n = @n + 1;
+   set @n = @n + 1;
+   select @n
+END;
+
 ************************************************************************
 *       VIEW testing
 ************************************************************************

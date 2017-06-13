@@ -89,7 +89,7 @@ object AWSS3InputDevice extends InputDeviceFactory with SourceUrlParser {
   private def getS3Client(accessKeyID: String,
                           secretAccessKey: String,
                           sessionKey: String,
-                          regionName: Option[String] = None): AmazonS3 = {
+                          regionName: Option[String]): AmazonS3 = {
     // create the S3 client
     val s3Client = AmazonS3ClientBuilder.standard()
       .withCredentials(new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKeyID, secretAccessKey, sessionKey)))
