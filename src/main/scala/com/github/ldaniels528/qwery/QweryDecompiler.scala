@@ -37,10 +37,10 @@ object QweryDecompiler {
   }
 
   private def makeSQL(executable: Executable): String = executable match {
-    case Assignment(variableRef, expression) => s"SET $variableRef = ${expression.toSQL}"
+    case Assignment(variableRef, expression) => s"SET ${variableRef.toSQL} = ${expression.toSQL}"
     case CodeBlock(operations) => s"BEGIN ${operations.map(_.toSQL).mkString("; ")} END"
     case DataResource(path, hints) => toDataResource(path, hints)
-    case Declare(variableRef, typeName) => s"DECLARE $variableRef $typeName"
+    case Declare(variableRef, typeName) => s"DECLARE ${variableRef.toSQL} $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Insert(target, fields, source) => toInsert(target, fields, source)
     case InsertValues(_, dataSets) =>
