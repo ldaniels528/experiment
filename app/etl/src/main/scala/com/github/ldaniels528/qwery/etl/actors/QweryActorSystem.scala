@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.actors
+package com.github.ldaniels528.qwery.etl.actors
 
 import java.net.URL
 

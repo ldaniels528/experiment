@@ -8,7 +8,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import akka.actor.{Actor, ActorLogging}
-import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.actors.FileManagementActor._
 import com.github.ldaniels528.qwery.util.DurationHelper._
 

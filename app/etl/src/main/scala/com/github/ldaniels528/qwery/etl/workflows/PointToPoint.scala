@@ -3,8 +3,7 @@ package com.github.ldaniels528.qwery.etl.workflows
 import java.util.UUID
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.actors.QweryActorSystem
-import com.github.ldaniels528.qwery.etl.actors.ResourceReadingActor
+import com.github.ldaniels528.qwery.etl.actors.{QweryActorSystem, ResourceReadingActor}
 import com.github.ldaniels528.qwery.etl.actors.ResourceReadingActor.ReadFile
 import com.github.ldaniels528.qwery.ops.{RootScope, Row, Scope}
 import com.github.ldaniels528.qwery.sources.{DataResource, OutputSource, Statistics}

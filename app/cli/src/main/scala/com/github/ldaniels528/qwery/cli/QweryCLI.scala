@@ -67,6 +67,7 @@ object QweryCLI {
     input match {
       case "exit" => alive = false
       case sql =>
+        println()
         for {
           op <- compiler.compileFully(sql)
           line <- tabular.transform(op.execute(globalScope))

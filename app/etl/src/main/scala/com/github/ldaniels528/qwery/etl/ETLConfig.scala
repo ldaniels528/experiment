@@ -4,9 +4,8 @@ package etl
 import java.io.File
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.ETLConfig.TriggerRaw
-import com.github.ldaniels528.qwery.etl.actors.{FileManagementActor, WorkflowManagementActor}
+import com.github.ldaniels528.qwery.etl.actors.{FileManagementActor, QweryActorSystem, WorkflowManagementActor}
 import com.github.ldaniels528.qwery.etl.triggers._
 import com.github.ldaniels528.qwery.ops.{CodeBlock, Executable, Scope}
 import org.slf4j.LoggerFactory
