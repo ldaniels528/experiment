@@ -8,7 +8,6 @@ import com.github.ldaniels528.qwery.ops.builtins._
 
 /**
   * Expression Parser
-  *
   * @author lawrence.daniels@gmail.com
   */
 trait ExpressionParser {
@@ -53,12 +52,11 @@ trait ExpressionParser {
   }
 
   /**
-    * Parses an internal function (e.g. "LEN('Hello World')")
-    *
+    * Parses an internal or user-defined function (e.g. "LEN('Hello World')")
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Expression internal function]]
     */
-  private def parseInternalFunction(stream: TokenStream): Option[Expression] = {
+  private def parseFunction(stream: TokenStream): Option[Expression] = {
     stream match {
       // is it a parameter-less function? (e.g. "Now()")
       case ts if function0s.exists(fx => ts is fx.name) =>
@@ -68,7 +66,7 @@ trait ExpressionParser {
       // is it a single-parameter function? (e.g. "Trim('Hello ')")
       case ts if function1s.exists { case (name, _) => ts is name } =>
         function1s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          parseParameters(ts, name, 1) match {
+          parseArguments(ts, name, 1) match {
             case a :: Nil => fx(a)
             case params => ts.die(s"Invalid parameters: expected 1, found ${params.size}")
           }
@@ -76,7 +74,7 @@ trait ExpressionParser {
       // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
       case ts if function2s.exists { case (name, _) => ts is name } =>
         function2s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          parseParameters(ts, name, 2) match {
+          parseArguments(ts, name, 2) match {
             case a :: b :: Nil => fx(a, b)
             case params => ts.die(s"Invalid parameters: expected 2, found ${params.size}")
           }
@@ -84,32 +82,49 @@ trait ExpressionParser {
       // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
       case ts if function3s.exists { case (name, _) => ts is name } =>
         function3s.find { case (name, _) => ts.nextIf(name) } map { case (name, fx) =>
-          parseParameters(ts, name, 3) match {
+          parseArguments(ts, name, 3) match {
             case a :: b :: c :: Nil => fx(a, b, c)
             case params => ts.die(s"Invalid parameters: expected 3, found ${params.size}")
           }
         }
-      case ts => ts.die(s"${ts.previous.orNull} is not a defined function")
+      // must be a user-defined function
+      case ts => Option(FunctionRef(name = ts.next().text, parseArguments(ts)))
     }
   }
 
-  private def parseParameters(ts: TokenStream, name: String, count: Int): List[Expression] = {
-
-    def invalidParameters = count match {
-      case 0 => ts.die(s"Function $name expects no parameters")
-      case 1 => ts.die(s"Function $name expects a single parameter")
-      case n => ts.die(s"Function $name expects $n parameters")
-    }
-
+  /**
+    * Extracts a variable number of function arguments
+    * @param ts the given [[TokenStream token stream]]
+    * @return a collection of [[Expression argument expressions]]
+    */
+  private def parseArguments(ts: TokenStream): List[Expression] = {
     ts.expect("(")
-    var list: List[Expression] = Nil
-    for (n <- 1 to count) {
-      val expr = parseExpression(ts).getOrElse(invalidParameters)
-      list = list ::: expr :: Nil
-      if (n < count) ts.expect(",")
+    var args: List[Expression] = Nil
+    while (!ts.is(")")) {
+      args = parseExpression(ts).getOrElse(ts.die("An expression was expected")) :: args
+      if (!ts.is(")")) ts.expect(",")
     }
     ts.expect(")")
-    list
+    args.reverse
+  }
+
+  /**
+    * Extracts a fixed number of function arguments
+    * @param ts    the given [[TokenStream token stream]]
+    * @param name  the name of the function
+    * @param count the number of arguments to expect
+    * @return a collection of [[Expression argument expressions]]
+    */
+  private def parseArguments(ts: TokenStream, name: String, count: Int): List[Expression] = {
+    val args = parseArguments(ts)
+    if (args.size != count) {
+      count match {
+        case 0 => ts.die(s"Function $name expects no parameters")
+        case 1 => ts.die(s"Function $name expects a single parameter")
+        case n => ts.die(s"Function $name expects $n parameters")
+      }
+    }
+    args
   }
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
@@ -158,7 +173,7 @@ trait ExpressionParser {
         ts expect ")"
         expr
       // is it a function?
-      case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseInternalFunction(stream)
+      case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseFunction(stream)
       // is it a field or constant value?
       case ts if ts.isNumeric | ts.isQuoted => Option(Expression(ts.next()))
       case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
@@ -168,7 +183,6 @@ trait ExpressionParser {
 
   /**
     * Parses an expression alias (e.g. "(1 + 3) * 2 AS qty")
-    *
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Expression CAST expression]]
     */
@@ -199,7 +213,6 @@ trait ExpressionParser {
     *   ELSE expr3
     * END
     * }}}
-    *
     * @param ts the given [[TokenStream token stream]]
     * @return
     */
@@ -243,7 +256,6 @@ trait ExpressionParser {
 
   /**
     * Parses a CAST expression (e.g. "CAST(1234 as String)")
-    *
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Expression CAST expression]]
     */
@@ -261,7 +273,6 @@ trait ExpressionParser {
 
   /**
     * Parses a NOT condition (e.g. "NOT X = 1")
-    *
     * @param ts the given [[TokenStream token stream]]
     * @return a [[Condition condition]]
     */
@@ -275,7 +286,6 @@ trait ExpressionParser {
 
 /**
   * Expression Parser Singleton
-  *
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
@@ -317,7 +327,6 @@ object ExpressionParser {
 
   /**
     * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
-    *
     * @param name the given name
     * @return true, if the given name qualifies as an identifier
     */

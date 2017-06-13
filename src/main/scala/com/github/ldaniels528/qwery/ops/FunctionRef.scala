@@ -7,7 +7,9 @@ package com.github.ldaniels528.qwery.ops
 case class FunctionRef(name: String, args: Seq[Expression]) extends NamedExpression {
 
   override def evaluate(scope: Scope): Option[Any] = {
-    scope.lookupFunction(name).flatMap(_.invoke(scope, args))
+    val function = scope.lookupFunction(name)
+      .getOrElse(throw new IllegalArgumentException(s"Function '$name' not found"))
+    function.invoke(scope, args)
   }
 
 }

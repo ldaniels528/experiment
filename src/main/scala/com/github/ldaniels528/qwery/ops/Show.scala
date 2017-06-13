@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.ops
 
 import java.util.Date
 
-import com.github.ldaniels528.qwery.QwerySQLConversion._
+import com.github.ldaniels528.qwery.QweryDecompiler._
 
 /**
   * Show Statement
@@ -20,6 +20,14 @@ case class Show(entityType: String) extends Executable {
           "LastModified" -> new Date(file.lastModified),
           "Path" -> file.getCanonicalFile.getParent
         )).toIterator)
+
+      case "FUNCTIONS" =>
+        ResultSet(scope.getFunctions.map(function =>
+          Seq("Name" -> function.name, "Value" -> function.executable.toSQL)).toIterator)
+
+      case "PROCEDURES" =>
+        ResultSet(scope.getProcedures.map(procedure =>
+          Seq("Name" -> procedure.name, "Value" -> procedure.executable.toSQL)).toIterator)
 
       case "VARIABLES" =>
         ResultSet(scope.getVariables.map(variable =>
@@ -41,7 +49,7 @@ case class Show(entityType: String) extends Executable {
   * @author lawrence.daniels@gmail.com
   */
 object Show {
-  private val entityTypes = Seq("FILES", "VARIABLES", "VIEWS")
+  private val entityTypes = Seq("FILES", "FUNCTIONS", "PROCEDURES", "VARIABLES", "VIEWS")
 
   def isValidEntityType(entityType: String): Boolean = entityTypes.exists(_.equalsIgnoreCase(entityType))
 

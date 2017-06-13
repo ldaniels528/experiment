@@ -63,7 +63,7 @@ case class Select(fields: Seq[Expression],
                                     aggregates: Seq[Expression with Aggregation],
                                     groupFields: Seq[String]): ResultSet = {
     val groupField = groupFields.headOption.orNull
-    val groupedResults = resultSets.toSeq.groupBy(_.row.find(_._1 == groupField).map(_._2).orNull)
+    val groupedResults = resultSets.toSeq.groupBy(_.row.find(_._1.equalsIgnoreCase(groupField)).map(_._2).orNull)
     ResultSet(rows = groupedResults map { case (_, rows) =>
       rows.foreach(row => aggregates.foreach(_.update(row)))
       val scope = LocalScope(parentScope, row = Nil)
