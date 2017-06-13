@@ -4,14 +4,14 @@ import java.io.InputStream
 import java.util.{Properties => JProperties}
 
 import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicSessionCredentials}
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicSessionCredentials}
 import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.github.ldaniels528.qwery.devices.AWSS3InputDevice._
 import com.github.ldaniels528.qwery.devices.InputDevice._
 import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper._
-import com.github.ldaniels528.qwery.util.PropertiesHelper._
 import org.slf4j.LoggerFactory
 
 import scala.io.{BufferedSource, Source}
@@ -20,7 +20,11 @@ import scala.io.{BufferedSource, Source}
   * AWS S3 File Input Device
   * @author lawrence.daniels@gmail.com
   */
-case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Option[String] = None, config: JProperties)
+case class AWSS3InputDevice(bucketName: String,
+                            keyName: String,
+                            region: Option[String],
+                            profile: Option[String],
+                            config: Option[JProperties])
   extends InputDevice {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private var s3Client: Option[AmazonS3] = None
@@ -38,13 +42,11 @@ case class AWSS3InputDevice(bucketName: String, keyName: String, regionName: Opt
   override def getSize: Option[Long] = None
 
   override def open(scope: Scope): Unit = {
-    val accessKeyID = config.require("AWS_ACCESS_KEY_ID")
-    val secretAccessKey = config.require("AWS_SECRET_ACCESS_KEY")
-    val sessionKey = config.getProperty("AWS_SESSION_TOKEN")
-    val regionName_? = regionName ?? Option(config.getProperty("AWS_REGION"))
+    val credentialsProvider = config.flatMap(getStaticCredentials).getOrElse(getProfileCredentials(profile))
+    val region_? = region ?? config.flatMap(p => Option(p.getProperty("AWS_REGION")))
     val clientConfiguration = new ClientConfiguration()
     clientConfiguration.setSignerOverride("AWSS3V4SignerType")
-    s3Client = Option(getS3Client(accessKeyID, secretAccessKey, sessionKey, regionName ?? regionName_?))
+    s3Client = Option(getS3Client(credentialsProvider, region ?? region_?))
     s3Object = s3Client map (getS3Object(_, bucketName, keyName))
     source = s3Object map getS3Content
     lines = source.map(_.getNonEmptyLines) getOrElse Iterator.empty
@@ -73,7 +75,7 @@ object AWSS3InputDevice extends InputDeviceFactory with SourceUrlParser {
 
   /**
     * Returns a compatible input device for the given URL.
-    * @param url the given URL (e.g. "s3://ldaniels3/companylist.csv?region=us-west-1")
+    * @param url the given URL (e.g. "s3://ldaniels3/companylist.csv?region=us-west-1&profile=ldaniels3")
     * @return an option of the [[InputDevice input device]]
     */
   override def parseInputURL(url: String, hints: Option[Hints]): Option[InputDevice] = {
@@ -82,26 +84,28 @@ object AWSS3InputDevice extends InputDeviceFactory with SourceUrlParser {
       bucket <- comps.host if url.toLowerCase.startsWith("s3:")
       key <- comps.path
       region = comps.params.get("region")
-      config <- hints.flatMap(_.properties)
-    } yield AWSS3InputDevice(bucketName = bucket, keyName = key, regionName = region, config = config)
+      profile = comps.params.get("profile")
+      config = hints.flatMap(_.properties)
+    } yield AWSS3InputDevice(bucketName = bucket, keyName = key, region = region, profile = profile, config = config)
   }
 
-  private def getS3Client(accessKeyID: String,
-                          secretAccessKey: String,
-                          sessionKey: String,
-                          regionName: Option[String]): AmazonS3 = {
-    // create the S3 client
-    val s3Client = AmazonS3ClientBuilder.standard()
-      .withCredentials(new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKeyID, secretAccessKey, sessionKey)))
+  private def getProfileCredentials(profile_? : Option[String]) = {
+    profile_?.map(new ProfileCredentialsProvider(_)) getOrElse new ProfileCredentialsProvider()
+  }
+
+  private def getStaticCredentials(config: JProperties): Option[AWSStaticCredentialsProvider] = {
+    for {
+      accessKeyID <- Option(config.getProperty("AWS_ACCESS_KEY_ID"))
+      secretAccessKey <- Option(config.getProperty("AWS_SECRET_ACCESS_KEY"))
+      sessionKey = config.getProperty("AWS_SESSION_TOKEN")
+    } yield new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKeyID, secretAccessKey, sessionKey))
+  }
+
+  private def getS3Client(provider: AWSCredentialsProvider, regionName: Option[String]): AmazonS3 = {
+    AmazonS3ClientBuilder.standard()
+      .withCredentials(provider)
       .withRegion(regionName getOrElse "us-west-2")
       .build()
-    //val regions = Option(Regions.fromName(regionName)).getOrElse(throw new IllegalArgumentException(s"Region '$regionName' not found"))
-    //val region = /*Region.getRegion(regions)*/ Region.getRegion(Regions.US_WEST_2)
-    //s3Client.setRegion(region)
-    //s3Client.setEndpoint("http://localhost:9000")
-    //val clientOptions = S3ClientOptions.builder().setPathStyleAccess(true).build()
-    //s3Client.setS3ClientOptions(clientOptions)
-    s3Client
   }
 
   private def getS3Object(s3Client: AmazonS3, bucketName: String, keyName: String): S3Object = {

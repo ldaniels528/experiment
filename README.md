@@ -247,7 +247,8 @@ Query Kafka topics:
 
 ```sql
 SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM "kafka:json://dev001:9093?topic=weblogs&group_id=ldtest1"
+FROM "kafka://dev001:9093?topic=weblogs&group_id=ldtest1"
+WITH JSON FORMAT
 WITH PROPERTIES "./kafka-auth.properties"
 LIMIT 5;
 ```
@@ -267,7 +268,8 @@ You can also query Avro-encoded Kafka topics:
 
 ```sql
 SELECT visitorId, adGroup, program, pageLabel, categoryId, referrerDomain
-FROM "kafka:avro://dev001:9093?topic=weblogs_avro&group_id=ldtest2&schema=./weblogs-v1.avsc"
+FROM "kafka://dev001:9093?topic=weblogs_avro&group_id=ldtest2"
+WITH AVRO "./weblogs-v1.avsc" 
 WITH PROPERTIES "./kafka-auth.properties"
 LIMIT 5;
 ```
@@ -288,7 +290,7 @@ Query files on S3:
 
 ```sql
 SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
-FROM "s3:csv://ldaniels3/companylist.csv"
+FROM "s3://ldaniels3/companylist.csv"
 WITH PROPERTIES "./aws-s3.properties"
 WHERE Industry = "EDP Services";
 ```
@@ -307,6 +309,22 @@ AWS_ACCESS_KEY_ID=[YOUR AWS ACCESS KEY]
 AWS_SECRET_ACCESS_KEY=[YOUR AWS SECRET ACCESS KEY]
 AWS_SESSION_TOKEN=[YOUR AWS SESSION TOKEN]
 AWS_REGION=[YOUR AWS REGION]
+```
+
+Alternatively, you could also use profile-based authentication:
+
+```sql
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
+FROM "s3://ldaniels3/companylist.csv?profile=ldaniels3&region=us-west-2"
+WHERE Industry = "EDP Services";
+```
+```text
++ -------------------------------------------------------------------------------- +
+| Symbol  Name                   Sector      Industry      LastSale  MarketCap     |
++ -------------------------------------------------------------------------------- +
+| TEUM    Pareteum Corporation   Technology  EDP Services  0.775     9893729.05    |
+| WYY     WidePoint Corporation  Technology  EDP Services  0.44      36438301.68   |
++ -------------------------------------------------------------------------------- +
 ```
 
 <a name="built-in-functions"></a>
