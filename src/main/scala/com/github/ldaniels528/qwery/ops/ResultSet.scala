@@ -21,6 +21,14 @@ case class ResultSet(rows: Iterator[Seq[Column]] = Iterator.empty, statistics: O
   */
 object ResultSet {
 
-  def ok() = ResultSet(rows = Iterator(Seq("ROWS_AFFECTED" -> 1)))
+  def affected(count: Long = 1) = ResultSet(rows = Iterator(Seq("ROWS_AFFECTED" -> count)))
+
+  def inserted(count: Long, statistics: Option[Statistics]): ResultSet = {
+    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> count)), statistics)
+  }
+
+  def updated(count: Long, statistics: Option[Statistics]): ResultSet = {
+    ResultSet(rows = Iterator(Seq("ROWS_UPDATED" -> count)), statistics)
+  }
 
 }

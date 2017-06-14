@@ -75,6 +75,17 @@ class QweryCompilerTest extends FunSpec {
         Select(fields = List(NamedExpression(name = "number", 1234))))
     }
 
+    it("should support fixed-length fields") {
+      val sql =
+        """
+          |INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10)
+          |SELECT Symbol, Name, Sector, Industry, LastSale
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Oil/Gas Transmission'
+        """.stripMargin
+      info(QweryCompiler(sql).toString)
+    }
+
     it("should support IS NULL conditions") {
       val sql = "SELECT * FROM 'companylist.csv' WHERE exchange IS NULL"
       assert(QweryCompiler(sql) ==

@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.Token
+import com.github.ldaniels528.qwery.ExpressionParser.identifierRegEx
+import com.github.ldaniels528.qwery.TokenStream
 
 /**
   * Represents a field reference
@@ -17,18 +18,32 @@ object Field {
   /**
     * Creates a new field
     * @param name the name of the field
-    * @return a new [[Field field]] instance
+    * @return a new [[BasicField field]] instance
     */
   def apply(name: String) = BasicField(name)
 
   /**
+    * Creates a new fixed-width field
+    * @param name the name of the field
+    * @return a new [[FixedField field]] instance
+    */
+  def apply(name: String, width: Int) = FixedField(name, width)
+
+  /**
     * Creates a new field from a token
-    * @param token the given [[Token token]]
+    * @param tokenStream the given [[TokenStream token stream]]
     * @return a new [[Field field]] instance
     */
-  def apply(token: Token): Field = token.text match {
-    case "*" => AllFields
-    case name => BasicField(name)
+  def apply(tokenStream: TokenStream): Field = {
+    tokenStream match {
+      case ts if ts nextIf "*" => AllFields
+      case ts if ts.peekAhead(1).exists(_.text == "^") =>
+        val name = ts.next().text
+        ts.expect("^")
+        val width = ts.next().text.toDouble.toInt
+        FixedField(name, width)
+      case ts => BasicField(ts.next().text)
+    }
   }
 
   /**
@@ -44,9 +59,17 @@ object Field {
 object AllFields extends BasicField(name = "*")
 
 /**
-  * Represents a field reference
+  * Represents a simple field definition
   * @author lawrence.daniels@gmail.com
   */
 case class BasicField(name: String) extends Field {
+  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+}
+
+/**
+  * Represents a fixed-width field definition
+  * @author lawrence.daniels@gmail.com
+  */
+case class FixedField(name: String, width: Int) extends Field {
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
 }

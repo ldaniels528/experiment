@@ -11,6 +11,7 @@ import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 case class Hints(append: Option[Boolean] = None,
                  avro: Option[String] = None,
                  delimiter: Option[String] = None,
+                 fixed: Option[Boolean] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
                  isJson: Option[Boolean] = None,
@@ -36,7 +37,7 @@ case class Hints(append: Option[Boolean] = None,
   def isGzip: Boolean = gzip.contains(true)
 
   lazy val nonEmpty: Boolean = Seq(
-    append, avro, delimiter, gzip, headers, isJson, jsonPath, properties, quotedNumbers, quotedText
+    append, avro, delimiter, fixed, gzip, headers, isJson, jsonPath, properties, quotedNumbers, quotedText
   ).exists(_.nonEmpty)
 
   def usingFormat(format: String): Hints = {

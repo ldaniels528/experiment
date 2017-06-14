@@ -176,7 +176,7 @@ trait ExpressionParser {
       case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseFunction(stream)
       // is it a field or constant value?
       case ts if ts.isNumeric | ts.isQuoted => Option(Expression(ts.next()))
-      case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
+      case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts))
       case _ => None
     }
   }
@@ -298,7 +298,7 @@ trait ExpressionParser {
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
-  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
+  val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
   private val function0s = Seq(Now, Rand, Uuid)
   private val function1s = Map(
     "AVG" -> Avg.apply _,

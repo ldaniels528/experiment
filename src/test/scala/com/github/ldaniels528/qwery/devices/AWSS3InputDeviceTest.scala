@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.devices
 import java.io.{File, FileReader}
 import java.util.{Properties => JProperties}
 
-import com.github.ldaniels528.qwery.ops.RootScope
+import com.github.ldaniels528.qwery.ops.{Hints, RootScope}
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 import org.scalatest.FunSpec
 
@@ -23,7 +23,7 @@ class AWSS3InputDeviceTest extends FunSpec {
         config.load(new FileReader(file))
         info(s"config: $config")
 
-        val source = AWSS3InputDevice(bucketName = "ldaniels3", keyName = "companylist.csv", config = config)
+        val source = AWSS3InputDevice(bucketName = "ldaniels3", keyName = "companylist.csv", hints = Option(Hints(properties = Some(config))))
         source.open(scope)
         source use { device =>
           var record: Option[Record] = None

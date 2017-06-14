@@ -32,6 +32,7 @@ object OutputDeviceFactory extends OutputDeviceFactory {
   add("file", TextFileOutputDevice)
   add("jdbc", JDBCOutputSource)
   add("kafka", KafkaOutputDevice)
+  add("s3", AWSS3OutputDevice)
 
   /**
     * Adds a new device to the factory

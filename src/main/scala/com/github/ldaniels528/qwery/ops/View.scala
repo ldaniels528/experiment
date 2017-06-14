@@ -12,7 +12,7 @@ case class View(name: String, query: Executable) extends Executable {
     if (once) {
       once = !once
       scope += this
-      ResultSet.ok()
+      ResultSet.affected()
     }
     else query.execute(scope)
   }
