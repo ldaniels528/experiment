@@ -1,14 +1,15 @@
 package com.github.ldaniels528.qwery.sources
 
+import FixedLengthOutputSource._
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Row, Scope}
-import com.github.ldaniels528.qwery.sources.FixedLengthInputSource.FixedField
+import com.github.ldaniels528.qwery.ops.{FixedField, Hints, Row, Scope}
 
 /**
   * Fixed-length Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) extends InputSource {
+case class FixedLengthInputSource(device: InputDevice, hints: Option[Hints]) extends InputSource {
+  private val fields: Seq[FixedField] = getFixedFields(hints)
 
   override def read(scope: Scope): Option[Row] = {
     device.read() map { case Record(bytes, _, _) =>
@@ -27,20 +28,5 @@ case class FixedLengthInputSource(device: InputDevice, fields: Seq[FixedField]) 
     else if (position < line.length) line.substring(position, line.length)
     else ""
   }
-
-}
-
-/**
-  * Fixed-length Input Source Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object FixedLengthInputSource {
-
-  /**
-    * Represents a fixed-length field
-    * @param name  the field name
-    * @param width the field width
-    */
-  case class FixedField(name: String, width: Int)
 
 }

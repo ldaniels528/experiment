@@ -11,6 +11,7 @@ import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 case class Hints(append: Option[Boolean] = None,
                  avro: Option[String] = None,
                  delimiter: Option[String] = None,
+                 fields: Seq[Field] = Nil,
                  fixed: Option[Boolean] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
@@ -27,6 +28,14 @@ case class Hints(append: Option[Boolean] = None,
   def asPSV: Hints = copy(delimiter = "|", headers = true, quotedText = true, quotedNumbers = false)
 
   def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
+
+  def getFixedFields: Seq[FixedField] = {
+    fields.map {
+      case field: FixedField => field
+      case field =>
+        throw new IllegalStateException(s"Column '${field.name}' is not fixed width")
+    }
+  }
 
   def isAppend: Boolean = !isOverwrite
 

@@ -39,7 +39,7 @@ object QweryDecompiler {
   private def makeSQL(executable: Executable): String = executable match {
     case Assignment(variableRef, expression) => s"SET ${variableRef.toSQL} = ${expression.toSQL}"
     case CodeBlock(operations) => s"BEGIN ${operations.map(_.toSQL).mkString("; ")} END"
-    case DataResource(path, hints) => toDataResource(path, hints)
+    case DataResource(path, _) => s"'$path'"
     case Declare(variableRef, typeName) => s"DECLARE ${variableRef.toSQL} $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Insert(target, fields, source) => toInsert(target, fields, source)
@@ -105,12 +105,6 @@ object QweryDecompiler {
     case s => s"'$s'"
   }
 
-  private def toDataResource(path: String, hints: Option[Hints]) = {
-    val sb = new StringBuilder(80).append(s"'$path'")
-    hints.foreach(hints => sb.append(hints.toSQL))
-    sb.toString()
-  }
-
   private def toDescribe(source: Executable, limit: Option[Int]) = {
     val sb = new StringBuilder(s"DESCRIBE ")
     source match {
@@ -140,7 +134,7 @@ object QweryDecompiler {
       if (target.hints.exists(_.isAppend)) "INTO" else "OVERWRITE"
     } ${target.toSQL} (${
       fields.map(_.toSQL).mkString(", ")
-    }) ${source.toSQL}"""
+    })${if (target.hints.nonEmpty) target.hints.map(_.toSQL).getOrElse("")} ${source.toSQL}"""
   }
 
   private def toSelect(fields: Seq[Expression],
@@ -151,8 +145,11 @@ object QweryDecompiler {
                        limit: Option[Int]): String = {
     val sb = new StringBuilder(s"SELECT ${fields.map(_.toSQL) mkString ", "}")
     source foreach {
-      case ds: DataResource => sb.append(s" FROM ${ds.toSQL}")
-      case exec => sb.append(s" FROM (${exec.toSQL})")
+      case ds: DataResource =>
+        sb.append(s" FROM ${ds.toSQL}")
+        ds.hints.foreach(hints => if(hints.nonEmpty) sb.append(hints.toSQL))
+      case exec =>
+        sb.append(s" FROM (${exec.toSQL})")
     }
     condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
     if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")

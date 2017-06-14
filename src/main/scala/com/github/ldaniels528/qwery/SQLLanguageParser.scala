@@ -387,7 +387,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withAvro = "WITH AVRO %a:avro"
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
-    val withFixed = "WITH FIXED WIDTHS"
+    val withFixed = "WITH FIXED %a:fixedType"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
     val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
@@ -410,7 +410,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
           hints = hints.copy(headers = params.atoms.get("column").map(_.equalsIgnoreCase("HEADERS")))
         // WITH FIXED WIDTHS
         case p if p.matches(withFixed) =>
-          p.process(withFixed)
+          val params = p.process(withFixed)
+          if (!params.atoms.get("fixedType").exists(_.equalsIgnoreCase("WIDTH"))) stream.die("Keyword WIDTH expected")
           hints = hints.copy(fixed = Some(true))
         // WITH [GZIP] COMPRESSION
         case p if p.matches(withCompression) =>
@@ -647,7 +648,7 @@ object SQLLanguageParser {
     * }}}
     * @example
     * {{{
-    * INSERT INTO 'companylist.json' WITH FORMAT JSON (Symbol, Name, Sector, Industry)
+    * INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
     * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
     * FROM 'companylist.csv' WITH FORMAT CSV
     * WHERE Industry = 'Oil/Gas Transmission'
@@ -657,12 +658,13 @@ object SQLLanguageParser {
     */
   private def parseInsert(stream: TokenStream): Insert = {
     val parser = SQLLanguageParser(stream)
-    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target %w:hints ( %F:fields )")
+    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target ( %F:fields ) %w:hints")
     val append = params.atoms("mode").equalsIgnoreCase("INTO")
-    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append)))
+    val fields = params.fields("fields")
+    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append), fields = fields))
     Insert(
       target = DataResource(params.atoms("target"), hints),
-      fields = params.fields("fields"),
+      fields = fields,
       source = stream match {
         case ts if ts.is("VALUES") => parseInsertValues(params.fields("fields"), ts, parser)
         case ts => parseNext(ts)

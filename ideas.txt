@@ -4,7 +4,7 @@ DESIGN NOTES / IDEAS
 *       Fixed-length Format testing
 ************************************************************************
 
-INSERT INTO 'fixed-data.txt' WITH FIXED WIDTHS (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10)
+INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10) WITH FIXED WIDTH
 SELECT Symbol, Name, Sector, Industry, LastSale
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'

@@ -536,6 +536,28 @@ WITH CSV FORMAT;
 
 *NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
 
+Here is an example of generating fixed-width data:
+
+```sql
+INSERT INTO 'fixed-data.txt' WITH FIXED WIDTH (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10)
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 4               |
++ --------------- +
+```
+
+The above example results in appending 4 fixed-width lines to the file 'fixed-data.txt', where:
+ * _Symbol_ is 10-characters wide
+ * _Name_ is 40-characters wide
+ * _Sector_ is 40-characters wide
+ * _LastTrade_ is 10-characters wide
+
 <a name="declare-set"></a>
 #### DECLARE & SET statements
 

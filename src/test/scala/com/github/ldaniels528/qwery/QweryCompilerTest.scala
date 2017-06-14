@@ -221,7 +221,9 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test2.csv", hints = Some(Hints(append = Some(false)))),
+          target = DataResource("test2.csv", hints = Some(Hints(
+            append = Some(false),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)))),
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             source = Option(DataResource(path = "companylist.csv")),
@@ -239,7 +241,10 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test3.csv", hints = Some(Hints(append = Some(true)))),
+          target = DataResource("test3.csv", hints = Some(Hints(
+            append = Some(true),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)
+          ))),
           source = InsertValues(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(

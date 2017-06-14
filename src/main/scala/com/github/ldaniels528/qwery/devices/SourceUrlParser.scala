@@ -86,6 +86,7 @@ trait SourceUrlParser {
   private def guessInputSourceFormat(device: InputDevice, path: String, hints: Option[Hints]) = {
     val myHints = hints ?? Some(Hints())
     path.toLowerCase() match {
+      case _ if myHints.exists(_.fixed.contains(true)) => Option(FixedLengthInputSource(device, myHints))
       case file if file.endsWith(".csv") => Option(DelimitedInputSource(device, hints = myHints.map(_.asCSV)))
       case file if file.endsWith(".json") => Option(JSONInputSource(device, hints = myHints.map(_.asJSON)))
       case file if file.endsWith(".psv") => Option(DelimitedInputSource(device, hints = myHints.map(_.asPSV)))
@@ -97,6 +98,7 @@ trait SourceUrlParser {
   private def guessOutputSourceFormat(device: OutputDevice, path: String, hints: Option[Hints]) = {
     val myHints = hints ?? Some(Hints())
     path.toLowerCase() match {
+      case _ if myHints.exists(_.fixed.contains(true)) => Option(FixedLengthOutputSource(device, myHints))
       case file if file.endsWith(".csv") => Option(DelimitedOutputSource(device, hints = myHints.map(_.asCSV)))
       case file if file.endsWith(".json") => Option(JSONOutputSource(device, hints = myHints.map(_.asJSON)))
       case file if file.endsWith(".psv") => Option(DelimitedOutputSource(device, hints = myHints.map(_.asPSV)))

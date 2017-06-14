@@ -130,14 +130,14 @@ class QweryDecompilerTest extends FunSpec {
     it("supports INSERT-INTO-SELECT-WITH-FORMATS") {
       val sql0 =
         """
-          |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+          |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH JSON FORMAT
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM 'companylist.csv' WITH CSV FORMAT
           |WHERE Industry = 'Oil/Gas Transmission'
           |""".stripMargin.toSingleLine
       val sql1 =
         """
-          |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+          |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH JSON FORMAT
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM 'companylist.csv'
           |WITH DELIMITER ','
@@ -152,7 +152,7 @@ class QweryDecompilerTest extends FunSpec {
     it("supports INSERT-INTO-SELECT-WITH-MULTIPLE") {
       val sql =
         """
-          |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+          |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH JSON FORMAT
           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
           |FROM 'companylist.csv'
           |WITH DELIMITER ','
