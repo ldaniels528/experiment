@@ -202,10 +202,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     */
   private def extractListOfFields(name: String) = Try {
     var fields: List[Field] = Nil
-    do {
-      fields = fields ::: stream.nextOption.map(t => Field(t.text)).getOrElse(die("Unexpected end of statement")) :: Nil
-    } while (stream nextIf ",")
-    SQLTemplateParams(fields = Map(name -> fields))
+    do fields = Field(stream) :: fields while (stream nextIf ",")
+    SQLTemplateParams(fields = Map(name -> fields.reverse))
   }
 
   /**
@@ -389,6 +387,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withAvro = "WITH AVRO %a:avro"
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
+    val withFixed = "WITH FIXED WIDTHS"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
     val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
@@ -409,6 +408,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withHeader) =>
           val params = p.process(withHeader)
           hints = hints.copy(headers = params.atoms.get("column").map(_.equalsIgnoreCase("HEADERS")))
+        // WITH FIXED WIDTHS
+        case p if p.matches(withFixed) =>
+          p.process(withFixed)
+          hints = hints.copy(fixed = Some(true))
         // WITH [GZIP] COMPRESSION
         case p if p.matches(withCompression) =>
           val params = p.process(withCompression)

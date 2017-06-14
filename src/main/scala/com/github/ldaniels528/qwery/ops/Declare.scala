@@ -8,7 +8,7 @@ case class Declare(variableRef: VariableRef, typeName: String) extends Executabl
 
   override def execute(scope: Scope): ResultSet = {
     scope += Variable(variableRef.name, value = None)
-    ResultSet.ok()
+    ResultSet.affected()
   }
 
 }

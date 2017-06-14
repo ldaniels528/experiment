@@ -16,12 +16,13 @@ case class Insert(target: DataResource, fields: Seq[Field], source: Executable) 
     outputSource.open(scope)
     outputSource use { device =>
       source.execute(scope) foreach { row =>
-        // TODO perform filtering of the row?
-        device.write(row)
+        device.write(fields zip row map { case (field, (_, value)) =>
+          field.name -> value
+        })
         count += 1
       }
     }
-    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> count)), statistics = outputSource.getStatistics)
+    ResultSet.inserted(count, statistics = outputSource.getStatistics)
   }
 
 }

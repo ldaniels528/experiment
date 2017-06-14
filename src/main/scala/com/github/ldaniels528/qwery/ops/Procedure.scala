@@ -10,7 +10,7 @@ case class Procedure(name: String, parameters: Seq[Field], executable: Executabl
 
   override def execute(scope: Scope): ResultSet = {
     scope += this
-    ResultSet.ok()
+    ResultSet.affected()
   }
 
   def invoke(scope: Scope, args: Seq[Expression]): ResultSet = {
