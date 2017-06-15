@@ -46,6 +46,7 @@ case class AWSS3OutputDevice(bucketName: String,
     statsGen.update(records = 1, bytesRead = record.data.length)
     out.write(new String(record.data))
     out.newLine()
+    offset += 1
   }
 
 }
@@ -64,7 +65,7 @@ object AWSS3OutputDevice extends OutputDeviceFactory with SourceUrlParser {
   override def parseOutputURL(url: String, hints: Option[Hints]): Option[OutputDevice] = {
     val comps = parseURI(url)
     for {
-      bucket <- comps.host if url.toLowerCase.startsWith("s3:")
+      bucket <- comps.host
       key <- comps.path
       region = comps.params.get("region")
       profile = comps.params.get("profile")
