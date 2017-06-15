@@ -43,8 +43,9 @@ trait SourceUrlParser {
       case uriRegExA(_prefix, hostAndPath, _queryString) =>
         val (_host, _path) = parseHost(hostAndPath)
         (_prefix, _host, _path, _queryString)
-      case uriRegExB(_prefix, _server) =>
-        (_prefix, Some(_server), None, "")
+      case uriRegExB(_prefix, hostAndPath) =>
+        val (_host, _path) = parseHost(hostAndPath)
+        (_prefix, _host, _path, "")
       case _path => ("", None, Some(_path), "")
     }
 
@@ -58,7 +59,7 @@ trait SourceUrlParser {
 
   private def parseHost(hostAndPathString: String): (Option[String], Option[String]) = {
     // is a host being referenced?
-    hostAndPathString.indexOf('/') match {
+    hostAndPathString.lastIndexOf('/') match {
       case -1 => (Some(hostAndPathString), None)
       case index =>
         (Some(hostAndPathString.substring(0, index)), Some(hostAndPathString.substring(index + 1)))
@@ -115,6 +116,8 @@ trait SourceUrlParser {
   */
 object SourceUrlParser {
 
-  case class URLComps(prefix: String, host: Option[String], path: Option[String], params: Map[String, String])
+  case class URLComps(prefix: String, host: Option[String], path: Option[String], params: Map[String, String])   {
+    override def toString = s"${getClass.getSimpleName}(prefix = '$prefix', host = '${host.orNull}', path = '${path.orNull}', params = $params)"
+  }
 
 }

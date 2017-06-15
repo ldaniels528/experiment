@@ -82,7 +82,7 @@ object AWSS3InputDevice extends InputDeviceFactory with SourceUrlParser {
   override def parseInputURL(url: String, hints: Option[Hints]): Option[InputDevice] = {
     val comps = parseURI(url)
     for {
-      bucket <- comps.host if url.toLowerCase.startsWith("s3:")
+      bucket <- comps.host
       key <- comps.path
       region = comps.params.get("region")
       profile = comps.params.get("profile")

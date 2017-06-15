@@ -38,6 +38,15 @@ class SourceUrlParserTest extends FunSpec {
       assert(source.exists(_.getClass == classOf[DelimitedInputSource]))
       assert(source.exists(_.device.getClass == classOf[AWSS3InputDevice]))
     }
+
+    it("should return the specified S3 / JSON source") {
+      val source = parser.parseInputSource("s3://ldaniels3/level1/level2/level3/companylist.json", hints = Some(
+        Hints().asJSON
+      ))
+      assert(source.exists(_.getClass == classOf[JSONInputSource]))
+      assert(source.exists(_.device.getClass == classOf[AWSS3InputDevice]))
+    }
+
   }
 
 }
