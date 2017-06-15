@@ -84,6 +84,7 @@ lazy val core = (project in file(".")).
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
       "com.twitter" %% "bijection-avro" % "0.9.5",
       "log4j" % "log4j" % "1.2.17",
+      "mysql" % "mysql-connector-java" % "5.1.42",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",

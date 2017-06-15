@@ -389,6 +389,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withDelimiter = "WITH DELIMITER %a:delimiter"
     val withFixed = "WITH FIXED %a:fixedType"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
+    val withJdbcDriver = "WITH JDBC DRIVER %a:jdbcDriver"
     val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
@@ -421,6 +422,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH JDBC 'com.mysql.jdbc.Driver'
+        case p if p.matches(withJdbcDriver) =>
+          val params = p.process(withJdbcDriver)
+          hints = hints.copy(jdbcDriver = params.atoms.get("jdbcDriver"))
         // WITH JSON PATH ( elem1, elem2, .., elemN )
         case p if p.matches(withJsonPath) =>
           val params = p.process(withJsonPath)

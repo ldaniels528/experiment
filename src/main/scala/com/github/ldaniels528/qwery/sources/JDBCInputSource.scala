@@ -24,6 +24,14 @@ case class JDBCInputSource(url: String, query: String, hints: Option[Hints]) ext
 
   override def open(scope: Scope): Unit = {
     super.open(scope)
+
+    // load the driver
+    for {
+      hints <- hints
+      jdbcDriver <- hints.jdbcDriver
+    } Class.forName(jdbcDriver).newInstance()
+
+    // open the connection
     conn = Option(DriverManager.getConnection(url))
   }
 

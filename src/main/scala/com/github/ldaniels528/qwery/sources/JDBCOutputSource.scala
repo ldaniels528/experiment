@@ -5,6 +5,7 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 import com.github.ldaniels528.qwery.SQLGenerator
 import com.github.ldaniels528.qwery.devices._
 import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Try
@@ -14,9 +15,11 @@ import scala.util.Try
   * @author lawrence.daniels@gmail.com
   */
 case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]) extends OutputSource with OutputDevice {
+  private val log = LoggerFactory.getLogger(getClass)
+  private val preparedStatements = TrieMap[String, PreparedStatement]()
   private val sqlGenerator = new SQLGenerator()
   private var conn_? : Option[Connection] = None
-  private val preparedStatements = TrieMap[String, PreparedStatement]()
+  private var offset = 0L
 
   override def close(): Unit = {
     preparedStatements.values.foreach(ps => Try(ps.close()))
@@ -29,16 +32,33 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
 
   override def open(scope: Scope): Unit = {
     super.open(scope)
+    offset = 0
+
+    // load the driver
+    for {
+      hints <- hints
+      jdbcDriver <- hints.jdbcDriver
+    } Class.forName(jdbcDriver).newInstance()
+
+    // open the connection
     conn_? = Option(DriverManager.getConnection(url))
   }
 
   override def write(record: Record): Any = ()
 
   override def write(row: Row): Unit = {
-    toInsert(row) foreach { ps =>
-      row.map(_._2).zipWithIndex foreach { case (value, index) =>
-        ps.setObject(index + 1, value)
+    offset += 1
+    try {
+      toInsert(row) foreach { ps =>
+        row.map(_._2).zipWithIndex foreach { case (value, index) =>
+          ps.setObject(index + 1, value)
+        }
+        ps.execute()
       }
+    } catch {
+      case e: Exception =>
+        statsGen.update(failures = 1)
+        log.error(s"Record #$offset failed: ${e.getMessage}")
     }
   }
 
@@ -46,7 +66,10 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     val sql = sqlGenerator.insert(tableName, row)
     for {
       conn <- conn_?
-    } yield preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
+    } yield preparedStatements.getOrElseUpdate(sql, {
+      log.info(s"SQL: $sql")
+      conn.prepareStatement(sql)
+    })
   }
 
 }

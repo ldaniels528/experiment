@@ -41,7 +41,11 @@ trait SourceUrlParser {
       case h if h.delimiter.nonEmpty => Option(DelimitedInputSource(device, hints))
       case h if h.fixed.contains(true) => Option(FixedLengthInputSource(device, hints))
       case h if h.isJson.contains(true) | h.jsonPath.nonEmpty => Option(JSONInputSource(device, hints))
-      case _ => None
+      case _ =>
+        device match {
+          case source: InputSource => Option(source)
+          case _ => None
+        }
     }
   }
 
@@ -51,7 +55,11 @@ trait SourceUrlParser {
       case h if h.delimiter.nonEmpty => Option(DelimitedOutputSource(device, hints))
       case h if h.fixed.contains(true) => Option(FixedLengthOutputSource(device, hints))
       case h if h.isJson.contains(true) | h.jsonPath.nonEmpty => Option(JSONOutputSource(device, hints))
-      case _ => None
+      case _ =>
+        device match {
+          case source: OutputSource => Option(source)
+          case _ => None
+        }
     }
   }
 
