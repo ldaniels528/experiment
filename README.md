@@ -824,6 +824,21 @@ There are times when you may want to execute a native SQL (or platform specific 
 Qwery may not support. In these situations, you can use the NATIVE SQL statement:
 
 ```sql
+NATIVE SQL 'TRUNCATE TABLE company'
+FROM 'jdbc:mysql://localhost:3306/test'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 0               |
++ --------------- +
+```
+
+Queries work as well:
+
+```sql
 NATIVE SQL 'SELECT * FROM company WHERE Symbol = "OCX"'
 FROM 'jdbc:mysql://localhost:3306/test'
 WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
