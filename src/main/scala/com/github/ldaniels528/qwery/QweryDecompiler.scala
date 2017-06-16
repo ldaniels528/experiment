@@ -67,6 +67,7 @@ object QweryDecompiler {
     case Count(expr) => s"COUNT(${expr.toSQL})"
     case ConstantValue(value) => toConstantValue(value)
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
+    case FieldRef(name) => s"#$name"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
     case Left(a, b) => s"LEFT(${a.toSQL}, ${b.toSQL})"
     case Len(expr) => s"LEN(${expr.toSQL})"

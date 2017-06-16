@@ -33,7 +33,7 @@ class JDBCSupportTest() extends FunSpec {
       /*
       DROP TABLE company;
       CREATE TABLE company (
-        Symbol VARCHAR(10),
+        Symbol VARCHAR(10) PRIMARY KEY,
         Name VARCHAR(64),
         LastSale DECIMAL(9, 4),
         MarketCap DECIMAL(20,4),

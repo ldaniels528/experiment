@@ -705,17 +705,14 @@ object SQLLanguageParser {
     * }}}
     */
   private def parseUpsert(stream: TokenStream): Upsert = {
-    val params = SQLTemplateParams(stream,
-      """
-        |UPSERT INTO %a:target ( %F:fields ) %w:hints) %V:source
-        |WHERE %c:condition""".stripMargin)
+    val params = SQLTemplateParams(stream, "UPSERT INTO %a:target ( %F:fields ) KEYED ON %F:keyFields %w:hints %V:source")
     val fields = params.fields("fields")
     val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(fields = fields))
     Upsert(
       target = DataResource(params.atoms("target"), hints),
       source = params.sources("source"),
       fields = fields,
-      condition = params.conditions("condition"))
+      keyedOn = params.fields("keyFields"))
   }
 
   /**

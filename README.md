@@ -584,13 +584,31 @@ The MySQL table definition is as follows:
 
 ```sql
 CREATE TABLE company (
-    Symbol VARCHAR(10),
+    Symbol VARCHAR(10) PRIMARY KEY,
     Name VARCHAR(64),
     LastSale DECIMAL(9, 4),
     MarketCap DECIMAL(20,4),
     Sector VARCHAR(64),
     Industry VARCHAR(64)
 );
+```
+
+Additionally, there are times when you want to attempt an INSERT, but perform an UPDATE if it fails due to a primark key
+constraint. In cases like these, you'll want to use the UPSERT statement. Consider the following:
+
+```sql
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END
+FROM 'companylist.csv'
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 359             |
++ --------------- +
 ```
 
 <a name="declare-set"></a>

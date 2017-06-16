@@ -46,28 +46,47 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
 
   override def write(record: Record): Any = ()
 
-  override def write(row: Row): Unit = {
-    offset += 1
-    try {
-      toInsert(row) foreach { ps =>
-        row.map(_._2).zipWithIndex foreach { case (value, index) =>
-          ps.setObject(index + 1, value)
-        }
-        val count = if (ps.execute()) 1 else 0
+  override def write(row: Row): Unit = insert(row) match {
+    case Success(count_?) =>
+      count_?.foreach { count =>
+        offset += 1
         statsGen.update(records = count)
       }
-    } catch {
-      case e: Exception =>
-        statsGen.update(failures = 1)
-        log.error(s"Record #$offset failed: ${e.getMessage}")
+    case Failure(e) =>
+      statsGen.update(failures = 1)
+      log.error(s"Record #$offset failed: ${e.getMessage}")
+  }
+
+  def upsert(row: Row, where: Seq[String]): Try[Option[Int]] = {
+    insert(row).recoverWith { case e =>
+      if (e.getMessage.toLowerCase().contains("duplicate")) update(row, where)
+      else {
+        log.warn(s"insert failed: ${e.getMessage}")
+        Try(None)
+      }
     }
   }
 
-  private def toInsert(row: Row): Option[PreparedStatement] = {
+  def insert(row: Row): Try[Option[Int]] = Try {
     val sql = sqlGenerator.insert(tableName, row)
-    for {
-      conn <- conn_?
-    } yield preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
+    conn_? map { conn =>
+      val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
+      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+        ps.setObject(index + 1, value)
+      }
+      ps.executeUpdate()
+    }
+  }
+
+  def update(row: Row, where: Seq[String]): Try[Option[Int]] = Try {
+    val sql = sqlGenerator.update(tableName, row, where)
+    conn_? map { conn =>
+      val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
+      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+        ps.setObject(index + 1, value)
+      }
+      ps.executeUpdate()
+    }
   }
 
 }
