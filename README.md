@@ -558,6 +558,33 @@ The above example results in appending 4 fixed-width lines to the file 'fixed-da
  * _Sector_ is 40-characters wide
  * _LastTrade_ is 10-characters wide
 
+
+You can also insert records into an RDBMS like MySQL, consider the following:
+
+```sql
+INSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, MarketCap, LastSale)
+SELECT Symbol, Name, Sector, Industry, MarketCap,
+ CASE LastSale
+   WHEN 'n/a' THEN NULL
+   ELSE CAST(LastSale AS DOUBLE)
+ END
+FROM './companylist.csv'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+
+The MySQL table definition is as follows:
+
+```sql
+CREATE TABLE company (
+    Symbol VARCHAR(10),
+    Name VARCHAR(64),
+    LastSale DECIMAL(9, 4),
+    MarketCap DECIMAL(20,4),
+    Sector VARCHAR(64),
+    Industry VARCHAR(64)
+);
+```
+
 <a name="declare-set"></a>
 #### DECLARE & SET statements
 
