@@ -1,21 +1,20 @@
 package com.github.ldaniels528.qwery.ops.sql
 
-import com.github.ldaniels528.qwery.ops.{Executable, Expression, Field, ResultSet, Scope}
+import com.github.ldaniels528.qwery.ops.{Executable, Expression, NamedExpression, ResultSet, Scope}
 
-import scala.collection.Iterable
 import scala.language.postfixOps
 
 /**
   * Represents a collection of insert values
   * @author lawrence.daniels@gmail.com
   */
-case class InsertValues(fields: Seq[Field], dataSets: Iterable[Seq[Expression]]) extends Executable {
+case class InsertValues(dataSets: Seq[Seq[Expression]]) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
+    val fieldNames = (1 to dataSets.headOption.map(_.size).getOrElse(0)) map (_ => NamedExpression.randomName())
     ResultSet(rows = dataSets map { dataSet =>
-      fields zip dataSet map { case (field, value) =>
-        field.name -> value.evaluate(scope)
-          .getOrElse(throw new RuntimeException(s"Could not resolve value for '${field.name}': $value"))
+      fieldNames zip dataSet map { case (field, value) =>
+        field -> value.evaluate(scope).orNull
       }
     } toIterator)
   }

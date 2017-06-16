@@ -29,7 +29,7 @@ case class JDBCInputSource(url: String, table: String, hints: Option[Hints])
     super.open(scope)
 
     // open the connection
-    getConnection(scope, url, hints) match {
+    createConnection(scope, url, hints) match {
       case Success(conn) =>
         conn_? = Option(conn)
       case Failure(e) =>

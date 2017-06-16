@@ -168,6 +168,8 @@ trait ExpressionParser {
       case ts if ts nextIf "Cast" => parseCast(ts)
       // is it an all fields reference?
       case ts if ts nextIf "*" => Option(AllFields)
+      // is it a field?
+      case ts if ts is "#" => parseFieldRef(ts)
       // is it a variable?
       case ts if ts is "@" => parseVariableRef(ts)
       // is it a quantity (e.g. "(2 + (5 * 2))")?
@@ -182,6 +184,15 @@ trait ExpressionParser {
       case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts))
       case _ => None
     }
+  }
+
+  def parseFieldRef(ts: TokenStream): Option[FieldRef] = {
+    if (ts nextIf "#") {
+      val name = ts.next().text
+      if (isFieldIdentifier(name)) Option(FieldRef(name))
+      else ts.die("Field identifier expected")
+    }
+    else None
   }
 
   def parseVariableRef(ts: TokenStream): Option[VariableRef] = {
@@ -340,8 +351,15 @@ object ExpressionParser {
   )
 
   /**
+    * Indicates whether the given name qualifies as a field identifier (e.g. "customerName")
+    * @param name the given field name
+    * @return true, if the given name qualifies as a field identifier
+    */
+  def isFieldIdentifier(name: String): Boolean = true
+
+  /**
     * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
-    * @param name the given name
+    * @param name the given identifier name
     * @return true, if the given name qualifies as an identifier
     */
   def isIdentifier(name: String): Boolean = name.matches(identifierRegEx)

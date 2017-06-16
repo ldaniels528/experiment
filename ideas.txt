@@ -10,6 +10,20 @@ FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
 
 ************************************************************************
+*      UPSERT testing
+************************************************************************
+
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM 'companylist.csv'
+WHERE Symbol = #Symbol
+
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
+
+************************************************************************
 *       Data Resource testing
 ************************************************************************
 

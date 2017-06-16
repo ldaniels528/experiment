@@ -13,22 +13,25 @@ import scala.util.{Failure, Success}
   * @param expression the SQL query or statement expression
   */
 case class NativeSQL(expression: Expression, jdbcUrl: String, hints: Option[Hints]) extends Executable with JDBCSupport {
-  private lazy val log = LoggerFactory.getLogger(getClass)
   private var conn_? : Option[Connection] = None
 
   override def execute(scope: Scope): ResultSet = {
     expression.getAsString(scope).map(scope.expand).map(_.trim) match {
-      case Some(sql) =>
-        getConnection(scope, jdbcUrl, hints) match {
-          case Success(conn) =>
-            conn_? = Option(conn)
-            executeSQL(conn, sql)
-          case Failure(e) =>
-            log.error(s"Connection error: ${e.getMessage}")
-            ResultSet.affected(count = 0)
-        }
+      case Some(sql) => executeSQL(getConnection(scope), sql)
       case None =>
         throw new IllegalArgumentException("No SQL to execute")
+    }
+  }
+
+  private def getConnection(scope: Scope): Connection = {
+    conn_? getOrElse {
+      createConnection(scope, jdbcUrl, hints) match {
+        case Success(conn) =>
+          conn_? = Option(conn)
+          conn
+        case Failure(e) =>
+          throw new IllegalStateException(s"Connection error: ${e.getMessage}", e)
+      }
     }
   }
 

@@ -114,6 +114,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => extractVariableReference(tag.drop(3))
 
+    // insert values or selection? (e.g. "%V:insertSource" => "VALUES (1, 2, 3)" | "SELECT 1, 2, 3")
+    case tag if tag.startsWith("%V:") => extractInsertSelection(tag.drop(3))
+
     // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
     case tag if tag.startsWith("%w:") => extractWithClause(tag.drop(3))
 
@@ -172,6 +175,15 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val value = stream.peek.map(_.text).getOrElse(die(s"'$name' identifier expected"))
     stream.next()
     SQLTemplateParams(atoms = Map(name -> value))
+  }
+
+  private def extractInsertSelection(name: String) = Try {
+    import SQLLanguageParser.{parseInsertValues, parseNext}
+    val source = stream match {
+      case ts if ts.is("VALUES") => parseInsertValues(ts)
+      case ts => parseNext(ts)
+    }
+    SQLTemplateParams(sources = Map(name -> source))
   }
 
   private def extractKeyWord(keyword: String) = Try {
@@ -528,6 +540,7 @@ object SQLLanguageParser {
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
     case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "UPSERT" => parseUpsert(ts)
     case ts if ts is "NATIVE SQL" => parseNativeSQL(ts)
     case ts if ts is "RETURN" => parseReturn(ts)
     case ts if ts is "SELECT" => parseSelect(ts)
@@ -555,11 +568,11 @@ object SQLLanguageParser {
   /**
     * Parses a CALL statement
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[CallProcedure executable]]
+    * @return an [[Call executable]]
     */
-  private def parseCall(ts: TokenStream): CallProcedure = {
+  private def parseCall(ts: TokenStream): Call = {
     val params = SQLTemplateParams(ts, "CALL %a:name ?( +?%A:args +?)")
-    CallProcedure(name = params.atoms("name"), args = params.expressions.getOrElse("args", Nil))
+    Call(name = params.atoms("name"), args = params.expressions.getOrElse("args", Nil))
   }
 
   /**
@@ -664,36 +677,58 @@ object SQLLanguageParser {
     * @return an [[Insert executable]]
     */
   private def parseInsert(stream: TokenStream): Insert = {
-    val parser = SQLLanguageParser(stream)
-    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target ( %F:fields ) %w:hints")
+    val params = SQLTemplateParams(stream, "INSERT %C(mode,INTO,OVERWRITE) %a:target ( %F:fields ) %w:hints %V:source")
     val append = params.atoms("mode").equalsIgnoreCase("INTO")
     val fields = params.fields("fields")
     val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append), fields = fields))
     Insert(
       target = DataResource(params.atoms("target"), hints),
+      source = params.sources("source"),
+      fields = fields)
+  }
+
+  /**
+    * Parses an UPSERT statement
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, LastSale
+    * FROM 'companylist.csv'
+    * WHERE Symbol = #Symbol
+    * }}}
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
+    * }}}
+    */
+  private def parseUpsert(stream: TokenStream): Upsert = {
+    val params = SQLTemplateParams(stream,
+      """
+        |UPSERT INTO %a:target ( %F:fields ) %w:hints) %V:source
+        |WHERE %c:condition""".stripMargin)
+    val fields = params.fields("fields")
+    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(fields = fields))
+    Upsert(
+      target = DataResource(params.atoms("target"), hints),
+      source = params.sources("source"),
       fields = fields,
-      source = stream match {
-        case ts if ts.is("VALUES") => parseInsertValues(params.fields("fields"), ts, parser)
-        case ts => parseNext(ts)
-      })
+      condition = params.conditions("condition"))
   }
 
   /**
     * Parses an INSERT VALUES clause
-    * @param fields the corresponding fields
-    * @param ts     the [[TokenStream token stream]]
-    * @param parser the implicit [[SQLLanguageParser language parser]]
+    * @param ts the [[TokenStream token stream]]
     * @return the resulting [[InsertValues modifications]]
     */
-  private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLLanguageParser): InsertValues = {
-    val valueSets = parser.process("%R:valueSet {{ VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
+  private def parseInsertValues(ts: TokenStream): InsertValues = {
+    val valueSets = SQLTemplateParams(ts, "%R:valueSet {{ VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
       case Some(sets) => sets.flatMap(_.expressions.get("values"))
-      case None =>
-        throw SyntaxException("VALUES clause could not be parsed", ts)
+      case None => ts.die("VALUES clause could not be parsed")
     }
-    if (!valueSets.forall(_.size == fields.size))
-      throw SyntaxException("The number of fields must match the number of values", ts)
-    InsertValues(fields, valueSets)
+    InsertValues(valueSets)
   }
 
   /**

@@ -247,7 +247,6 @@ class QweryCompilerTest extends FunSpec {
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)
           ))),
           source = InsertValues(
-            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(
               List[Expression]("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0),
               List[Expression]("EMX", "Basic Industries", "Precious Metals", 0.828)

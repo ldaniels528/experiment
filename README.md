@@ -564,13 +564,13 @@ You can also insert records into an RDBMS like MySQL using JDBC, consider the fo
 
 ```sql
 INSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, MarketCap, LastSale)
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
 SELECT Symbol, Name, Sector, Industry, MarketCap,
  CASE LastSale
    WHEN 'n/a' THEN NULL
    ELSE CAST(LastSale AS DOUBLE)
  END
 FROM './companylist.csv'
-WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
 ```
 ```text
 + --------------- +

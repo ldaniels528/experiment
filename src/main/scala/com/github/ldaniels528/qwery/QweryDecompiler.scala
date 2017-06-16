@@ -44,7 +44,7 @@ object QweryDecompiler {
     case Declare(variableRef, typeName) => s"DECLARE ${variableRef.toSQL} $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Insert(target, fields, source) => toInsert(target, fields, source)
-    case InsertValues(_, dataSets) =>
+    case InsertValues(dataSets) =>
       dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Procedure(name, params, operation) =>
       s"CREATE PROCEDURE $name(${params.map(_.toSQL).mkString(",")}) AS ${operation.toSQL}"

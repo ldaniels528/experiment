@@ -36,7 +36,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     offset = 0
 
     // open the connection
-    getConnection(scope, url, hints) match {
+    createConnection(scope, url, hints) match {
       case Success(conn) =>
         conn_? = Option(conn)
       case Failure(e) =>

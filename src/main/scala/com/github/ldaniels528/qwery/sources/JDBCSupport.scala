@@ -26,7 +26,7 @@ trait JDBCSupport {
     * @param hints the given [[Hints hints]]
     * @return the [[Connection connection]]
     */
-  def getConnection(scope: Scope, url: String, hints: Option[Hints]) = Try {
+  def createConnection(scope: Scope, url: String, hints: Option[Hints]) = Try {
     // load the driver
     for {
       hints <- hints
