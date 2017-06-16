@@ -1,6 +1,8 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
+
 import scala.language.postfixOps
 
 /**

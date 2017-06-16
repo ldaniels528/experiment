@@ -1,5 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
+import com.github.ldaniels528.qwery.ops.{Executable, Expression, ResultSet, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**

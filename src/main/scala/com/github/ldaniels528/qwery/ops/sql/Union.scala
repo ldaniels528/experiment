@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
+
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
 
 /**
   * Represents a Union operation; which combines two queries.

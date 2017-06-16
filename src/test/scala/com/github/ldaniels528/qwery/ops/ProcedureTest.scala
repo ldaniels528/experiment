@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.ops
 import java.io.File
 
 import com.github.ldaniels528.qwery.ops.Implicits._
+import com.github.ldaniels528.qwery.ops.sql.{CallProcedure, Insert, Procedure, Select}
 import com.github.ldaniels528.qwery.sources.DataResource
 import org.scalatest.FunSpec
 

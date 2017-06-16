@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery
 import com.github.ldaniels528.qwery.ops.NamedExpression.{NamedAggregation, NamedAlias}
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins._
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.sources._
 
 /**

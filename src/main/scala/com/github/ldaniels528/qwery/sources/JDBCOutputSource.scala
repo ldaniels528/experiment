@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import java.sql.{Connection, DriverManager, PreparedStatement}
+import java.sql.{Connection, PreparedStatement}
 
 import com.github.ldaniels528.qwery.SQLGenerator
 import com.github.ldaniels528.qwery.devices._
@@ -8,13 +8,14 @@ import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * JDBC Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]) extends OutputSource with OutputDevice {
+case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints])
+  extends OutputSource with OutputDevice with JDBCSupport {
   private val log = LoggerFactory.getLogger(getClass)
   private val preparedStatements = TrieMap[String, PreparedStatement]()
   private val sqlGenerator = new SQLGenerator()
@@ -34,14 +35,13 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     super.open(scope)
     offset = 0
 
-    // load the driver
-    for {
-      hints <- hints
-      jdbcDriver <- hints.jdbcDriver
-    } Class.forName(jdbcDriver).newInstance()
-
     // open the connection
-    conn_? = Option(DriverManager.getConnection(url))
+    getConnection(scope, url, hints) match {
+      case Success(conn) =>
+        conn_? = Option(conn)
+      case Failure(e) =>
+        throw new IllegalStateException(s"Connection error: ${e.getMessage}", e)
+    }
   }
 
   override def write(record: Record): Any = ()
@@ -53,7 +53,8 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
         row.map(_._2).zipWithIndex foreach { case (value, index) =>
           ps.setObject(index + 1, value)
         }
-        ps.execute()
+        val count = if (ps.execute()) 1 else 0
+        statsGen.update(records = count)
       }
     } catch {
       case e: Exception =>
@@ -66,10 +67,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     val sql = sqlGenerator.insert(tableName, row)
     for {
       conn <- conn_?
-    } yield preparedStatements.getOrElseUpdate(sql, {
-      log.info(s"SQL: $sql")
-      conn.prepareStatement(sql)
-    })
+    } yield preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
   }
 
 }

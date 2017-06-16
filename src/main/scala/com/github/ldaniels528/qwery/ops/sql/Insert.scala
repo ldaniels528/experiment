@@ -1,5 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
+import com.github.ldaniels528.qwery.ops.{Executable, Field, ResultSet, Scope}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 

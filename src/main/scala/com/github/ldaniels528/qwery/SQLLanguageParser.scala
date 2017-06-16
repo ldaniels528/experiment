@@ -6,6 +6,7 @@ import java.util.Properties
 import com.github.ldaniels528.qwery.SQLLanguageParser.{SLPExtensions, die}
 import com.github.ldaniels528.qwery.ops.NamedExpression._
 import com.github.ldaniels528.qwery.ops.builtins.Return
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.ops.{Expression, _}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
@@ -527,6 +528,7 @@ object SQLLanguageParser {
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
     case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "NATIVE SQL" => parseNativeSQL(ts)
     case ts if ts is "RETURN" => parseReturn(ts)
     case ts if ts is "SELECT" => parseSelect(ts)
     case ts if ts is "SET" => parseSet(ts)
@@ -695,10 +697,21 @@ object SQLLanguageParser {
   }
 
   /**
-    * Parses a RETURN statement
-    * @return {{{ RETURN }}}
-    * @return {{{ RETURN "Hello World" }}}
+    * Parses a NATIVE SQL statement
     * @param ts the [[TokenStream token stream]]
+    * @return an [[NativeSQL executable]]
+    */
+  private def parseNativeSQL(ts: TokenStream): Executable = {
+    val params = SQLTemplateParams(ts, "NATIVE SQL %e:sql FROM %a:jdbcUrl %w:hints")
+    NativeSQL(expression = params.assignables("sql"), jdbcUrl = params.atoms("jdbcUrl"), hints = params.hints.get("hints"))
+  }
+
+  /**
+    * Parses a RETURN statement
+    * @example {{{ RETURN }}}
+    * @example {{{ RETURN "Hello World" }}}
+    * @param ts the [[TokenStream token stream]]
+    * @return an [[Return executable]]
     */
   private def parseReturn(ts: TokenStream): Return = {
     val params = SQLTemplateParams(ts, "RETURN ?%e:expression")

@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.ops.sql.OrderedColumn
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
