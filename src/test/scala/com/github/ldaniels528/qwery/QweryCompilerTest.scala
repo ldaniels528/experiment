@@ -4,6 +4,7 @@ import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
 import com.github.ldaniels528.qwery.ops.builtins._
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec
 

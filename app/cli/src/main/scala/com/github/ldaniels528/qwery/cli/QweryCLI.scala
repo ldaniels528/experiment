@@ -30,6 +30,8 @@ object QweryCLI {
     println(welcome("CLI"))
     val commandPrompt = CommandPrompt()
     println(s"Using ${commandPrompt.getClass.getSimpleName} for input.")
+    println("HINT: Press ENTER (twice) to run your query:")
+    println()
 
     reset()
     while (alive) {

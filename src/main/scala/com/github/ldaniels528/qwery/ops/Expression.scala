@@ -87,6 +87,10 @@ trait Expression {
 object Expression {
   val validTypes = Seq("Boolean", "Byte", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
 
+  object Null extends Expression {
+    override def evaluate(scope: Scope): Option[Any] = None
+  }
+
   def isValidType(typeName: String): Boolean = validTypes.exists(_.equalsIgnoreCase(typeName))
 
   /**

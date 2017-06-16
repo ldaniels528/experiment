@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ExpressionParser._
+import com.github.ldaniels528.qwery.ops.Expression.Null
 import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
@@ -159,6 +160,8 @@ trait ExpressionParser {
 
   private def parseNextExpression(stream: TokenStream): Option[Expression] = {
     stream match {
+      // is is a null value?
+      case ts if ts nextIf "NULL" => Option(Null)
       // is it a Case expression?
       case ts if ts nextIf "Case" => parseCase(ts)
       // is it a special function?

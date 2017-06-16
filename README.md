@@ -24,6 +24,7 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#describe">DESCRIBE statement</a>
     * <a href="#user-defined-functions">User-defined Functions</a>
     * <a href="#stored-procedures">Stored Procedures</a>
+    * <a href="#native-sql">Native SQL</a>    
 * <a href="#etl">Qwery ETL</a>
     * <a href="#how-it-works">How it works</a>
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
@@ -558,6 +559,40 @@ The above example results in appending 4 fixed-width lines to the file 'fixed-da
  * _Sector_ is 40-characters wide
  * _LastTrade_ is 10-characters wide
 
+
+You can also insert records into an RDBMS like MySQL using JDBC, consider the following:
+
+```sql
+INSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, MarketCap, LastSale)
+SELECT Symbol, Name, Sector, Industry, MarketCap,
+ CASE LastSale
+   WHEN 'n/a' THEN NULL
+   ELSE CAST(LastSale AS DOUBLE)
+ END
+FROM './companylist.csv'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 359             |
++ --------------- +
+```
+
+The MySQL table definition is as follows:
+
+```sql
+CREATE TABLE company (
+    Symbol VARCHAR(10),
+    Name VARCHAR(64),
+    LastSale DECIMAL(9, 4),
+    MarketCap DECIMAL(20,4),
+    Sector VARCHAR(64),
+    Industry VARCHAR(64)
+);
+```
+
 <a name="declare-set"></a>
 #### DECLARE & SET statements
 
@@ -780,6 +815,59 @@ CALL copyData('Hello World');
 + ------------- +
 | Hello World   |
 + ------------- +
+```
+
+<a name="native-sql"></a>
+### Native SQL
+
+There are times when you may want to execute a native SQL (or platform specific SQL) statement to perform tasks that 
+Qwery may not support. In these situations, you can use the NATIVE SQL statement:
+
+```sql
+NATIVE SQL 'TRUNCATE TABLE company'
+FROM 'jdbc:mysql://localhost:3306/test'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 0               |
++ --------------- +
+```
+
+Queries work as well:
+
+```sql
+NATIVE SQL 'SELECT * FROM company WHERE Symbol = "OCX"'
+FROM 'jdbc:mysql://localhost:3306/test'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ ---------------------------------------------------------------------------------------------------------------------------- +
+| Symbol  Name                  LastSale  MarketCap       Sector       Industry                                                |
++ ---------------------------------------------------------------------------------------------------------------------------- +
+| OCX     OncoCyte Corporation  5.9500    174701615.2000  Health Care  Biotechnology: In Vitro & In Vivo Diagnostic Subst...   |
++ ---------------------------------------------------------------------------------------------------------------------------- +
+```
+
+You can also use string interpolation with variables:
+
+```sql
+BEGIN
+    DECLARE @symbol STRING;
+    SET @symbol = "JOB";
+    NATIVE SQL 'SELECT * FROM company WHERE Symbol = "{{ symbol }}"'
+    FROM 'jdbc:mysql://localhost:3306/test'
+    WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+END
+```
+```text
++ ---------------------------------------------------------------------------------------------- +
+| Symbol  Name            LastSale  MarketCap      Sector      Industry                          |
++ ---------------------------------------------------------------------------------------------- +
+| JOB     GEE Group Inc.  5.9800    56085774.1600  Technology  Diversified Commercial Services   |
++ ---------------------------------------------------------------------------------------------- +
 ```
 
 <a name="etl"></a>

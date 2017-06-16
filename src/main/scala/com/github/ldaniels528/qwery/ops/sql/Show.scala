@@ -1,8 +1,9 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
 import java.util.Date
 
 import com.github.ldaniels528.qwery.QweryDecompiler._
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
 
 /**
   * Show Statement

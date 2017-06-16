@@ -1,7 +1,8 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
 import com.github.ldaniels528.qwery.ops.NamedExpression._
-import com.github.ldaniels528.qwery.ops.Select._
+import com.github.ldaniels528.qwery.ops._
+import com.github.ldaniels528.qwery.ops.sql.Select._
 
 import scala.language.postfixOps
 
@@ -17,19 +18,22 @@ case class Select(fields: Seq[Expression],
                   limit: Option[Int] = None)
   extends Executable {
 
-  override def execute(scope: Scope): ResultSet = source.map(_.execute(scope)) match {
-    case Some(resultSet) =>
-      val rows = resultSet.map(row => LocalScope(scope, row))
-        .filter(row => condition.isEmpty || condition.exists(_.isSatisfied(row)))
-        .take(limit getOrElse Int.MaxValue)
+  override def execute(scope: Scope): ResultSet = {
+    source match {
+      //case Some(ds@DataResource(path, _)) if path.startsWith("jdbc:") =>
+      case Some(executable) =>
+        val resultSet = executable.execute(scope)
+        val rows = resultSet.map(row => LocalScope(scope, row))
+          .filter(row => condition.isEmpty || condition.exists(_.isSatisfied(row)))
+          .take(limit getOrElse Int.MaxValue)
 
-      // is this an aggregate query?
-      if (isAggregate) doAggregation(scope, rows)
-      else if (fields.hasAllFields) ResultSet(rows = rows.map(_.row))
-      else ResultSet(rows = rows.map(row => fields.map(expand(row, _))))
-
-    case None =>
-      ResultSet(rows = Iterator(fields.map(expand(scope, _))))
+        // is this an aggregate query?
+        if (isAggregate) doAggregation(scope, rows)
+        else if (fields.hasAllFields) ResultSet(rows = rows.map(_.row))
+        else ResultSet(rows = rows.map(row => fields.map(expand(row, _))))
+      case None =>
+        ResultSet(rows = Iterator(fields.map(expand(scope, _))))
+    }
   }
 
   /**

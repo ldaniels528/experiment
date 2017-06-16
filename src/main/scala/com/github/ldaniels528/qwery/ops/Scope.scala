@@ -2,6 +2,8 @@ package com.github.ldaniels528.qwery.ops
 
 import java.io.File
 
+import com.github.ldaniels528.qwery.ops.sql.{Procedure, View}
+
 import scala.collection.concurrent.TrieMap
 
 /**

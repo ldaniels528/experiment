@@ -6,6 +6,7 @@ import java.util.Properties
 import com.github.ldaniels528.qwery.SQLLanguageParser.{SLPExtensions, die}
 import com.github.ldaniels528.qwery.ops.NamedExpression._
 import com.github.ldaniels528.qwery.ops.builtins.Return
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.ops.{Expression, _}
 import com.github.ldaniels528.qwery.sources.DataResource
 import com.github.ldaniels528.qwery.util.OptionHelper._
@@ -389,6 +390,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withDelimiter = "WITH DELIMITER %a:delimiter"
     val withFixed = "WITH FIXED %a:fixedType"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
+    val withJdbcDriver = "WITH JDBC DRIVER %a:jdbcDriver"
     val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
@@ -421,6 +423,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH JDBC 'com.mysql.jdbc.Driver'
+        case p if p.matches(withJdbcDriver) =>
+          val params = p.process(withJdbcDriver)
+          hints = hints.copy(jdbcDriver = params.atoms.get("jdbcDriver"))
         // WITH JSON PATH ( elem1, elem2, .., elemN )
         case p if p.matches(withJsonPath) =>
           val params = p.process(withJsonPath)
@@ -522,6 +528,7 @@ object SQLLanguageParser {
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
     case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "NATIVE SQL" => parseNativeSQL(ts)
     case ts if ts is "RETURN" => parseReturn(ts)
     case ts if ts is "SELECT" => parseSelect(ts)
     case ts if ts is "SET" => parseSet(ts)
@@ -690,10 +697,21 @@ object SQLLanguageParser {
   }
 
   /**
-    * Parses a RETURN statement
-    * @return {{{ RETURN }}}
-    * @return {{{ RETURN "Hello World" }}}
+    * Parses a NATIVE SQL statement
     * @param ts the [[TokenStream token stream]]
+    * @return an [[NativeSQL executable]]
+    */
+  private def parseNativeSQL(ts: TokenStream): Executable = {
+    val params = SQLTemplateParams(ts, "NATIVE SQL %e:sql FROM %a:jdbcUrl %w:hints")
+    NativeSQL(expression = params.assignables("sql"), jdbcUrl = params.atoms("jdbcUrl"), hints = params.hints.get("hints"))
+  }
+
+  /**
+    * Parses a RETURN statement
+    * @example {{{ RETURN }}}
+    * @example {{{ RETURN "Hello World" }}}
+    * @param ts the [[TokenStream token stream]]
+    * @return an [[Return executable]]
     */
   private def parseReturn(ts: TokenStream): Return = {
     val params = SQLTemplateParams(ts, "RETURN ?%e:expression")
