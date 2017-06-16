@@ -820,8 +820,8 @@ CALL copyData('Hello World');
 <a name="native-sql"></a>
 ### Native SQL
 
-There are times when you may want to execute native SQL statement to perform tasks that Qwery may not yet support. 
-In these situations, you can use the NATIVE SQL statement:
+There are times when you may want to execute a native SQL (or platform specific SQL) statement to perform tasks that 
+Qwery may not support. In these situations, you can use the NATIVE SQL statement:
 
 ```sql
 NATIVE SQL 'SELECT * FROM company WHERE Symbol = "OCX"'
