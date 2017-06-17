@@ -44,14 +44,14 @@ object QweryDecompiler {
     case Declare(variableRef, typeName) => s"DECLARE ${variableRef.toSQL} $typeName"
     case Describe(source, limit) => toDescribe(source, limit)
     case Insert(target, fields, source) => toInsert(target, fields, source)
-    case InsertValues(dataSets) =>
-      dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
-    case Procedure(name, params, operation) =>
-      s"CREATE PROCEDURE $name(${params.map(_.toSQL).mkString(",")}) AS ${operation.toSQL}"
+    case InsertValues(dataSets) => dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
+    case Procedure(name, params, operation) => s"CREATE PROCEDURE $name(${params.map(_.toSQL).mkString(",")}) AS ${operation.toSQL}"
     case Return(expression) => s"RETURN ${expression.map(_.toSQL).getOrElse("")}".trim
     case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
       toSelect(fields, source, condition, groupFields, orderedColumns, limit)
     case Union(a, b) => s"${a.toSQL} UNION ${b.toSQL}"
+    case Update(target, assignments, source, keyedOn) => toUpdate(target, assignments, source, keyedOn)
+    case Upsert(target, fields, source, keyedOn) => toUpsert(target, fields, source, keyedOn)
     case View(name, query) => s"CREATE VIEW $name AS ${query.toSQL}"
     case unknown => unhandled("Executable", unknown)
   }
@@ -133,11 +133,11 @@ object QweryDecompiler {
   }
 
   private def toInsert(target: DataResource, fields: Seq[Field], source: Executable): String = {
-    s"""INSERT ${
+    s"INSERT ${
       if (target.hints.exists(_.isAppend)) "INTO" else "OVERWRITE"
     } ${target.toSQL} (${
       fields.map(_.toSQL).mkString(", ")
-    })${if (target.hints.nonEmpty) target.hints.map(_.toSQL).getOrElse("")} ${source.toSQL}"""
+    })${target.hints.map(_.toSQL).getOrElse("")} ${source.toSQL}"
   }
 
   private def toSelect(fields: Seq[Expression],
@@ -150,7 +150,7 @@ object QweryDecompiler {
     source foreach {
       case ds: DataResource =>
         sb.append(s" FROM ${ds.toSQL}")
-        ds.hints.foreach(hints => if(hints.nonEmpty) sb.append(hints.toSQL))
+        ds.hints.foreach(hints => if (hints.nonEmpty) sb.append(hints.toSQL))
       case exec =>
         sb.append(s" FROM (${exec.toSQL})")
     }
@@ -159,6 +159,26 @@ object QweryDecompiler {
     if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")
     limit.foreach(n => sb.append(s" LIMIT $n"))
     sb.toString
+  }
+
+  private def toUpdate(target: DataResource,
+                       assignments: Seq[(String, Expression)],
+                       source: Executable,
+                       keyedOn: Seq[Field]) = {
+    s"UPDATE ${target.toSQL} SET ${
+      assignments.map { case (name, value) => s"$name = ${value.toSQL}" } mkString ", "
+    } KEYED ON ${
+      keyedOn.map(_.toSQL) mkString ", "
+    }${target.hints.map(_.toSQL).getOrElse("")} ${source.toSQL}"
+  }
+
+  private def toUpsert(target: DataResource,
+                       fields: Seq[Field],
+                       source: Executable,
+                       keyedOn: Seq[Field]) = {
+    s"UPSERT INTO ${target.toSQL} (${fields.map(_.toSQL) mkString ", "}) KEYED ON ${
+      keyedOn.map(_.toSQL) mkString ", "
+    }${target.hints.map(_.toSQL).getOrElse("")} ${source.toSQL}"
   }
 
   private def unhandled(typeName: String, value: Any) = {
