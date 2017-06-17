@@ -1087,7 +1087,7 @@ Using UNIXCommandPrompt for input.
 ```
 
 From here you can input statements and queries. 
-*NOTE*: Just remember, queries are execute after a blank line is entered.
+*NOTE*: Just remember, queries are executed only after a blank line is entered.
 
 <a name="sdk"></a>
 ### Qwery SDK
