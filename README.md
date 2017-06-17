@@ -1082,16 +1082,12 @@ ldaniels@Spartan:~$ sbt run
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
-You can executes multi-line queries here like:
 
-SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, `Summary Quote` FROM './companylist.csv'
-WHERE Sector = 'Basic Industries'
-LIMIT 5;
-      
 Using UNIXCommandPrompt for input.
 ```
 
-From here you can input statements and queries. Just remember to end this with a semi-colon (;).
+From here you can input statements and queries. 
+*NOTE*: Just remember, queries are execute after a blank line is entered.
 
 <a name="sdk"></a>
 ### Qwery SDK
