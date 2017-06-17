@@ -12,7 +12,8 @@ import com.github.ldaniels528.qwery.util.ResourceHelper._
 case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, keyedOn: Seq[Field]) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
-    var count = 0L
+    var inserted = 0L
+    var updated = 0L
     val outputSource = getJDBCOutputSource(scope)
     outputSource.open(scope)
     outputSource use { device =>
@@ -20,11 +21,13 @@ case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, 
         val upsertRow: Row = fields zip row map { case (field, (_, value)) =>
           field.name -> value
         }
-        device.upsert(upsertRow, keyedOn.map(_.name))
-        count += 1
+        device.upsert(upsertRow, keyedOn.map(_.name)) foreach { case (inserts, updates) =>
+          inserted += inserts
+          updated += updates
+        }
       }
     }
-    ResultSet.inserted(count, statistics = outputSource.getStatistics)
+    ResultSet.upserted(inserted = inserted, updated = updated, statistics = outputSource.getStatistics)
   }
 
   private def getJDBCOutputSource(scope: Scope): JDBCOutputSource = {

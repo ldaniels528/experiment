@@ -19,8 +19,8 @@ WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
 SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END
 FROM 'companylist.csv'
 
-
 UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+KEYED ON Symbol
 WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
 VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
 

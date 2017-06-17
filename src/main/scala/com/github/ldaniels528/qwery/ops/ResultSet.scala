@@ -31,4 +31,8 @@ object ResultSet {
     ResultSet(rows = Iterator(Seq("ROWS_UPDATED" -> count)), statistics)
   }
 
+  def upserted(inserted: Long, updated: Long, statistics: Option[Statistics]): ResultSet = {
+    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> inserted, "ROWS_UPDATED" -> updated)), statistics)
+  }
+
 }

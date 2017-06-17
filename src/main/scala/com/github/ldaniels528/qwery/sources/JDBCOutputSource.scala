@@ -4,7 +4,7 @@ import java.sql.{Connection, PreparedStatement}
 
 import com.github.ldaniels528.qwery.SQLGenerator
 import com.github.ldaniels528.qwery.devices._
-import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
+import com.github.ldaniels528.qwery.ops._
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -48,42 +48,56 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
 
   override def write(row: Row): Unit = insert(row) match {
     case Success(count_?) =>
-      count_?.foreach { count =>
+      count_?.foreach { case (inserted, updated) =>
         offset += 1
-        statsGen.update(records = count)
+        statsGen.update(records = inserted + updated)
       }
     case Failure(e) =>
       statsGen.update(failures = 1)
       log.error(s"Record #$offset failed: ${e.getMessage}")
   }
 
-  def upsert(row: Row, where: Seq[String]): Try[Option[Int]] = insert(row).recoverWith { case e =>
-    if (e.getMessage.toLowerCase().contains("duplicate")) update(row, where)
-    else {
-      log.warn(s"insert failed: ${e.getMessage}")
-      Try(None)
+  def upsert(row: Row, where: Seq[String]): Option[(Int, Int)] = {
+    val results: Try[Option[(Int, Int)]] = insert(row) match {
+      case outcome@Success(counts) =>
+        counts foreach { case (inserted, updated) =>
+          statsGen.update(records = inserted + updated)
+        }
+        outcome
+      case Failure(e) =>
+        if (e.getMessage.toLowerCase().contains("duplicate")) update(row, where) else Failure(e)
+    }
+    results match {
+      case Success(counts) => counts
+      case Failure(e) =>
+        statsGen.update(failures = 1)
+        log.warn(s"insert/update failed: ${e.getMessage}")
+        None
     }
   }
 
-  def insert(row: Row): Try[Option[Int]] = Try {
+  def insert(row: Row): Try[Option[(Int, Int)]] = Try {
     val sql = sqlGenerator.insert(tableName, row)
     conn_? map { conn =>
       val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
       row.map(_._2).zipWithIndex foreach { case (value, index) =>
         ps.setObject(index + 1, value)
       }
-      ps.executeUpdate()
+      (ps.executeUpdate(), 0)
     }
   }
 
-  def update(row: Row, where: Seq[String]): Try[Option[Int]] = Try {
+  def update(row: Row, where: Seq[String]): Try[Option[(Int, Int)]] = Try {
     val sql = sqlGenerator.update(tableName, row, where)
     conn_? map { conn =>
       val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
       row.map(_._2).zipWithIndex foreach { case (value, index) =>
         ps.setObject(index + 1, value)
       }
-      ps.executeUpdate()
+      where.zipWithIndex foreach { case (name, index) =>
+        ps.setObject(index + row.size + 1, row.get(name).orNull)
+      }
+      (0, ps.executeUpdate())
     }
   }
 
