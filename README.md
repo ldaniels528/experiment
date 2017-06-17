@@ -593,7 +593,7 @@ CREATE TABLE company (
 );
 ```
 
-Additionally, there are times when you want to attempt an INSERT, but perform an UPDATE if it fails due to a primark key
+Additionally, there are times when you want to attempt an INSERT, but perform an UPDATE if it fails due to a primary key
 constraint. In cases like these, you'll want to use the UPSERT statement. Consider the following:
 
 ```sql

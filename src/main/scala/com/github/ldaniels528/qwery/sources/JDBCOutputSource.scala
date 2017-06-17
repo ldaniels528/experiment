@@ -57,13 +57,11 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
       log.error(s"Record #$offset failed: ${e.getMessage}")
   }
 
-  def upsert(row: Row, where: Seq[String]): Try[Option[Int]] = {
-    insert(row).recoverWith { case e =>
-      if (e.getMessage.toLowerCase().contains("duplicate")) update(row, where)
-      else {
-        log.warn(s"insert failed: ${e.getMessage}")
-        Try(None)
-      }
+  def upsert(row: Row, where: Seq[String]): Try[Option[Int]] = insert(row).recoverWith { case e =>
+    if (e.getMessage.toLowerCase().contains("duplicate")) update(row, where)
+    else {
+      log.warn(s"insert failed: ${e.getMessage}")
+      Try(None)
     }
   }
 
