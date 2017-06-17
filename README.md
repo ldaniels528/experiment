@@ -19,12 +19,14 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#built-in-functions">Built-in Functions</a>
     * <a href="#views">VIEWS</a>
     * <a href="#insert">INSERT statement</a>
+    * <a href="#update">UPDATE statement</a>
+    * <a href="#upsert">UPSERT statement</a>
     * <a href="#declare-set">DECLARE & SET statements</a> 
     * <a href="#show">SHOW statement</a>  
     * <a href="#describe">DESCRIBE statement</a>
     * <a href="#user-defined-functions">User-defined Functions</a>
     * <a href="#stored-procedures">Stored Procedures</a>
-    * <a href="#native-sql">Native SQL</a>    
+    * <a href="#native-sql">NATIVE SQL</a>    
 * <a href="#etl">Qwery ETL</a>
     * <a href="#how-it-works">How it works</a>
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
@@ -53,7 +55,7 @@ a solution to that challenge.
 Qwery provides the capability of invoking SQL-like queries against:
 * Files (local, HTTP or S3)
 * Avro-encoded or JSON-based Kafka topics 
-* Database tables (Coming soon)
+* JDBC data sources
 
 Additionally, Qwery has three modes of operation:
 * ETL/Orchestration Server
@@ -122,24 +124,31 @@ sbt clean coverage test coverageReport
 <a name="sql-commands"></a>
 ### SQL Syntax and Grammar
 
-Qwery currently supports a limited, but powerful set of SQL statements, including:
+Qwery currently supports a limited, but powerful set of SQL statements, including:   
+* CALL - used to execute a stored procedure.
+* CREATE FUNCTION - used to create user-defined functions.
+* CREATE PROCEDURE - used to create stored procedures.
 * CREATE VIEW - used to create views.
+* DECLARE - use to create (or declare) a variable.
 * DESCRIBE - shows the layout/structure of files or query results.
 * INSERT - inserts (appends or overwrites) files, Kafka topics, etc.
+* NATIVE SQL - Executes a native SQL query or statement (*JDBC only*).
 * SELECT - executes queries 
 * SET - used to sets the value of a variable
 * SHOW - returns lists of files, variables (in the current scope) or views (in the current session)
-
+* UPDATE - updates a record (*JDBC only*)
+* UPSERT - inserts (or updates) a record (*JDBC only*).
+                              
 <a name="select"></a>
 #### SELECT statement
 
-The _SELECT_ statement works as you would expect with a traditional SQL-like language, with one important difference...
+The `SELECT` statement works as you would expect with a traditional SQL-like language, with one important difference...
 You can query structure files.
 
 Count the number of (non-blank) lines in the file:
 
 ```sql
-SELECT COUNT(*) FROM "./companylist.csv";
+SELECT COUNT(*) FROM "./companylist.csv"
 ```
 ```text
 + ---------- +
@@ -152,7 +161,7 @@ SELECT COUNT(*) FROM "./companylist.csv";
 Count the number of lines that match a given set of criteria in the file:
 
 ```sql
-SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
+SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries"
 ```
 ```text
 + ---------- +
@@ -165,7 +174,7 @@ SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
 Select fields from the file using criteria (WHERE clause):
 
 ```sql
-SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM "./companylist.csv" WHERE Industry = "EDP Services";
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM "./companylist.csv" WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -209,11 +218,11 @@ CASE "Hello World"
  WHEN "HelloWorld" THEN "Found 1"
  WHEN "Hello" || " " || "World" THEN "Found 2"
  ELSE "Not Found"
-END;
+END AS Greeting
 ```       
 ```text
 + ---------- +
-| JSOdavyb   |
+| Greeting   |
 + ---------- +
 | Found 2    |
 + ---------- +
@@ -229,7 +238,7 @@ WHERE Industry = 'Oil/Gas Transmission'
 UNION
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM 'companylist.csv'
-WHERE Industry = 'Integrated oil Companies';
+WHERE Industry = 'Integrated oil Companies'
 ```
 ```text
 + ---------------------------------------------------------------------------------------------------------------------------------- +
@@ -293,7 +302,7 @@ Query files on S3:
 SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
 FROM "s3://ldaniels3/companylist.csv"
 WITH PROPERTIES "./aws-s3.properties"
-WHERE Industry = "EDP Services";
+WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -317,7 +326,7 @@ Alternatively, you could also use profile-based authentication:
 ```sql
 SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
 FROM "s3://ldaniels3/companylist.csv?profile=ldaniels3&region=us-west-2"
-WHERE Industry = "EDP Services";
+WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -360,22 +369,22 @@ WHERE Industry = "EDP Services";
 Perform date conversions:
 
 ```sql
-SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd');
+SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd') AS EntryDate
 ```
 ```text
 + ----------------------- +
-| WsbLhYNC                |
+| EntryDate               |
 + ----------------------- +
 | 05/12/17 12:00:00 PDT   |
 + ----------------------- +
 ```
 
 ```sql
-SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
+SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy') AS EntryDate
 ```
 ```text
 + ------------ +
-| wFJMOFgd     |
+| EntryDate    |
 + ------------ +
 | 05-12-2017   |
 + ------------ +
@@ -384,7 +393,7 @@ SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
 Sum values (just like you normally do with SQL) in the file:
 
 ```sql
-SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
+SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5
 ```
 ```text
 + --------------- +
@@ -397,7 +406,7 @@ SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
 Type-casting and column name aliases are supported:
 
 ```sql
-SELECT CAST("1234" AS Double) AS number;
+SELECT CAST("1234" AS Double) AS number
 ```
 ```text
 + -------- + 
@@ -406,6 +415,22 @@ SELECT CAST("1234" AS Double) AS number;
 | 1234.0   | 
 + -------- + 
 ```
+
+Supported types are:
+
+| Type              | Description                      | 
+|-------------------|----------------------------------|
+| Boolean           | Boolean values; `true` or `false` | 
+| Byte              | Signed 8-bit integers; range: -127 to 127 |
+| Date              | Date/Time values |
+| Double            | Double precision decimal; 32-bit floating point |  
+| Float             | Single precision decimal; 16-bit floating point |  
+| Int / Integer     | Signed 32-bit integers |  
+| Long              | Signed 64-bit integers |   
+| Short             | Signed 16-bit integers |   
+| String            | Text values | 
+| UUID              | Universally Unique Identifier (e.g. "1d8d1609-78db-4813-a87a-9cdf989bb896") |
+
 
 <a name="views"></a>
 #### VIEWS
@@ -417,7 +442,7 @@ In Qwery, views are tied to the current session; thus, one you exit the applicat
 CREATE VIEW "OilAndGas" AS
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
-WHERE Industry = "Oil/Gas Transmission";
+WHERE Industry = "Oil/Gas Transmission"
 ``` 
 ```text  
 + --------------- +
@@ -446,7 +471,7 @@ SELECT * FROM "OilAndGas";
 <a name="insert"></a>
 #### INSERT statement
 
-The _INSERT_ statement behaves very much like its RDBMS counterparts, as you can directly insert collections
+The `INSERT` statement behaves very much like its RDBMS counterparts, as you can directly insert collections
 of values, or insert the results of a query.
 
 ```sql
@@ -493,7 +518,7 @@ WHERE Industry = "Precious Metals";
 + --------------- +
 ```
 
-Moreover, _INSERT_ supports the notion of hints. You can provide "hints" to the compiler about the format you want to 
+Moreover, `INSERT` supports the notion of hints. You can provide "hints" to the compiler about the format you want to 
 read or write:
 
 ```sql
@@ -515,7 +540,7 @@ SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
 ```
 
-The two _INSERT_ statements above are functionally identical.
+The two `INSERT` statements above are functionally identical.
 
 *NOTE*: When processing files via the ETL module, it is recommend to provide hints as to the input and output formats.
 
@@ -535,7 +560,7 @@ WITH CSV FORMAT;
 + --------------- +
 ```
 
-*NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
+*NOTE:* The `SELECT` statement with `INTO` clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
 
 Here is an example of generating fixed-width data:
 
@@ -593,8 +618,42 @@ CREATE TABLE company (
 );
 ```
 
+<a name="update"></a>
+#### UPDATE statement
+
+Unlike the <a href="#insert">INSERT</a> statement, `UPDATE` behaves differently from its RDBMS counterpart, as it is 
+primarily meant to update a collection of records via the results of a query.
+
+Consider the following example:
+
+```sql
+UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+SET Industry = 'Oil/Gas'
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END AS LastSale
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+```
+```text
++ --------------- +
+| ROWS_UPDATED    |
++ --------------- +
+| 4               |
++ --------------- +
+```
+
+Notice in the example above, the `KEYED ON` clause. This clause specifies the columns that are to be used in the 
+`WHERE` clause that is generated to update each of the selected records.
+
+
+<a name="upsert"></a>
+#### UPSERT statement
+
 Additionally, there are times when you want to attempt an INSERT, but perform an UPDATE if it fails due to a primary key
-constraint. In cases like these, you'll want to use the UPSERT statement. Consider the following:
+constraint. In cases like these, you'll want to use the UPSERT statement. 
+
+Consider the following example:
 
 ```sql
 UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
@@ -604,11 +663,11 @@ SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE L
 FROM 'companylist.csv'
 ```
 ```text
-+ --------------- +
-| ROWS_INSERTED   |
-+ --------------- +
-| 359             |
-+ --------------- +
++ ----------------------------- +
+| ROWS_INSERTED  ROWS_UPDATED   |
++ ----------------------------- +
+| 0              359            |
++ ----------------------------- +
 ```
 
 <a name="declare-set"></a>
@@ -637,7 +696,7 @@ You can also set values from a result set:
 SET @myVariable = (SELECT 1)
 ```
 
-To display the contents of a variable, just _SELECT_ it.
+To display the contents of a variable, just `SELECT` it.
 
 ```sql
 SELECT @myVariable
@@ -838,8 +897,8 @@ CALL copyData('Hello World');
 <a name="native-sql"></a>
 ### Native SQL
 
-There are times when you may want to execute a native SQL (or platform specific SQL) statement to perform tasks that 
-Qwery may not support. In these situations, you can use the NATIVE SQL statement:
+There are times when you may want to execute a native (e.g. platform specific) SQL statement to perform tasks that 
+Qwery may not support. In these situations, you can use the `NATIVE SQL` statement:
 
 ```sql
 NATIVE SQL 'TRUNCATE TABLE company'
@@ -1115,7 +1174,7 @@ Let's examine the columns and values of the file
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler("DESCRIBE './companylist.csv'")
@@ -1150,7 +1209,7 @@ Execute a Query against thr local file
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler(
@@ -1182,7 +1241,7 @@ Or execute a Query against a REST-ful endpoint
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler(
@@ -1219,7 +1278,7 @@ records where the "Sector" field contains the text "Basic Industries", and write
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(
@@ -1251,7 +1310,7 @@ Alternatively, you could overwrite the file instead of appending it...
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(
@@ -1299,7 +1358,7 @@ records where the "Sector" field contains the text "Basic Industries", and write
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(

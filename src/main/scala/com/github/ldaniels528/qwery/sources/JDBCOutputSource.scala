@@ -37,8 +37,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
 
     // open the connection
     createConnection(scope, url, hints) match {
-      case Success(conn) =>
-        conn_? = Option(conn)
+      case Success(conn) => conn_? = Option(conn)
       case Failure(e) =>
         throw new IllegalStateException(s"Connection error: ${e.getMessage}", e)
     }
@@ -96,6 +95,17 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
       }
       where.zipWithIndex foreach { case (name, index) =>
         ps.setObject(index + row.size + 1, row.get(name).orNull)
+      }
+      (0, ps.executeUpdate())
+    }
+  }
+
+  def update(row: Row, where: Condition): Try[Option[(Int, Int)]] = Try {
+    val sql = sqlGenerator.update(tableName, row, where)
+    conn_? map { conn =>
+      val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
+      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+        ps.setObject(index + 1, value)
       }
       (0, ps.executeUpdate())
     }

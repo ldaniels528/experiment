@@ -1,20 +1,20 @@
 package com.github.ldaniels528.qwery.ops.sql
 
-import com.github.ldaniels528.qwery.QweryDecompiler.ConditionExtensions
-import com.github.ldaniels528.qwery.ops.{Condition, Executable, Field, ResultSet, Row, Scope}
-import com.github.ldaniels528.qwery.sources.{DataResource, JDBCOutputSource}
+import com.github.ldaniels528.qwery.ops.{Executable, Field, ResultSet, Row, Scope}
+import com.github.ldaniels528.qwery.sources.{DataResource, JDBCSupport}
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
 /**
   * Represents an UPSERT statement
   * @author lawrence.daniels@gmail.com
   */
-case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, keyedOn: Seq[Field]) extends Executable {
+case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, keyedOn: Seq[Field])
+  extends Executable with JDBCSupport {
 
   override def execute(scope: Scope): ResultSet = {
     var inserted = 0L
     var updated = 0L
-    val outputSource = getJDBCOutputSource(scope)
+    val outputSource = getJDBCOutputSource(target, scope)
     outputSource.open(scope)
     outputSource use { device =>
       source.execute(scope) foreach { row =>
@@ -28,20 +28,6 @@ case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, 
       }
     }
     ResultSet.upserted(inserted = inserted, updated = updated, statistics = outputSource.getStatistics)
-  }
-
-  private def getJDBCOutputSource(scope: Scope): JDBCOutputSource = {
-    target.getOutputSource(scope) match {
-      case Some(source: JDBCOutputSource) => source
-      case Some(_) =>
-        throw new IllegalArgumentException("Only JDBC Output Sources support UPSERT")
-      case None =>
-        throw new IllegalStateException(s"No output source found for '${target.path}'")
-    }
-  }
-
-  private def toWhereClause(condition: Condition): String = {
-    condition.toSQL
   }
 
 }

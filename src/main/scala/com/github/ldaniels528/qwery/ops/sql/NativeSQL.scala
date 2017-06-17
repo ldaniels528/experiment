@@ -4,19 +4,18 @@ import java.sql.Connection
 
 import com.github.ldaniels528.qwery.ops.{Executable, Expression, Hints, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.sources.JDBCSupport
-import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success}
 
 /**
   * Represents a Native SQL statement
-  * @param expression the SQL query or statement expression
+  * @param query the SQL query or statement expression
   */
-case class NativeSQL(expression: Expression, jdbcUrl: String, hints: Option[Hints]) extends Executable with JDBCSupport {
+case class NativeSQL(query: Expression, jdbcUrl: String, hints: Option[Hints]) extends Executable with JDBCSupport {
   private var conn_? : Option[Connection] = None
 
   override def execute(scope: Scope): ResultSet = {
-    expression.getAsString(scope).map(scope.expand).map(_.trim) match {
+    query.getAsString(scope).map(scope.expand).map(_.trim) match {
       case Some(sql) => executeSQL(getConnection(scope), sql)
       case None =>
         throw new IllegalArgumentException("No SQL to execute")
@@ -36,8 +35,10 @@ case class NativeSQL(expression: Expression, jdbcUrl: String, hints: Option[Hint
   }
 
   private def executeSQL(conn: Connection, sql: String) = {
-    if (sql.toUpperCase.startsWith("SELECT")) executeQuery(conn, sql)
-    else executeStatement(conn, sql)
+    sql.toUpperCase match {
+      case s if s.startsWith("SELECT") => executeQuery(conn, sql)
+      case _ => executeUpdate(conn, sql)
+    }
   }
 
   private def executeQuery(conn: Connection, sql: String) = {
@@ -53,7 +54,7 @@ case class NativeSQL(expression: Expression, jdbcUrl: String, hints: Option[Hint
     ResultSet(rows = rows.reverseIterator)
   }
 
-  private def executeStatement(conn: Connection, sql: String) = {
+  private def executeUpdate(conn: Connection, sql: String) = {
     val count = conn.createStatement().executeUpdate(sql)
     ResultSet.affected(count = count)
   }

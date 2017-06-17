@@ -85,7 +85,7 @@ trait Expression {
   * @author lawrence.daniels@gmail.com
   */
 object Expression {
-  val validTypes = Seq("Boolean", "Byte", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
+  val validTypes = Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
 
   object Null extends Expression {
     override def evaluate(scope: Scope): Option[Any] = None

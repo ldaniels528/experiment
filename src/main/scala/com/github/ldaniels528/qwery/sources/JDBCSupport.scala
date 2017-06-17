@@ -13,12 +13,6 @@ import scala.util.Try
   */
 trait JDBCSupport {
 
-  def getColumnNames(rs: java.sql.ResultSet): Seq[String] = {
-    val metaData = rs.getMetaData
-    val count = metaData.getColumnCount
-    for (n <- 1 to count) yield metaData.getColumnName(n)
-  }
-
   /**
     * Creates a database connection
     * @param scope the given [[Scope scope]]
@@ -38,6 +32,33 @@ trait JDBCSupport {
 
     // open the connection
     DriverManager.getConnection(url, properties)
+  }
+
+  /**
+    * Returns the column names based on the result set meta data
+    * @param rs the given [[java.sql.ResultSet result set]]
+    * @return the collection of column names
+    */
+  def getColumnNames(rs: java.sql.ResultSet): Seq[String] = {
+    val metaData = rs.getMetaData
+    val count = metaData.getColumnCount
+    for (n <- 1 to count) yield metaData.getColumnName(n)
+  }
+
+  /**
+    * Returns the JDBCOutputSource
+    * @param target the given [[DataResource target]]
+    * @param scope  the given [[Scope scope]]
+    * @return the [[JDBCOutputSource]]
+    */
+  def getJDBCOutputSource(target: DataResource, scope: Scope): JDBCOutputSource = {
+    target.getOutputSource(scope) match {
+      case Some(source: JDBCOutputSource) => source
+      case Some(_) =>
+        throw new IllegalArgumentException("Only JDBC Output Sources support UPDATE")
+      case None =>
+        throw new IllegalStateException(s"No output source found for '${target.path}'")
+    }
   }
 
 }

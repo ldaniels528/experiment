@@ -47,7 +47,7 @@ case class JDBCInputSource(url: String, table: String, hints: Option[Hints])
           Option(rs.getObject(name)).map(name -> _)
         }) else None
       case None =>
-        resultSet = conn_?.map(_.createStatement().executeQuery(generateQuery()))
+        resultSet = conn_?.map(_.createStatement().executeQuery(generateQuery(table)))
         columnNames = (resultSet map getColumnNames).getOrElse(throw new IllegalStateException("Column names could not be determined"))
 
         // read the next record
@@ -55,7 +55,7 @@ case class JDBCInputSource(url: String, table: String, hints: Option[Hints])
     }
   }
 
-  private def generateQuery() = {
+  private def generateQuery(table: String) = {
     s"SELECT * FROM $table"
   }
 

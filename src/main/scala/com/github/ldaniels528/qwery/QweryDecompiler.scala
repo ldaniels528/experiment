@@ -124,6 +124,7 @@ object QweryDecompiler {
     hints.gzip.foreach(on => if (on) sb.append(" WITH GZIP COMPRESSION"))
     hints.headers.foreach(on => if (on) sb.append(" WITH COLUMN HEADERS"))
     hints.isJson.foreach(on => if (on) sb.append(" WITH JSON FORMAT"))
+    hints.jdbcDriver.foreach(driver => sb.append(s" WITH JDBC DRIVER '$driver'"))
     if (hints.jsonPath.nonEmpty) sb.append(s" WITH JSON PATH (${hints.jsonPath.mkString(", ")})")
     // TODO hints.properties
     hints.quotedNumbers.foreach(on => if (on) sb.append(" WITH QUOTED NUMBERS"))

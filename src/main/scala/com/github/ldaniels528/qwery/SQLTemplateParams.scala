@@ -9,9 +9,9 @@ import com.github.ldaniels528.qwery.util.StringHelper._
   * @param atoms         the named collection of identifiers (e.g. "FROM './customers.csv')
   * @param conditions    the named collection of conditions (e.g. "lastTradeDate >= now() + 1")
   * @param assignables   the named collection of singular expressions (e.g. "SET X = 1+(2*3)")
-  * @param expressions   the named collection of field/value expression arguments (e.g. "SELECT 1+(2*3), 'Hello', 123, symbol")
   * @param fields        the named collection of field references (e.g. "INSERT INTO (symbol, exchange, lastSale)")
   * @param hints         the named collection of hint references (e.g. "WITH GZIP COMPRESSION")
+  * @param keyValuePairs the named collection of key-value pairs (e.g. "key = 'Hello', value = 123")
   * @param numerics      the named collection of numeric values (e.g. "TOP 100")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
@@ -24,6 +24,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
                              hints: Map[String, Hints] = Map.empty,
+                             keyValuePairs: Map[String, List[(String, Expression)]] = Map.empty,
                              numerics: Map[String, Double] = Map.empty,
                              orderedFields: Map[String, List[OrderedColumn]] = Map.empty,
                              repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty,
@@ -38,6 +39,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
       hints = this.hints ++ that.hints,
+      keyValuePairs = this.keyValuePairs ++ that.keyValuePairs,
       numerics = this.numerics ++ that.numerics,
       orderedFields = this.orderedFields ++ that.orderedFields,
       repeatedSets = this.repeatedSets ++ that.repeatedSets,
@@ -56,7 +58,8 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
     * @return true, if at least one of the template mappings is not empty
     */
   def nonEmpty: Boolean = {
-    Seq(atoms, conditions, assignables, expressions, fields, numerics, orderedFields, sources, repeatedSets, variables).exists(_.nonEmpty)
+    Seq(atoms, conditions, assignables, expressions, fields, keyValuePairs, numerics, orderedFields, sources,
+      repeatedSets, variables).exists(_.nonEmpty)
   }
 
 }

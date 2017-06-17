@@ -111,6 +111,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // source or sub-query? (e.g. "%s:source" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
     case tag if tag.startsWith("%s:") => extractSourceOrQuery(tag.drop(3))
 
+    // update field assignments
+    case tag if tag.startsWith("%U:") => extractFieldAssignmentExpressions(tag.drop(3))
+
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => extractVariableReference(tag.drop(3))
 
@@ -135,6 +138,21 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
   private def extractAssignableExpression(name: String): Try[SQLTemplateParams] = Try {
     val expr = parseExpression(stream).getOrElse(die("Expression expected"))
     SQLTemplateParams(assignables = Map(name -> expr))
+  }
+
+  /**
+    * Extracts a collection of field assignment expressions (e.g. "active = 1, ready = 0, total = subtotal + 1")
+    * @param name the given identifier name (e.g. "fields")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractFieldAssignmentExpressions(name: String) = Try {
+    var assignments: List[(String, Expression)] = Nil
+    val template = "%a:name = %e:expression"
+    do {
+      val params = SQLTemplateParams(stream, template)
+      assignments = params.atoms("name") -> params.assignables("expression") :: assignments
+    } while (stream nextIf ",")
+    SQLTemplateParams(keyValuePairs = Map(name -> assignments.reverse))
   }
 
   /**
@@ -540,6 +558,7 @@ object SQLLanguageParser {
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
     case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "UPDATE" => parseUpdate(ts)
     case ts if ts is "UPSERT" => parseUpsert(ts)
     case ts if ts is "NATIVE SQL" => parseNativeSQL(ts)
     case ts if ts is "RETURN" => parseReturn(ts)
@@ -688,10 +707,35 @@ object SQLLanguageParser {
   }
 
   /**
+    * Parses an UPDATE statement
+    * @example
+    * {{{
+    * UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+    * SET Active = 1, Processed = 0
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM 'companylist.csv' WITH FORMAT CSV
+    * WHERE Industry = 'Oil/Gas Transmission'
+    * }}}
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Update executable]]
+    */
+  private def parseUpdate(stream: TokenStream): Update = {
+    val params = SQLTemplateParams(stream, "UPDATE %a:target SET %U:assignments KEYED ON %F:keyFields %w:hints %V:source")
+    Update(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      source = params.sources("source"),
+      assignments = params.keyValuePairs("assignments"),
+      keyedOn = params.fields("keyFields"))
+  }
+
+  /**
     * Parses an UPSERT statement
     * @example
     * {{{
     * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
     * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
     * SELECT Symbol, Name, Sector, Industry, LastSale
     * FROM 'companylist.csv'
@@ -700,18 +744,17 @@ object SQLLanguageParser {
     * @example
     * {{{
     * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
     * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
     * VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
     * }}}
     */
   private def parseUpsert(stream: TokenStream): Upsert = {
     val params = SQLTemplateParams(stream, "UPSERT INTO %a:target ( %F:fields ) KEYED ON %F:keyFields %w:hints %V:source")
-    val fields = params.fields("fields")
-    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(fields = fields))
     Upsert(
-      target = DataResource(params.atoms("target"), hints),
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
       source = params.sources("source"),
-      fields = fields,
+      fields = params.fields("fields"),
       keyedOn = params.fields("keyFields"))
   }
 
@@ -735,7 +778,7 @@ object SQLLanguageParser {
     */
   private def parseNativeSQL(ts: TokenStream): Executable = {
     val params = SQLTemplateParams(ts, "NATIVE SQL %e:sql FROM %a:jdbcUrl %w:hints")
-    NativeSQL(expression = params.assignables("sql"), jdbcUrl = params.atoms("jdbcUrl"), hints = params.hints.get("hints"))
+    NativeSQL(query = params.assignables("sql"), jdbcUrl = params.atoms("jdbcUrl"), hints = params.hints.get("hints"))
   }
 
   /**
@@ -813,7 +856,7 @@ object SQLLanguageParser {
     */
   private def parseSet(ts: TokenStream): Assignment = {
     val params = SQLTemplateParams(ts, "SET %v:name = %q:expression")
-    Assignment(variableRef = params.variables("name"), value = params.assignables("expression"))
+    Assignment(reference = params.variables("name"), value = params.assignables("expression"))
   }
 
   /**
