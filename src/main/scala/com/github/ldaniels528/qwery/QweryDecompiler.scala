@@ -47,8 +47,8 @@ object QweryDecompiler {
     case InsertValues(dataSets) => dataSets.map(dataSet => s"VALUES (${dataSet.map(_.toSQL).mkString(", ")})").mkString(" ")
     case Procedure(name, params, operation) => s"CREATE PROCEDURE $name(${params.map(_.toSQL).mkString(",")}) AS ${operation.toSQL}"
     case Return(expression) => s"RETURN ${expression.map(_.toSQL).getOrElse("")}".trim
-    case Select(fields, source, condition, groupFields, orderedColumns, limit) =>
-      toSelect(fields, source, condition, groupFields, orderedColumns, limit)
+    case Select(fields, source, joins, condition, groupFields, orderedColumns, limit) =>
+      toSelect(fields, source, joins, condition, groupFields, orderedColumns, limit)
     case Union(a, b) => s"${a.toSQL} UNION ${b.toSQL}"
     case Update(target, assignments, source, keyedOn) => toUpdate(target, assignments, source, keyedOn)
     case Upsert(target, fields, source, keyedOn) => toUpsert(target, fields, source, keyedOn)
@@ -67,7 +67,7 @@ object QweryDecompiler {
     case Count(expr) => s"COUNT(${expr.toSQL})"
     case ConstantValue(value) => toConstantValue(value)
     case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
-    case FieldRef(name) => s"#$name"
+    case ColumnRef(name) => s"#$name"
     case FunctionRef(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
     case Left(a, b) => s"LEFT(${a.toSQL}, ${b.toSQL})"
     case Len(expr) => s"LEN(${expr.toSQL})"
@@ -142,6 +142,7 @@ object QweryDecompiler {
 
   private def toSelect(fields: Seq[Expression],
                        source: Option[Executable],
+                       joins: List[Join],
                        condition: Option[Condition],
                        groupFields: Seq[Field],
                        orderedColumns: Seq[OrderedColumn],
@@ -154,6 +155,7 @@ object QweryDecompiler {
       case exec =>
         sb.append(s" FROM (${exec.toSQL})")
     }
+    joins.foreach(join => sb.append(s" INNER JOIN ${join.right.toSQL} ON ${condition.toSQL}"))
     condition.foreach(where => sb.append(s" WHERE ${where.toSQL}"))
     if (groupFields.nonEmpty) sb.append(s" GROUP BY ${groupFields.map(_.toSQL) mkString ", "}")
     if (orderedColumns.nonEmpty) sb.append(s" ORDER BY ${orderedColumns.map(_.toSQL) mkString ", "}")

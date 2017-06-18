@@ -8,7 +8,7 @@ import com.github.ldaniels528.qwery.ops.NamedExpression._
 import com.github.ldaniels528.qwery.ops.builtins.Return
 import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.ops.{Expression, _}
-import com.github.ldaniels528.qwery.sources.DataResource
+import com.github.ldaniels528.qwery.sources.{DataResource, NamedResource}
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
@@ -43,7 +43,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     var results = SQLTemplateParams()
     val tags = new PeekableIterator(template.split("[ ]").map(_.trim))
     while (tags.hasNext) {
-      processNextTag(tags.next(), tags) match {
+      processNextTag(tags.next(), results, tags) match {
         case Success(params) => results = results + params
         case Failure(e) => throw SyntaxException(e.getMessage, stream)
       }
@@ -57,12 +57,12 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tags the [[PeekableIterator iteration]] of tags
     * @return the option of the resultant [[SQLTemplateParams template parameters]]
     */
-  private def processNextTag(aTag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
+  private def processNextTag(aTag: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
     // optionally required tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
-    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
+    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), params, tags)
 
     // optionally required child-tag? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
-    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
+    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), params, tags)
 
     // atom? (e.g. "%a:table" => "'./tickers.csv'")
     case tag if tag.startsWith("%a:") => extractIdentifier(tag.drop(3))
@@ -85,6 +85,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // field names? (e.g. "%F:fields" => "field1, field2, ..., fieldN")
     case tag if tag.startsWith("%F:") => extractListOfFields(tag.drop(3))
 
+    // joins? (e.g. "%J:joins" => "INNER JOIN 'stocks.csv' ON A.symbol = B.ticker")
+    case tag if tag.startsWith("%J:") => extractJoins(tag.drop(3), params)
+
     // numeric? (e.g. "%n:limit" => "100")
     case tag if tag.startsWith("%n:") => extractNumericValue(tag.drop(3))
 
@@ -106,7 +109,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // repeat start/end tag? (e.g. "%R:valueSet {{ VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
     case tag if tag.startsWith("%R:") =>
       if (!tags.nextOption.contains("{{")) throw new IllegalArgumentException("Start of sequence '{{' expected")
-      processRepeatedSequence(name = tag.drop(3), tags)
+      processRepeatedSequence(name = tag.drop(3), params, tags)
 
     // source or sub-query? (e.g. "%s:source" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
     case tag if tag.startsWith("%s:") => extractSourceOrQuery(tag.drop(3))
@@ -124,7 +127,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     case tag if tag.startsWith("%w:") => extractWithClause(tag.drop(3))
 
     // executable? (e.g. "%X:code" => "CREATE PROCEDURE test AS SHOW FILES")
-    case tag if tag.startsWith("%X:") => extractSQLCode(tag.drop(3))
+    case tag if tag.startsWith("%X:") => extractSQLCommand(tag.drop(3))
 
     // must be literal text (e.g. "FROM")
     case text => extractKeyWord(text)
@@ -202,6 +205,35 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       case ts => parseNext(ts)
     }
     SQLTemplateParams(sources = Map(name -> source))
+  }
+
+  /**
+    * Extracts JOIN statements from the token stream
+    * @example {{{ INNER JOIN './companylist.csv' AS A ON A.Symbol = B.Symbol }}}
+    * @example {{{ JOIN './companylist.csv' AS A ON A.Symbol = B.Symbol }}}
+    * @param name the given named identifier
+    * @return an [[Describe executable]]
+    */
+  private def extractJoins(name: String, aggParams: SQLTemplateParams) = Try {
+    var joins: List[Join] = Nil
+    while (stream.is("INNER") || stream.is("JOIN") || stream.is("OUTER")) {
+      stream match {
+        case ts if ts is "INNER" =>
+          val params = SQLTemplateParams(ts, "INNER JOIN %a:joinPath AS %a:joinAlias ON %c:joinCond %w:joinHints")
+          joins = InnerJoin(
+            left = aggParams.sources("source").withHints(params.hints.get("sourceHints")) match {
+              case nr: NamedResource => nr
+              case _ => throw new IllegalArgumentException("An aliased query resource was expected")
+            },
+            right = NamedResource(
+              name = params.atoms("joinAlias"),
+              resource = DataResource(params.atoms("joinPath"), hints = params.hints.get("joinHints"))
+            ),
+            condition = params.conditions("joinCond")) :: joins
+        case _ => die("Syntax error: Invalid JOIN expression")
+      }
+    }
+    SQLTemplateParams(joins = Map(name -> joins.reverse))
   }
 
   private def extractKeyWord(keyword: String) = Try {
@@ -299,8 +331,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tag  the tag to be executed (e.g. "%a:name")
     * @param tags the [[PeekableIterator iterator]]
     */
-  private def extractOptional(tag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = Try {
-    processNextTag(aTag = tag, tags) match {
+  private def extractOptional(tag: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = Try {
+    processNextTag(aTag = tag, params, tags) match {
       case Success(result) => result
       case Failure(e) =>
         while (tags.peek.exists(_.startsWith("+?"))) {
@@ -336,25 +368,28 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractQuery(name: String) = Try {
-    val executable = stream match {
-      case ts if ts is "SELECT" => SQLLanguageParser.parseSelect(ts)
-      case ts if ts nextIf "(" =>
-        val result = SQLLanguageParser.parseNext(stream)
-        stream expect ")"
-        result
-      case _ => die("Sub-query expected")
-    }
-    SQLTemplateParams(sources = Map(name -> executable))
+    SQLTemplateParams(sources = Map(name -> extractQueryOption.getOrElse(die("Sub-query expected"))))
   }
 
-  def extractQueryOption: Option[Executable] = stream match {
-    case ts if ts is "SELECT" =>
-      Option(SQLLanguageParser.parseSelect(stream))
-    case ts if ts nextIf "(" =>
-      val result = Option(SQLLanguageParser.parseNext(stream))
-      stream expect ")"
-      result
-    case _ => None
+  /**
+    * Parses a source expression; either a direct or via query
+    * @return the option of a [[Executable query resource]]
+    */
+  private def extractQueryOption: Option[Executable] = {
+    import SQLLanguageParser._
+
+    val outcome = stream match {
+      case ts if ts is "SELECT" => Option(parseSelect(stream))
+      case ts if ts nextIf "(" =>
+        val result = Option(parseNext(stream))
+        stream expect ")"
+        result
+      case _ => None
+    }
+    // is there as alias?
+    outcome map { query =>
+      if (stream nextIf "AS") NamedResource(name = stream.next().text, query) else query
+    }
   }
 
   /**
@@ -386,10 +421,12 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       case ts if ts.isQuoted => DataResource(ts.next().text)
       case _ => die("Source or sub-query expected")
     }
-    SQLTemplateParams(sources = Map(name -> executable))
+    // is there as alias?
+    val resource = if (stream nextIf "AS") NamedResource(name = stream.next().text, executable) else executable
+    SQLTemplateParams(sources = Map(name -> resource))
   }
 
-  private def extractSQLCode(name: String) = Try {
+  private def extractSQLCommand(name: String) = Try {
     SQLTemplateParams(sources = Map(name -> SQLLanguageParser.parseNext(stream)))
   }
 
@@ -496,7 +533,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tags the [[PeekableIterator iterator]]
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def processRepeatedSequence(name: String, tags: PeekableIterator[String]) = Try {
+  private def processRepeatedSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]) = Try {
     // extract the repeated sequence
     val repeatedTagsSeq = extractRepeatedSequence(tags)
     var paramSet: List[SQLTemplateParams] = Nil
@@ -506,7 +543,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       val count = paramSet.size
       val repeatedTags = new PeekableIterator(repeatedTagsSeq)
       while (repeatedTags.hasNext) {
-        result = processNextTag(repeatedTags.next(), repeatedTags)
+        result = processNextTag(repeatedTags.next(), params, repeatedTags)
         result.foreach(params => paramSet = paramSet ::: params :: Nil)
       }
 
@@ -565,7 +602,7 @@ object SQLLanguageParser {
     case ts if ts is "SELECT" => parseSelect(ts)
     case ts if ts is "SET" => parseSet(ts)
     case ts if ts is "SHOW" => parseShow(ts)
-    case _ => die("Unrecognized command")
+    case ts => die(s"Unrecognized command near '${ts.peek.map(_.text).orNull}'")
   }
 
   /**
@@ -707,58 +744,6 @@ object SQLLanguageParser {
   }
 
   /**
-    * Parses an UPDATE statement
-    * @example
-    * {{{
-    * UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
-    * SET Active = 1, Processed = 0
-    * KEYED ON Symbol
-    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
-    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-    * FROM 'companylist.csv' WITH FORMAT CSV
-    * WHERE Industry = 'Oil/Gas Transmission'
-    * }}}
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Update executable]]
-    */
-  private def parseUpdate(stream: TokenStream): Update = {
-    val params = SQLTemplateParams(stream, "UPDATE %a:target SET %U:assignments KEYED ON %F:keyFields %w:hints %V:source")
-    Update(
-      target = DataResource(params.atoms("target"), params.hints.get("hints")),
-      source = params.sources("source"),
-      assignments = params.keyValuePairs("assignments"),
-      keyedOn = params.fields("keyFields"))
-  }
-
-  /**
-    * Parses an UPSERT statement
-    * @example
-    * {{{
-    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
-    * KEYED ON Symbol
-    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
-    * SELECT Symbol, Name, Sector, Industry, LastSale
-    * FROM 'companylist.csv'
-    * WHERE Symbol = #Symbol
-    * }}}
-    * @example
-    * {{{
-    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
-    * KEYED ON Symbol
-    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
-    * VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
-    * }}}
-    */
-  private def parseUpsert(stream: TokenStream): Upsert = {
-    val params = SQLTemplateParams(stream, "UPSERT INTO %a:target ( %F:fields ) KEYED ON %F:keyFields %w:hints %V:source")
-    Upsert(
-      target = DataResource(params.atoms("target"), params.hints.get("hints")),
-      source = params.sources("source"),
-      fields = params.fields("fields"),
-      keyedOn = params.fields("keyFields"))
-  }
-
-  /**
     * Parses an INSERT VALUES clause
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[InsertValues modifications]]
@@ -801,6 +786,14 @@ object SQLLanguageParser {
     * WHERE exchange = 'NASDAQ'
     * LIMIT 5
     * }}}
+    * @example
+    * {{{
+    * SELECT A.symbol, A.exchange, A.lastSale AS lastSaleA, B.lastSale AS lastSaleB
+    * FROM 'companlist.csv' AS A
+    * INNER JOIN 'companlist2.csv' AS B ON B.Symbol = A.Symbol
+    * WHERE A.exchange = 'NASDAQ'
+    * LIMIT 5
+    * }}}
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Select executable]]
     */
@@ -809,7 +802,7 @@ object SQLLanguageParser {
       """
         |SELECT ?TOP +?%n:top %E:fields
         |?%C(mode,INTO,OVERWRITE) +?%a:target +?%w:targetHints
-        |?FROM +?%s:source +?%w:sourceHints
+        |?FROM +?%s:source +?%w:sourceHints %J:joins
         |?WHERE +?%c:condition
         |?GROUP +?BY +?%F:groupBy
         |?ORDER +?BY +?%o:orderBy
@@ -819,6 +812,7 @@ object SQLLanguageParser {
     var select: Executable = Select(
       fields = params.expressions("fields"),
       source = params.sources.get("source").map(_.withHints(params.hints.get("sourceHints"))),
+      joins = params.joins.getOrElse("joins", Nil),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
@@ -870,6 +864,58 @@ object SQLLanguageParser {
     val entityType = params.atoms("entityType")
     if (!Show.isValidEntityType(entityType)) die(s"Invalid entity type '$entityType'")
     Show(entityType)
+  }
+
+  /**
+    * Parses an UPDATE statement
+    * @example
+    * {{{
+    * UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+    * SET Active = 1, Processed = 0
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM 'companylist.csv' WITH FORMAT CSV
+    * WHERE Industry = 'Oil/Gas Transmission'
+    * }}}
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Update executable]]
+    */
+  private def parseUpdate(stream: TokenStream): Update = {
+    val params = SQLTemplateParams(stream, "UPDATE %a:target SET %U:assignments KEYED ON %F:keyFields %w:hints %V:source")
+    Update(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      source = params.sources("source"),
+      assignments = params.keyValuePairs("assignments"),
+      keyedOn = params.fields("keyFields"))
+  }
+
+  /**
+    * Parses an UPSERT statement
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, LastSale
+    * FROM 'companylist.csv'
+    * WHERE Symbol = #Symbol
+    * }}}
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
+    * }}}
+    */
+  private def parseUpsert(stream: TokenStream): Upsert = {
+    val params = SQLTemplateParams(stream, "UPSERT INTO %a:target ( %F:fields ) KEYED ON %F:keyFields %w:hints %V:source")
+    Upsert(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      source = params.sources("source"),
+      fields = params.fields("fields"),
+      keyedOn = params.fields("keyFields"))
   }
 
   private def die[A](message: String): A = throw new IllegalStateException(message)

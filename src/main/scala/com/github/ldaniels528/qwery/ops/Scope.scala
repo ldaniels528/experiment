@@ -15,12 +15,28 @@ trait Scope {
   private lazy val procedures = TrieMap[String, Procedure]()
   private lazy val variables = TrieMap[String, Variable]()
   private lazy val views = TrieMap[String, View]()
+  private lazy val resources = TrieMap[String, Row]()
 
   /**
     * Returns the row that scope is currently referencing
     * @return a row of data
     */
-  def row: Row
+  def row: Row // = row("")
+
+  /**
+    * Returns the row that scope is currently referencing
+    * @return a row of data
+    */
+  def row(alias: String): Row = {
+    resources.getOrElse(alias, throw new IllegalArgumentException(s"Table alias '$alias' not found"))
+  }
+
+  /**
+    * Sets an aliased row of data
+    * @param alias the data resource alias (e.g. "FROM 'companylist.csv' AS A")
+    * @param row   the row of data
+    */
+  def setRow(alias: String, row: Row): Unit = resources(alias) = row
 
   /**
     * Returns a column value by name

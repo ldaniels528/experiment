@@ -18,7 +18,7 @@ case class Assignment(reference: NamedExpression, value: Expression) extends Exe
   }
 
   private def getEntityName = reference match {
-    case FieldRef(_) => "field"
+    case ColumnRef(_) => "field"
     case VariableRef(_) => "variable"
     case unhandled =>
       throw new IllegalArgumentException(s"Unhandled reference type '${unhandled.getName}'")

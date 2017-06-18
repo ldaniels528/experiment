@@ -12,6 +12,7 @@ import scala.language.postfixOps
   */
 case class Select(fields: Seq[Expression],
                   source: Option[Executable] = None,
+                  joins: List[Join] = Nil,
                   condition: Option[Condition] = None,
                   groupFields: Seq[Field] = Nil,
                   orderedColumns: Seq[OrderedColumn] = Nil,

@@ -168,7 +168,7 @@ trait ExpressionParser {
       case ts if ts nextIf "Cast" => parseCast(ts)
       // is it an all fields reference?
       case ts if ts nextIf "*" => Option(AllFields)
-      // is it a field?
+      // is it a field reference?
       case ts if ts is "#" => parseFieldRef(ts)
       // is it a variable?
       case ts if ts is "@" => parseVariableRef(ts)
@@ -177,6 +177,10 @@ trait ExpressionParser {
         val expr = parseExpression(ts)
         ts expect ")"
         expr
+      // is it a join column reference (e.g. )?
+      case ts if ts.peekAhead(1).exists(_.text == ".") =>
+        val params = SQLTemplateParams(ts, "%a:alias . %a:column")
+        Option(JoinColumnRef(alias = params.atoms("alias"), name = params.atoms("column")))
       // is it a function?
       case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseFunction(stream)
       // is it a field or constant value?
@@ -186,10 +190,10 @@ trait ExpressionParser {
     }
   }
 
-  def parseFieldRef(ts: TokenStream): Option[FieldRef] = {
+  def parseFieldRef(ts: TokenStream): Option[ColumnRef] = {
     if (ts nextIf "#") {
       val name = ts.next().text
-      if (isFieldIdentifier(name)) Option(FieldRef(name))
+      if (isFieldIdentifier(name)) Option(ColumnRef(name))
       else ts.die("Field identifier expected")
     }
     else None

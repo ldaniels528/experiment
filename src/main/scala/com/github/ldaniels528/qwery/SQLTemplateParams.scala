@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.ops.sql.OrderedColumn
+import com.github.ldaniels528.qwery.ops.sql.{Join, OrderedColumn}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 /**
@@ -11,6 +11,7 @@ import com.github.ldaniels528.qwery.util.StringHelper._
   * @param assignables   the named collection of singular expressions (e.g. "SET X = 1+(2*3)")
   * @param fields        the named collection of field references (e.g. "INSERT INTO (symbol, exchange, lastSale)")
   * @param hints         the named collection of hint references (e.g. "WITH GZIP COMPRESSION")
+  * @param joins         the named collection of join references (e.g. "INNER JOIN './stocks.csv' ON A.symbol = B.symbol")
   * @param keyValuePairs the named collection of key-value pairs (e.g. "key = 'Hello', value = 123")
   * @param numerics      the named collection of numeric values (e.g. "TOP 100")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
@@ -24,6 +25,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
                              hints: Map[String, Hints] = Map.empty,
+                             joins: Map[String, List[Join]] = Map.empty,
                              keyValuePairs: Map[String, List[(String, Expression)]] = Map.empty,
                              numerics: Map[String, Double] = Map.empty,
                              orderedFields: Map[String, List[OrderedColumn]] = Map.empty,
@@ -39,6 +41,7 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
       hints = this.hints ++ that.hints,
+      joins = this.joins ++ that.joins,
       keyValuePairs = this.keyValuePairs ++ that.keyValuePairs,
       numerics = this.numerics ++ that.numerics,
       orderedFields = this.orderedFields ++ that.orderedFields,
@@ -58,8 +61,8 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
     * @return true, if at least one of the template mappings is not empty
     */
   def nonEmpty: Boolean = {
-    Seq(atoms, conditions, assignables, expressions, fields, keyValuePairs, numerics, orderedFields, sources,
-      repeatedSets, variables).exists(_.nonEmpty)
+    Seq(atoms, conditions, assignables, expressions, fields, joins, keyValuePairs, numerics,
+      orderedFields, sources, repeatedSets, variables).exists(_.nonEmpty)
   }
 
 }
@@ -75,6 +78,8 @@ object SQLTemplateParams {
     * @param ts the given [[TokenStream token stream]]
     * @return the [[SQLLanguageParser language parser]]
     */
-  def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLLanguageParser(ts).process(template.toSingleLine)
+  def apply(ts: TokenStream, template: String): SQLTemplateParams = {
+    new SQLLanguageParser(ts).process(template.toSingleLine)
+  }
 
 }
