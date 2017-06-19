@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.devices
 import java.io.{File, FileReader}
 import java.util.{Properties => JProperties}
 
-import com.github.ldaniels528.qwery.ops.{Hints, RootScope}
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 import org.scalatest.FunSpec
 
@@ -13,7 +13,7 @@ import org.scalatest.FunSpec
   */
 class AWSS3InputDeviceTest extends FunSpec {
   private val file = new File("./s3.properties")
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("AWSS3InputDevice") {
 

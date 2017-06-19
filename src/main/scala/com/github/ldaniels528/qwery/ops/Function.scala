@@ -15,7 +15,7 @@ case class Function(name: String, parameters: Seq[Field], executable: Executable
 
   def invoke(scope: Scope, args: Seq[Expression]): Option[Any] = {
     // create a local scope, and populate it with the argument values as variables
-    val myScope = LocalScope(scope, row = Nil)
+    val myScope = Scope(scope)
     populateArgs(myScope, parameters, args)
 
     // execute the function

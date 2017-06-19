@@ -12,26 +12,31 @@ import scala.language.postfixOps
   */
 case class Select(fields: Seq[Expression],
                   source: Option[Executable] = None,
-                  joins: List[Join] = Nil,
                   condition: Option[Condition] = None,
                   groupFields: Seq[Field] = Nil,
+                  joins: List[Join] = Nil,
                   orderedColumns: Seq[OrderedColumn] = Nil,
                   limit: Option[Int] = None)
   extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
     source match {
-      //case Some(ds@DataResource(path, _)) if path.startsWith("jdbc:") =>
-      case Some(executable) =>
-        val resultSet = executable.execute(scope)
-        val rows = resultSet.map(row => LocalScope(scope, row))
-          .filter(row => condition.isEmpty || condition.exists(_.isSatisfied(row)))
+      case Some(query) =>
+        // is it a JOIN query?
+        val intermediate = if (joins.isEmpty) query.execute(scope) else {
+          joins.foldLeft(ResultSet()) { (_, join) => join.join(query, scope) }
+        }
+
+        // filter via the WHERE clause
+        val rowScopes = intermediate.map(row => Scope(scope, row))
+          .filter(rowScope => condition.isEmpty || condition.exists(_.isSatisfied(rowScope)))
           .take(limit getOrElse Int.MaxValue)
 
         // is this an aggregate query?
-        if (isAggregate) doAggregation(scope, rows)
-        else if (fields.hasAllFields) ResultSet(rows = rows.map(_.row))
-        else ResultSet(rows = rows.map(row => fields.map(expand(row, _))))
+        if (isAggregate) doAggregation(scope, rowScopes)
+        else if (fields.hasAllFields) ResultSet(rows = rowScopes.map(_.row))
+        else ResultSet(rows = rowScopes.map(rowScope => fields.map(expand(rowScope, _))))
+
       case None =>
         ResultSet(rows = Iterator(fields.map(expand(scope, _))))
     }
@@ -46,13 +51,12 @@ case class Select(fields: Seq[Expression],
     case _ => false
   }
 
-  private def doAggregation(scope: Scope, rows: Iterator[LocalScope]): ResultSet = {
+  private def doAggregation(scope: Scope, rows: Iterator[Scope]): ResultSet = {
     // collect the aggregates
     val groupFieldNames = groupFields.map(_.name)
     val aggregates = fields.collect {
       case agg: Aggregation => agg
-      case expr@NamedExpression(name) if groupFieldNames.exists(_.equalsIgnoreCase(name)) =>
-        AggregateExpression(name, expr)
+      case expr@NamedExpression(name) if groupFieldNames.exists(_.equalsIgnoreCase(name)) => AggregateExpression(name, expr)
     }
 
     // update each aggregate field, and return the evaluated results
@@ -64,14 +68,14 @@ case class Select(fields: Seq[Expression],
   }
 
   private def doAggregationByFields(parentScope: Scope,
-                                    resultSets: Iterator[LocalScope],
+                                    resultSets: Iterator[Scope],
                                     aggregates: Seq[Expression with Aggregation],
                                     groupFields: Seq[String]): ResultSet = {
     val groupField = groupFields.headOption.orNull
     val groupedResults = resultSets.toSeq.groupBy(_.row.find(_._1.equalsIgnoreCase(groupField)).map(_._2).orNull)
     ResultSet(rows = groupedResults map { case (_, rows) =>
       rows.foreach(row => aggregates.foreach(_.update(row)))
-      val scope = LocalScope(parentScope, row = Nil)
+      val scope = Scope(parentScope)
       aggregates.map(expand(scope, _))
     } toIterator)
   }

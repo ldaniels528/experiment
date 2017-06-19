@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.ops
 
-import com.github.ldaniels528.qwery.ExpressionParser.identifierRegEx
 import com.github.ldaniels528.qwery.TokenStream
+import com.github.ldaniels528.qwery.util.OptionHelper._
 
 /**
   * Represents a field reference
@@ -25,9 +25,13 @@ object Field {
   /**
     * Creates a new fixed-width field
     * @param name the name of the field
-    * @return a new [[FixedField field]] instance
+    * @return a new [[FixedWidth field]] instance
     */
-  def apply(name: String, width: Int) = FixedField(name, width)
+  def apply(name: String, width: Int): Field with FixedWidth = {
+    new BasicField(name) with FixedWidth {
+      val width: Int = width
+    }
+  }
 
   /**
     * Creates a new field from a token
@@ -41,7 +45,7 @@ object Field {
         val name = ts.next().text
         ts.expect("^")
         val width = ts.next().text.toDouble.toInt
-        FixedField(name, width)
+        apply(name, width)
       case ts => BasicField(ts.next().text)
     }
   }
@@ -63,13 +67,32 @@ object AllFields extends BasicField(name = "*")
   * @author lawrence.daniels@gmail.com
   */
 case class BasicField(name: String) extends Field {
+
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+
 }
 
 /**
-  * Represents a fixed-width field definition
+  * Represents a fixed-width trait
   * @author lawrence.daniels@gmail.com
   */
-case class FixedField(name: String, width: Int) extends Field {
-  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+trait FixedWidth extends Field {
+
+  def width: Int
+
+}
+
+/**
+  * Represents a join field definition
+  * @param alias      the data resource (e.g. table) alias
+  * @param columnName the name of the column being referenced
+  * @see Field
+  */
+case class JoinField(alias: String, columnName: String) extends Field {
+  val name = s"$alias.$columnName"
+
+  override def evaluate(scope: Scope): Option[Any] = {
+    (scope.getTuple(name) ?? scope.getTuple(columnName)).map(_._2)
+  }
+
 }

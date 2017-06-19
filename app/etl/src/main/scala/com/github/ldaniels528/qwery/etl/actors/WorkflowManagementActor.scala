@@ -11,7 +11,7 @@ import com.github.ldaniels528.qwery.etl.actors.ResourceReadingActor.{DataReceive
 import com.github.ldaniels528.qwery.etl.actors.WorkflowManagementActor._
 import com.github.ldaniels528.qwery.etl.triggers.Trigger
 import com.github.ldaniels528.qwery.etl.workflows.Workflow
-import com.github.ldaniels528.qwery.ops.{LocalScope, ResultSet, Scope, Variable}
+import com.github.ldaniels528.qwery.ops.{ResultSet, Scope, Variable}
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
@@ -74,7 +74,7 @@ class WorkflowManagementActor(config: ETLConfig) extends Actor with ActorLogging
         log.info(s"Processing file '${workFile.getAbsolutePath}' using '${trigger.name}'...")
 
         // set a new scope with processing variables
-        val scope = LocalScope(rootScope, row = Nil)
+        val scope = Scope(rootScope)
         scope += Variable("work.file.base", Option(workFile.getBaseName))
         scope += Variable("work.file.name", Option(workFile.getName))
         scope += Variable("work.file.path", Option(workFile.getCanonicalPath))

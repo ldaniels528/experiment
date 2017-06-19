@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.github.ldaniels528.qwery.etl.actors.ResourceReadingActor._
-import com.github.ldaniels528.qwery.ops.{RootScope, Row, Scope}
+import com.github.ldaniels528.qwery.ops.{Row, Scope}
 import com.github.ldaniels528.qwery.sources.{DataResource, Statistics}
 import com.github.ldaniels528.qwery.util.ResourceHelper._
 
@@ -19,7 +19,7 @@ class ResourceReadingActor() extends Actor with ActorLogging {
       log.info(s"[$pid] Reading resource '$resource'")
       resource.getInputSource(scope) match {
         case Some(source) =>
-          source.open(RootScope())
+          source.open(Scope.root())
           source use { device =>
             var record: Option[Row] = None
             do {

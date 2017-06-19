@@ -2,14 +2,14 @@ package com.github.ldaniels528.qwery.sources
 
 import FixedLengthOutputSource._
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{FixedField, Hints, Row, RowEnrichment}
+import com.github.ldaniels528.qwery.ops.{FixedWidth, Hints, Row, RowEnrichment}
 
 /**
   * Fixed-length Output Source
   * @author lawrence.daniels@gmail.com
   */
 case class FixedLengthOutputSource(device: OutputDevice, hints: Option[Hints]) extends OutputSource {
-  private val fields: Seq[FixedField] = getFixedFields(hints)
+  private val fields: Seq[FixedWidth] = getFixedFields(hints)
   private var offset = 0L
 
   override def write(row: Row): Unit = {
@@ -37,7 +37,7 @@ case class FixedLengthOutputSource(device: OutputDevice, hints: Option[Hints]) e
   */
 object FixedLengthOutputSource {
 
-  def getFixedFields(hints: Option[Hints]): Seq[FixedField] = {
+  def getFixedFields(hints: Option[Hints]): Seq[FixedWidth] = {
     hints.map(_.getFixedFields).getOrElse(throw new IllegalStateException("No columns defined"))
   }
 

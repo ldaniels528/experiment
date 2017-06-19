@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery
 
-import com.github.ldaniels528.qwery.ops.RootScope
+import com.github.ldaniels528.qwery.ops.Scope
 import org.scalatest.FunSpec
 
 import scala.util.Properties
@@ -10,7 +10,7 @@ import scala.util.Properties
   * @author lawrence.daniels@gmail.com
   */
 class QweryTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("Qwery") {
 

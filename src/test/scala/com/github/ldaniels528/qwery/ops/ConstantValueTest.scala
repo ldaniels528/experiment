@@ -8,7 +8,7 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class ConstantValueTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("ConstantValue") {
     it("should support determine when Boolean values are equivalent") {

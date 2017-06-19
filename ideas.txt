@@ -17,9 +17,19 @@ SELECT Symbol, Name, Sector, Industry, LastSale
 FROM "companylist.csv" AS A
 INNER JOIN "companylist.csv" AS B ON B.Symbol = A.Symbol
 
-SELECT Symbol, Name, Sector, Industry, LastSale, B.LastSale AS CurrentSale
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM "companylist.csv"
+INNER JOIN "companylist.csv" AS B ON B.Symbol = Symbol
+
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
 FROM "companylist.csv" AS A
-INNER JOIN "companylist.csv" AS B ON B.Symbol = A.Symbol
+INNER JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
+WHERE A.Industry = 'Oil/Gas Transmission'
+LIMIT 5
+
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
+FROM "companylist.csv" AS A
+JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
 
 ************************************************************************
 *      UPSERT testing

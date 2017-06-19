@@ -216,14 +216,14 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     */
   private def extractJoins(name: String, aggParams: SQLTemplateParams) = Try {
     var joins: List[Join] = Nil
-    while (stream.is("INNER") || stream.is("JOIN") || stream.is("OUTER")) {
+    while (stream.is("JOIN") || stream.is("INNER") || stream.is("OUTER")) {
       stream match {
-        case ts if ts is "INNER" =>
-          val params = SQLTemplateParams(ts, "INNER JOIN %a:joinPath AS %a:joinAlias ON %c:joinCond %w:joinHints")
+        case ts if ts.is("JOIN") | ts.nextIf("INNER") =>
+          val params = SQLTemplateParams(ts, "JOIN %a:joinPath AS %a:joinAlias ON %c:joinCond %w:joinHints")
           joins = InnerJoin(
-            left = aggParams.sources("source").withHints(params.hints.get("sourceHints")) match {
-              case nr: NamedResource => nr
-              case _ => throw new IllegalArgumentException("An aliased query resource was expected")
+            leftAlias = aggParams.sources("source") match {
+              case NamedResource(alias, _) => Some(alias)
+              case _ => None
             },
             right = NamedResource(
               name = params.atoms("joinAlias"),
@@ -812,9 +812,9 @@ object SQLLanguageParser {
     var select: Executable = Select(
       fields = params.expressions("fields"),
       source = params.sources.get("source").map(_.withHints(params.hints.get("sourceHints"))),
-      joins = params.joins.getOrElse("joins", Nil),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
+      joins = params.joins.getOrElse("joins", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 

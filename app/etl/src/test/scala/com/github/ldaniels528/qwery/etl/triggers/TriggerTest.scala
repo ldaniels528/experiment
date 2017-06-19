@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.etl.triggers
 
-import com.github.ldaniels528.qwery.ops.RootScope
+import com.github.ldaniels528.qwery.ops.Scope
 import org.scalatest.FunSpec
 
 /**
@@ -8,7 +8,7 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class TriggerTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("Trigger") {
 

@@ -180,7 +180,7 @@ trait ExpressionParser {
       // is it a join column reference (e.g. )?
       case ts if ts.peekAhead(1).exists(_.text == ".") =>
         val params = SQLTemplateParams(ts, "%a:alias . %a:column")
-        Option(JoinColumnRef(alias = params.atoms("alias"), name = params.atoms("column")))
+        Option(JoinField(alias = params.atoms("alias"), columnName = params.atoms("column")))
       // is it a function?
       case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseFunction(stream)
       // is it a field or constant value?

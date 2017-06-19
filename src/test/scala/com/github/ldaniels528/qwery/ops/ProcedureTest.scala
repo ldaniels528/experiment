@@ -12,7 +12,7 @@ import org.scalatest.FunSpec
   * @author Lawrence Daniels <lawrence.daniels@gmail.com>
   */
 class ProcedureTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("Procedure") {
 

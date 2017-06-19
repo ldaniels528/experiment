@@ -13,6 +13,7 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#run-tests">Running the tests</a>
 * <a href="#sql-commands">SQL Syntax and Grammar</a>
     * <a href="#select">SELECT statement</a>
+        * <a href="#join">JOINS</a>
         * <a href="#union">UNION clause</a>
         * <a href="#select-kafka">Querying Kafka topics</a>
         * <a href="#select-s3">Querying files on S3</a>
@@ -227,6 +228,29 @@ END AS Greeting
 | Found 2    |
 + ---------- +
 ```
+
+<a name="join"></a>
+INNER JOIN clauses are supported:
+
+```sql
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
+FROM "companylist.csv" AS A
+INNER JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
+WHERE A.Industry = 'Oil/Gas Transmission'
+LIMIT 5
+```
+```text
++ ---------------------------------------------------------------------------------------------------------------------- +
+| A.Symbol  A.Name                                     A.Sector          A.Industry            A.LastSale  CurrentSale   |
++ ---------------------------------------------------------------------------------------------------------------------- +
+| CQH       Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission  25.68       26.23         |
+| CQP       Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission  31.75       31.55         |
+| LNG       Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission  45.35       47.28         |
+| EGAS      Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  12.5        12.7          |
++ ---------------------------------------------------------------------------------------------------------------------- +
+```
+
+*NOTE:* OUTER JOIN clauses will be implemented in a future release.
 
 <a name="union"></a>
 UNION clauses are also supported:
@@ -1180,7 +1204,7 @@ import com.github.ldaniels528.qwery.Tabular
 val query = QweryCompiler("DESCRIBE './companylist.csv'")
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println    
@@ -1219,7 +1243,7 @@ val query = QweryCompiler(
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1251,7 +1275,7 @@ val query = QweryCompiler(
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1289,7 +1313,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1321,7 +1345,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1369,7 +1393,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println

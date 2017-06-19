@@ -30,9 +30,9 @@ case class Hints(append: Option[Boolean] = None,
 
   def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
 
-  def getFixedFields: Seq[FixedField] = {
+  def getFixedFields: Seq[FixedWidth] = {
     fields.map {
-      case field: FixedField => field
+      case field: FixedWidth => field
       case field =>
         throw new IllegalStateException(s"Column '${field.name}' is not fixed width")
     }

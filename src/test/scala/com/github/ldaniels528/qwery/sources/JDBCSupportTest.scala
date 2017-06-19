@@ -1,7 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.QweryCompiler
-import com.github.ldaniels528.qwery.ops.{RootScope, Variable}
+import com.github.ldaniels528.qwery.ops.{Scope, Variable}
 import org.scalatest.FunSpec
 
 import scala.util.Properties
@@ -11,7 +11,7 @@ import scala.util.Properties
   * @author lawrence.daniels@gmail.com
   */
 class JDBCSupportTest() extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("JDBCSupport") {
 

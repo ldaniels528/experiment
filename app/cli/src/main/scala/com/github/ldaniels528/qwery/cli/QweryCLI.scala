@@ -4,6 +4,8 @@ package cli
 import com.github.ldaniels528.qwery.AppConstants._
 import com.github.ldaniels528.qwery.ops._
 
+import scala.language.existentials
+
 /**
   * Qwery CLI Application
   * @author lawrence.daniels@gmail.com
@@ -13,7 +15,7 @@ object QweryCLI {
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()
   private var ticker = 0L
-  private val globalScope = RootScope()
+  private val globalScope = Scope.root().includeEnvVars
   private val sb = new StringBuilder()
 
   /**

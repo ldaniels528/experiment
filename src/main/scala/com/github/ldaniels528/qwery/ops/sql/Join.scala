@@ -1,19 +1,15 @@
 package com.github.ldaniels528.qwery.ops.sql
 
-import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope, _}
+import com.github.ldaniels528.qwery.ops.{ResultSet, Scope, _}
 import com.github.ldaniels528.qwery.sources.NamedResource
 
 /**
-  * Represents a generic JOIN operation
+  * Represents a JOIN operation
   * @author lawrence.daniels@gmail.com
   */
-sealed trait Join extends Executable {
+sealed trait Join {
 
-  def left: NamedResource
-
-  def right: NamedResource
-
-  def condition: Condition
+  def join(left: Executable, scope: Scope): ResultSet
 
 }
 
@@ -21,19 +17,18 @@ sealed trait Join extends Executable {
   * Represents an INNER JOIN
   * @author lawrence.daniels@gmail.com
   */
-case class InnerJoin(left: NamedResource, right: NamedResource, condition: Condition) extends Join {
+case class InnerJoin(leftAlias: Option[String], right: NamedResource, condition: Condition) extends Join {
 
-  override def execute(parentScope: Scope): ResultSet = {
-    val scope = LocalScope(parentScope, row = Nil)
+  def join(left: Executable, scope: Scope): ResultSet = {
     ResultSet(rows =
-      left.execute(scope).rows flatMap { row0 =>
-        scope.setRow(left.name, row0)
+      left.execute(scope).rows flatMap { rowLeft =>
+        right.execute(scope).rows flatMap { rowRight =>
+          val combinedRow: Row =
+            rowLeft.map { case (name, value) => leftAlias.map(alias => s"$alias.$name").getOrElse(name) -> value } ++
+              rowRight.map { case (name, value) => s"${right.name}.$name" -> value }
 
-        right.execute(scope).rows flatMap { row1 =>
-          scope.setRow(right.name, row1)
-
-          // determine whether to include the results
-          if (condition.isSatisfied(scope)) Some(row0 ++ row1) else None
+          // determine whether to include the row
+          if (condition.isSatisfied(Scope(scope, combinedRow))) Some(combinedRow) else None
         }
       })
   }
