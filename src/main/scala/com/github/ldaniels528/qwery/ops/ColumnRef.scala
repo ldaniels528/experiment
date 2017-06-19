@@ -17,6 +17,6 @@ case class ColumnRef(name: String) extends NamedExpression {
   */
 case class JoinColumnRef(alias: String, name: String) extends NamedExpression {
 
-  override def evaluate(scope: Scope): Option[Any] = scope.row(alias).get(name)
+  override def evaluate(scope: Scope): Option[Any] = scope.row(alias).flatMap(_.get(name))
 
 }

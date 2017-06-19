@@ -27,9 +27,7 @@ trait Scope {
     * Returns the row that scope is currently referencing
     * @return a row of data
     */
-  def row(alias: String): Row = {
-    resources.getOrElse(alias, throw new IllegalArgumentException(s"Table alias '$alias' not found"))
-  }
+  def row(alias: String): Option[Row] = resources.get(alias)
 
   /**
     * Sets an aliased row of data

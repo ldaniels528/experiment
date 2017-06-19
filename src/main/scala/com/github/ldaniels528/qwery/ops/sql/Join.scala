@@ -26,11 +26,14 @@ case class InnerJoin(left: NamedResource, right: NamedResource, condition: Condi
   override def execute(parentScope: Scope): ResultSet = {
     val scope = LocalScope(parentScope, row = Nil)
     ResultSet(rows =
-      left.execute(scope).rows filter { row0 =>
-        right.execute(scope).rows exists { row1 =>
-          scope.setRow(left.name, row0)
+      left.execute(scope).rows flatMap { row0 =>
+        scope.setRow(left.name, row0)
+
+        right.execute(scope).rows flatMap { row1 =>
           scope.setRow(right.name, row1)
-          condition.isSatisfied(scope)
+
+          // determine whether to include the results
+          if (condition.isSatisfied(scope)) Some(row0 ++ row1) else None
         }
       })
   }
