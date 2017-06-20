@@ -2,16 +2,17 @@ package com.github.ldaniels528.qwery
 package etl
 
 import java.io.File
+import java.util.UUID
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.etl.ETLConfig.TriggerRaw
 import com.github.ldaniels528.qwery.etl.actors.{FileManagementActor, QweryActorSystem, WorkflowManagementActor}
+import com.github.ldaniels528.qwery.etl.events.ScheduledEvent
 import com.github.ldaniels528.qwery.etl.triggers._
-import com.github.ldaniels528.qwery.ops.{CodeBlock, Executable, Scope}
+import com.github.ldaniels528.qwery.ops.Scope
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
-import scala.io.Source
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * ETL Configuration
@@ -19,6 +20,7 @@ import scala.io.Source
   */
 class ETLConfig(val baseDir: File) {
   private lazy val log = LoggerFactory.getLogger(getClass)
+  private val scheduledEvents = TrieMap[UUID, ScheduledEvent]()
   private val triggers = TrieMap[String, Trigger]()
 
   // define the processing directories
@@ -35,6 +37,12 @@ class ETLConfig(val baseDir: File) {
 
   // installation checks
   ensureSubdirectories(baseDir)
+
+  /**
+    * Adds the given scheduled event to the configuration
+    * @param scheduledEvent the given [[ScheduledEvent scheduled event]]
+    */
+  def add(scheduledEvent: ScheduledEvent): Unit = scheduledEvents(scheduledEvent.uid) = scheduledEvent
 
   /**
     * Adds the given trigger to the configuration
@@ -69,69 +77,21 @@ class ETLConfig(val baseDir: File) {
   def lookupTrigger(scope: Scope, file: String): Option[Trigger] = triggers.find(_._2.accepts(scope, file)).map(_._2)
 
   /**
+    * Loads the scheduled events found in ./config/scheduled-events.json
+    */
+  def loadScheduledEvents(): Unit = {
+    val scheduledEvents = ScheduledEvent.loadScheduledEvents(this, configDir)
+    scheduledEvents foreach { scheduledEvent =>
+      add(scheduledEvent)
+      scheduledEvent.update(this)
+    }
+  }
+
+  /**
     * Loads the triggers found in ./config/triggers.json
     */
   def loadTriggers(): Unit = {
-    import net.liftweb.json
-    implicit val defaults = json.DefaultFormats
-
-    val triggersFile = new File(configDir, "triggers.json")
-    if (triggersFile.exists()) {
-      log.info(s"Loading triggers from '${triggersFile.getCanonicalPath}'...")
-      val triggersJs = json.parse(Source.fromFile(triggersFile).mkString).extract[List[TriggerRaw]]
-      triggersJs.map(_.toModel(this)) foreach this.add
-    }
-  }
-
-}
-
-/**
-  * ETLConfig Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object ETLConfig {
-  private[this] lazy val log = LoggerFactory.getLogger(getClass)
-
-  /**
-    * Represents a trigger JSON object
-    * @param name        the name of the trigger
-    * @param constraints the given [[ConstraintRaw constraints]]
-    * @param script      the given script to execute when triggered
-    */
-  case class TriggerRaw(name: String, constraints: Seq[ConstraintRaw], script: String) {
-
-    def toModel(config: ETLConfig) = FileTrigger(name, constraints.flatMap(_.toModel), compileScript(config))
-
-    private def compileScript(config: ETLConfig): Executable = {
-      val scriptFile = new File(config.scriptsDir, script)
-      log.info(s"[$name] Compiling script '${scriptFile.getName}'...")
-      CodeBlock(operations = QweryCompiler.compileFully(Source.fromFile(scriptFile).mkString).toSeq)
-    }
-  }
-
-  /**
-    * Represents a constraint JSON object
-    * @param contains   represents a "contains" constraint (e.g. "constraints": [{"prefix": "companylist"}])
-    * @param equals     represents a "equals" constraint (e.g. "constraints": [{"equals": "companylist.csv"}])
-    * @param prefix     represents a "prefix" constraint (e.g. "constraints": [{"prefix": "company"}])
-    * @param regex      represents a "regex" constraint (e.g. "constraints": [{"regex": "company*.csv"}])
-    * @param suffix     represents a "suffix" constraint (e.g. "constraints": [{"suffix": ".csv"}])
-    * @param ignoreCase represents a "ignoreCase" constraint (e.g. "constraints": [{"ignoreCase": true}])
-    */
-  case class ConstraintRaw(contains: Option[String],
-                           equals: Option[String],
-                           prefix: Option[String],
-                           regex: Option[String],
-                           suffix: Option[String],
-                           ignoreCase: Option[Boolean]) {
-    def toModel: Seq[Constraint] = {
-      val ignoresCase = ignoreCase.contains(true)
-      contains.map(contains => ContainsConstraint(contains, ignoreCase = ignoresCase)).toList :::
-        equals.map(equals => EqualsConstraint(equals, ignoreCase = ignoresCase)).toList :::
-        prefix.map(prefix => PrefixConstraint(prefix, ignoreCase = ignoresCase)).toList :::
-        regex.map(regex => RegExConstraint(regex)).toList :::
-        suffix.map(suffix => SuffixConstraint(suffix, ignoreCase = ignoresCase)).toList
-    }
+    FileTrigger.loadTriggers(this, configDir) foreach add
   }
 
 }

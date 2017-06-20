@@ -15,7 +15,7 @@ object QweryCLI {
   private val compiler = new QweryCompiler()
   private val tabular = new Tabular()
   private var ticker = 0L
-  private val globalScope = Scope.root().includeEnvVars
+  private val globalScope = Scope.root()
   private val sb = new StringBuilder()
 
   /**

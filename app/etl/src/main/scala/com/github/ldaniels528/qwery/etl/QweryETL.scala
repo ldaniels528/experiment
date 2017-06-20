@@ -37,10 +37,11 @@ object QweryETL {
 
     // load the configuration
     val config = new ETLConfig(baseDir)
+    config.loadScheduledEvents()
     config.loadTriggers()
 
     // define the root scope
-    val rootScope = Scope.root().includeEnvVars
+    val rootScope = Scope.root()
 
     // get references to the support actors
     val fileManager = config.fileManager

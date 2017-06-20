@@ -1,0 +1,5 @@
+[{
+  "name": "OncePerDay",
+  "script": "oncePerDay.sql",
+  "times": ["8:15", "20:15", "22:45"]
+}]
