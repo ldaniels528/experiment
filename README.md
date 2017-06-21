@@ -33,6 +33,7 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
         * <a href="#sample-sql-script">Sample SQL script</a>
         * <a href="#file-archival">File Archival</a>
+        * <a href="#scheduled-events">Scheduled Events</a>        
         * <a href="#building-etl">Building and running the ETL</a>
 * <a href="#repl">Qwery REPL</a>
     * <a href="#repl_start">Start the REPL</a>
@@ -546,7 +547,7 @@ Moreover, `INSERT` supports the notion of hints. You can provide "hints" to the 
 read or write:
 
 ```sql
-INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
 WITH CSV FORMAT
@@ -993,15 +994,16 @@ The directory structure is as follows:
 | $QWERY_HOME/script    | The directory where Qwery looks for user-created SQL script files |
 | $QWERY_HOME/work      | The directory where Qwery processes files                     |
 
-The ETL module two things to create a workflow; a trigger configuration and a SQL script. The trigger configuration defines
-which file(s) will be processed, and the SQL script describes how data will be extracted and where it will be written.
+The ETL module requires two things to create a workflow; a trigger configuration and a SQL script. The trigger 
+configuration defines which file(s) will be processed, and the SQL script describes how data will be extracted and 
+where it will be written.
 
 <a name="sample-trigger-file"></a>
-##### Sample Trigger Configuration File
+##### Trigger Files Configuration
 
 The following is an example of a simple trigger file configuration. This example essentially directs Qwery to look for 
 files (in $QWERY_HOME/inbox) starting with "companylist" (prefix) and ending in ".csv" (suffix), and processing them 
-using the script file.
+using the script file (in $QWERY_HOME/scripts).
 
 ```json
 [{
@@ -1017,7 +1019,7 @@ using the script file.
 The following is script to execute ($QWERY_HOME/scripts/companylist.sql) when the file has been observed:
 
 ```sql
-INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT 
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv" 
 WITH CSV FORMAT
@@ -1031,7 +1033,7 @@ As a result, Qwery supports the substitution of pre-defined variables for the in
 script which is functionally identical to the one above.
 
 ```sql
-INSERT INTO "{{ work.file.base }}.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "{{ work.file.base }}.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT 
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "{{ work.file.path }}"
 WITH CSV FORMAT
@@ -1088,6 +1090,22 @@ By convention, on a file has been processed, Qwery stores the file in $QWERY_HOM
 * _pid_ is the unique processing ID assigned to the ETL job (e.g. "9bfc2e45-92bd-4fa4-b618-84ba554be1f8")
 
 Example: example/archive/2017/05/28/061107/9bfc2e45-92bd-4fa4-b618-84ba554be1f8/companylist.csv
+
+
+<a name="scheduled-events"></a>
+##### Scheduled Events
+
+The following is an example of a simple scheduled event configuration. This example instructs Qwery execute the
+indicated script 'thricePerDay.sql' (found in $QWERY_HOME/scripts) three times daily. Once at 8:15am, again at 8:15pm 
+and finally at 10:45pm.
+
+```json
+[{
+  "name": "ThricePerDay",
+  "script": "thricePerDay.sql",
+  "times": ["8:15", "20:15", "22:45"]
+}]
+```
 
 <a name="building-etl"></a>
 ### Building and running the ETL

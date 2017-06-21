@@ -1,5 +1,5 @@
 [{
-  "name": "OncePerDay",
-  "script": "oncePerDay.sql",
+  "name": "ThricePerDay",
+  "script": "thricePerDay.sql",
   "times": ["8:15", "20:15", "22:45"]
 }]
