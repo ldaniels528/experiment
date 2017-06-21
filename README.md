@@ -590,7 +590,7 @@ WITH CSV FORMAT;
 Here is an example of generating fixed-width data:
 
 ```sql
-INSERT INTO 'fixed-data.txt' WITH FIXED WIDTH (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10)
+INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10) WITH FIXED WIDTH 
 SELECT Symbol, Name, Sector, Industry, LastSale
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
@@ -820,7 +820,7 @@ DESCRIBE "./companylist.csv";
 And as you would imagine, you can "describe" the result of a query:
 
 ```sql
-DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM "companylist.csv");
+DESCRIBE (SELECT Symbol, Name, Sector, Industry, CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM "companylist.csv");
 ```
 ```text
 + -------------------------------------------- +
