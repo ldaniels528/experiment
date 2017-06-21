@@ -39,7 +39,7 @@ trait SourceUrlParser {
     hints flatMap {
       case h if h.avro.nonEmpty => Option(AvroInputSource(device, hints))
       case h if h.delimiter.nonEmpty => Option(DelimitedInputSource(device, hints))
-      case h if h.fixed.contains(true) => Option(FixedLengthInputSource(device, hints))
+      case h if h.fixed.contains(true) => Option(FixedWidthInputSource(device, hints))
       case h if h.isJson.contains(true) | h.jsonPath.nonEmpty => Option(JSONInputSource(device, hints))
       case _ =>
         device match {
@@ -53,7 +53,7 @@ trait SourceUrlParser {
     hints flatMap {
       case h if h.avro.nonEmpty => Option(AvroOutputSource(device, hints))
       case h if h.delimiter.nonEmpty => Option(DelimitedOutputSource(device, hints))
-      case h if h.fixed.contains(true) => Option(FixedLengthOutputSource(device, hints))
+      case h if h.fixed.contains(true) => Option(FixedWidthOutputSource(device, hints))
       case h if h.isJson.contains(true) | h.jsonPath.nonEmpty => Option(JSONOutputSource(device, hints))
       case _ =>
         device match {

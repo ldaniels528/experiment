@@ -25,13 +25,9 @@ object Field {
   /**
     * Creates a new fixed-width field
     * @param name the name of the field
-    * @return a new [[FixedWidth field]] instance
+    * @return a new [[FixedWithField field]] instance
     */
-  def apply(name: String, width: Int): Field with FixedWidth = {
-    new BasicField(name) with FixedWidth {
-      val width: Int = width
-    }
-  }
+  def apply(name: String, width: Int): FixedWithField = FixedWithField(name, width)
 
   /**
     * Creates a new field from a token
@@ -45,7 +41,7 @@ object Field {
         val name = ts.next().text
         ts.expect("^")
         val width = ts.next().text.toDouble.toInt
-        apply(name, width)
+        FixedWithField(name, width)
       case ts => BasicField(ts.next().text)
     }
   }
@@ -67,16 +63,19 @@ object AllFields extends BasicField(name = "*")
   * @author lawrence.daniels@gmail.com
   */
 case class BasicField(name: String) extends Field {
-
   override def evaluate(scope: Scope): Option[Any] = scope.get(name)
+}
 
+case class FixedWithField(name: String, width: Int) extends Field with FixedWidth {
+  override def evaluate(scope: Scope): Option[Any] = scope.get(name)
 }
 
 /**
   * Represents a fixed-width trait
   * @author lawrence.daniels@gmail.com
   */
-trait FixedWidth extends Field {
+trait FixedWidth {
+  this: Field =>
 
   def width: Int
 
@@ -92,7 +91,7 @@ case class JoinField(alias: String, columnName: String) extends Field {
   val name = s"$alias.$columnName"
 
   override def evaluate(scope: Scope): Option[Any] = {
-    (scope.getTuple(name) ?? scope.getTuple(columnName)).map(_._2)
+    (scope.getColumn(name) ?? scope.getColumn(columnName)).map(_._2)
   }
 
 }

@@ -29,14 +29,14 @@ trait Scope {
     * @param name the name of the desired column
     * @return the option of a value
     */
-  def get(name: String): Option[Any] = getTuple(name).map(_._2)
+  def get(name: String): Option[Any] = getColumn(name).map(_._2)
 
   /**
     * Returns a column-value pair by name
     * @param name the name of the desired column
     * @return the option of a column-value tuple
     */
-  def getTuple(name: String): Option[(String, Any)] = row.find(_._1.equalsIgnoreCase(name))
+  def getColumn(name: String): Option[Column] = row.find(_._1.equalsIgnoreCase(name))
 
   /////////////////////////////////////////////////////////////////
   //    Files
@@ -216,9 +216,9 @@ object Scope {
     */
   case class ChildScope(parent: Scope, row: Row = Nil) extends Scope {
 
-    override def get(name: String): Option[Any] = getTuple(name).map(_._2)
+    override def get(name: String): Option[Any] = getColumn(name).map(_._2)
 
-    override def getTuple(name: String): Option[(String, Any)] = super.getTuple(name) ?? parent.getTuple(name)
+    override def getColumn(name: String): Option[(String, Any)] = super.getColumn(name) ?? parent.getColumn(name)
 
     override def lookupFunction(name: String): Option[Function] = {
       super.lookupFunction(name) ?? parent.lookupFunction(name)
