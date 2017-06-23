@@ -11,14 +11,28 @@ val curatorVersion = "3.1.0"
 val kafkaVersion = "0.10.2.1"
 val slf4jVersion = "1.7.25"
 
-homepage := Some(url("https://github.com/ldaniels528/qwery"))
+lazy val root = (project in file("./app/bundle")).
+  aggregate(cli, etl).
+  dependsOn(cli, etl).
+  settings(publishingSettings: _*).
+  settings(
+    name := "qwery-bundle",
+    organization := "io.scalajs",
+    description := "Qwery Application Bundle",
+    version := apiVersion,
+    scalaVersion := appScalaVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true
+  )
 
 lazy val cli = (project in file("./app/cli")).
   aggregate(core).
   dependsOn(core).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-cli",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "Qwery CLI Application",
     version := apiVersion,
     scalaVersion := appScalaVersion,
@@ -44,9 +58,10 @@ lazy val cli = (project in file("./app/cli")).
 lazy val etl = (project in file("./app/etl")).
   aggregate(core).
   dependsOn(core).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-etl",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "Qwery ETL and Orchestration Server",
     version := apiVersion,
     scalaVersion := appScalaVersion,
@@ -70,9 +85,10 @@ lazy val etl = (project in file("./app/etl")).
     ))
 
 lazy val core = (project in file(".")).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-core",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "A SQL-like query language for performing ETL",
     version := apiVersion,
     scalaVersion := appScalaVersion,
@@ -134,8 +150,8 @@ lazy val publishingSettings = Seq(
           <id>ldaniels528</id>
           <name>Lawrence Daniels</name>
           <email>lawrence.daniels@gmail.com</email>
-          <organization>com.github.ldaniels528</organization>
-          <organizationUrl>https://github.com/ldaniels528</organizationUrl>
+          <organization>io.scalajs</organization>
+          <organizationUrl>https://github.com/scalajs-io</organizationUrl>
           <roles>
             <role>Project-Administrator</role>
             <role>Developer</role>
@@ -146,4 +162,4 @@ lazy val publishingSettings = Seq(
 )
 
 // loads the Scalajs-io root project at sbt startup
-onLoad in Global := (Command.process("project cli", _: State)) compose (onLoad in Global).value
+onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value
