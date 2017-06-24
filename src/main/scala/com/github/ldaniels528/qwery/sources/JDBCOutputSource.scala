@@ -79,7 +79,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     val sql = sqlGenerator.insert(tableName, row)
     conn_? map { conn =>
       val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
-      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+      row.columns.map(_._2).zipWithIndex foreach { case (value, index) =>
         ps.setObject(index + 1, value)
       }
       (ps.executeUpdate(), 0)
@@ -90,7 +90,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     val sql = sqlGenerator.update(tableName, row, where)
     conn_? map { conn =>
       val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
-      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+      row.columns.map(_._2).zipWithIndex foreach { case (value, index) =>
         ps.setObject(index + 1, value)
       }
       where.zipWithIndex foreach { case (name, index) =>
@@ -104,7 +104,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     val sql = sqlGenerator.update(tableName, row, where)
     conn_? map { conn =>
       val ps = preparedStatements.getOrElseUpdate(sql, conn.prepareStatement(sql))
-      row.map(_._2).zipWithIndex foreach { case (value, index) =>
+      row.columns.map(_._2).zipWithIndex foreach { case (value, index) =>
         ps.setObject(index + 1, value)
       }
       (0, ps.executeUpdate())

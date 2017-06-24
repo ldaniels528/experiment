@@ -23,13 +23,13 @@ case class DelimitedOutputSource(device: OutputDevice, hints: Option[Hints] = So
     // apply the headers?
     if (applyHeaders && !headersApplied) {
       headersApplied = true
-      val headers = row.map(_._1).map(s => '"' + s + '"').mkString(delimiter)
+      val headers = row.columns.map(_._1).map(s => '"' + s + '"').mkString(delimiter)
       offset += 1
       device.write(Record(headers.getBytes(), offset))
     }
 
     // apply a line of data
-    val line = row.map(_._2).map(_.asInstanceOf[Object]).map {
+    val line = row.columns.map(_._2).map(_.asInstanceOf[Object]).map {
       case n: Number if quotedNumbers => quoted(numberFormat.format(n))
       case n: Number => numberFormat.format(n)
       case x => asString(x)

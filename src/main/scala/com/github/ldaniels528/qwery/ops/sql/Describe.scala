@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops.sql
 
-import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Row, Scope}
 import com.github.ldaniels528.qwery.util.StringHelper._
 
 import scala.language.postfixOps
@@ -13,12 +13,12 @@ case class Describe(source: Executable, limit: Option[Int] = None) extends Execu
 
   override def execute(scope: Scope): ResultSet = {
     val rows = source.execute(scope).take(1)
-    val header = if (rows.hasNext) rows.next() else Map.empty
-    ResultSet(rows = header.take(limit getOrElse Int.MaxValue).toSeq map { case (name, value) =>
+    val header = if (rows.hasNext) rows.next().columns else Nil
+    ResultSet(rows = header.take(limit getOrElse Int.MaxValue) map { case (name, value) =>
       Seq(
         "Column" -> name,
         "Type" -> Option(value).map(_.getClass.getSimpleName).orNull,
-        "Sample" -> Option(value).map(_.toString.toSingleLine).orNull)
+        "Sample" -> Option(value).map(_.toString.toSingleLine).orNull) : Row
     } toIterator)
   }
 

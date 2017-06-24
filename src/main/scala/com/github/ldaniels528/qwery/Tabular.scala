@@ -21,8 +21,8 @@ class Tabular() {
     */
   def transform(results: ResultSet): Seq[String] = {
     val values = results.toSeq
-    val headers = values.headOption.map(_.map(_._1).toSeq).toSeq.flatten
-    val rows = values.map(v => Map(v map { case (name, value) => (name, asString(value)) }: _*))
+    val headers = values.headOption.map(_.columns.map(_._1).toSeq).toSeq.flatten
+    val rows = values.map(v => Map(v.columns map { case (name, value) => (name, asString(value)) }: _*))
     makeTable(headers, rows)
   }
 

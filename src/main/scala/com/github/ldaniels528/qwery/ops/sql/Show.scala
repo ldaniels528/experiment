@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.ops.sql
 import java.util.Date
 
 import com.github.ldaniels528.qwery.QweryDecompiler._
-import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Row, Scope}
 
 /**
   * Show Statement
@@ -20,23 +20,23 @@ case class Show(entityType: String) extends Executable {
           "Size" -> file.length,
           "LastModified" -> new Date(file.lastModified),
           "Path" -> file.getCanonicalFile.getParent
-        )).toIterator)
+        ): Row).toIterator)
 
       case "FUNCTIONS" =>
         ResultSet(scope.getFunctions.map(function =>
-          Seq("Name" -> function.name, "Value" -> function.executable.toSQL)).toIterator)
+          Seq("Name" -> function.name, "Value" -> function.executable.toSQL): Row).toIterator)
 
       case "PROCEDURES" =>
         ResultSet(scope.getProcedures.map(procedure =>
-          Seq("Name" -> procedure.name, "Value" -> procedure.executable.toSQL)).toIterator)
+          Seq("Name" -> procedure.name, "Value" -> procedure.executable.toSQL): Row).toIterator)
 
       case "VARIABLES" =>
         ResultSet(scope.getVariables.map(variable =>
-          Seq("Name" -> variable.name, "Value" -> variable.value)).toIterator)
+          Seq("Name" -> variable.name, "Value" -> variable.value): Row).toIterator)
 
       case "VIEWS" =>
         ResultSet(scope.getViews.map(view =>
-          Seq("Name" -> view.name, "Value" -> view.query.toSQL)).toIterator)
+          Seq("Name" -> view.name, "Value" -> view.query.toSQL): Row).toIterator)
 
       case unknown =>
         throw new IllegalArgumentException(s"Invalid entity type '$unknown'")

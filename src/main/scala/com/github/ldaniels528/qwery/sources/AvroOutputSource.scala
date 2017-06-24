@@ -19,7 +19,7 @@ case class AvroOutputSource(device: OutputDevice, hints: Option[Hints])
 
   override def write(row: Row): Unit = {
     offset += 1
-    val bytes = transcodeJsonToAvroBytes(json = compactRender(decompose(Map(row: _*))), schema = schema)
+    val bytes = transcodeJsonToAvroBytes(json = compactRender(decompose(Map(row.columns: _*))), schema = schema)
     device.write(Record(bytes, offset))
   }
 

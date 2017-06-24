@@ -10,27 +10,27 @@ import com.github.ldaniels528.qwery.ops._
 class SQLGenerator {
 
   def insert(tableName: String, row: Row): String = {
-    val columns = row.map(_._1)
+    val columnNames = row.columns.map(_._1)
     s"INSERT INTO $tableName (${
-      columns.mkString(",")
+      columnNames.mkString(",")
     }) VALUES (${
-      columns.indices.map(_ => "?").mkString(",")
+      columnNames.indices.map(_ => "?").mkString(",")
     })"
   }
 
   def update(tableName: String, row: Row, where: Seq[String]): String = {
-    val columns = row.map(_._1)
+    val columnNames = row.columns.map(_._1)
     s"UPDATE $tableName SET ${
-      columns.map(name => s"$name=?").mkString(",")
+      columnNames.map(name => s"$name=?").mkString(",")
     } WHERE ${
       where.map(name => s"$name=?").mkString(" AND ")
     }"
   }
 
   def update(tableName: String, row: Row, condition: Condition): String = {
-    val columns = row.map(_._1)
+    val columnNames = row.columns.map(_._1)
     s"UPDATE $tableName SET ${
-      columns.map(name => s"$name=?").mkString(",")
+      columnNames.map(name => s"$name=?").mkString(",")
     } WHERE ${condition.toSQL}"
   }
 

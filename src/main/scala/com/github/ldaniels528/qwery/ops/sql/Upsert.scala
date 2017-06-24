@@ -18,7 +18,7 @@ case class Upsert(target: DataResource, fields: Seq[Field], source: Executable, 
     outputSource.open(scope)
     outputSource use { device =>
       source.execute(scope) foreach { row =>
-        val upsertRow: Row = fields zip row map { case (field, (_, value)) =>
+        val upsertRow: Row = fields zip row.columns map { case (field, (_, value)) =>
           field.name -> value
         }
         device.upsert(upsertRow, keyedOn.map(_.name)) foreach { case (inserts, updates) =>

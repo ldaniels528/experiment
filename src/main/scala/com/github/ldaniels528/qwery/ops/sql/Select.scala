@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.ops.sql
 
 import com.github.ldaniels528.qwery.ops.NamedExpression._
+import com.github.ldaniels528.qwery.ops.Row._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.sql.Select._
 
@@ -72,11 +73,11 @@ case class Select(fields: Seq[Expression],
                                     aggregates: Seq[Expression with Aggregation],
                                     groupFields: Seq[String]): ResultSet = {
     val groupField = groupFields.headOption.orNull
-    val groupedResults = resultSets.toSeq.groupBy(_.row.find(_._1.equalsIgnoreCase(groupField)).map(_._2).orNull)
+    val groupedResults = resultSets.toSeq.groupBy(_.row.get(groupField).orNull)
     ResultSet(rows = groupedResults map { case (_, rows) =>
-      rows.foreach(row => aggregates.foreach(_.update(row)))
+      rows.foreach(rowScope => aggregates.foreach(_.update(rowScope)))
       val scope = Scope(parentScope)
-      aggregates.map(expand(scope, _))
+      aggregates.map(expand(scope, _)): Row
     } toIterator)
   }
 

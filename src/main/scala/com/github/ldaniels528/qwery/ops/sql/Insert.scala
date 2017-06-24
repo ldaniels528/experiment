@@ -17,7 +17,7 @@ case class Insert(target: DataResource, fields: Seq[Field], source: Executable) 
     outputSource.open(scope)
     outputSource use { device =>
       source.execute(scope) foreach { row =>
-        device.write(fields zip row map { case (field, (_, value)) =>
+        device.write(fields zip row.columns map { case (field, (_, value)) =>
           field.name -> value
         })
         count += 1

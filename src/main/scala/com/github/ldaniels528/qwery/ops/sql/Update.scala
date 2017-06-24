@@ -26,7 +26,7 @@ case class Update(target: DataResource, assignments: Seq[(String, Expression)], 
 
         // build the updated row
         val mappings = Map(assignments.flatMap { case (name, expr) => expr.evaluate(scope).map(name -> _) }: _*)
-        val updateRow: Row = row map { case (name, value) =>
+        val updateRow: Row = row.columns map { case (name, value) =>
           name -> mappings.getOrElse(name, value)
         }
 
@@ -35,7 +35,7 @@ case class Update(target: DataResource, assignments: Seq[(String, Expression)], 
           case Success(results) => results.foreach { case (_, updates) => updated += updates }
           case Failure(e) =>
             log.error(s"JDBC Update # $offset failed: ${e.getMessage}")
-            log.error(s"Record: [${updateRow map { case (k, v) => s"$k:'$v'" } mkString ","}]")
+            log.error(s"Record: [${updateRow.columns map { case (k, v) => s"$k:'$v'" } mkString ","}]")
         }
       }
     }
