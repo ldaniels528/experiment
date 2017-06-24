@@ -1,8 +1,8 @@
 package com.github.ldaniels528.qwery.sources
 
-import FixedWidthOutputSource._
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
-import com.github.ldaniels528.qwery.ops.{Field, FixedWidth, Hints, Row, RowEnrichment}
+import com.github.ldaniels528.qwery.ops.{Field, FixedWidth, Hints, Row}
+import com.github.ldaniels528.qwery.sources.FixedWidthOutputSource._
 
 /**
   * Fixed-width Output Source

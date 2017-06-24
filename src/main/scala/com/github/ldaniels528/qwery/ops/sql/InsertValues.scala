@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.ops.sql
 
-import com.github.ldaniels528.qwery.ops.{Executable, Expression, NamedExpression, ResultSet, Scope}
+import com.github.ldaniels528.qwery.ops._
 
 import scala.language.postfixOps
 
@@ -15,7 +15,7 @@ case class InsertValues(dataSets: Seq[Seq[Expression]]) extends Executable {
     ResultSet(rows = dataSets map { dataSet =>
       fieldNames zip dataSet map { case (field, value) =>
         field -> value.evaluate(scope).orNull
-      }
+      }: Row
     } toIterator)
   }
 

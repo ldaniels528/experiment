@@ -29,14 +29,14 @@ trait Scope {
     * @param name the name of the desired column
     * @return the option of a value
     */
-  def get(name: String): Option[Any] = getColumn(name).map(_._2)
+  def get(name: String): Option[Any] = row.get(name)
 
   /**
     * Returns a column-value pair by name
     * @param name the name of the desired column
     * @return the option of a column-value tuple
     */
-  def getColumn(name: String): Option[Column] = row.find(_._1.equalsIgnoreCase(name))
+  def getColumn(name: String): Option[Column] = row.getColumn(name)
 
   /////////////////////////////////////////////////////////////////
   //    Files

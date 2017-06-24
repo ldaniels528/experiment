@@ -105,12 +105,13 @@ lazy val core = (project in file(".")).
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",
       //
-      // Akka
+      // TypeSafe
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "com.typesafe.play" %% "play-json" % "2.6.0",
       //
-      // Kafka/Zookeeper
+      // Apache
       "org.apache.avro" % "avro" % "1.8.1",
       "org.apache.curator" % "curator-framework" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
       "org.apache.curator" % "curator-test" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),

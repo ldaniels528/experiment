@@ -15,7 +15,7 @@ case class JSONOutputSource(device: OutputDevice, hints: Option[Hints] = None) e
 
   override def write(row: Row): Unit = {
     offset += 1
-    device.write(Record(compactRender(decompose(Map(row: _*))).getBytes(), offset))
+    device.write(Record(compactRender(decompose(Map(row.columns: _*))).getBytes(), offset))
   }
 
 }

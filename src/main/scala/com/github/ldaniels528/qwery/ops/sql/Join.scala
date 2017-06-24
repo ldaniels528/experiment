@@ -24,8 +24,8 @@ case class InnerJoin(leftAlias: Option[String], right: NamedResource, condition:
       left.execute(scope).rows flatMap { rowLeft =>
         right.execute(scope).rows flatMap { rowRight =>
           val combinedRow: Row =
-            rowLeft.map { case (name, value) => leftAlias.map(alias => s"$alias.$name").getOrElse(name) -> value } ++
-              rowRight.map { case (name, value) => s"${right.name}.$name" -> value }
+            rowLeft.columns.map { case (name, value) => leftAlias.map(alias => s"$alias.$name").getOrElse(name) -> value } ++
+              rowRight.columns.map { case (name, value) => s"${right.name}.$name" -> value }
 
           // determine whether to include the row
           if (condition.isSatisfied(Scope(scope, combinedRow))) Some(combinedRow) else None

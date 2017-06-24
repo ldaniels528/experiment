@@ -44,7 +44,7 @@ class ProcedureTest extends FunSpec {
       val resultSet = Call(name = "test5", args = Nil).execute(scope)
 
       info("4 records should have been inserted")
-      assert(resultSet.rows.toSeq == Seq(Seq(("ROWS_INSERTED", 4))))
+      assert(resultSet.rows.toSeq == Seq(Row(("ROWS_INSERTED", 4))))
 
       Seq("test5.csv", "test5.json").map(new File(_)) foreach { file =>
         info(s"'${file.getName}' should exist")
