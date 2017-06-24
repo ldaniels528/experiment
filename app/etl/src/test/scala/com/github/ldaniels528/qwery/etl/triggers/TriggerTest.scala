@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery.etl.triggers
 
-import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.QweryCompiler
+import com.github.ldaniels528.qwery.ops.{Row, Scope}
 import org.scalatest.FunSpec
 
 /**
@@ -16,16 +17,16 @@ class TriggerTest extends FunSpec {
       val trigger = FileTrigger(
         name = "Company Lists",
         constraints = List(PrefixConstraint(prefix = "companylist")),
-        script =
+        executable = QweryCompiler(sql =
           """
-            |INSERT INTO 'companylist.json' WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+            |INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry)
             |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
             |FROM 'companylist.csv' WITH CSV FORMAT
             |WHERE Industry = 'Oil/Gas Transmission'
-          """.stripMargin)
+          """.stripMargin))
 
-      val results = trigger.execute(scope, file = "companylist.csv").toSeq
-      assert(results == Seq(Seq("ROWS_INSERTED" -> 4)))
+      val results = trigger.execute(scope, path = "companylist.csv").toSeq
+      assert(results == Seq(Row("ROWS_INSERTED" -> 4)))
     }
 
   }

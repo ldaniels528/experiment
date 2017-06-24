@@ -4,6 +4,7 @@ import java.io.File
 
 import com.github.ldaniels528.qwery.etl.{ETLConfig, ScriptSupport}
 import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
+import com.github.ldaniels528.qwery.util.JSONSupport
 import org.slf4j.LoggerFactory
 
 import scala.io.Source
@@ -26,20 +27,17 @@ case class FileTrigger(name: String, constraints: Seq[Constraint], executable: E
   * File Trigger
   * @author lawrence.daniels@gmail.com
   */
-object FileTrigger {
+object FileTrigger extends JSONSupport {
   private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
   /**
     * Loads the triggers found in ./config/triggers.json
     */
   def loadTriggers(config: ETLConfig, configDir: File): List[FileTrigger] = {
-    import net.liftweb.json
-    implicit val defaults = json.DefaultFormats
-
     val triggersFile = new File(configDir, "triggers.json")
     if (triggersFile.exists()) {
       log.info(s"Loading triggers from '${triggersFile.getCanonicalPath}'...")
-      val triggersJs = json.parse(Source.fromFile(triggersFile).mkString).extract[List[TriggerRaw]]
+      val triggersJs = parseJsonAs[List[TriggerRaw]](Source.fromFile(triggersFile).mkString)
       triggersJs.map(_.toModel(config))
     }
     else Nil

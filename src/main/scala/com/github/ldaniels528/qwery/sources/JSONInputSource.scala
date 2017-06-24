@@ -3,7 +3,6 @@ package com.github.ldaniels528.qwery.sources
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
 import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
 import com.github.ldaniels528.qwery.util.JSONSupport
-import play.api.libs.json._
 
 import scala.language.postfixOps
 
@@ -20,10 +19,7 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends In
     else {
       device.read() match {
         case Some(Record(bytes, _, _)) =>
-          val json = jsonPath.map(_.getAsString(scope)).foldLeft[JsValue](Json.parse(new String(bytes))) { (jv, elem) =>
-            elem.map(text => (jv \ text).get) getOrElse jv
-          }
-          val rows = parseRows(json)
+          val rows = parseRows(jsonString = new String(bytes), jsonPath = jsonPath.flatMap(_.getAsString(scope)))
           buffer = rows ::: buffer
           getNext
         case None => getNext

@@ -12,7 +12,7 @@ import scala.collection.concurrent.TrieMap
   * Represents a scope
   * @author lawrence.daniels@gmail.com
   */
-trait Scope {
+trait Scope extends DataContainer {
   private lazy val functions = TrieMap[String, Function]()
   private lazy val procedures = TrieMap[String, Procedure]()
   private lazy val variables = TrieMap[String, Variable]()
@@ -29,14 +29,14 @@ trait Scope {
     * @param name the name of the desired column
     * @return the option of a value
     */
-  def get(name: String): Option[Any] = row.get(name)
+  override def get(name: String): Option[Any] = row.get(name)
 
   /**
     * Returns a column-value pair by name
     * @param name the name of the desired column
     * @return the option of a column-value tuple
     */
-  def getColumn(name: String): Option[Column] = row.getColumn(name)
+  override def getColumn(name: String): Option[Column] = row.getColumn(name)
 
   /////////////////////////////////////////////////////////////////
   //    Files
@@ -227,6 +227,7 @@ object Scope {
     override def lookupVariable(name: String): Option[Variable] = {
       super.lookupVariable(name) ?? parent.lookupVariable(name)
     }
+
   }
 
   /**

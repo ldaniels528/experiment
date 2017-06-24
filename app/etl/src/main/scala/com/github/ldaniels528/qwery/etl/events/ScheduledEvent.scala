@@ -7,6 +7,7 @@ import java.util.{Calendar, Date, UUID}
 import com.github.ldaniels528.qwery.etl.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.{ETLConfig, ScriptSupport}
 import com.github.ldaniels528.qwery.ops.{Executable, Scope}
+import com.github.ldaniels528.qwery.util.JSONSupport
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
@@ -79,20 +80,17 @@ case class ScheduledEvent(uid: UUID, name: String, times: Array[String], executa
   * Scheduled Event Companion
   * @author lawrence.daniels@gmail.com
   */
-object ScheduledEvent {
+object ScheduledEvent extends JSONSupport {
   private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
   /**
     * Loads the scheduled events found in ./config/scheduled-events.json
     */
   def loadScheduledEvents(config: ETLConfig, configDir: File): List[ScheduledEvent] = {
-    import net.liftweb.json
-    implicit val defaults = json.DefaultFormats
-
     val scheduledEventsFile = new File(configDir, "scheduled-events.json")
     if (scheduledEventsFile.exists()) {
       log.info(s"Loading scheduled events from '${scheduledEventsFile.getCanonicalPath}'...")
-      val scheduledEventsJs = json.parse(Source.fromFile(scheduledEventsFile).mkString).extract[List[ScheduledEventRaw]]
+      val scheduledEventsJs = parseJsonAs[List[ScheduledEventRaw]](Source.fromFile(scheduledEventsFile).mkString)
       scheduledEventsJs.map(_.toModel(config))
     }
     else Nil

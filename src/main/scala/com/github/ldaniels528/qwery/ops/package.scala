@@ -6,7 +6,9 @@ package com.github.ldaniels528.qwery
   */
 package object ops {
 
+  /**
+    * Represents a column or name-value pair
+    */
   type Column = (String, Any)
-
 
 }

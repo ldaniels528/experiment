@@ -3,7 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val apiVersion = "0.3.7"
+val apiVersion = "0.3.8"
 val appScalaVersion = "2.12.2"
 
 val akkaVersion = "2.5.2"

@@ -98,17 +98,20 @@ SELECT Process, COUNT(*) as Total FROM 'report-data.csv' group by Process;
 *       JSON testing
 ************************************************************************
 
-SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
+SELECT * FROM './data/mfw/1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
 
-SELECT `data.Id`, `data.CreatedById`, `data.city`, `data.state`, `data.AnnualRevenue`, `data.Type`, `data.SystemModstamp` FROM '1495582154423.json';
+SELECT `data.Id`, `data.CreatedById`, `data.city`, `data.state`, `data.AnnualRevenue`, `data.Type`, `data.SystemModstamp`
+FROM './data/mfw/1495582154423.json';
 
-SELECT Id, CreatedById, city, state, AnnualRevenue, Type, SystemModstamp FROM '1495582154423.json' WITH JSON PATH ('data');
+SELECT Id, CreatedById, city, state, country, AnnualRevenue, Type, SystemModstamp
+FROM './data/mfw/1495582154423.json'
+WITH JSON PATH ('data');
 
-DESCRIBE (SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
 
-DESCRIBE (SELECT * FROM '1495582154423.json' LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582154423.json' LIMIT 1);
 
-DESCRIBE (SELECT * FROM '1495582940879.json' LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582940879.json' LIMIT 1);
 
 ************************************************************************
 *       Union testing
