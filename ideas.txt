@@ -9,6 +9,13 @@ SELECT Symbol, Name, Sector, Industry, LastSale
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
 
+
+************************************************************************
+*       Directories of Files
+************************************************************************
+
+select * from 'files://./data/NASDAQ/*.txt' with csv format where `<ticker>` = 'AAPL' limit 30;
+
 ************************************************************************
 *      JOIN testing
 ************************************************************************

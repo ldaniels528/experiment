@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.ops
 import java.io.File
 
 import com.github.ldaniels528.qwery.ops.sql.{Procedure, View}
+import com.github.ldaniels528.qwery.util.FileHelper
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
 import scala.collection.JavaConverters._
@@ -44,14 +45,10 @@ trait Scope extends DataContainer {
 
   /**
     * Returns the files in the currently directory
+    * @param file the given [[File file]]
     * @return a list of files
     */
-  def getFiles(file: File = new File(".")): List[File] = {
-    file match {
-      case f if f.isDirectory => f.listFiles().flatMap(getFiles).toList
-      case f => f :: Nil
-    }
-  }
+  def getFiles(file: File = new File(".")): Stream[File] = FileHelper.getFiles(file)
 
   /////////////////////////////////////////////////////////////////
   //    Functions

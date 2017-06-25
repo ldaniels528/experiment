@@ -62,7 +62,8 @@ object TextFileInputDevice extends InputDeviceFactory with SourceUrlParser {
     */
   override def parseInputURL(path: String, hints: Option[Hints]): Option[InputDevice] = {
     path.toLowerCase() match {
-      case _ if path.startsWith("file://") => Option(TextFileInputDevice(path.drop(7), hints))
+      case s if s.startsWith("files://") => Option(DirectoryInputDevice(path.drop(8), hints))
+      case s if s.startsWith("file://") => Option(TextFileInputDevice(path.drop(7), hints))
       case uri if uri.startsWith("http://") | uri.startsWith("https://") => Option(TextFileInputDevice(path, hints))
       case _ if new File(path).exists() => Option(TextFileInputDevice(path, hints))
       case _ => None

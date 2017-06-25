@@ -28,6 +28,8 @@ object QweryCLI {
     * Starts the REPL
     */
   def start(): Unit = {
+    var debugging = false
+
     alive = true
     println(welcome("CLI"))
     val commandPrompt = CommandPrompt()
@@ -44,13 +46,21 @@ object QweryCLI {
 
           if (line.isEmpty || line.equalsIgnoreCase("exit")) {
             val input = sb.toString().trim
-            if (input.nonEmpty) interpret(input)
+            if (input.nonEmpty) {
+              input match {
+                case "debug" =>
+                  debugging = !debugging
+                  println(s"Debugging is ${if (debugging) "On" else "Off"}")
+                case s => interpret(s)
+              }
+            }
             reset()
           }
         }
       } catch {
         case e: Throwable =>
           System.err.println(e.getMessage)
+          if (debugging) e.printStackTrace()
           reset()
       }
     }

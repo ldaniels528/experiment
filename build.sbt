@@ -99,6 +99,7 @@ lazy val core = (project in file(".")).
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
       "com.twitter" %% "bijection-avro" % "0.9.5",
+      "commons-io" % "commons-io" % "2.5",
       "log4j" % "log4j" % "1.2.17",
       "mysql" % "mysql-connector-java" % "5.1.42",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
