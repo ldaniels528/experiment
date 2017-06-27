@@ -26,8 +26,8 @@ case class DirectoryInputDevice(path: String, hints: Option[Hints]) extends Inpu
 
   private def getFileList = {
     if (path.contains('*')) {
-      val pathPcs = new File(path).getCanonicalPath.split(File.separatorChar)
-      pathPcs.indexWhere(_.contains('*'))  match {
+      val pathPcs = new File(path).getAbsolutePath.split(File.separatorChar)
+      pathPcs.indexWhere(_.contains('*')) match {
         case index =>
           val pathSect = pathPcs.slice(0, index).mkString(File.separator)
           val patternSect = pathPcs.slice(index, pathPcs.length).mkString(File.separator)
