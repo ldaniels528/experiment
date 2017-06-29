@@ -10,15 +10,15 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
 /**
-  * Transgress Client JavaScript Application
+  * Qwery Client JavaScript Application
   * @author lawrence.daniels@gmail.com
   */
-object TransgressWebClientJSApp extends js.JSApp {
+object QweryWebClientJSApp extends js.JSApp {
 
   @JSExport
   override def main(): Unit = {
     // create the application
-    val module = angular.createModule("transgress",
+    val module = angular.createModule("qwery",
       js.Array("ngAnimate", "ngCookies", "ngRoute", "ngSanitize", "nvd3", "angularFileUpload", "hljs", "toaster", "ui.bootstrap"))
 
     // add the custom filters

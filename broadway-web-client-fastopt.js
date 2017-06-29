@@ -1080,105 +1080,404 @@ var $asArrayOf_J = $makeAsArrayOfPrimitive($isArrayOf_J, "J");
 var $asArrayOf_F = $makeAsArrayOfPrimitive($isArrayOf_F, "F");
 var $asArrayOf_D = $makeAsArrayOfPrimitive($isArrayOf_D, "D");
 
-function $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($thiz, jobs, job) {
-  var len = $uI(jobs.length);
-  var i = 0;
-  while (true) {
-    if ((i < len)) {
-      var index = i;
-      var arg1 = jobs[index];
-      var jsx$1 = (!$m_sr_BoxesRunTime$().equals__O__O__Z(arg1._id, job._id))
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__com$github$ldaniels528$transgress$client$controllers$CollapseExpandHandling$$$anonfun$$init$$1__sjs_js_UndefOr__V($thiz, anExpandable) {
+  if ((anExpandable !== (void 0))) {
+    var value = anExpandable.expanded;
+    if ((value === (void 0))) {
+      var valueA = (void 0)
     } else {
-      var jsx$1 = false
+      var opt = $m_s_Option$().apply__O__s_Option(value);
+      if (opt.isEmpty__Z()) {
+        var valueA = (void 0)
+      } else {
+        var arg1 = opt.get__O();
+        var valueA = arg1
+      }
     };
-    if (jsx$1) {
-      i = ((1 + i) | 0)
+    var value$1 = (!((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, true)));
+    anExpandable.expanded = value$1
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__$$init$__V($thiz) {
+  $thiz.$$scope$1.collapseExpand = (function(arg$outer) {
+    return (function(arg1$2) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__com$github$ldaniels528$transgress$client$controllers$CollapseExpandHandling$$$anonfun$$init$$1__sjs_js_UndefOr__V(arg$outer, arg1$2)
+    })
+  })($thiz)
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$3__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var value = aJob.state;
+    if ((value === (void 0))) {
+      return (void 0)
     } else {
-      break
-    }
-  };
-  var n = i;
-  var x1 = ((n >= $uI(jobs.length)) ? (-1) : n);
-  switch (x1) {
-    case (-1): {
-      jobs.push(job);
-      break
-    }
-    default: {
-      var theJob = jobs[x1];
-      theJob.state = job.state;
-      theJob.processingHost = job.processingHost;
-      theJob.statistics = job.statistics
+      var x0$1 = $as_T(value);
+      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$1) ? "images/statuses/offlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$1) ? "images/statuses/yellowlight.gif" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$1) ? "images/statuses/loading16.gif" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$1) ? "images/statuses/redlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$1) ? "images/statuses/greenlight.png" : (void 0))))))))
     }
   }
 }
-function $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__refreshJobs__sc_Seq__s_concurrent_ExecutionContext__V($thiz, jobStates, ec) {
-  var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-  var p = $thiz.jobService__Lcom_github_ldaniels528_bourne_client_services_JobService().getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise(jobStates, ec);
-  jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        var x2 = $as_s_util_Success(x0$1);
-        var response = x2.value$2;
-        return $this.$$scope__Lcom_github_ldaniels528_bourne_client_controllers_JobHandlingScope().$apply((function($this$1, response$1) {
-          return (function() {
-            var array = response$1.data;
-            var i = 0;
-            var len = $uI(array.length);
-            while ((i < len)) {
-              var index = i;
-              var arg1 = array[index];
-              var jobs = $this$1.$$scope__Lcom_github_ldaniels528_bourne_client_controllers_JobHandlingScope().jobs;
-              $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($this$1, jobs, arg1);
-              i = ((1 + i) | 0)
-            }
-          })
-        })($this, response))
-      } else if ($is_s_util_Failure(x0$1)) {
-        var x3 = $as_s_util_Failure(x0$1);
-        var e = x3.exception$2;
-        var jsx$3 = $g.console;
-        var rc6 = false;
-        var x2$1 = null;
-        var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-        matchEnd7: {
-          var s$1;
-          if ($is_s_Some(x1)) {
-            rc6 = true;
-            x2$1 = $as_s_Some(x1);
-            var s = $as_T(x2$1.value$2);
-            var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-            if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-              var jsx$2 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$12 = new $c_sci_StringOps().init___T(s);
-              var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-              var n = $uI(thiz.length);
-              var $$this = this$12.repr$1;
-              var until = $uI($$this.length);
-              var s$1 = jsx$2.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$12.repr$1, n, until));
-              break matchEnd7
-            }
-          };
-          if (rc6) {
-            var s$2 = $as_T(x2$1.value$2);
-            var s$1 = s$2;
-            break matchEnd7
-          };
-          var x = $m_s_None$();
-          if ((x === x1)) {
-            var s$1 = "Cause unknown";
-            break matchEnd7
-          };
-          throw new $c_s_MatchError().init___O(x1)
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_Array($thiz) {
+  var array = $thiz.$$scope$1.jobs;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var valueA = arg1.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
+    if ((((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value)) !== true)) {
+      array$1.push(arg1)
+    };
+    i = ((1 + i) | 0)
+  };
+  return array$1
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$13__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+    return ((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz) {
+  var value = $thiz.$$scope$1.pausing;
+  if ((value === (void 0))) {
+    var valueA = (void 0)
+  } else {
+    var opt = $m_s_Option$().apply__O__s_Option(value);
+    if (opt.isEmpty__Z()) {
+      var valueA = (void 0)
+    } else {
+      var arg1 = opt.get__O();
+      var valueA = arg1
+    }
+  };
+  if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, true))) {
+    var jsx$1 = true
+  } else {
+    var value$1 = $thiz.$$scope$1.resuming;
+    if ((value$1 === (void 0))) {
+      var valueA$1 = (void 0)
+    } else {
+      var opt$1 = $m_s_Option$().apply__O__s_Option(value$1);
+      if (opt$1.isEmpty__Z()) {
+        var valueA$1 = (void 0)
+      } else {
+        var arg1$1 = opt$1.get__O();
+        var valueA$1 = arg1$1
+      }
+    };
+    var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, true))
+  };
+  if (jsx$1) {
+    return true
+  } else {
+    var value$2 = $thiz.$$scope$1.stopping;
+    if ((value$2 === (void 0))) {
+      var valueA$2 = (void 0)
+    } else {
+      var opt$2 = $m_s_Option$().apply__O__s_Option(value$2);
+      if (opt$2.isEmpty__Z()) {
+        var valueA$2 = (void 0)
+      } else {
+        var arg1$2 = opt$2.get__O();
+        var valueA$2 = arg1$2
+      }
+    };
+    return ((valueA$2 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$2, true))
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V($thiz) {
+  $thiz.$$scope$1.jobs = [];
+  $thiz.$$scope$1.getRunningJobs = (function(arg$outer) {
+    return (function() {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_Array(arg$outer)
+    })
+  })($thiz);
+  $thiz.$$scope$1.getJobStatusBulb = (function(arg$outer$1) {
+    return (function(arg1$2) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$3__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$1, arg1$2)
+    })
+  })($thiz);
+  $thiz.$$scope$1.getJobStatusClass = (function(arg$outer$2) {
+    return (function(arg1$2$1) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$2, arg1$2$1)
+    })
+  })($thiz);
+  $thiz.$$scope$1.isPausable = (function(arg$outer$3) {
+    return (function(arg1$2$2) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z(arg$outer$3, arg1$2$2)
+    })
+  })($thiz);
+  $thiz.$$scope$1.isResumable = (function(arg$outer$4) {
+    return (function(arg1$2$3) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$11__sjs_js_UndefOr__Z(arg$outer$4, arg1$2$3)
+    })
+  })($thiz);
+  $thiz.$$scope$1.isRunning = (function(arg$outer$5) {
+    return (function(arg1$2$4) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$13__sjs_js_UndefOr__Z(arg$outer$5, arg1$2$4)
+    })
+  })($thiz);
+  $thiz.$$scope$1.isStoppable = (function(arg$outer$6) {
+    return (function(arg1$2$5) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$15__sjs_js_UndefOr__Z(arg$outer$6, arg1$2$5)
+    })
+  })($thiz);
+  $thiz.$$scope$1.selectJob = (function(arg$outer$7) {
+    return (function(arg1$2$6) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$17__sjs_js_UndefOr__V(arg$outer$7, arg1$2$6)
+    })
+  })($thiz);
+  $thiz.$$scope$1.updateJob = (function(arg$outer$8) {
+    return (function(arg1$2$7, arg2$2) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__sjs_js_UndefOr__V(arg$outer$8, arg1$2$7, arg2$2)
+    })
+  })($thiz)
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var value = aJob.state;
+    if ((value === (void 0))) {
+      return (void 0)
+    } else {
+      var x0$2 = $as_T(value);
+      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$2) ? "status_new" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$2) ? "status_claimed" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$2) ? "status_paused" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$2) ? "status_queued" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$2) ? "status_running" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$2) ? "status_stopped" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$2) ? "status_success" : (void 0))))))))
+    }
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$17__sjs_js_UndefOr__V($thiz, aJob) {
+  var jsx$2 = $thiz.$$scope$1;
+  if ((aJob === (void 0))) {
+    var jsx$1 = (void 0)
+  } else {
+    var opt = $m_s_Option$().apply__O__s_Option(aJob);
+    if (opt.isEmpty__Z()) {
+      var jsx$1 = (void 0)
+    } else {
+      var arg1 = opt.get__O();
+      var jsx$1 = arg1
+    }
+  };
+  jsx$2.selectedJob = jsx$1
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aJobs, aJob) {
+  if ((aJobs !== (void 0))) {
+    if ((aJob !== (void 0))) {
+      var len = $uI(aJobs.length);
+      var i = 0;
+      while (true) {
+        if ((i < len)) {
+          var index = i;
+          var arg1 = aJobs[index];
+          var valueA = arg1._id;
+          var valueB = aJob._id;
+          var jsx$1 = (!((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))))
+        } else {
+          var jsx$1 = false
         };
-        jsx$3.error(s$1);
+        if (jsx$1) {
+          i = ((1 + i) | 0)
+        } else {
+          break
+        }
+      };
+      var n = i;
+      var x1 = ((n >= $uI(aJobs.length)) ? (-1) : n);
+      switch (x1) {
+        case (-1): {
+          $uI(aJobs.push(aJob));
+          break
+        }
+        default: {
+          var theJob = aJobs[x1];
+          theJob.state = aJob.state;
+          theJob.processingHost = aJob.processingHost;
+          theJob.statistics = aJob.statistics
+        }
+      }
+    }
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$15__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      var jsx$1 = true
+    } else {
+      var valueA$1 = aJob.state;
+      var value$1 = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
+    };
+    if (jsx$1) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$11__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      var jsx$1 = true
+    } else {
+      var valueA$1 = aJob.state;
+      var value$1 = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1;
+      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
+    };
+    if (jsx$1) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__com$github$ldaniels528$transgress$client$controllers$SlaveHandling$$$anonfun$$init$$7__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aSlave) {
+  if ((aSlave === (void 0))) {
+    return (void 0)
+  } else {
+    var value = aSlave.concurrency;
+    if ((value === (void 0))) {
+      return (void 0)
+    } else {
+      var concurrency = $uI(value);
+      var value$1 = aSlave.maxConcurrency;
+      var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+        return (function(maxConcurrency$2) {
+          var maxConcurrency = $uI(maxConcurrency$2);
+          return (maxConcurrency > 0)
+        })
+      })($thiz));
+      var this$13 = new $c_sjs_js_UndefOrOps$WithFilter().init___sjs_js_UndefOr__F1(value$1, p);
+      var value$2 = this$13.self$1;
+      var p$1 = this$13.p$1;
+      var value$3 = (((value$2 === (void 0)) || $uZ(p$1.apply__O__O(value$2))) ? value$2 : (void 0));
+      if ((value$3 === (void 0))) {
         return (void 0)
       } else {
-        throw new $c_s_MatchError().init___O(x0$1)
+        var maxConcurrency$3 = $uI(value$3);
+        var value$4 = (100.0 * (concurrency / maxConcurrency$3));
+        return value$4
       }
+    }
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__com$github$ldaniels528$transgress$client$controllers$SlaveHandling$$$anonfun$$init$$1__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aSlaves, aSlave) {
+  if ((aSlaves !== (void 0))) {
+    if ((aSlave !== (void 0))) {
+      var len = $uI(aSlaves.length);
+      var i = 0;
+      while (true) {
+        if ((i < len)) {
+          var index = i;
+          var arg1 = aSlaves[index];
+          var jsx$1 = (!$m_sr_BoxesRunTime$().equals__O__O__Z(arg1._id, aSlave._id))
+        } else {
+          var jsx$1 = false
+        };
+        if (jsx$1) {
+          i = ((1 + i) | 0)
+        } else {
+          break
+        }
+      };
+      var n = i;
+      var x1 = ((n >= $uI(aSlaves.length)) ? (-1) : n);
+      switch (x1) {
+        case (-1): {
+          $uI(aSlaves.push(aSlave));
+          break
+        }
+        default: {
+          var theSlave = aSlaves[x1];
+          theSlave.concurrency = aSlave.concurrency;
+          theSlave.maxConcurrency = aSlave.maxConcurrency;
+          theSlave.lastUpdated = aSlave.lastUpdated;
+          var value = theSlave.jobs;
+          if ((value === (void 0))) {
+            var jsx$2 = (void 0)
+          } else {
+            var array = [];
+            var i$1 = 0;
+            var len$1 = $uI(value.length);
+            while ((i$1 < len$1)) {
+              var index$1 = i$1;
+              var arg1$1 = value[index$1];
+              var value$1 = arg1$1.state;
+              if ((value$1 !== (void 0))) {
+                var x$1 = $as_T(value$1);
+                var s = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
+                var jsx$3 = (!($uI(x$1.indexOf(s)) !== (-1)))
+              } else {
+                var jsx$3 = false
+              };
+              if ((jsx$3 !== false)) {
+                array.push(arg1$1)
+              };
+              i$1 = ((1 + i$1) | 0)
+            };
+            var jsx$2 = array
+          };
+          theSlave.jobs = jsx$2
+        }
+      }
+    }
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__$$init$__V($thiz) {
+  $thiz.$$scope$1.slaves = [];
+  $thiz.$$scope$1.updateSlave = (function(arg$outer) {
+    return (function(arg1$2, arg2$2) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__com$github$ldaniels528$transgress$client$controllers$SlaveHandling$$$anonfun$$init$$1__sjs_js_UndefOr__sjs_js_UndefOr__V(arg$outer, arg1$2, arg2$2)
     })
-  })($thiz)), ec)
+  })($thiz);
+  $thiz.$$scope$1.utilization = (function(arg$outer$1) {
+    return (function(arg1$2$1) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__com$github$ldaniels528$transgress$client$controllers$SlaveHandling$$$anonfun$$init$$7__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$1, arg1$2$1)
+    })
+  })($thiz)
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V($thiz) {
+  $thiz.$$scope$1.tabs = [new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Activity", "/activity", "fa-tasks"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Dashboard", "/dashboard", "fa-stack-overflow"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Workflows", "/workflows", "fa-th-large")];
+  $thiz.$$scope$1.selectedTab = $thiz.$$scope$1.tabs[0];
+  $thiz.$$scope$1.changeTab = (function(arg$outer) {
+    return (function(arg1$2) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__com$github$ldaniels528$transgress$client$controllers$TabHandling$$$anonfun$$init$$1__sjs_js_UndefOr__V(arg$outer, arg1$2)
+    })
+  })($thiz)
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__com$github$ldaniels528$transgress$client$controllers$TabHandling$$$anonfun$$init$$1__sjs_js_UndefOr__V($thiz, aTab) {
+  if ((aTab !== (void 0))) {
+    $thiz.$$scope$1.selectedTab = aTab;
+    $thiz.$$location$1.url($as_T(aTab.uri))
+  }
 }
 function $is_Ljava_io_Closeable(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Ljava_io_Closeable)))
@@ -1256,6 +1555,18 @@ function $isArrayOf_jl_CharSequence(obj, depth) {
 function $asArrayOf_jl_CharSequence(obj, depth) {
   return (($isArrayOf_jl_CharSequence(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Ljava.lang.CharSequence;", depth))
 }
+function $is_jl_Runnable(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.jl_Runnable)))
+}
+function $as_jl_Runnable(obj) {
+  return (($is_jl_Runnable(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "java.lang.Runnable"))
+}
+function $isArrayOf_jl_Runnable(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.jl_Runnable)))
+}
+function $asArrayOf_jl_Runnable(obj, depth) {
+  return (($isArrayOf_jl_Runnable(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Ljava.lang.Runnable;", depth))
+}
 function $is_ju_Formattable(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.ju_Formattable)))
 }
@@ -1274,9 +1585,44 @@ function $f_s_Proxy__equals__O__Z($thiz, that) {
 function $f_s_Proxy__toString__T($thiz) {
   return ("" + $thiz.self$1)
 }
+function $is_s_concurrent_BlockContext(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.s_concurrent_BlockContext)))
+}
+function $as_s_concurrent_BlockContext(obj) {
+  return (($is_s_concurrent_BlockContext(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.concurrent.BlockContext"))
+}
+function $isArrayOf_s_concurrent_BlockContext(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.s_concurrent_BlockContext)))
+}
+function $asArrayOf_s_concurrent_BlockContext(obj, depth) {
+  return (($isArrayOf_s_concurrent_BlockContext(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.concurrent.BlockContext;", depth))
+}
+function $is_s_concurrent_OnCompleteRunnable(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.s_concurrent_OnCompleteRunnable)))
+}
+function $as_s_concurrent_OnCompleteRunnable(obj) {
+  return (($is_s_concurrent_OnCompleteRunnable(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.concurrent.OnCompleteRunnable"))
+}
+function $isArrayOf_s_concurrent_OnCompleteRunnable(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.s_concurrent_OnCompleteRunnable)))
+}
+function $asArrayOf_s_concurrent_OnCompleteRunnable(obj, depth) {
+  return (($isArrayOf_s_concurrent_OnCompleteRunnable(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.concurrent.OnCompleteRunnable;", depth))
+}
 function $f_s_concurrent_Promise__failure__jl_Throwable__s_concurrent_Promise($thiz, cause) {
   var result = new $c_s_util_Failure().init___jl_Throwable(cause);
   return $f_s_concurrent_Promise__complete__s_util_Try__s_concurrent_Promise($thiz, result)
+}
+function $f_s_concurrent_Promise__tryCompleteWith__s_concurrent_Future__s_concurrent_Promise($thiz, other) {
+  if ((other !== $thiz)) {
+    other.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+      return (function(x$1$2) {
+        var x$1 = $as_s_util_Try(x$1$2);
+        return $this.tryComplete__s_util_Try__Z(x$1)
+      })
+    })($thiz)), $m_s_concurrent_Future$InternalCallbackExecutor$())
+  };
+  return $thiz
 }
 function $f_s_concurrent_Promise__complete__s_util_Try__s_concurrent_Promise($thiz, result) {
   if ($thiz.tryComplete__s_util_Try__Z(result)) {
@@ -1571,81 +1917,81 @@ function $f_sci_VectorPointer__initFrom__sci_VectorPointer__I__V($thiz, that, de
   }
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_AppConstants$() {
+function $c_Lcom_github_ldaniels528_transgress_AppConstants$() {
   $c_O.call(this);
   this.Version$1 = 0.0
 }
-$c_Lcom_github_ldaniels528_bourne_AppConstants$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_AppConstants$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_AppConstants$;
+$c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_AppConstants$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_AppConstants$() {
+function $h_Lcom_github_ldaniels528_transgress_AppConstants$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_AppConstants$.prototype = $c_Lcom_github_ldaniels528_bourne_AppConstants$.prototype;
-$c_Lcom_github_ldaniels528_bourne_AppConstants$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype;
+$c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.init___ = (function() {
   this.Version$1 = 0.1;
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_AppConstants$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_AppConstants$: 0
+var $d_Lcom_github_ldaniels528_transgress_AppConstants$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_AppConstants$: 0
 }, false, "com.github.ldaniels528.transgress.AppConstants$", {
-  Lcom_github_ldaniels528_bourne_AppConstants$: 1,
+  Lcom_github_ldaniels528_transgress_AppConstants$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_AppConstants$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_AppConstants$;
-var $n_Lcom_github_ldaniels528_bourne_AppConstants$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_AppConstants$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_AppConstants$)) {
-    $n_Lcom_github_ldaniels528_bourne_AppConstants$ = new $c_Lcom_github_ldaniels528_bourne_AppConstants$().init___()
+$c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_AppConstants$;
+var $n_Lcom_github_ldaniels528_transgress_AppConstants$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_AppConstants$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_AppConstants$)) {
+    $n_Lcom_github_ldaniels528_transgress_AppConstants$ = new $c_Lcom_github_ldaniels528_transgress_AppConstants$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_AppConstants$
+  return $n_Lcom_github_ldaniels528_transgress_AppConstants$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_BytesHelper$() {
+function $c_Lcom_github_ldaniels528_transgress_BytesHelper$() {
   $c_O.call(this);
-  this.com$github$ldaniels528$bourne$BytesHelper$$UnitNames$1 = null
+  this.com$github$ldaniels528$transgress$BytesHelper$$UnitNames$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_BytesHelper$;
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_BytesHelper$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_BytesHelper$() {
+function $h_Lcom_github_ldaniels528_transgress_BytesHelper$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype = $c_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype;
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype.init___ = (function() {
-  $n_Lcom_github_ldaniels528_bourne_BytesHelper$ = this;
-  this.com$github$ldaniels528$bourne$BytesHelper$$UnitNames$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Bytes", "KB", "MB", "GB", "TB"])));
+$h_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype = $c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype;
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype.init___ = (function() {
+  $n_Lcom_github_ldaniels528_transgress_BytesHelper$ = this;
+  this.com$github$ldaniels528$transgress$BytesHelper$$UnitNames$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Bytes", "KB", "MB", "GB", "TB", "PB"])));
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_BytesHelper$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_BytesHelper$: 0
+var $d_Lcom_github_ldaniels528_transgress_BytesHelper$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_BytesHelper$: 0
 }, false, "com.github.ldaniels528.transgress.BytesHelper$", {
-  Lcom_github_ldaniels528_bourne_BytesHelper$: 1,
+  Lcom_github_ldaniels528_transgress_BytesHelper$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_BytesHelper$;
-var $n_Lcom_github_ldaniels528_bourne_BytesHelper$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_BytesHelper$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_BytesHelper$)) {
-    $n_Lcom_github_ldaniels528_bourne_BytesHelper$ = new $c_Lcom_github_ldaniels528_bourne_BytesHelper$().init___()
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_BytesHelper$;
+var $n_Lcom_github_ldaniels528_transgress_BytesHelper$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_BytesHelper$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_BytesHelper$)) {
+    $n_Lcom_github_ldaniels528_transgress_BytesHelper$ = new $c_Lcom_github_ldaniels528_transgress_BytesHelper$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_BytesHelper$
+  return $n_Lcom_github_ldaniels528_transgress_BytesHelper$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$() {
+function $c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$() {
   $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$;
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$() {
+function $h_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype = $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype;
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype = $c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype;
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype.init___ = (function() {
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.units$extension__D__D__I__T = (function($$this, value, unit) {
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype.units$extension__D__D__I__T = (function($$this, value, unit) {
   _units$extension: while (true) {
     if ((value >= 1000)) {
       var temp$value = (value / 1024);
@@ -1655,7 +2001,7 @@ $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.uni
       continue _units$extension
     } else {
       var arg$macro$1 = value;
-      var arg$macro$2 = $m_Lcom_github_ldaniels528_bourne_BytesHelper$().com$github$ldaniels528$bourne$BytesHelper$$UnitNames$1.apply__I__O(unit);
+      var arg$macro$2 = $m_Lcom_github_ldaniels528_transgress_BytesHelper$().com$github$ldaniels528$transgress$BytesHelper$$UnitNames$1.apply__I__O(unit);
       var this$1 = new $c_sci_StringOps().init___T("%.2f %s");
       var array = [arg$macro$1, arg$macro$2];
       var jsx$2 = $m_sjsr_RuntimeString$();
@@ -1699,52 +2045,56 @@ $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.uni
     }
   }
 });
-var $d_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$: 0
+var $d_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$: 0
 }, false, "com.github.ldaniels528.transgress.BytesHelper$BytesUnitEnrichment$", {
-  Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$: 1,
+  Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$;
-var $n_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$)) {
-    $n_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$ = new $c_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$().init___()
+$c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$;
+var $n_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$)) {
+    $n_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$ = new $c_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$
+  return $n_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_RemoteEvent$() {
+function $c_Lcom_github_ldaniels528_transgress_RemoteEvent$() {
   $c_O.call(this);
-  this.JOB$undUPDATE$1 = null
+  this.FEED$undUPDATE$1 = null;
+  this.JOB$undUPDATE$1 = null;
+  this.SLAVE$undUPDATE$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_RemoteEvent$;
+$c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_RemoteEvent$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_RemoteEvent$() {
+function $h_Lcom_github_ldaniels528_transgress_RemoteEvent$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype = $c_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype;
-$c_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype = $c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype;
+$c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype.init___ = (function() {
+  this.FEED$undUPDATE$1 = "FEED_UPDATE";
   this.JOB$undUPDATE$1 = "JOB_UPDATE";
+  this.SLAVE$undUPDATE$1 = "SLAVE_UPDATE";
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_RemoteEvent$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_RemoteEvent$: 0
+var $d_Lcom_github_ldaniels528_transgress_RemoteEvent$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_RemoteEvent$: 0
 }, false, "com.github.ldaniels528.transgress.RemoteEvent$", {
-  Lcom_github_ldaniels528_bourne_RemoteEvent$: 1,
+  Lcom_github_ldaniels528_transgress_RemoteEvent$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_RemoteEvent$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_RemoteEvent$;
-var $n_Lcom_github_ldaniels528_bourne_RemoteEvent$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_RemoteEvent$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_RemoteEvent$)) {
-    $n_Lcom_github_ldaniels528_bourne_RemoteEvent$ = new $c_Lcom_github_ldaniels528_bourne_RemoteEvent$().init___()
+$c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_RemoteEvent$;
+var $n_Lcom_github_ldaniels528_transgress_RemoteEvent$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_RemoteEvent$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_RemoteEvent$)) {
+    $n_Lcom_github_ldaniels528_transgress_RemoteEvent$ = new $c_Lcom_github_ldaniels528_transgress_RemoteEvent$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_RemoteEvent$
+  return $n_Lcom_github_ldaniels528_transgress_RemoteEvent$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_Filters$() {
+function $c_Lcom_github_ldaniels528_transgress_client_Filters$() {
   $c_O.call(this);
   this.timeUnits$1 = null;
   this.timeFactors$1 = null;
@@ -1752,14 +2102,14 @@ function $c_Lcom_github_ldaniels528_bourne_client_Filters$() {
   this.bytes$1 = null;
   this.bps$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_Filters$;
+$c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_Filters$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_Filters$() {
+function $h_Lcom_github_ldaniels528_transgress_client_Filters$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_Filters$.prototype = $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.toDuration__sjs_js_UndefOr__sjs_js_UndefOr = (function(aTime) {
+$h_Lcom_github_ldaniels528_transgress_client_Filters$.prototype = $c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype.toDuration__sjs_js_UndefOr__sjs_js_UndefOr = (function(aTime) {
   if ((aTime === (void 0))) {
     return (void 0)
   } else {
@@ -1777,9 +2127,9 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.toDuration__sjs_js_U
     var unitName0 = ($as_T(this.timeUnits$1.apply__I__O(unit)) + ((age0 !== 1.0) ? "s" : ""));
     var unitName1 = ((unit > 0) ? ($as_T(this.timeUnits$1.apply__I__O((((-1) + unit) | 0))) + ((age1 !== 1.0) ? "s" : "")) : "");
     if ((age1 === 0.0)) {
-      var arg$macro$25 = age0;
+      var arg$macro$1 = age0;
       var this$6 = new $c_sci_StringOps().init___T("%.0f %s");
-      var array = [arg$macro$25, unitName0];
+      var array = [arg$macro$1, unitName0];
       var jsx$2 = $m_sjsr_RuntimeString$();
       var $$this = this$6.repr$1;
       $m_sc_Seq$();
@@ -1819,10 +2169,10 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.toDuration__sjs_js_U
       };
       var value = jsx$2.format__T__AO__T($$this, result)
     } else {
-      var arg$macro$27 = age0;
-      var arg$macro$29 = age1;
+      var arg$macro$3 = age0;
+      var arg$macro$5 = age1;
       var this$20 = new $c_sci_StringOps().init___T("%.0f %s, %.0f %s");
-      var array$2 = [arg$macro$27, unitName0, arg$macro$29, unitName1];
+      var array$2 = [arg$macro$3, unitName0, arg$macro$5, unitName1];
       var jsx$4 = $m_sjsr_RuntimeString$();
       var $$this$1 = this$20.repr$1;
       $m_sc_Seq$();
@@ -1865,8 +2215,8 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.toDuration__sjs_js_U
     return value
   }
 });
-$c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.init___ = (function() {
-  $n_Lcom_github_ldaniels528_bourne_client_Filters$ = this;
+$c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype.init___ = (function() {
+  $n_Lcom_github_ldaniels528_transgress_client_Filters$ = this;
   this.timeUnits$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["sec", "min", "hour", "day", "month", "year"])));
   this.timeFactors$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array([60, 60, 24, 30, 12])));
   this.duration$1 = (function($this) {
@@ -1886,8 +2236,8 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.init___ = (function(
             return (void 0)
           } else {
             var x$1 = $uD(aValue$2);
-            $m_Lcom_github_ldaniels528_bourne_BytesHelper$();
-            var value = $m_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$().units$extension__D__D__I__T(x$1, x$1, 0);
+            $m_Lcom_github_ldaniels528_transgress_BytesHelper$();
+            var value = $m_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$().units$extension__D__D__I__T(x$1, x$1, 0);
             return value
           }
         })
@@ -1902,8 +2252,8 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.init___ = (function(
             return (void 0)
           } else {
             var x$2 = $uD(aValue$2$1);
-            $m_Lcom_github_ldaniels528_bourne_BytesHelper$();
-            var value$1 = ($m_Lcom_github_ldaniels528_bourne_BytesHelper$BytesUnitEnrichment$().units$extension__D__D__I__T(x$2, x$2, 0) + "/sec");
+            $m_Lcom_github_ldaniels528_transgress_BytesHelper$();
+            var value$1 = ($m_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$().units$extension__D__D__I__T(x$2, x$2, 0) + "/sec");
             return value$1
           }
         })
@@ -1912,22 +2262,22 @@ $c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.init___ = (function(
   })(this);
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_client_Filters$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_Filters$: 0
+var $d_Lcom_github_ldaniels528_transgress_client_Filters$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_Filters$: 0
 }, false, "com.github.ldaniels528.transgress.client.Filters$", {
-  Lcom_github_ldaniels528_bourne_client_Filters$: 1,
+  Lcom_github_ldaniels528_transgress_client_Filters$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_Filters$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_Filters$;
-var $n_Lcom_github_ldaniels528_bourne_client_Filters$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_client_Filters$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_client_Filters$)) {
-    $n_Lcom_github_ldaniels528_bourne_client_Filters$ = new $c_Lcom_github_ldaniels528_bourne_client_Filters$().init___()
+$c_Lcom_github_ldaniels528_transgress_client_Filters$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_Filters$;
+var $n_Lcom_github_ldaniels528_transgress_client_Filters$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_client_Filters$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_client_Filters$)) {
+    $n_Lcom_github_ldaniels528_transgress_client_Filters$ = new $c_Lcom_github_ldaniels528_transgress_client_Filters$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_client_Filters$
+  return $n_Lcom_github_ldaniels528_transgress_client_Filters$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_models_JobStates$() {
+function $c_Lcom_github_ldaniels528_transgress_models_JobStates$() {
   $c_O.call(this);
   this.NEW$1 = null;
   this.CLAIMED$1 = null;
@@ -1937,14 +2287,14 @@ function $c_Lcom_github_ldaniels528_bourne_models_JobStates$() {
   this.STOPPED$1 = null;
   this.SUCCESS$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_models_JobStates$;
+$c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_models_JobStates$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_models_JobStates$() {
+function $h_Lcom_github_ldaniels528_transgress_models_JobStates$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype = $c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype;
-$c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype = $c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype;
+$c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.init___ = (function() {
   this.NEW$1 = "NEW";
   this.CLAIMED$1 = "CLAIMED";
   this.QUEUED$1 = "QUEUED";
@@ -1954,22 +2304,22 @@ $c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype.init___ = (functio
   this.SUCCESS$1 = "SUCCESS";
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype.values__sc_Iterator = (function() {
+$c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.values__sc_Iterator = (function() {
   return $as_sc_IterableLike($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.NEW$1, this.QUEUED$1, this.RUNNING$1, this.STOPPED$1, this.SUCCESS$1]))).iterator__sc_Iterator()
 });
-var $d_Lcom_github_ldaniels528_bourne_models_JobStates$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_models_JobStates$: 0
+var $d_Lcom_github_ldaniels528_transgress_models_JobStates$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_models_JobStates$: 0
 }, false, "com.github.ldaniels528.transgress.models.JobStates$", {
-  Lcom_github_ldaniels528_bourne_models_JobStates$: 1,
+  Lcom_github_ldaniels528_transgress_models_JobStates$: 1,
   O: 1
 });
-$c_Lcom_github_ldaniels528_bourne_models_JobStates$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_models_JobStates$;
-var $n_Lcom_github_ldaniels528_bourne_models_JobStates$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_models_JobStates$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_models_JobStates$)) {
-    $n_Lcom_github_ldaniels528_bourne_models_JobStates$ = new $c_Lcom_github_ldaniels528_bourne_models_JobStates$().init___()
+$c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_models_JobStates$;
+var $n_Lcom_github_ldaniels528_transgress_models_JobStates$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_models_JobStates$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_models_JobStates$)) {
+    $n_Lcom_github_ldaniels528_transgress_models_JobStates$ = new $c_Lcom_github_ldaniels528_transgress_models_JobStates$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_models_JobStates$
+  return $n_Lcom_github_ldaniels528_transgress_models_JobStates$
 }
 /** @constructor */
 function $c_Lio_scalajs_npm_angularjs_AngularJsHelper$() {
@@ -2366,6 +2716,76 @@ function $m_jl_System$() {
   return $n_jl_System$
 }
 /** @constructor */
+function $c_jl_Thread$() {
+  $c_O.call(this);
+  this.SingleThread$1 = null
+}
+$c_jl_Thread$.prototype = new $h_O();
+$c_jl_Thread$.prototype.constructor = $c_jl_Thread$;
+/** @constructor */
+function $h_jl_Thread$() {
+  /*<skip>*/
+}
+$h_jl_Thread$.prototype = $c_jl_Thread$.prototype;
+$c_jl_Thread$.prototype.init___ = (function() {
+  $n_jl_Thread$ = this;
+  this.SingleThread$1 = new $c_jl_Thread().init___sr_BoxedUnit((void 0));
+  return this
+});
+var $d_jl_Thread$ = new $TypeData().initClass({
+  jl_Thread$: 0
+}, false, "java.lang.Thread$", {
+  jl_Thread$: 1,
+  O: 1
+});
+$c_jl_Thread$.prototype.$classData = $d_jl_Thread$;
+var $n_jl_Thread$ = (void 0);
+function $m_jl_Thread$() {
+  if ((!$n_jl_Thread$)) {
+    $n_jl_Thread$ = new $c_jl_Thread$().init___()
+  };
+  return $n_jl_Thread$
+}
+/** @constructor */
+function $c_jl_ThreadLocal() {
+  $c_O.call(this);
+  this.hasValue$1 = null;
+  this.v$1 = null
+}
+$c_jl_ThreadLocal.prototype = new $h_O();
+$c_jl_ThreadLocal.prototype.constructor = $c_jl_ThreadLocal;
+/** @constructor */
+function $h_jl_ThreadLocal() {
+  /*<skip>*/
+}
+$h_jl_ThreadLocal.prototype = $c_jl_ThreadLocal.prototype;
+$c_jl_ThreadLocal.prototype.init___ = (function() {
+  this.hasValue$1 = false;
+  return this
+});
+$c_jl_ThreadLocal.prototype.remove__V = (function() {
+  this.hasValue$1 = false;
+  this.v$1 = null
+});
+$c_jl_ThreadLocal.prototype.get__O = (function() {
+  var x = this.hasValue$1;
+  if ((!$uZ(x))) {
+    this.set__O__V(null)
+  };
+  return this.v$1
+});
+$c_jl_ThreadLocal.prototype.set__O__V = (function(o) {
+  this.v$1 = o;
+  this.hasValue$1 = true
+});
+var $d_jl_ThreadLocal = new $TypeData().initClass({
+  jl_ThreadLocal: 0
+}, false, "java.lang.ThreadLocal", {
+  jl_ThreadLocal: 1,
+  O: 1
+});
+$c_jl_ThreadLocal.prototype.$classData = $d_jl_ThreadLocal;
+/** @constructor */
 function $c_jl_reflect_Array$() {
   $c_O.call(this)
 }
@@ -2561,6 +2981,104 @@ function $m_s_Predef$any2stringadd$() {
     $n_s_Predef$any2stringadd$ = new $c_s_Predef$any2stringadd$().init___()
   };
   return $n_s_Predef$any2stringadd$
+}
+function $f_s_concurrent_BatchingExecutor__batchable__jl_Runnable__Z($thiz, runnable) {
+  return $is_s_concurrent_OnCompleteRunnable(runnable)
+}
+function $f_s_concurrent_BatchingExecutor__execute__jl_Runnable__V($thiz, runnable) {
+  if ($f_s_concurrent_BatchingExecutor__batchable__jl_Runnable__Z($thiz, runnable)) {
+    var x1 = $as_sci_List($thiz.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.get__O());
+    if ((x1 === null)) {
+      $m_sci_List$();
+      var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array([runnable]);
+      var this$2 = $m_sci_List$();
+      var cbf = this$2.ReusableCBFInstance$2;
+      var r = new $c_s_concurrent_BatchingExecutor$Batch().init___s_concurrent_BatchingExecutor__sci_List($thiz, $as_sci_List($f_sc_TraversableLike__to__scg_CanBuildFrom__O(xs, cbf)));
+      r.run__V()
+    } else {
+      $thiz.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.set__O__V(new $c_sci_$colon$colon().init___O__sci_List(runnable, x1))
+    }
+  } else {
+    runnable.run__V()
+  }
+}
+/** @constructor */
+function $c_s_concurrent_BlockContext$() {
+  $c_O.call(this);
+  this.contextLocal$1 = null
+}
+$c_s_concurrent_BlockContext$.prototype = new $h_O();
+$c_s_concurrent_BlockContext$.prototype.constructor = $c_s_concurrent_BlockContext$;
+/** @constructor */
+function $h_s_concurrent_BlockContext$() {
+  /*<skip>*/
+}
+$h_s_concurrent_BlockContext$.prototype = $c_s_concurrent_BlockContext$.prototype;
+$c_s_concurrent_BlockContext$.prototype.init___ = (function() {
+  $n_s_concurrent_BlockContext$ = this;
+  this.contextLocal$1 = new $c_jl_ThreadLocal().init___();
+  return this
+});
+$c_s_concurrent_BlockContext$.prototype.current__s_concurrent_BlockContext = (function() {
+  var x1 = $as_s_concurrent_BlockContext(this.contextLocal$1.get__O());
+  if ((x1 === null)) {
+    var x1$2 = $m_jl_Thread$().SingleThread$1;
+    return ($is_s_concurrent_BlockContext(x1$2) ? $as_s_concurrent_BlockContext(x1$2) : $m_s_concurrent_BlockContext$DefaultBlockContext$())
+  } else {
+    return x1
+  }
+});
+var $d_s_concurrent_BlockContext$ = new $TypeData().initClass({
+  s_concurrent_BlockContext$: 0
+}, false, "scala.concurrent.BlockContext$", {
+  s_concurrent_BlockContext$: 1,
+  O: 1
+});
+$c_s_concurrent_BlockContext$.prototype.$classData = $d_s_concurrent_BlockContext$;
+var $n_s_concurrent_BlockContext$ = (void 0);
+function $m_s_concurrent_BlockContext$() {
+  if ((!$n_s_concurrent_BlockContext$)) {
+    $n_s_concurrent_BlockContext$ = new $c_s_concurrent_BlockContext$().init___()
+  };
+  return $n_s_concurrent_BlockContext$
+}
+function $f_s_concurrent_Future__flatMap__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f, executor) {
+  var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, f$1) {
+    return (function(x0$5$2) {
+      var x0$5 = $as_s_util_Try(x0$5$2);
+      if ($is_s_util_Success(x0$5)) {
+        var x2 = $as_s_util_Success(x0$5);
+        var s = x2.value$2;
+        return $as_s_concurrent_Future(f$1.apply__O__O(s))
+      } else if ($is_s_util_Failure(x0$5)) {
+        return $this
+      } else {
+        throw new $c_s_MatchError().init___O(x0$5)
+      }
+    })
+  })($thiz, f));
+  return $f_s_concurrent_impl_Promise__transformWith__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f$2, executor)
+}
+function $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f, executor) {
+  var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, f$1) {
+    return (function(x$2$2) {
+      var x$2 = $as_s_util_Try(x$2$2);
+      return x$2.map__F1__s_util_Try(f$1)
+    })
+  })($thiz, f));
+  return $f_s_concurrent_impl_Promise__transform__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f$2, executor)
+}
+function $is_s_concurrent_Future(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.s_concurrent_Future)))
+}
+function $as_s_concurrent_Future(obj) {
+  return (($is_s_concurrent_Future(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.concurrent.Future"))
+}
+function $isArrayOf_s_concurrent_Future(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.s_concurrent_Future)))
+}
+function $asArrayOf_s_concurrent_Future(obj, depth) {
+  return (($isArrayOf_s_concurrent_Future(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.concurrent.Future;", depth))
 }
 /** @constructor */
 function $c_s_concurrent_duration_package$DurationInt$() {
@@ -3623,6 +4141,31 @@ function $m_sjs_js_Thenable$ThenableOps$() {
   };
   return $n_sjs_js_Thenable$ThenableOps$
 }
+/** @constructor */
+function $c_sjs_js_UndefOrOps$WithFilter() {
+  $c_O.call(this);
+  this.self$1 = null;
+  this.p$1 = null
+}
+$c_sjs_js_UndefOrOps$WithFilter.prototype = new $h_O();
+$c_sjs_js_UndefOrOps$WithFilter.prototype.constructor = $c_sjs_js_UndefOrOps$WithFilter;
+/** @constructor */
+function $h_sjs_js_UndefOrOps$WithFilter() {
+  /*<skip>*/
+}
+$h_sjs_js_UndefOrOps$WithFilter.prototype = $c_sjs_js_UndefOrOps$WithFilter.prototype;
+$c_sjs_js_UndefOrOps$WithFilter.prototype.init___sjs_js_UndefOr__F1 = (function(self, p) {
+  this.self$1 = self;
+  this.p$1 = p;
+  return this
+});
+var $d_sjs_js_UndefOrOps$WithFilter = new $TypeData().initClass({
+  sjs_js_UndefOrOps$WithFilter: 0
+}, false, "scala.scalajs.js.UndefOrOps$WithFilter", {
+  sjs_js_UndefOrOps$WithFilter: 1,
+  O: 1
+});
+$c_sjs_js_UndefOrOps$WithFilter.prototype.$classData = $d_sjs_js_UndefOrOps$WithFilter;
 /** @constructor */
 function $c_sjs_js_WrappedDictionary$Cache$() {
   $c_O.call(this);
@@ -4865,76 +5408,76 @@ function $m_sr_Statics$() {
   return $n_sr_Statics$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$() {
+function $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
   $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$;
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$() {
+function $h_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype = $c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype = $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.init___ = (function() {
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
-  module.controller("ActivityController", ["$scope", "$interval", "toaster", (function($this) {
-    return (function(x$macro$1$2, x$macro$2$2, x$macro$3$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController().init___Lcom_github_ldaniels528_bourne_client_controllers_ActivityScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$1$2, x$macro$2$2, x$macro$3$2)
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
+  module.controller("ActivityController", ["$scope", (function($this) {
+    return (function(x$macro$7$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$7$2)
     })
   })(this)]);
-  module.controller("DashboardController", ["$scope", "$interval", "toaster", "JobService", (function(this$2$1) {
-    return (function(x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7$2) {
-      var x$macro$7 = $as_Lcom_github_ldaniels528_bourne_client_services_JobService(x$macro$7$2);
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController().init___Lcom_github_ldaniels528_bourne_client_controllers_DashboardScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_JobService(x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7)
+  module.controller("DashboardController", ["$scope", (function(this$2$1) {
+    return (function(x$macro$8$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController().init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope(x$macro$8$2)
     })
   })(this)]);
-  module.controller("MainController", ["$scope", "$interval", "$location", "toaster", "JobService", (function(this$3$1) {
-    return (function(x$macro$8$2, x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2) {
-      var x$macro$12 = $as_Lcom_github_ldaniels528_bourne_client_services_JobService(x$macro$12$2);
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_MainController().init___Lcom_github_ldaniels528_bourne_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_JobService(x$macro$8$2, x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12)
+  module.controller("MainController", ["$scope", "$interval", "$location", "toaster", "JobService", "SlaveService", (function(this$3$1) {
+    return (function(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13$2, x$macro$14$2) {
+      var x$macro$13 = $as_Lcom_github_ldaniels528_transgress_client_services_JobService(x$macro$13$2);
+      var x$macro$14 = $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$14$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController().init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13, x$macro$14)
     })
   })(this)]);
   module.controller("SlaveController", ["$scope", (function(this$4$1) {
-    return (function(x$macro$13$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController().init___Lcom_github_ldaniels528_bourne_client_controllers_SlaveScope(x$macro$13$2)
+    return (function(x$macro$15$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController().init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope(x$macro$15$2)
     })
   })(this)]);
   module.controller("TriggerController", ["$scope", (function(this$5$1) {
-    return (function(x$macro$14$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController().init___Lcom_github_ldaniels528_bourne_client_controllers_TriggerScope(x$macro$14$2)
+    return (function(x$macro$16$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController().init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope(x$macro$16$2)
     })
   })(this)]);
   module.controller("WorkflowController", ["$scope", "toaster", "WorkflowService", (function(this$6$1) {
-    return (function(x$macro$15$2, x$macro$16$2, x$macro$17$2) {
-      var x$macro$17 = $as_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(x$macro$17$2);
-      return new $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_bourne_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_WorkflowService(x$macro$15$2, x$macro$16$2, x$macro$17)
+    return (function(x$macro$17$2, x$macro$18$2, x$macro$19$2) {
+      var x$macro$19 = $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$19$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$17$2, x$macro$18$2, x$macro$19)
     })
   })(this)])
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.main__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.main__V = (function() {
   var self = $g.angular;
-  var array = ["ngAnimate", "ngCookies", "ngRoute", "ngSanitize", "nvd3", "angularFileUpload", "toaster", "ui.bootstrap"];
-  var self$1 = self.module("bourne", array);
-  self$1.filter("duration", $m_Lcom_github_ldaniels528_bourne_client_Filters$().duration$1);
-  self$1.filter("bytes", $m_Lcom_github_ldaniels528_bourne_client_Filters$().bytes$1);
-  self$1.filter("bps", $m_Lcom_github_ldaniels528_bourne_client_Filters$().bps$1);
+  var array = ["ngAnimate", "ngCookies", "ngRoute", "ngSanitize", "nvd3", "angularFileUpload", "hljs", "toaster", "ui.bootstrap"];
+  var self$1 = self.module("qwery", array);
+  self$1.filter("duration", $m_Lcom_github_ldaniels528_transgress_client_Filters$().duration$1);
+  self$1.filter("bytes", $m_Lcom_github_ldaniels528_transgress_client_Filters$().bytes$1);
+  self$1.filter("bps", $m_Lcom_github_ldaniels528_transgress_client_Filters$().bps$1);
   this.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V(self$1);
   this.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V(self$1);
   var dependencySet = ["$routeProvider", (function($this) {
     return (function($$$routeProvider) {
-      var value = $d_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.getClassOf().getSimpleName__T();
+      var value = $d_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.getClassOf().getSimpleName__T();
       var jsx$6 = $$$routeProvider.when("/activity", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value, (void 0), (void 0), (void 0), (void 0), "/views/activity/index.html"));
-      var value$1 = $d_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.getClassOf().getSimpleName__T();
+      var value$1 = $d_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.getClassOf().getSimpleName__T();
       var jsx$5 = jsx$6.when("/dashboard", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value$1, (void 0), (void 0), (void 0), (void 0), "/views/dashboard/index.html"));
-      var value$2 = $d_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.getClassOf().getSimpleName__T();
+      var value$2 = $d_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.getClassOf().getSimpleName__T();
       var jsx$4 = jsx$5.when("/dashboard/:id", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value$2, (void 0), (void 0), (void 0), (void 0), "/views/dashboard/index.html"));
-      var value$3 = $d_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.getClassOf().getSimpleName__T();
+      var value$3 = $d_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.getClassOf().getSimpleName__T();
       var jsx$3 = jsx$4.when("/slaves", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value$3, (void 0), (void 0), (void 0), (void 0), "/views/slaves/index.html"));
-      var value$4 = $d_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.getClassOf().getSimpleName__T();
+      var value$4 = $d_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.getClassOf().getSimpleName__T();
       var jsx$2 = jsx$3.when("/triggers", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value$4, (void 0), (void 0), (void 0), (void 0), "/views/triggers/index.html"));
-      var value$5 = $d_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.getClassOf().getSimpleName__T();
+      var value$5 = $d_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.getClassOf().getSimpleName__T();
       var jsx$1 = jsx$2.when("/workflows", new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())(value$5, (void 0), (void 0), (void 0), (void 0), "/views/workflows/index.html"));
       jsx$1.otherwise(new ($a_Lio_scalajs_npm_angularjs_uirouter_RouteTo())((void 0), (void 0), (void 0), (void 0), (void 0), (void 0), (void 0), (void 0), "/activity"))
     })
@@ -4942,197 +5485,198 @@ $c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.main__V = 
   self$1.config(dependencySet);
   var initializationFn = ["$rootScope", "$timeout", "WebSocketService", (function(this$2$1) {
     return (function($$$rootScope, $$$timeout, WebSocketService$2) {
-      var WebSocketService = $as_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(WebSocketService$2);
+      var WebSocketService = $as_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(WebSocketService$2);
       WebSocketService.init__V()
     })
   })(this)];
   self$1.run(initializationFn)
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.$$js$exported$meth$main__O = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$$js$exported$meth$main__O = (function() {
   this.main__V()
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.service("JobService", ["$http", (function($this) {
-    return (function(x$macro$18$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$18$2)
+    return (function(x$macro$20$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$20$2)
     })
   })(this)]);
-  module.service("WebSocketService", ["$rootScope", "$http", "$location", "$timeout", "toaster", (function(this$2$1) {
-    return (function(x$macro$19$2, x$macro$20$2, x$macro$21$2, x$macro$22$2, x$macro$23$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$19$2, x$macro$20$2, x$macro$21$2, x$macro$22$2, x$macro$23$2)
+  module.service("SlaveService", ["$http", (function(this$2$1) {
+    return (function(x$macro$21$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$21$2)
     })
   })(this)]);
-  module.service("WorkflowService", ["$http", (function(this$3$1) {
-    return (function(x$macro$24$2) {
-      return new $c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$24$2)
+  module.service("WebSocketService", ["$rootScope", "$http", "$location", "$timeout", "toaster", (function(this$3$1) {
+    return (function(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2)
+    })
+  })(this)]);
+  module.service("WorkflowService", ["$http", (function(this$4$1) {
+    return (function(x$macro$27$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$27$2)
     })
   })(this)])
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.main = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.main = (function() {
   return this.$$js$exported$meth$main__O()
 });
-var $d_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$: 0
-}, false, "com.github.ldaniels528.transgress.client.BourneClientJSApp$", {
-  Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$: 1,
+var $d_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$: 0
+}, false, "com.github.ldaniels528.transgress.client.QweryWebClientJSApp$", {
+  Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$: 1,
   O: 1,
   sjs_js_JSApp: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$;
-var $n_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$ = (void 0);
-function $m_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$() {
-  if ((!$n_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$)) {
-    $n_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$ = new $c_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$().init___()
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
+var $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$)) {
+    $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = new $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$().init___()
   };
-  return $n_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$
+  return $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController() {
-  $c_O.call(this);
-  this.$$scope$1 = null
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController() {
+  $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController() {
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype.com$github$ldaniels528$bourne$client$controllers$ActivityController$$$anonfun$new$2__sjs_js_Array = (function() {
-  var array = this.$$scope$1.jobs;
-  var array$1 = [];
-  var i = 0;
-  var len = $uI(array.length);
-  while ((i < len)) {
-    var index = i;
-    var arg1 = array[index];
-    var value = arg1.state;
-    var elem = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().SUCCESS$1;
-    if ((((value !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(elem, value)) !== true)) {
-      array$1.push(arg1)
-    };
-    i = ((1 + i) | 0)
-  };
-  return array$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype.com$github$ldaniels528$bourne$client$controllers$ActivityController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_ActivityScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_toaster_Toaster = (function($$scope, $$interval, toaster) {
-  this.$$scope$1 = $$scope;
+$h_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope = (function($$scope) {
   $$scope.init = (function(arg$outer) {
     return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$ActivityController$$$anonfun$new$1__V()
-    })
-  })(this);
-  $$scope.getRunningJobs = (function(arg$outer$1) {
-    return (function() {
-      return arg$outer$1.com$github$ldaniels528$bourne$client$controllers$ActivityController$$$anonfun$new$2__sjs_js_Array()
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$ActivityController$$$anonfun$new$1__V()
     })
   })(this);
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_ActivityController: 0
+$c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype.com$github$ldaniels528$transgress$client$controllers$ActivityController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s)
+});
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_ActivityController: 0
 }, false, "com.github.ldaniels528.transgress.client.controllers.ActivityController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_ActivityController: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_ActivityController: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Controller: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_ActivityController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController() {
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController() {
   $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController() {
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_SlaveScope = (function($$scope) {
+$h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope = (function($$scope) {
   $$scope.init = (function(arg$outer) {
     return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$SlaveController$$$anonfun$new$1__V()
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V()
     })
   })(this);
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype.com$github$ldaniels528$bourne$client$controllers$SlaveController$$$anonfun$new$1__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V = (function() {
   var jsx$1 = $g.console;
   var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
   jsx$1.info(s)
 });
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_SlaveController: 0
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_DashboardController: 0
+}, false, "com.github.ldaniels528.transgress.client.controllers.DashboardController", {
+  Lcom_github_ldaniels528_transgress_client_controllers_DashboardController: 1,
+  O: 1,
+  Lio_scalajs_npm_angularjs_Controller: 1
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController;
+/** @constructor */
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController() {
+  $c_O.call(this)
+}
+$c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController;
+/** @constructor */
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController() {
+  /*<skip>*/
+}
+$h_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype.com$github$ldaniels528$transgress$client$controllers$SlaveController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope = (function($$scope) {
+  $$scope.init = (function(arg$outer) {
+    return (function() {
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$SlaveController$$$anonfun$new$1__V()
+    })
+  })(this);
+  return this
+});
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_SlaveController: 0
 }, false, "com.github.ldaniels528.transgress.client.controllers.SlaveController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_SlaveController: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_SlaveController: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Controller: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_SlaveController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController() {
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController() {
   $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController() {
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype.com$github$ldaniels528$bourne$client$controllers$TriggerController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_TriggerScope = (function($$scope) {
+$h_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope = (function($$scope) {
   $$scope.init = (function(arg$outer) {
     return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$TriggerController$$$anonfun$new$1__V()
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$TriggerController$$$anonfun$new$1__V()
     })
   })(this);
   return this
 });
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_TriggerController: 0
+$c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype.com$github$ldaniels528$transgress$client$controllers$TriggerController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s)
+});
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_TriggerController: 0
 }, false, "com.github.ldaniels528.transgress.client.controllers.TriggerController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_TriggerController: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_TriggerController: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Controller: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_TriggerController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController() {
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController() {
   $c_O.call(this);
   this.$$scope$1 = null;
   this.toaster$1 = null;
   this.workflowService$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController() {
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_WorkflowService = (function($$scope, toaster, workflowService) {
-  this.$$scope$1 = $$scope;
-  this.toaster$1 = toaster;
-  this.workflowService$1 = workflowService;
-  $$scope.workflows = [];
-  $$scope.init = (function(arg$outer) {
-    return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$WorkflowController$$$anonfun$new$1__V()
-    })
-  })(this);
-  return this
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Workflow__V = (function(workflows, workflow) {
+$h_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_transgress_client_models_Workflow__V = (function(workflows, workflow) {
   var len = $uI(workflows.length);
   var i = 0;
   while (true) {
@@ -5166,7 +5710,41 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
     }
   }
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.refreshWorkflows__p1__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService = (function($$scope, toaster, workflowService) {
+  this.$$scope$1 = $$scope;
+  this.toaster$1 = toaster;
+  this.workflowService$1 = workflowService;
+  $$scope.workflows = [];
+  $$scope.init = (function(arg$outer) {
+    return (function() {
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$1__V()
+    })
+  })(this);
+  $$scope.selectWorkflow = (function(arg$outer$1) {
+    return (function(arg1$2) {
+      arg$outer$1.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$2__sjs_js_UndefOr__V(arg1$2)
+    })
+  })(this);
+  $$scope.toJSON = (function(arg$outer$2) {
+    return (function(arg1$2$1) {
+      return arg$outer$2.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$3__sjs_js_Any__T(arg1$2$1)
+    })
+  })(this);
+  return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$3__sjs_js_Any__T = (function(anObject) {
+  return $as_T($g.JSON.stringify(anObject, null, 4))
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s);
+  this.refreshWorkflows__p1__V()
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$2__sjs_js_UndefOr__V = (function(aWorkflow) {
+  this.$$scope$1.selectedWorkflow = aWorkflow
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.refreshWorkflows__p1__V = (function() {
   var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
   var p = this.workflowService$1.getWorkflows__sjs_js_Promise();
   jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
@@ -5178,20 +5756,30 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
         var jsx$2 = $g.console;
         var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Loaded ", " workflow(s)"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$uI(response.data.length)]));
         jsx$2.log(s);
-        var array = response.data;
-        var i = 0;
-        var len = $uI(array.length);
-        while ((i < len)) {
-          var index = i;
-          var arg1 = array[index];
-          $this.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Workflow__V($this.$$scope$1.workflows, arg1);
-          i = ((1 + i) | 0)
-        };
-        return $this.$$scope$1.$apply((function(this$2$1) {
+        return $this.$$scope$1.$apply((function($this$1, response$1) {
           return (function() {
-            return (void 0)
+            var array = response$1.data;
+            var i = 0;
+            var len = $uI(array.length);
+            while ((i < len)) {
+              var index = i;
+              var arg1 = array[index];
+              $this$1.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_transgress_client_models_Workflow__V($this$1.$$scope$1.workflows, arg1);
+              i = ((1 + i) | 0)
+            };
+            var jsx$4 = $this$1.$$scope$1;
+            var array$1 = response$1.data;
+            var this$5 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$1);
+            var opt = $f_sc_TraversableLike__headOption__s_Option(this$5);
+            if (opt.isEmpty__Z()) {
+              var jsx$3 = (void 0)
+            } else {
+              var arg1$1 = opt.get__O();
+              var jsx$3 = arg1$1
+            };
+            jsx$4.selectedWorkflow = jsx$3
           })
-        })($this))
+        })($this, response))
       } else if ($is_s_util_Failure(x0$1)) {
         var x3 = $as_s_util_Failure(x0$1);
         var e = x3.exception$2;
@@ -5207,13 +5795,13 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
             var s$1 = $as_T(x2$1.value$2);
             var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
             if ((($uI(s$1.length) >= 0) && ($as_T(s$1.substring(0, $uI(prefix.length))) === prefix))) {
-              var jsx$3 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$14 = new $c_sci_StringOps().init___T(s$1);
+              var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$19 = new $c_sci_StringOps().init___T(s$1);
               var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
               var n = $uI(thiz.length);
-              var $$this = this$14.repr$1;
+              var $$this = this$19.repr$1;
               var until = $uI($$this.length);
-              var body = jsx$3.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$14.repr$1, n, until));
+              var body = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$19.repr$1, n, until));
               break matchEnd7
             }
           };
@@ -5230,9 +5818,9 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
           throw new $c_s_MatchError().init___O(x1)
         };
         var value = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-        var jsx$4 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Initialization Error", body);
-        toaster.pop(jsx$4);
-        var jsx$6 = $g.console;
+        var jsx$6 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Initialization Error", body);
+        toaster.pop(jsx$6);
+        var jsx$8 = $g.console;
         var rc6$1 = false;
         var x2$2 = null;
         var x1$1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
@@ -5244,13 +5832,13 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
             var s$3 = $as_T(x2$2.value$2);
             var prefix$1 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
             if ((($uI(s$3.length) >= 0) && ($as_T(s$3.substring(0, $uI(prefix$1.length))) === prefix$1))) {
-              var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$30 = new $c_sci_StringOps().init___T(s$3);
+              var jsx$7 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$35 = new $c_sci_StringOps().init___T(s$3);
               var thiz$1 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
               var n$1 = $uI(thiz$1.length);
-              var $$this$1 = this$30.repr$1;
+              var $$this$1 = this$35.repr$1;
               var until$1 = $uI($$this$1.length);
-              var s$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$30.repr$1, n$1, until$1));
+              var s$4 = jsx$7.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$35.repr$1, n$1, until$1));
               break matchEnd7$1
             }
           };
@@ -5266,7 +5854,7 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
           };
           throw new $c_s_MatchError().init___O(x1$1)
         };
-        jsx$6.error(s$4);
+        jsx$8.error(s$4);
         return (void 0)
       } else {
         throw new $c_s_MatchError().init___O(x0$1)
@@ -5274,70 +5862,103 @@ $c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototyp
     })
   })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.com$github$ldaniels528$bourne$client$controllers$WorkflowController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s);
-  this.refreshWorkflows__p1__V()
-});
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController: 0
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController: 0
 }, false, "com.github.ldaniels528.transgress.client.controllers.WorkflowController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Controller: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_WorkflowController;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_services_JobService() {
+function $c_Lcom_github_ldaniels528_transgress_client_services_JobService() {
   $c_O.call(this);
   this.$$http$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_services_JobService;
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_services_JobService;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_services_JobService() {
+function $h_Lcom_github_ldaniels528_transgress_client_services_JobService() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype = $c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
+$h_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype = $c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
   this.$$http$1 = $$http;
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.pauseJob__T__sjs_js_Promise = (function(jobId) {
-  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/pause"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId])))
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.resumeJob__T__T__sjs_js_Promise = (function(jobId, slaveId) {
+  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/resume/", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId, slaveId])))
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.stopJob__T__sjs_js_Promise = (function(jobId) {
-  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/stop"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId])))
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.stopJob__T__T__sjs_js_Promise = (function(jobId, slaveId) {
+  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/stop/", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId, slaveId])))
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.resumeJob__T__sjs_js_Promise = (function(jobId) {
-  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/resume"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId])))
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.pauseJob__T__T__sjs_js_Promise = (function(jobId, slaveId) {
+  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/job/", "/pause/", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jobId, slaveId])))
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise = (function(states, ec) {
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise = (function(states, ec) {
   return this.$$http$1.get((states.nonEmpty__Z() ? new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/jobs?states=", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([states.mkString__T__T("|")])) : "/api/jobs"))
 });
-function $is_Lcom_github_ldaniels528_bourne_client_services_JobService(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_bourne_client_services_JobService)))
+function $is_Lcom_github_ldaniels528_transgress_client_services_JobService(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_transgress_client_services_JobService)))
 }
-function $as_Lcom_github_ldaniels528_bourne_client_services_JobService(obj) {
-  return (($is_Lcom_github_ldaniels528_bourne_client_services_JobService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.JobService"))
+function $as_Lcom_github_ldaniels528_transgress_client_services_JobService(obj) {
+  return (($is_Lcom_github_ldaniels528_transgress_client_services_JobService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.JobService"))
 }
-function $isArrayOf_Lcom_github_ldaniels528_bourne_client_services_JobService(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_bourne_client_services_JobService)))
+function $isArrayOf_Lcom_github_ldaniels528_transgress_client_services_JobService(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_transgress_client_services_JobService)))
 }
-function $asArrayOf_Lcom_github_ldaniels528_bourne_client_services_JobService(obj, depth) {
-  return (($isArrayOf_Lcom_github_ldaniels528_bourne_client_services_JobService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.JobService;", depth))
+function $asArrayOf_Lcom_github_ldaniels528_transgress_client_services_JobService(obj, depth) {
+  return (($isArrayOf_Lcom_github_ldaniels528_transgress_client_services_JobService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.JobService;", depth))
 }
-var $d_Lcom_github_ldaniels528_bourne_client_services_JobService = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_services_JobService: 0
+var $d_Lcom_github_ldaniels528_transgress_client_services_JobService = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_services_JobService: 0
 }, false, "com.github.ldaniels528.transgress.client.services.JobService", {
-  Lcom_github_ldaniels528_bourne_client_services_JobService: 1,
+  Lcom_github_ldaniels528_transgress_client_services_JobService: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Service: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_JobService.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_services_JobService;
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_services_JobService;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService() {
+function $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService() {
+  $c_O.call(this);
+  this.$$http$1 = null
+}
+$c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService;
+/** @constructor */
+function $h_Lcom_github_ldaniels528_transgress_client_services_SlaveService() {
+  /*<skip>*/
+}
+$h_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype = $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
+  this.$$http$1 = $$http;
+  return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise = (function(ec) {
+  return this.$$http$1.get("/api/slaves")
+});
+function $is_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_transgress_client_services_SlaveService)))
+}
+function $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj) {
+  return (($is_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.SlaveService"))
+}
+function $isArrayOf_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_transgress_client_services_SlaveService)))
+}
+function $asArrayOf_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj, depth) {
+  return (($isArrayOf_Lcom_github_ldaniels528_transgress_client_services_SlaveService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.SlaveService;", depth))
+}
+var $d_Lcom_github_ldaniels528_transgress_client_services_SlaveService = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_services_SlaveService: 0
+}, false, "com.github.ldaniels528.transgress.client.services.SlaveService", {
+  Lcom_github_ldaniels528_transgress_client_services_SlaveService: 1,
+  O: 1,
+  Lio_scalajs_npm_angularjs_Service: 1
+});
+$c_Lcom_github_ldaniels528_transgress_client_services_SlaveService.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_services_SlaveService;
+/** @constructor */
+function $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService() {
   $c_O.call(this);
   this.$$rootScope$1 = null;
   this.$$location$1 = null;
@@ -5347,27 +5968,14 @@ function $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService() {
   this.connected$1 = false;
   this.attemptsLeft$1 = 0
 }
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService;
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_services_WebSocketService() {
+function $h_Lcom_github_ldaniels528_transgress_client_services_WebSocketService() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype = $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.com$github$ldaniels528$bourne$client$services$WebSocketService$$$anonfun$connect$2__Lio_scalajs_dom_ws_CloseEvent__O = (function(event) {
-  this.connected$1 = false;
-  $g.console.warn("WebSocket connection lost");
-  var jsx$2 = this.$$timeout$1;
-  var jsx$1 = $m_Lio_scalajs_util_DurationHelper$();
-  var this$3 = new $c_s_concurrent_duration_package$DurationInt().init___I(15);
-  var unit = $m_ju_concurrent_TimeUnit$().SECONDS$1;
-  return jsx$2((function($this) {
-    return (function() {
-      $this.connect__p1__V()
-    })
-  })(this), jsx$1.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$3.scala$concurrent$duration$DurationInt$$n$1, unit)))
-});
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.init__V = (function() {
+$h_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype = $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.init__V = (function() {
   $g.console.log("Initializing WebSocket service...");
   var value = $g.window.WebSocket;
   if ((value === (void 0))) {
@@ -5387,11 +5995,20 @@ $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.ini
     }
   }
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.com$github$ldaniels528$bourne$client$services$WebSocketService$$$anonfun$connect$1__Lio_scalajs_dom_ws_OpenEvent__O = (function(event) {
-  this.connected$1 = true;
-  $g.console.log("WebSocket connection established")
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.com$github$ldaniels528$transgress$client$services$WebSocketService$$$anonfun$connect$2__Lio_scalajs_dom_ws_CloseEvent__O = (function(event) {
+  this.connected$1 = false;
+  $g.console.warn("WebSocket connection lost");
+  var jsx$2 = this.$$timeout$1;
+  var jsx$1 = $m_Lio_scalajs_util_DurationHelper$();
+  var this$3 = new $c_s_concurrent_duration_package$DurationInt().init___I(15);
+  var unit = $m_ju_concurrent_TimeUnit$().SECONDS$1;
+  return jsx$2((function($this) {
+    return (function() {
+      $this.connect__p1__V()
+    })
+  })(this), jsx$1.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$3.scala$concurrent$duration$DurationInt$$n$1, unit)))
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.connect__p1__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.connect__p1__V = (function() {
   var endpoint = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["ws://", ":", "/websocket"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(this.$$location$1.host()), $uI(this.$$location$1.port())]));
   var jsx$1 = $g.console;
   var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Connecting to WebSocket endpoint '", "'..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([endpoint]));
@@ -5399,12 +6016,12 @@ $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.con
   this.socket$1 = new $g.WebSocket(endpoint);
   this.socket$1.onopen = (function(arg$outer) {
     return (function(arg1$2) {
-      return arg$outer.com$github$ldaniels528$bourne$client$services$WebSocketService$$$anonfun$connect$1__Lio_scalajs_dom_ws_OpenEvent__O(arg1$2)
+      return arg$outer.com$github$ldaniels528$transgress$client$services$WebSocketService$$$anonfun$connect$1__Lio_scalajs_dom_ws_OpenEvent__O(arg1$2)
     })
   })(this);
   this.socket$1.onclose = (function(arg$outer$1) {
     return (function(arg1$2$1) {
-      return arg$outer$1.com$github$ldaniels528$bourne$client$services$WebSocketService$$$anonfun$connect$2__Lio_scalajs_dom_ws_CloseEvent__O(arg1$2$1)
+      return arg$outer$1.com$github$ldaniels528$transgress$client$services$WebSocketService$$$anonfun$connect$2__Lio_scalajs_dom_ws_CloseEvent__O(arg1$2$1)
     })
   })(this);
   this.socket$1.onerror = (function(arg$outer$2) {
@@ -5427,7 +6044,7 @@ $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.con
     })
   })(this), jsx$2.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$7.scala$concurrent$duration$DurationInt$$n$1, unit)))
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.handleMessage__p1__Lio_scalajs_dom_ws_MessageEvent__V = (function(event) {
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.handleMessage__p1__Lio_scalajs_dom_ws_MessageEvent__V = (function(event) {
   var x1 = $m_s_Option$().apply__O__s_Option($as_T(event.data));
   matchEnd6$2: {
     if ($is_s_Some(x1)) {
@@ -5491,7 +6108,11 @@ $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.han
     throw new $c_s_MatchError().init___O(x1)
   }
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster = (function($$rootScope, $$http, $$location, $$timeout, toaster) {
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.com$github$ldaniels528$transgress$client$services$WebSocketService$$$anonfun$connect$1__Lio_scalajs_dom_ws_OpenEvent__O = (function(event) {
+  this.connected$1 = true;
+  $g.console.log("WebSocket connection established")
+});
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster = (function($$rootScope, $$http, $$location, $$timeout, toaster) {
   this.$$rootScope$1 = $$rootScope;
   this.$$location$1 = $$location;
   this.$$timeout$1 = $$timeout;
@@ -5500,65 +6121,65 @@ $c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.ini
   this.attemptsLeft$1 = 3;
   return this
 });
-function $is_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_bourne_client_services_WebSocketService)))
+function $is_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_transgress_client_services_WebSocketService)))
 }
-function $as_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj) {
-  return (($is_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.WebSocketService"))
+function $as_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj) {
+  return (($is_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.WebSocketService"))
 }
-function $isArrayOf_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_bourne_client_services_WebSocketService)))
+function $isArrayOf_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_transgress_client_services_WebSocketService)))
 }
-function $asArrayOf_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj, depth) {
-  return (($isArrayOf_Lcom_github_ldaniels528_bourne_client_services_WebSocketService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.WebSocketService;", depth))
+function $asArrayOf_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj, depth) {
+  return (($isArrayOf_Lcom_github_ldaniels528_transgress_client_services_WebSocketService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.WebSocketService;", depth))
 }
-var $d_Lcom_github_ldaniels528_bourne_client_services_WebSocketService = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_services_WebSocketService: 0
+var $d_Lcom_github_ldaniels528_transgress_client_services_WebSocketService = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_services_WebSocketService: 0
 }, false, "com.github.ldaniels528.transgress.client.services.WebSocketService", {
-  Lcom_github_ldaniels528_bourne_client_services_WebSocketService: 1,
+  Lcom_github_ldaniels528_transgress_client_services_WebSocketService: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Service: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WebSocketService.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_services_WebSocketService;
+$c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_services_WebSocketService;
 /** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService() {
+function $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService() {
   $c_O.call(this);
   this.$$http$1 = null
 }
-$c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService;
+$c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_services_WorkflowService() {
+function $h_Lcom_github_ldaniels528_transgress_client_services_WorkflowService() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype = $c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
+$h_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype = $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
   this.$$http$1 = $$http;
   return this
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype.getWorkflows__sjs_js_Promise = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype.getWorkflows__sjs_js_Promise = (function() {
   return this.$$http$1.get("/api/workflows")
 });
-function $is_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_bourne_client_services_WorkflowService)))
+function $is_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_transgress_client_services_WorkflowService)))
 }
-function $as_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj) {
-  return (($is_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.WorkflowService"))
+function $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj) {
+  return (($is_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.services.WorkflowService"))
 }
-function $isArrayOf_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_bourne_client_services_WorkflowService)))
+function $isArrayOf_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_transgress_client_services_WorkflowService)))
 }
-function $asArrayOf_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj, depth) {
-  return (($isArrayOf_Lcom_github_ldaniels528_bourne_client_services_WorkflowService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.WorkflowService;", depth))
+function $asArrayOf_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj, depth) {
+  return (($isArrayOf_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.services.WorkflowService;", depth))
 }
-var $d_Lcom_github_ldaniels528_bourne_client_services_WorkflowService = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_services_WorkflowService: 0
+var $d_Lcom_github_ldaniels528_transgress_client_services_WorkflowService = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_services_WorkflowService: 0
 }, false, "com.github.ldaniels528.transgress.client.services.WorkflowService", {
-  Lcom_github_ldaniels528_bourne_client_services_WorkflowService: 1,
+  Lcom_github_ldaniels528_transgress_client_services_WorkflowService: 1,
   O: 1,
   Lio_scalajs_npm_angularjs_Service: 1
 });
-$c_Lcom_github_ldaniels528_bourne_client_services_WorkflowService.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_services_WorkflowService;
+$c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_services_WorkflowService;
 /** @constructor */
 function $c_jl_Number() {
   $c_O.call(this)
@@ -5673,6 +6294,35 @@ var $d_jl_StackTraceElement = new $TypeData().initClass({
   Ljava_io_Serializable: 1
 });
 $c_jl_StackTraceElement.prototype.$classData = $d_jl_StackTraceElement;
+/** @constructor */
+function $c_jl_Thread() {
+  $c_O.call(this);
+  this.java$lang$Thread$$interruptedState$1 = false;
+  this.name$1 = null
+}
+$c_jl_Thread.prototype = new $h_O();
+$c_jl_Thread.prototype.constructor = $c_jl_Thread;
+/** @constructor */
+function $h_jl_Thread() {
+  /*<skip>*/
+}
+$h_jl_Thread.prototype = $c_jl_Thread.prototype;
+$c_jl_Thread.prototype.run__V = (function() {
+  /*<skip>*/
+});
+$c_jl_Thread.prototype.init___sr_BoxedUnit = (function(dummy) {
+  this.java$lang$Thread$$interruptedState$1 = false;
+  this.name$1 = "main";
+  return this
+});
+var $d_jl_Thread = new $TypeData().initClass({
+  jl_Thread: 0
+}, false, "java.lang.Thread", {
+  jl_Thread: 1,
+  O: 1,
+  jl_Runnable: 1
+});
+$c_jl_Thread.prototype.$classData = $d_jl_Thread;
 /** @constructor */
 function $c_jl_Throwable() {
   $c_O.call(this);
@@ -6037,6 +6687,35 @@ function $f_s_Product2__productElement__I__O($thiz, n) {
       throw new $c_jl_IndexOutOfBoundsException().init___T(("" + n))
     }
   }
+}
+/** @constructor */
+function $c_s_concurrent_BlockContext$DefaultBlockContext$() {
+  $c_O.call(this)
+}
+$c_s_concurrent_BlockContext$DefaultBlockContext$.prototype = new $h_O();
+$c_s_concurrent_BlockContext$DefaultBlockContext$.prototype.constructor = $c_s_concurrent_BlockContext$DefaultBlockContext$;
+/** @constructor */
+function $h_s_concurrent_BlockContext$DefaultBlockContext$() {
+  /*<skip>*/
+}
+$h_s_concurrent_BlockContext$DefaultBlockContext$.prototype = $c_s_concurrent_BlockContext$DefaultBlockContext$.prototype;
+$c_s_concurrent_BlockContext$DefaultBlockContext$.prototype.init___ = (function() {
+  return this
+});
+var $d_s_concurrent_BlockContext$DefaultBlockContext$ = new $TypeData().initClass({
+  s_concurrent_BlockContext$DefaultBlockContext$: 0
+}, false, "scala.concurrent.BlockContext$DefaultBlockContext$", {
+  s_concurrent_BlockContext$DefaultBlockContext$: 1,
+  O: 1,
+  s_concurrent_BlockContext: 1
+});
+$c_s_concurrent_BlockContext$DefaultBlockContext$.prototype.$classData = $d_s_concurrent_BlockContext$DefaultBlockContext$;
+var $n_s_concurrent_BlockContext$DefaultBlockContext$ = (void 0);
+function $m_s_concurrent_BlockContext$DefaultBlockContext$() {
+  if ((!$n_s_concurrent_BlockContext$DefaultBlockContext$)) {
+    $n_s_concurrent_BlockContext$DefaultBlockContext$ = new $c_s_concurrent_BlockContext$DefaultBlockContext$().init___()
+  };
+  return $n_s_concurrent_BlockContext$DefaultBlockContext$
 }
 /** @constructor */
 function $c_s_concurrent_duration_package$DurationInt() {
@@ -6594,11 +7273,11 @@ var $d_sr_ObjectRef = new $TypeData().initClass({
   Ljava_io_Serializable: 1
 });
 $c_sr_ObjectRef.prototype.$classData = $d_sr_ObjectRef;
-var $b_Lcom_github_ldaniels528_bourne_client_controllers_AppTab = (void 0);
-function $a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab() {
-  if ((!$b_Lcom_github_ldaniels528_bourne_client_controllers_AppTab)) {
+var $b_Lcom_github_ldaniels528_transgress_client_controllers_AppTab = (void 0);
+function $a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab() {
+  if ((!$b_Lcom_github_ldaniels528_transgress_client_controllers_AppTab)) {
     /** @constructor */
-    var $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab = (function $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab(arg$1, arg$2, arg$3) {
+    var $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab = (function $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab(arg$1, arg$2, arg$3) {
       var name = $as_T(arg$1);
       var uri = $as_T(arg$2);
       var icon = $as_T(arg$3);
@@ -6626,15 +7305,15 @@ function $a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab() {
       this.icon = icon
     });
     /** @constructor */
-    var $h_Lcom_github_ldaniels528_bourne_client_controllers_AppTab = (function $h_Lcom_github_ldaniels528_bourne_client_controllers_AppTab() {
+    var $h_Lcom_github_ldaniels528_transgress_client_controllers_AppTab = (function $h_Lcom_github_ldaniels528_transgress_client_controllers_AppTab() {
       /*<skip>*/
     });
-    $h_Lcom_github_ldaniels528_bourne_client_controllers_AppTab.prototype = $g.Object.prototype;
-    $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab.prototype = new $h_Lcom_github_ldaniels528_bourne_client_controllers_AppTab();
-    $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab;
-    $b_Lcom_github_ldaniels528_bourne_client_controllers_AppTab = $c_Lcom_github_ldaniels528_bourne_client_controllers_AppTab
+    $h_Lcom_github_ldaniels528_transgress_client_controllers_AppTab.prototype = $g.Object.prototype;
+    $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab.prototype = new $h_Lcom_github_ldaniels528_transgress_client_controllers_AppTab();
+    $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab;
+    $b_Lcom_github_ldaniels528_transgress_client_controllers_AppTab = $c_Lcom_github_ldaniels528_transgress_client_controllers_AppTab
   };
-  return $b_Lcom_github_ldaniels528_bourne_client_controllers_AppTab
+  return $b_Lcom_github_ldaniels528_transgress_client_controllers_AppTab
 }
 var $b_Lio_scalajs_npm_angularjs_toaster_ToasterOptions = (void 0);
 function $a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions() {
@@ -8299,6 +8978,88 @@ function $m_s_StringContext$() {
   return $n_s_StringContext$
 }
 /** @constructor */
+function $c_s_concurrent_BatchingExecutor$Batch() {
+  $c_O.call(this);
+  this.initial$1 = null;
+  this.parentBlockContext$1 = null;
+  this.$$outer$1 = null
+}
+$c_s_concurrent_BatchingExecutor$Batch.prototype = new $h_O();
+$c_s_concurrent_BatchingExecutor$Batch.prototype.constructor = $c_s_concurrent_BatchingExecutor$Batch;
+/** @constructor */
+function $h_s_concurrent_BatchingExecutor$Batch() {
+  /*<skip>*/
+}
+$h_s_concurrent_BatchingExecutor$Batch.prototype = $c_s_concurrent_BatchingExecutor$Batch.prototype;
+$c_s_concurrent_BatchingExecutor$Batch.prototype.init___s_concurrent_BatchingExecutor__sci_List = (function($$outer, initial) {
+  this.initial$1 = initial;
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$1 = $$outer
+  };
+  return this
+});
+$c_s_concurrent_BatchingExecutor$Batch.prototype.processBatch$1__p1__sci_List__V = (function(batch) {
+  _processBatch: while (true) {
+    var x1 = batch;
+    var x$2 = $m_sci_Nil$();
+    if ((!x$2.equals__O__Z(x1))) {
+      if ($is_sci_$colon$colon(x1)) {
+        var x2 = $as_sci_$colon$colon(x1);
+        var head = $as_jl_Runnable(x2.head$5);
+        var tail = x2.tl$5;
+        this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.set__O__V(tail);
+        try {
+          head.run__V()
+        } catch (e) {
+          var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
+          if ((e$2 !== null)) {
+            var remaining = $as_sci_List(this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.get__O());
+            this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.set__O__V($m_sci_Nil$());
+            var r = new $c_s_concurrent_BatchingExecutor$Batch().init___s_concurrent_BatchingExecutor__sci_List(this.$$outer$1, remaining);
+            r.run__V();
+            throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(e$2)
+          } else {
+            throw e
+          }
+        };
+        batch = $as_sci_List(this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.get__O());
+        continue _processBatch
+      };
+      throw new $c_s_MatchError().init___O(x1)
+    };
+    break
+  }
+});
+$c_s_concurrent_BatchingExecutor$Batch.prototype.run__V = (function() {
+  $m_s_Predef$().require__Z__V((this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.get__O() === null));
+  var prevBlockContext = $m_s_concurrent_BlockContext$().current__s_concurrent_BlockContext();
+  var this$1 = $m_s_concurrent_BlockContext$();
+  var old = $as_s_concurrent_BlockContext(this$1.contextLocal$1.get__O());
+  try {
+    this$1.contextLocal$1.set__O__V(this);
+    try {
+      this.parentBlockContext$1 = prevBlockContext;
+      this.processBatch$1__p1__sci_List__V(this.initial$1)
+    } finally {
+      this.$$outer$1.scala$concurrent$BatchingExecutor$$$undtasksLocal$1.remove__V();
+      this.parentBlockContext$1 = null
+    }
+  } finally {
+    this$1.contextLocal$1.set__O__V(old)
+  }
+});
+var $d_s_concurrent_BatchingExecutor$Batch = new $TypeData().initClass({
+  s_concurrent_BatchingExecutor$Batch: 0
+}, false, "scala.concurrent.BatchingExecutor$Batch", {
+  s_concurrent_BatchingExecutor$Batch: 1,
+  O: 1,
+  jl_Runnable: 1,
+  s_concurrent_BlockContext: 1
+});
+$c_s_concurrent_BatchingExecutor$Batch.prototype.$classData = $d_s_concurrent_BatchingExecutor$Batch;
+/** @constructor */
 function $c_s_concurrent_duration_Duration$() {
   $c_O.call(this);
   this.timeUnitLabels$1 = null;
@@ -8638,6 +9399,39 @@ var $d_s_concurrent_impl_CallbackRunnable = new $TypeData().initClass({
   s_concurrent_OnCompleteRunnable: 1
 });
 $c_s_concurrent_impl_CallbackRunnable.prototype.$classData = $d_s_concurrent_impl_CallbackRunnable;
+function $f_s_concurrent_impl_Promise__transformWith__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f, executor) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  $thiz.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, f$1, p$1) {
+    return (function(v$2) {
+      var v = $as_s_util_Try(v$2);
+      try {
+        var x1 = $as_s_concurrent_Future(f$1.apply__O__O(v));
+        if ((x1 === $this)) {
+          return $f_s_concurrent_Promise__complete__s_util_Try__s_concurrent_Promise(p$1, v)
+        } else if ($is_s_concurrent_impl_Promise$DefaultPromise(x1)) {
+          var x2 = $as_s_concurrent_impl_Promise$DefaultPromise(x1);
+          x2.link__p2__s_concurrent_impl_Promise$DefaultPromise__V(p$1.compressedRoot__p2__s_concurrent_impl_Promise$DefaultPromise());
+          return (void 0)
+        } else {
+          return $f_s_concurrent_Promise__tryCompleteWith__s_concurrent_Future__s_concurrent_Promise(p$1, x1)
+        }
+      } catch (e) {
+        var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
+        if ((e$2 !== null)) {
+          var o11 = $m_s_util_control_NonFatal$().unapply__jl_Throwable__s_Option(e$2);
+          if ((!o11.isEmpty__Z())) {
+            var t = $as_jl_Throwable(o11.get__O());
+            return $f_s_concurrent_Promise__failure__jl_Throwable__s_concurrent_Promise(p$1, t)
+          };
+          throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(e$2)
+        } else {
+          throw e
+        }
+      }
+    })
+  })($thiz, f, p)), executor);
+  return p
+}
 function $f_s_concurrent_impl_Promise__toString__T($thiz) {
   var x1 = $thiz.value0__p2__s_Option();
   if ($is_s_Some(x1)) {
@@ -8650,6 +9444,34 @@ function $f_s_concurrent_impl_Promise__toString__T($thiz) {
       return "Future(<not completed>)"
     } else {
       throw new $c_s_MatchError().init___O(x1)
+    }
+  }
+}
+function $f_s_concurrent_impl_Promise__transform__F1__s_concurrent_ExecutionContext__s_concurrent_Future($thiz, f, executor) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  $thiz.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, f$1, p$1) {
+    return (function(result$2) {
+      var result = $as_s_util_Try(result$2);
+      var result$1 = $f_s_concurrent_impl_Promise__liftedTree1$1__ps_concurrent_impl_Promise__F1__s_util_Try__s_util_Try($this, f$1, result);
+      return $as_s_concurrent_impl_Promise$DefaultPromise($f_s_concurrent_Promise__complete__s_util_Try__s_concurrent_Promise(p$1, result$1))
+    })
+  })($thiz, f, p)), executor);
+  return p
+}
+function $f_s_concurrent_impl_Promise__liftedTree1$1__ps_concurrent_impl_Promise__F1__s_util_Try__s_util_Try($thiz, f$1, result$1) {
+  try {
+    return $as_s_util_Try(f$1.apply__O__O(result$1))
+  } catch (e) {
+    var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
+    if ((e$2 !== null)) {
+      var o11 = $m_s_util_control_NonFatal$().unapply__jl_Throwable__s_Option(e$2);
+      if ((!o11.isEmpty__Z())) {
+        var t = $as_jl_Throwable(o11.get__O());
+        return new $c_s_util_Failure().init___jl_Throwable(t)
+      };
+      throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(e$2)
+    } else {
+      throw e
     }
   }
 }
@@ -10045,6 +10867,46 @@ $c_s_Predef$$less$colon$less.prototype.toString__T = (function() {
   return "<function1>"
 });
 /** @constructor */
+function $c_s_concurrent_Future$InternalCallbackExecutor$() {
+  $c_O.call(this);
+  this.scala$concurrent$BatchingExecutor$$$undtasksLocal$1 = null
+}
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype = new $h_O();
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype.constructor = $c_s_concurrent_Future$InternalCallbackExecutor$;
+/** @constructor */
+function $h_s_concurrent_Future$InternalCallbackExecutor$() {
+  /*<skip>*/
+}
+$h_s_concurrent_Future$InternalCallbackExecutor$.prototype = $c_s_concurrent_Future$InternalCallbackExecutor$.prototype;
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype.init___ = (function() {
+  $n_s_concurrent_Future$InternalCallbackExecutor$ = this;
+  this.scala$concurrent$BatchingExecutor$$$undtasksLocal$1 = new $c_jl_ThreadLocal().init___();
+  return this
+});
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype.reportFailure__jl_Throwable__V = (function(t) {
+  throw new $c_jl_IllegalStateException().init___T__jl_Throwable("problem in scala.concurrent internal callback", t)
+});
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype.execute__jl_Runnable__V = (function(runnable) {
+  $f_s_concurrent_BatchingExecutor__execute__jl_Runnable__V(this, runnable)
+});
+var $d_s_concurrent_Future$InternalCallbackExecutor$ = new $TypeData().initClass({
+  s_concurrent_Future$InternalCallbackExecutor$: 0
+}, false, "scala.concurrent.Future$InternalCallbackExecutor$", {
+  s_concurrent_Future$InternalCallbackExecutor$: 1,
+  O: 1,
+  s_concurrent_ExecutionContext: 1,
+  s_concurrent_BatchingExecutor: 1,
+  ju_concurrent_Executor: 1
+});
+$c_s_concurrent_Future$InternalCallbackExecutor$.prototype.$classData = $d_s_concurrent_Future$InternalCallbackExecutor$;
+var $n_s_concurrent_Future$InternalCallbackExecutor$ = (void 0);
+function $m_s_concurrent_Future$InternalCallbackExecutor$() {
+  if ((!$n_s_concurrent_Future$InternalCallbackExecutor$)) {
+    $n_s_concurrent_Future$InternalCallbackExecutor$ = new $c_s_concurrent_Future$InternalCallbackExecutor$().init___()
+  };
+  return $n_s_concurrent_Future$InternalCallbackExecutor$
+}
+/** @constructor */
 function $c_s_math_Equiv$() {
   $c_O.call(this)
 }
@@ -10701,6 +11563,10 @@ function $h_jl_IllegalStateException() {
 $h_jl_IllegalStateException.prototype = $c_jl_IllegalStateException.prototype;
 $c_jl_IllegalStateException.prototype.init___T = (function(s) {
   $c_jl_Throwable.prototype.init___T__jl_Throwable.call(this, s, null);
+  return this
+});
+$c_jl_IllegalStateException.prototype.init___T__jl_Throwable = (function(s, e) {
+  $c_jl_Throwable.prototype.init___T__jl_Throwable.call(this, s, e);
   return this
 });
 var $d_jl_IllegalStateException = new $TypeData().initClass({
@@ -13084,6 +13950,9 @@ $c_s_util_Failure.prototype.equals__O__Z = (function(x$1) {
     return false
   }
 });
+$c_s_util_Failure.prototype.map__F1__s_util_Try = (function(f) {
+  return this
+});
 $c_s_util_Failure.prototype.productElement__I__O = (function(x$1) {
   switch (x$1) {
     case 0: {
@@ -13159,6 +14028,23 @@ $c_s_util_Success.prototype.equals__O__Z = (function(x$1) {
     return $m_sr_BoxesRunTime$().equals__O__O__Z(this.value$2, Success$1.value$2)
   } else {
     return false
+  }
+});
+$c_s_util_Success.prototype.map__F1__s_util_Try = (function(f) {
+  try {
+    return new $c_s_util_Success().init___O(f.apply__O__O(this.value$2))
+  } catch (e) {
+    var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
+    if ((e$2 !== null)) {
+      var o11 = $m_s_util_control_NonFatal$().unapply__jl_Throwable__s_Option(e$2);
+      if ((!o11.isEmpty__Z())) {
+        var e$3 = $as_jl_Throwable(o11.get__O());
+        return new $c_s_util_Failure().init___jl_Throwable(e$3)
+      };
+      throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(e$2)
+    } else {
+      throw e
+    }
   }
 });
 $c_s_util_Success.prototype.productElement__I__O = (function(x$1) {
@@ -13251,6 +14137,9 @@ function $f_sc_TraversableLike__isPartLikelySynthetic$1__psc_TraversableLike__T_
 }
 function $f_sc_TraversableLike__toString__T($thiz) {
   return $thiz.mkString__T__T__T__T(($thiz.stringPrefix__T() + "("), ", ", ")")
+}
+function $f_sc_TraversableLike__headOption__s_Option($thiz) {
+  return ($thiz.isEmpty__Z() ? $m_s_None$() : new $c_s_Some().init___O($thiz.head__O()))
 }
 function $f_sc_TraversableLike__last__O($thiz) {
   var elem = $thiz.head__O();
@@ -13815,742 +14704,6 @@ var $d_sjsr_UndefinedBehaviorError = new $TypeData().initClass({
   s_util_control_NoStackTrace: 1
 });
 $c_sjsr_UndefinedBehaviorError.prototype.$classData = $d_sjsr_UndefinedBehaviorError;
-/** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController() {
-  $c_O.call(this);
-  this.$$scope$1 = null;
-  this.$$interval$1 = null;
-  this.toaster$1 = null;
-  this.jobService$1 = null
-}
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController;
-/** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController() {
-  /*<skip>*/
-}
-$h_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$13__sjs_js_UndefOr__V = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var value = aJob._id;
-    if ((value !== (void 0))) {
-      var id = $as_T(value);
-      this.$$scope$1.resuming = true;
-      var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-      var p = this.jobService$1.resumeJob__T__sjs_js_Promise(id);
-      jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-        return (function(x0$2$2) {
-          var x0$2 = $as_s_util_Try(x0$2$2);
-          if ($is_s_util_Success(x0$2)) {
-            var x2 = $as_s_util_Success(x0$2);
-            var response = x2.value$2;
-            return $this.$$scope$1.$apply((function($this$1, response$1) {
-              return (function() {
-                $this$1.$$scope$1.resuming = false;
-                var jobs = $this$1.$$scope$1.jobs;
-                var job = response$1.data;
-                $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($this$1, jobs, job)
-              })
-            })($this, response))
-          } else if ($is_s_util_Failure(x0$2)) {
-            var x3 = $as_s_util_Failure(x0$2);
-            var e = x3.exception$2;
-            $this.$$scope$1.resuming = false;
-            var toaster = $this.toaster$1;
-            var value$1 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-            var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$1, "Failed to resume job");
-            toaster.pop(jsx$2);
-            var jsx$6 = $g.console;
-            var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to resume job: ", ""]));
-            var rc6 = false;
-            var x2$1 = null;
-            var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-            matchEnd7: {
-              var jsx$3;
-              if ($is_s_Some(x1)) {
-                rc6 = true;
-                x2$1 = $as_s_Some(x1);
-                var s = $as_T(x2$1.value$2);
-                var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-                  var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-                  var this$28 = new $c_sci_StringOps().init___T(s);
-                  var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                  var n = $uI(thiz.length);
-                  var $$this = this$28.repr$1;
-                  var until = $uI($$this.length);
-                  var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$28.repr$1, n, until));
-                  break matchEnd7
-                }
-              };
-              if (rc6) {
-                var s$2 = $as_T(x2$1.value$2);
-                var jsx$3 = s$2;
-                break matchEnd7
-              };
-              var x = $m_s_None$();
-              if ((x === x1)) {
-                var jsx$3 = "Cause unknown";
-                break matchEnd7
-              };
-              throw new $c_s_MatchError().init___O(x1)
-            };
-            var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
-            jsx$6.error(s$1);
-            return (void 0)
-          } else {
-            throw new $c_s_MatchError().init___O(x0$2)
-          }
-        })
-      })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.productPrefix__T = (function() {
-  return "DashboardController"
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.$$scope__Lcom_github_ldaniels528_bourne_client_controllers_JobHandlingScope = (function() {
-  return this.$$scope$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_DashboardScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_JobService = (function($$scope, $$interval, toaster, jobService) {
-  this.$$scope$1 = $$scope;
-  this.$$interval$1 = $$interval;
-  this.toaster$1 = toaster;
-  this.jobService$1 = jobService;
-  $$scope.init = (function(arg$outer) {
-    return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$1__V()
-    })
-  })(this);
-  $$scope.isPausable = (function(arg$outer$1) {
-    return (function(arg1$2) {
-      return arg$outer$1.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_UndefOr__Z(arg1$2)
-    })
-  })(this);
-  $$scope.isResumable = (function(arg$outer$2) {
-    return (function(arg1$2$1) {
-      return arg$outer$2.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$4__sjs_js_UndefOr__Z(arg1$2$1)
-    })
-  })(this);
-  $$scope.isStoppable = (function(arg$outer$3) {
-    return (function(arg1$2$2) {
-      return arg$outer$3.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$6__sjs_js_UndefOr__Z(arg1$2$2)
-    })
-  })(this);
-  $$scope.pauseJob = (function(arg$outer$4) {
-    return (function(arg1$2$3) {
-      arg$outer$4.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$8__sjs_js_UndefOr__V(arg1$2$3)
-    })
-  })(this);
-  $$scope.resumeJob = (function(arg$outer$5) {
-    return (function(arg1$2$4) {
-      arg$outer$5.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$13__sjs_js_UndefOr__V(arg1$2$4)
-    })
-  })(this);
-  $$scope.stopJob = (function(arg$outer$6) {
-    return (function(arg1$2$5) {
-      arg$outer$6.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$18__sjs_js_UndefOr__V(arg1$2$5)
-    })
-  })(this);
-  return this
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.productArity__I = (function() {
-  return 4
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.equals__O__Z = (function(x$1) {
-  if ((this === x$1)) {
-    return true
-  } else if ($is_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(x$1)) {
-    var DashboardController$1 = $as_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(x$1);
-    if ((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$scope$1, DashboardController$1.$$scope$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$interval$1, DashboardController$1.$$interval$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.toaster$1, DashboardController$1.toaster$1))) {
-      var x = this.jobService$1;
-      var x$2 = DashboardController$1.jobService$1;
-      return (x === x$2)
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$4__sjs_js_UndefOr__Z = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().PAUSED$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      var jsx$1 = true
-    } else {
-      var valueA$1 = aJob.state;
-      var value$1 = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().STOPPED$1;
-      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
-    };
-    if (jsx$1) {
-      return (!this.isJobOperation__p1__Z())
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.productElement__I__O = (function(x$1) {
-  switch (x$1) {
-    case 0: {
-      return this.$$scope$1;
-      break
-    }
-    case 1: {
-      return this.$$interval$1;
-      break
-    }
-    case 2: {
-      return this.toaster$1;
-      break
-    }
-    case 3: {
-      return this.jobService$1;
-      break
-    }
-    default: {
-      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.toString__T = (function() {
-  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$8__sjs_js_UndefOr__V = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var value = aJob._id;
-    if ((value !== (void 0))) {
-      var id = $as_T(value);
-      this.$$scope$1.pausing = true;
-      var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-      var p = this.jobService$1.pauseJob__T__sjs_js_Promise(id);
-      jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-        return (function(x0$1$2) {
-          var x0$1 = $as_s_util_Try(x0$1$2);
-          if ($is_s_util_Success(x0$1)) {
-            var x2 = $as_s_util_Success(x0$1);
-            var response = x2.value$2;
-            return $this.$$scope$1.$apply((function($this$1, response$1) {
-              return (function() {
-                $this$1.$$scope$1.pausing = false;
-                var jobs = $this$1.$$scope$1.jobs;
-                var job = response$1.data;
-                $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($this$1, jobs, job)
-              })
-            })($this, response))
-          } else if ($is_s_util_Failure(x0$1)) {
-            var x3 = $as_s_util_Failure(x0$1);
-            var e = x3.exception$2;
-            $this.$$scope$1.pausing = false;
-            var toaster = $this.toaster$1;
-            var value$1 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-            var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$1, "Failed to pause job");
-            toaster.pop(jsx$2);
-            var jsx$6 = $g.console;
-            var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to pause job: ", ""]));
-            var rc6 = false;
-            var x2$1 = null;
-            var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-            matchEnd7: {
-              var jsx$3;
-              if ($is_s_Some(x1)) {
-                rc6 = true;
-                x2$1 = $as_s_Some(x1);
-                var s = $as_T(x2$1.value$2);
-                var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-                  var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-                  var this$28 = new $c_sci_StringOps().init___T(s);
-                  var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                  var n = $uI(thiz.length);
-                  var $$this = this$28.repr$1;
-                  var until = $uI($$this.length);
-                  var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$28.repr$1, n, until));
-                  break matchEnd7
-                }
-              };
-              if (rc6) {
-                var s$2 = $as_T(x2$1.value$2);
-                var jsx$3 = s$2;
-                break matchEnd7
-              };
-              var x = $m_s_None$();
-              if ((x === x1)) {
-                var jsx$3 = "Cause unknown";
-                break matchEnd7
-              };
-              throw new $c_s_MatchError().init___O(x1)
-            };
-            var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
-            jsx$6.error(s$1);
-            return (void 0)
-          } else {
-            throw new $c_s_MatchError().init___O(x0$1)
-          }
-        })
-      })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.jobService__Lcom_github_ldaniels528_bourne_client_services_JobService = (function() {
-  return this.jobService$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.isJobOperation__p1__Z = (function() {
-  var value = this.$$scope$1.pausing;
-  if ((value === (void 0))) {
-    var valueA = (void 0)
-  } else {
-    var opt = $m_s_Option$().apply__O__s_Option(value);
-    if (opt.isEmpty__Z()) {
-      var valueA = (void 0)
-    } else {
-      var arg1 = opt.get__O();
-      var valueA = arg1
-    }
-  };
-  if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, true))) {
-    var jsx$1 = true
-  } else {
-    var value$1 = this.$$scope$1.resuming;
-    if ((value$1 === (void 0))) {
-      var valueA$1 = (void 0)
-    } else {
-      var opt$1 = $m_s_Option$().apply__O__s_Option(value$1);
-      if (opt$1.isEmpty__Z()) {
-        var valueA$1 = (void 0)
-      } else {
-        var arg1$1 = opt$1.get__O();
-        var valueA$1 = arg1$1
-      }
-    };
-    var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, true))
-  };
-  if (jsx$1) {
-    return true
-  } else {
-    var value$2 = this.$$scope$1.stopping;
-    if ((value$2 === (void 0))) {
-      var valueA$2 = (void 0)
-    } else {
-      var opt$2 = $m_s_Option$().apply__O__s_Option(value$2);
-      if (opt$2.isEmpty__Z()) {
-        var valueA$2 = (void 0)
-      } else {
-        var arg1$2 = opt$2.get__O();
-        var valueA$2 = arg1$2
-      }
-    };
-    return ((valueA$2 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$2, true))
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_UndefOr__Z = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().RUNNING$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      return (!this.isJobOperation__p1__Z())
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$6__sjs_js_UndefOr__Z = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().PAUSED$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      var jsx$1 = true
-    } else {
-      var valueA$1 = aJob.state;
-      var value$1 = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().RUNNING$1;
-      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
-    };
-    if (jsx$1) {
-      return (!this.isJobOperation__p1__Z())
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.com$github$ldaniels528$bourne$client$controllers$DashboardController$$$anonfun$new$18__sjs_js_UndefOr__V = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var value = aJob._id;
-    if ((value !== (void 0))) {
-      var id = $as_T(value);
-      this.$$scope$1.stopping = true;
-      var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-      var p = this.jobService$1.stopJob__T__sjs_js_Promise(id);
-      jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-        return (function(x0$3$2) {
-          var x0$3 = $as_s_util_Try(x0$3$2);
-          if ($is_s_util_Success(x0$3)) {
-            var x2 = $as_s_util_Success(x0$3);
-            var response = x2.value$2;
-            return $this.$$scope$1.$apply((function($this$1, response$1) {
-              return (function() {
-                $this$1.$$scope$1.stopping = false;
-                var jobs = $this$1.$$scope$1.jobs;
-                var job = response$1.data;
-                $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($this$1, jobs, job)
-              })
-            })($this, response))
-          } else if ($is_s_util_Failure(x0$3)) {
-            var x3 = $as_s_util_Failure(x0$3);
-            var e = x3.exception$2;
-            $this.$$scope$1.stopping = false;
-            var toaster = $this.toaster$1;
-            var value$1 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-            var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$1, "Failed to stop job");
-            toaster.pop(jsx$2);
-            var jsx$6 = $g.console;
-            var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to stop job: ", ""]));
-            var rc6 = false;
-            var x2$1 = null;
-            var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-            matchEnd7: {
-              var jsx$3;
-              if ($is_s_Some(x1)) {
-                rc6 = true;
-                x2$1 = $as_s_Some(x1);
-                var s = $as_T(x2$1.value$2);
-                var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-                  var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-                  var this$28 = new $c_sci_StringOps().init___T(s);
-                  var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                  var n = $uI(thiz.length);
-                  var $$this = this$28.repr$1;
-                  var until = $uI($$this.length);
-                  var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$28.repr$1, n, until));
-                  break matchEnd7
-                }
-              };
-              if (rc6) {
-                var s$2 = $as_T(x2$1.value$2);
-                var jsx$3 = s$2;
-                break matchEnd7
-              };
-              var x = $m_s_None$();
-              if ((x === x1)) {
-                var jsx$3 = "Cause unknown";
-                break matchEnd7
-              };
-              throw new $c_s_MatchError().init___O(x1)
-            };
-            var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
-            jsx$6.error(s$1);
-            return (void 0)
-          } else {
-            throw new $c_s_MatchError().init___O(x0$3)
-          }
-        })
-      })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.hashCode__I = (function() {
-  var this$2 = $m_s_util_hashing_MurmurHash3$();
-  return this$2.productHash__s_Product__I__I(this, (-889275714))
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.productIterator__sc_Iterator = (function() {
-  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
-});
-function $is_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_bourne_client_controllers_DashboardController)))
-}
-function $as_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj) {
-  return (($is_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.controllers.DashboardController"))
-}
-function $isArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_bourne_client_controllers_DashboardController)))
-}
-function $asArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj, depth) {
-  return (($isArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.controllers.DashboardController;", depth))
-}
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_DashboardController: 0
-}, false, "com.github.ldaniels528.transgress.client.controllers.DashboardController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_DashboardController: 1,
-  O: 1,
-  Lio_scalajs_npm_angularjs_Controller: 1,
-  Lcom_github_ldaniels528_bourne_client_controllers_JobHandling: 1,
-  s_Product: 1,
-  s_Equals: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_DashboardController;
-/** @constructor */
-function $c_Lcom_github_ldaniels528_bourne_client_controllers_MainController() {
-  $c_O.call(this);
-  this.$$scope$1 = null;
-  this.$$interval$1 = null;
-  this.$$location$1 = null;
-  this.toaster$1 = null;
-  this.jobService$1 = null
-}
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.constructor = $c_Lcom_github_ldaniels528_bourne_client_controllers_MainController;
-/** @constructor */
-function $h_Lcom_github_ldaniels528_bourne_client_controllers_MainController() {
-  /*<skip>*/
-}
-$h_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype = $c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype;
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.productPrefix__T = (function() {
-  return "MainController"
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.$$scope__Lcom_github_ldaniels528_bourne_client_controllers_JobHandlingScope = (function() {
-  return this.$$scope$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.productArity__I = (function() {
-  return 5
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$15__sjs_js_UndefOr__V = (function(aJob) {
-  var jsx$2 = this.$$scope$1;
-  if ((aJob === (void 0))) {
-    var jsx$1 = (void 0)
-  } else {
-    var opt = $m_s_Option$().apply__O__s_Option(aJob);
-    if (opt.isEmpty__Z()) {
-      var jsx$1 = (void 0)
-    } else {
-      var arg1 = opt.get__O();
-      var jsx$1 = arg1
-    }
-  };
-  jsx$2.selectedJob = jsx$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$13__sjs_js_UndefOr__Z = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().RUNNING$1;
-    return ((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.equals__O__Z = (function(x$1) {
-  if ((this === x$1)) {
-    return true
-  } else if ($is_Lcom_github_ldaniels528_bourne_client_controllers_MainController(x$1)) {
-    var MainController$1 = $as_Lcom_github_ldaniels528_bourne_client_controllers_MainController(x$1);
-    if (((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$scope$1, MainController$1.$$scope$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$interval$1, MainController$1.$$interval$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$location$1, MainController$1.$$location$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.toaster$1, MainController$1.toaster$1))) {
-      var x = this.jobService$1;
-      var x$2 = MainController$1.jobService$1;
-      return (x === x$2)
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.productElement__I__O = (function(x$1) {
-  switch (x$1) {
-    case 0: {
-      return this.$$scope$1;
-      break
-    }
-    case 1: {
-      return this.$$interval$1;
-      break
-    }
-    case 2: {
-      return this.$$location$1;
-      break
-    }
-    case 3: {
-      return this.toaster$1;
-      break
-    }
-    case 4: {
-      return this.jobService$1;
-      break
-    }
-    default: {
-      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s);
-  var this$2 = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().values__sc_Iterator();
-  var jobStates = this$2.toStream__sci_Stream();
-  var ec = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-  $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__refreshJobs__sc_Seq__s_concurrent_ExecutionContext__V(this, jobStates, ec);
-  var jsx$3 = this.$$interval$1;
-  var jsx$2 = $m_Lio_scalajs_util_DurationHelper$();
-  var this$5 = new $c_s_concurrent_duration_package$DurationInt().init___I(3);
-  var unit = $m_ju_concurrent_TimeUnit$().MINUTES$1;
-  jsx$3((function($this) {
-    return (function() {
-      var this$3 = $m_Lcom_github_ldaniels528_bourne_models_JobStates$().values__sc_Iterator();
-      var jobStates$1 = this$3.toStream__sci_Stream();
-      var ec$1 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-      $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__refreshJobs__sc_Seq__s_concurrent_ExecutionContext__V($this, jobStates$1, ec$1)
-    })
-  })(this), jsx$2.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$5.scala$concurrent$duration$DurationInt$$n$1, unit)))
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.toString__T = (function() {
-  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$5__sjs_js_UndefOr__V = (function(anExpandable) {
-  if ((anExpandable !== (void 0))) {
-    var value = anExpandable.expanded;
-    if ((value === (void 0))) {
-      var valueA = (void 0)
-    } else {
-      var opt = $m_s_Option$().apply__O__s_Option(value);
-      if (opt.isEmpty__Z()) {
-        var valueA = (void 0)
-      } else {
-        var arg1 = opt.get__O();
-        var valueA = arg1
-      }
-    };
-    var value$1 = (!((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, true)));
-    anExpandable.expanded = value$1
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$7__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
-  if ((aJob === (void 0))) {
-    return (void 0)
-  } else {
-    var value = aJob.state;
-    if ((value === (void 0))) {
-      return (void 0)
-    } else {
-      var x0$1 = $as_T(value);
-      return (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().NEW$1 === x0$1) ? "images/statuses/offlight.png" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().CLAIMED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().PAUSED$1 === x0$1) ? "images/statuses/yellowlight.gif" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().QUEUED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().RUNNING$1 === x0$1) ? "images/statuses/loading16.gif" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().STOPPED$1 === x0$1) ? "images/statuses/redlight.png" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().SUCCESS$1 === x0$1) ? "images/statuses/greenlight.png" : (void 0))))))))
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.jobService__Lcom_github_ldaniels528_bourne_client_services_JobService = (function() {
-  return this.jobService$1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.hashCode__I = (function() {
-  var this$2 = $m_s_util_hashing_MurmurHash3$();
-  return this$2.productHash__s_Product__I__I(this, (-889275714))
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.init___Lcom_github_ldaniels528_bourne_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_bourne_client_services_JobService = (function($$scope, $$interval, $$location, toaster, jobService) {
-  this.$$scope$1 = $$scope;
-  this.$$interval$1 = $$interval;
-  this.$$location$1 = $$location;
-  this.toaster$1 = toaster;
-  this.jobService$1 = jobService;
-  var value = $m_Lcom_github_ldaniels528_bourne_AppConstants$().Version$1;
-  $$scope.version = ("" + value);
-  $$scope.jobs = [];
-  $$scope.tabs = [new ($a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab())("Activity", "/activity", "fa-tasks"), new ($a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab())("Dashboard", "/dashboard", "fa-stack-overflow"), new ($a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab())("Slaves", "/slaves", "fa-android"), new ($a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab())("Triggers", "/triggers", "fa-cogs"), new ($a_Lcom_github_ldaniels528_bourne_client_controllers_AppTab())("Workflows", "/workflows", "fa-th-large")];
-  $$scope.selectedTab = $$scope.tabs[0];
-  $$scope.init = (function(arg$outer) {
-    return (function() {
-      arg$outer.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$1__V()
-    })
-  })(this);
-  $$scope.changeTab = (function(arg$outer$1) {
-    return (function(arg1$2) {
-      arg$outer$1.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$3__sjs_js_UndefOr__V(arg1$2)
-    })
-  })(this);
-  $$scope.collapseExpand = (function(arg$outer$2) {
-    return (function(arg1$2$1) {
-      arg$outer$2.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$5__sjs_js_UndefOr__V(arg1$2$1)
-    })
-  })(this);
-  $$scope.getStatusBulb = (function(arg$outer$3) {
-    return (function(arg1$2$2) {
-      return arg$outer$3.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$7__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2$2)
-    })
-  })(this);
-  $$scope.getStatusClass = (function(arg$outer$4) {
-    return (function(arg1$2$3) {
-      return arg$outer$4.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$10__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2$3)
-    })
-  })(this);
-  $$scope.isRunning = (function(arg$outer$5) {
-    return (function(arg1$2$4) {
-      return arg$outer$5.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$13__sjs_js_UndefOr__Z(arg1$2$4)
-    })
-  })(this);
-  $$scope.selectJob = (function(arg$outer$6) {
-    return (function(arg1$2$5) {
-      arg$outer$6.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$15__sjs_js_UndefOr__V(arg1$2$5)
-    })
-  })(this);
-  $$scope.$on($m_Lcom_github_ldaniels528_bourne_RemoteEvent$().JOB$undUPDATE$1, (function($this) {
-    return (function(x$2$2, job$2) {
-      return $this.$$scope$1.$apply((function($this$1, job) {
-        return (function() {
-          var jobs = $this$1.$$scope$1.jobs;
-          $f_Lcom_github_ldaniels528_bourne_client_controllers_JobHandling__updateJob__sjs_js_Array__Lcom_github_ldaniels528_bourne_client_models_Job__V($this$1, jobs, job)
-        })
-      })($this, job$2))
-    })
-  })(this));
-  return this
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$10__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
-  if ((aJob === (void 0))) {
-    return (void 0)
-  } else {
-    var value = aJob.state;
-    if ((value === (void 0))) {
-      return (void 0)
-    } else {
-      var x0$2 = $as_T(value);
-      return (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().NEW$1 === x0$2) ? "status_new" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().CLAIMED$1 === x0$2) ? "status_claimed" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().PAUSED$1 === x0$2) ? "status_paused" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().QUEUED$1 === x0$2) ? "status_queued" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().RUNNING$1 === x0$2) ? "status_running" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().STOPPED$1 === x0$2) ? "status_stopped" : (($m_Lcom_github_ldaniels528_bourne_models_JobStates$().SUCCESS$1 === x0$2) ? "status_success" : (void 0))))))))
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.productIterator__sc_Iterator = (function() {
-  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.com$github$ldaniels528$bourne$client$controllers$MainController$$$anonfun$new$3__sjs_js_UndefOr__V = (function(aTab) {
-  if ((aTab !== (void 0))) {
-    this.$$scope$1.selectedTab = aTab;
-    this.$$location$1.url($as_T(aTab.uri))
-  }
-});
-function $is_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_bourne_client_controllers_MainController)))
-}
-function $as_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj) {
-  return (($is_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.controllers.MainController"))
-}
-function $isArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_bourne_client_controllers_MainController)))
-}
-function $asArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj, depth) {
-  return (($isArrayOf_Lcom_github_ldaniels528_bourne_client_controllers_MainController(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.controllers.MainController;", depth))
-}
-var $d_Lcom_github_ldaniels528_bourne_client_controllers_MainController = new $TypeData().initClass({
-  Lcom_github_ldaniels528_bourne_client_controllers_MainController: 0
-}, false, "com.github.ldaniels528.transgress.client.controllers.MainController", {
-  Lcom_github_ldaniels528_bourne_client_controllers_MainController: 1,
-  O: 1,
-  Lio_scalajs_npm_angularjs_Controller: 1,
-  Lcom_github_ldaniels528_bourne_client_controllers_JobHandling: 1,
-  s_Product: 1,
-  s_Equals: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lcom_github_ldaniels528_bourne_client_controllers_MainController.prototype.$classData = $d_Lcom_github_ldaniels528_bourne_client_controllers_MainController;
 /** @constructor */
 function $c_jl_JSConsoleBasedPrintStream() {
   $c_Ljava_io_PrintStream.call(this);
@@ -15266,6 +15419,48 @@ $c_s_concurrent_impl_Promise$DefaultPromise.prototype.tryComplete__s_util_Try__Z
 $c_s_concurrent_impl_Promise$DefaultPromise.prototype.toString__T = (function() {
   return $f_s_concurrent_impl_Promise__toString__T(this)
 });
+$c_s_concurrent_impl_Promise$DefaultPromise.prototype.link__p2__s_concurrent_impl_Promise$DefaultPromise__V = (function(target) {
+  var _$this = this;
+  _link: while (true) {
+    if ((_$this !== target)) {
+      var x1 = _$this.value$1;
+      matchEnd6: {
+        if ($is_s_util_Try(x1)) {
+          var x2 = $as_s_util_Try(x1);
+          if ((!target.tryComplete__s_util_Try__Z(x2))) {
+            throw new $c_jl_IllegalStateException().init___T("Cannot link completed promises together")
+          };
+          break matchEnd6
+        };
+        if ($is_s_concurrent_impl_Promise$DefaultPromise(x1)) {
+          var x3 = $as_s_concurrent_impl_Promise$DefaultPromise(x1);
+          _$this = _$this.compressedRoot__p2__s_concurrent_impl_Promise$DefaultPromise__s_concurrent_impl_Promise$DefaultPromise(x3);
+          continue _link
+        };
+        if ($is_sci_List(x1)) {
+          var x4 = $as_sci_List(x1);
+          if (_$this.compareAndSet__O__O__Z(x4, target)) {
+            if ($f_sc_TraversableOnce__nonEmpty__Z(x4)) {
+              var these = x4;
+              while ((!these.isEmpty__Z())) {
+                var arg1 = these.head__O();
+                var x$2 = $as_s_concurrent_impl_CallbackRunnable(arg1);
+                target.dispatchOrAddCallback__p2__s_concurrent_impl_CallbackRunnable__V(x$2);
+                var this$1 = these;
+                these = this$1.tail__sci_List()
+              };
+              break matchEnd6
+            } else {
+              break matchEnd6
+            }
+          }
+        };
+        continue _link
+      }
+    };
+    break
+  }
+});
 $c_s_concurrent_impl_Promise$DefaultPromise.prototype.root__p2__s_concurrent_impl_Promise$DefaultPromise = (function() {
   var _$this = this;
   _root: while (true) {
@@ -15277,6 +15472,15 @@ $c_s_concurrent_impl_Promise$DefaultPromise.prototype.root__p2__s_concurrent_imp
     } else {
       return _$this
     }
+  }
+});
+$c_s_concurrent_impl_Promise$DefaultPromise.prototype.compressedRoot__p2__s_concurrent_impl_Promise$DefaultPromise = (function() {
+  var x1 = this.value$1;
+  if ($is_s_concurrent_impl_Promise$DefaultPromise(x1)) {
+    var x2 = $as_s_concurrent_impl_Promise$DefaultPromise(x1);
+    return this.compressedRoot__p2__s_concurrent_impl_Promise$DefaultPromise__s_concurrent_impl_Promise$DefaultPromise(x2)
+  } else {
+    return this
   }
 });
 $c_s_concurrent_impl_Promise$DefaultPromise.prototype.tryCompleteAndGetListeners__p2__s_util_Try__sci_List = (function(v) {
@@ -16441,6 +16645,774 @@ function $m_scm_ListBuffer$() {
   return $n_scm_ListBuffer$
 }
 /** @constructor */
+function $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController() {
+  $c_O.call(this);
+  this.$$scope$1 = null;
+  this.$$interval$1 = null;
+  this.$$location$1 = null;
+  this.toaster$1 = null;
+  this.jobService$1 = null;
+  this.slaveService$1 = null
+}
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController;
+/** @constructor */
+function $h_Lcom_github_ldaniels528_transgress_client_controllers_MainController() {
+  /*<skip>*/
+}
+$h_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$36__sjs_js_UndefOr__V = (function(aJob) {
+  if ((aJob !== (void 0))) {
+    var value = aJob._id;
+    if ((value !== (void 0))) {
+      var jobId = $as_T(value);
+      var value$1 = (0, this.$$scope$1.getSlaveForJob)(aJob);
+      if ((value$1 !== (void 0))) {
+        var value$2 = value$1._id;
+        if ((value$2 !== (void 0))) {
+          var slaveId = $as_T(value$2);
+          this.$$scope$1.stopping = true;
+          var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+          var p = this.jobService$1.stopJob__T__T__sjs_js_Promise(jobId, slaveId);
+          jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+            return (function(x0$6$2) {
+              var x0$6 = $as_s_util_Try(x0$6$2);
+              if ($is_s_util_Success(x0$6)) {
+                var x2 = $as_s_util_Success(x0$6);
+                var response = x2.value$2;
+                return $this.$$scope$1.$apply((function($this$1, response$1) {
+                  return (function() {
+                    $this$1.$$scope$1.stopping = false;
+                    var jsx$2 = $this$1.$$scope$1.updateJob;
+                    var value$3 = $this$1.$$scope$1.jobs;
+                    var value$4 = response$1.data;
+                    jsx$2(value$3, value$4)
+                  })
+                })($this, response))
+              } else if ($is_s_util_Failure(x0$6)) {
+                var x3 = $as_s_util_Failure(x0$6);
+                var e = x3.exception$2;
+                $this.$$scope$1.stopping = false;
+                var toaster = $this.toaster$1;
+                var value$5 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+                var jsx$3 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$5, "Failed to stop job");
+                toaster.pop(jsx$3);
+                var jsx$7 = $g.console;
+                var jsx$6 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to stop job: ", ""]));
+                var rc6 = false;
+                var x2$1 = null;
+                var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+                matchEnd7: {
+                  var jsx$4;
+                  if ($is_s_Some(x1)) {
+                    rc6 = true;
+                    x2$1 = $as_s_Some(x1);
+                    var s = $as_T(x2$1.value$2);
+                    var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                    if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+                      var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+                      var this$41 = new $c_sci_StringOps().init___T(s);
+                      var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                      var n = $uI(thiz.length);
+                      var $$this = this$41.repr$1;
+                      var until = $uI($$this.length);
+                      var jsx$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$41.repr$1, n, until));
+                      break matchEnd7
+                    }
+                  };
+                  if (rc6) {
+                    var s$2 = $as_T(x2$1.value$2);
+                    var jsx$4 = s$2;
+                    break matchEnd7
+                  };
+                  var x = $m_s_None$();
+                  if ((x === x1)) {
+                    var jsx$4 = "Cause unknown";
+                    break matchEnd7
+                  };
+                  throw new $c_s_MatchError().init___O(x1)
+                };
+                var s$1 = jsx$6.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$4]));
+                jsx$7.error(s$1);
+                return (void 0)
+              } else {
+                throw new $c_s_MatchError().init___O(x0$6)
+              }
+            })
+          })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+        }
+      }
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productPrefix__T = (function() {
+  return "MainController"
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productArity__I = (function() {
+  return 6
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.equals__O__Z = (function(x$1) {
+  if ((this === x$1)) {
+    return true
+  } else if ($is_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1)) {
+    var MainController$1 = $as_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1);
+    if (((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$scope$1, MainController$1.$$scope$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$interval$1, MainController$1.$$interval$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$location$1, MainController$1.$$location$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.toaster$1, MainController$1.toaster$1))) {
+      var x = this.jobService$1;
+      var x$2 = MainController$1.jobService$1;
+      var jsx$1 = (x === x$2)
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      var x$3 = this.slaveService$1;
+      var x$4 = MainController$1.slaveService$1;
+      return (x$3 === x$4)
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$21__sjs_js_UndefOr__V = (function(aJobStates) {
+  if ((aJobStates === (void 0))) {
+    var col = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().values__sc_Iterator();
+    if ($is_sjs_js_ArrayOps(col)) {
+      var x2 = $as_sjs_js_ArrayOps(col);
+      var jobStates = x2.scala$scalajs$js$ArrayOps$$array$f
+    } else if ($is_sjs_js_WrappedArray(col)) {
+      var x3 = $as_sjs_js_WrappedArray(col);
+      var jobStates = x3.array$6
+    } else {
+      var result = [];
+      while (col.hasNext__Z()) {
+        var arg1 = col.next__O();
+        $uI(result.push(arg1))
+      };
+      var jobStates = result
+    }
+  } else {
+    var jobStates = aJobStates
+  };
+  var jsx$4 = $m_sjs_js_Thenable$ThenableOps$();
+  var this$10 = this.jobService$1;
+  $m_sjs_concurrent_JSExecutionContext$Implicits$();
+  var jsx$3 = this$10.$$http$1;
+  if (($uI(jobStates.length) !== 0)) {
+    var jsx$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/jobs?states=", ""]));
+    var b = new $c_scm_StringBuilder().init___();
+    var elem$1 = false;
+    elem$1 = true;
+    b.append__T__scm_StringBuilder("");
+    var i = 0;
+    var len = $uI(jobStates.length);
+    while ((i < len)) {
+      var index = i;
+      var arg1$1 = jobStates[index];
+      if (elem$1) {
+        b.append__O__scm_StringBuilder(arg1$1);
+        elem$1 = false
+      } else {
+        b.append__T__scm_StringBuilder("|");
+        b.append__O__scm_StringBuilder(arg1$1)
+      };
+      i = ((1 + i) | 0)
+    };
+    b.append__T__scm_StringBuilder("");
+    var this$12 = b.underlying$5;
+    var jsx$1 = jsx$2.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this$12.content$1]))
+  } else {
+    var jsx$1 = "/api/jobs"
+  };
+  var p = jsx$3.get(jsx$1);
+  jsx$4.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
+    return (function(x0$3$2) {
+      var x0$3 = $as_s_util_Try(x0$3$2);
+      if ($is_s_util_Success(x0$3)) {
+        var x2$1 = $as_s_util_Success(x0$3);
+        var response = x2$1.value$2;
+        return this$2$1.$$scope$1.$apply((function($this, response$1) {
+          return (function() {
+            var array = response$1.data;
+            var i$1 = 0;
+            var len$1 = $uI(array.length);
+            while ((i$1 < len$1)) {
+              var index$1 = i$1;
+              var arg1$2 = array[index$1];
+              var jsx$5 = $this.$$scope$1.updateJob;
+              var value = $this.$$scope$1.jobs;
+              jsx$5(value, arg1$2);
+              $this.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V(arg1$2);
+              i$1 = ((1 + i$1) | 0)
+            }
+          })
+        })(this$2$1, response))
+      } else if ($is_s_util_Failure(x0$3)) {
+        var x3$1 = $as_s_util_Failure(x0$3);
+        var e = x3$1.exception$2;
+        var jsx$7 = $g.console;
+        var rc6 = false;
+        var x2$2 = null;
+        var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+        matchEnd7: {
+          var s$1;
+          if ($is_s_Some(x1)) {
+            rc6 = true;
+            x2$2 = $as_s_Some(x1);
+            var s = $as_T(x2$2.value$2);
+            var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+            if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+              var jsx$6 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$26 = new $c_sci_StringOps().init___T(s);
+              var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+              var n = $uI(thiz.length);
+              var $$this = this$26.repr$1;
+              var until = $uI($$this.length);
+              var s$1 = jsx$6.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$26.repr$1, n, until));
+              break matchEnd7
+            }
+          };
+          if (rc6) {
+            var s$2 = $as_T(x2$2.value$2);
+            var s$1 = s$2;
+            break matchEnd7
+          };
+          var x = $m_s_None$();
+          if ((x === x1)) {
+            var s$1 = "Cause unknown";
+            break matchEnd7
+          };
+          throw new $c_s_MatchError().init___O(x1)
+        };
+        jsx$7.error(s$1);
+        return (void 0)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$3)
+      }
+    })
+  })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productElement__I__O = (function(x$1) {
+  switch (x$1) {
+    case 0: {
+      return this.$$scope$1;
+      break
+    }
+    case 1: {
+      return this.$$interval$1;
+      break
+    }
+    case 2: {
+      return this.$$location$1;
+      break
+    }
+    case 3: {
+      return this.toaster$1;
+      break
+    }
+    case 4: {
+      return this.jobService$1;
+      break
+    }
+    case 5: {
+      return this.slaveService$1;
+      break
+    }
+    default: {
+      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$29__sjs_js_UndefOr__V = (function(aJob) {
+  if ((aJob !== (void 0))) {
+    var value = aJob._id;
+    if ((value !== (void 0))) {
+      var jobId = $as_T(value);
+      var value$1 = (0, this.$$scope$1.getSlaveForJob)(aJob);
+      if ((value$1 !== (void 0))) {
+        var value$2 = value$1._id;
+        if ((value$2 !== (void 0))) {
+          var slaveId = $as_T(value$2);
+          this.$$scope$1.resuming = true;
+          var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+          var p = this.jobService$1.resumeJob__T__T__sjs_js_Promise(jobId, slaveId);
+          jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+            return (function(x0$5$2) {
+              var x0$5 = $as_s_util_Try(x0$5$2);
+              if ($is_s_util_Success(x0$5)) {
+                var x2 = $as_s_util_Success(x0$5);
+                var response = x2.value$2;
+                return $this.$$scope$1.$apply((function($this$1, response$1) {
+                  return (function() {
+                    $this$1.$$scope$1.resuming = false;
+                    var jsx$2 = $this$1.$$scope$1.updateJob;
+                    var value$3 = $this$1.$$scope$1.jobs;
+                    var value$4 = response$1.data;
+                    jsx$2(value$3, value$4)
+                  })
+                })($this, response))
+              } else if ($is_s_util_Failure(x0$5)) {
+                var x3 = $as_s_util_Failure(x0$5);
+                var e = x3.exception$2;
+                $this.$$scope$1.resuming = false;
+                var toaster = $this.toaster$1;
+                var value$5 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+                var jsx$3 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$5, "Failed to resume job");
+                toaster.pop(jsx$3);
+                var jsx$7 = $g.console;
+                var jsx$6 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to resume job: ", ""]));
+                var rc6 = false;
+                var x2$1 = null;
+                var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+                matchEnd7: {
+                  var jsx$4;
+                  if ($is_s_Some(x1)) {
+                    rc6 = true;
+                    x2$1 = $as_s_Some(x1);
+                    var s = $as_T(x2$1.value$2);
+                    var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                    if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+                      var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+                      var this$41 = new $c_sci_StringOps().init___T(s);
+                      var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                      var n = $uI(thiz.length);
+                      var $$this = this$41.repr$1;
+                      var until = $uI($$this.length);
+                      var jsx$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$41.repr$1, n, until));
+                      break matchEnd7
+                    }
+                  };
+                  if (rc6) {
+                    var s$2 = $as_T(x2$1.value$2);
+                    var jsx$4 = s$2;
+                    break matchEnd7
+                  };
+                  var x = $m_s_None$();
+                  if ((x === x1)) {
+                    var jsx$4 = "Cause unknown";
+                    break matchEnd7
+                  };
+                  throw new $c_s_MatchError().init___O(x1)
+                };
+                var s$1 = jsx$6.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$4]));
+                jsx$7.error(s$1);
+                return (void 0)
+              } else {
+                throw new $c_s_MatchError().init___O(x0$5)
+              }
+            })
+          })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+        }
+      }
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.toString__T = (function() {
+  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$14__sjs_js_UndefOr__V = (function(aJob) {
+  if ((aJob !== (void 0))) {
+    var value = aJob._id;
+    if ((value !== (void 0))) {
+      var jobId = $as_T(value);
+      var value$1 = (0, this.$$scope$1.getSlaveForJob)(aJob);
+      if ((value$1 !== (void 0))) {
+        var value$2 = value$1._id;
+        if ((value$2 !== (void 0))) {
+          var slaveId = $as_T(value$2);
+          this.$$scope$1.pausing = true;
+          var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+          var p = this.jobService$1.pauseJob__T__T__sjs_js_Promise(jobId, slaveId);
+          jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+            return (function(x0$2$2) {
+              var x0$2 = $as_s_util_Try(x0$2$2);
+              if ($is_s_util_Success(x0$2)) {
+                var x2 = $as_s_util_Success(x0$2);
+                var response = x2.value$2;
+                return $this.$$scope$1.$apply((function($this$1, response$1) {
+                  return (function() {
+                    $this$1.$$scope$1.pausing = false;
+                    var jsx$2 = $this$1.$$scope$1.updateJob;
+                    var value$3 = $this$1.$$scope$1.jobs;
+                    var value$4 = response$1.data;
+                    jsx$2(value$3, value$4)
+                  })
+                })($this, response))
+              } else if ($is_s_util_Failure(x0$2)) {
+                var x3 = $as_s_util_Failure(x0$2);
+                var e = x3.exception$2;
+                $this.$$scope$1.pausing = false;
+                var toaster = $this.toaster$1;
+                var value$5 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+                var jsx$3 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$5, "Failed to pause job");
+                toaster.pop(jsx$3);
+                var jsx$7 = $g.console;
+                var jsx$6 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to pause job: ", ""]));
+                var rc6 = false;
+                var x2$1 = null;
+                var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+                matchEnd7: {
+                  var jsx$4;
+                  if ($is_s_Some(x1)) {
+                    rc6 = true;
+                    x2$1 = $as_s_Some(x1);
+                    var s = $as_T(x2$1.value$2);
+                    var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                    if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+                      var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+                      var this$41 = new $c_sci_StringOps().init___T(s);
+                      var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                      var n = $uI(thiz.length);
+                      var $$this = this$41.repr$1;
+                      var until = $uI($$this.length);
+                      var jsx$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$41.repr$1, n, until));
+                      break matchEnd7
+                    }
+                  };
+                  if (rc6) {
+                    var s$2 = $as_T(x2$1.value$2);
+                    var jsx$4 = s$2;
+                    break matchEnd7
+                  };
+                  var x = $m_s_None$();
+                  if ((x === x1)) {
+                    var jsx$4 = "Cause unknown";
+                    break matchEnd7
+                  };
+                  throw new $c_s_MatchError().init___O(x1)
+                };
+                var s$1 = jsx$6.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$4]));
+                jsx$7.error(s$1);
+                return (void 0)
+              } else {
+                throw new $c_s_MatchError().init___O(x0$2)
+              }
+            })
+          })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+        }
+      }
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V = (function(job) {
+  var value = (0, this.$$scope$1.getSlaveForJob)(job);
+  if ((value !== (void 0))) {
+    var value$1 = value.jobs;
+    if ((value$1 === (void 0))) {
+      var value$2 = [];
+      value.jobs = value$2
+    };
+    (0, this.$$scope$1.updateJob)(value.jobs, job)
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$26__V = (function() {
+  var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+    return (function(x0$4$2) {
+      var x0$4 = $as_s_util_Try(x0$4$2);
+      if ($is_s_util_Success(x0$4)) {
+        var x2 = $as_s_util_Success(x0$4);
+        var response = x2.value$2;
+        return $this.$$scope$1.$apply((function($this$1, response$1) {
+          return (function() {
+            $this$1.$$scope$1.slaves = response$1.data
+          })
+        })($this, response))
+      } else if ($is_s_util_Failure(x0$4)) {
+        var x3 = $as_s_util_Failure(x0$4);
+        var e = x3.exception$2;
+        var toaster = $this.toaster$1;
+        var value = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+        var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Error loading slave");
+        toaster.pop(jsx$2);
+        var jsx$6 = $g.console;
+        var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Error loading slave: ", ""]));
+        var rc6 = false;
+        var x2$1 = null;
+        var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+        matchEnd7: {
+          var jsx$3;
+          if ($is_s_Some(x1)) {
+            rc6 = true;
+            x2$1 = $as_s_Some(x1);
+            var s = $as_T(x2$1.value$2);
+            var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+            if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+              var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$15 = new $c_sci_StringOps().init___T(s);
+              var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+              var n = $uI(thiz.length);
+              var $$this = this$15.repr$1;
+              var until = $uI($$this.length);
+              var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$15.repr$1, n, until));
+              break matchEnd7
+            }
+          };
+          if (rc6) {
+            var s$2 = $as_T(x2$1.value$2);
+            var jsx$3 = s$2;
+            break matchEnd7
+          };
+          var x = $m_s_None$();
+          if ((x === x1)) {
+            var jsx$3 = "Cause unknown";
+            break matchEnd7
+          };
+          throw new $c_s_MatchError().init___O(x1)
+        };
+        var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
+        jsx$6.error(s$1);
+        return (void 0)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$4)
+      }
+    })
+  })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.hashCode__I = (function() {
+  var this$2 = $m_s_util_hashing_MurmurHash3$();
+  return this$2.productHash__s_Product__I__I(this, (-889275714))
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s);
+  var startTime = $uD($g.Date.now());
+  var jsx$2 = $m_sjs_js_Thenable$ThenableOps$();
+  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  var this$3 = jsx$2.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p);
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+    return (function(x$1$2) {
+      return x$1$2.data
+    })
+  })(this));
+  var executor = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+  var this$7 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$3, f, executor);
+  var f$3 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
+    return (function(slaves$2) {
+      var jsx$3 = $m_sjs_js_Thenable$ThenableOps$();
+      var p$1 = this$2$1.jobService$1.getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise($m_sci_Nil$(), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+      var this$5 = jsx$3.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p$1);
+      var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$1) {
+        return (function(x$2$2) {
+          return x$2$2.data
+        })
+      })(this$2$1));
+      var executor$1 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+      var this$6 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$5, f$1, executor$1);
+      var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$2, slaves) {
+        return (function(jobs$2) {
+          return new $c_T2().init___O__O(slaves, jobs$2)
+        })
+      })(this$2$1, slaves$2));
+      var executor$2 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+      return $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$6, f$2, executor$2)
+    })
+  })(this));
+  var executor$3 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+  var outcome = $f_s_concurrent_Future__flatMap__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$3, executor$3);
+  outcome.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$3$1, startTime$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_s_util_Try(x0$1$2);
+      if ($is_s_util_Success(x0$1)) {
+        var x2 = $as_s_util_Success(x0$1);
+        var p3 = $as_T2(x2.value$2);
+        if ((p3 !== null)) {
+          var slaves$1 = p3.$$und1$f;
+          var jobs = p3.$$und2$f;
+          var jsx$4 = $g.console;
+          var s$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Loaded slaves and jobs in ", " msecs..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([($uD($g.Date.now()) - startTime$1)]));
+          jsx$4.log(s$1);
+          return this$3$1.$$scope$1.$apply((function($this$2, slaves$3, jobs$1) {
+            return (function() {
+              $this$2.$$scope$1.slaves = slaves$3;
+              $this$2.$$scope$1.jobs = jobs$1;
+              var i = 0;
+              var len = $uI(slaves$3.length);
+              while ((i < len)) {
+                var index = i;
+                var arg1 = slaves$3[index];
+                var array = [];
+                var i$1 = 0;
+                var len$1 = $uI(jobs$1.length);
+                while ((i$1 < len$1)) {
+                  var index$1 = i$1;
+                  var arg1$1 = jobs$1[index$1];
+                  var valueA = arg1$1.slaveID;
+                  var valueB = arg1._id;
+                  if ((((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))) !== false)) {
+                    array.push(arg1$1)
+                  };
+                  i$1 = ((1 + i$1) | 0)
+                };
+                arg1.jobs = array;
+                i = ((1 + i) | 0)
+              }
+            })
+          })(this$3$1, slaves$1, jobs))
+        }
+      };
+      if ($is_s_util_Failure(x0$1)) {
+        var x4 = $as_s_util_Failure(x0$1);
+        var e = x4.exception$2;
+        var jsx$5 = $g.console;
+        var s$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to retrieve slaves and jobs: ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([e.getMessage__T()]));
+        jsx$5.log(s$2);
+        e.printStackTrace__Ljava_io_PrintStream__V($m_jl_System$().err$1);
+        return (void 0)
+      };
+      throw new $c_s_MatchError().init___O(x0$1)
+    })
+  })(this, startTime)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  var jsx$7 = this.$$interval$1;
+  var jsx$6 = $m_Lio_scalajs_util_DurationHelper$();
+  var this$28 = new $c_s_concurrent_duration_package$DurationInt().init___I(3);
+  var unit = $m_ju_concurrent_TimeUnit$().MINUTES$1;
+  jsx$7((function(this$4$1) {
+    return (function() {
+      (0, this$4$1.$$scope$1.refreshJobs)((void 0))
+    })
+  })(this), jsx$6.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$28.scala$concurrent$duration$DurationInt$$n$1, unit)))
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productIterator__sc_Iterator = (function() {
+  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService = (function($$scope, $$interval, $$location, toaster, jobService, slaveService) {
+  this.$$scope$1 = $$scope;
+  this.$$interval$1 = $$interval;
+  this.$$location$1 = $$location;
+  this.toaster$1 = toaster;
+  this.jobService$1 = jobService;
+  this.slaveService$1 = slaveService;
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V(this);
+  var value = $m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1;
+  $$scope.version = ("" + value);
+  $$scope.init = (function(arg$outer) {
+    return (function() {
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V()
+    })
+  })(this);
+  $$scope.getSlaveForJob = (function(arg$outer$1) {
+    return (function(arg1$2) {
+      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$11__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2)
+    })
+  })(this);
+  $$scope.pauseJob = (function(arg$outer$2) {
+    return (function(arg1$2$1) {
+      arg$outer$2.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$14__sjs_js_UndefOr__V(arg1$2$1)
+    })
+  })(this);
+  $$scope.refreshJobs = (function(arg$outer$3) {
+    return (function(arg1$2$2) {
+      arg$outer$3.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$21__sjs_js_UndefOr__V(arg1$2$2)
+    })
+  })(this);
+  $$scope.refreshSlaves = (function(arg$outer$4) {
+    return (function() {
+      arg$outer$4.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$26__V()
+    })
+  })(this);
+  $$scope.resumeJob = (function(arg$outer$5) {
+    return (function(arg1$2$3) {
+      arg$outer$5.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$29__sjs_js_UndefOr__V(arg1$2$3)
+    })
+  })(this);
+  $$scope.stopJob = (function(arg$outer$6) {
+    return (function(arg1$2$4) {
+      arg$outer$6.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$36__sjs_js_UndefOr__V(arg1$2$4)
+    })
+  })(this);
+  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().JOB$undUPDATE$1, (function($this) {
+    return (function(x$5$2, job$2) {
+      return $this.$$scope$1.$apply((function($this$1, job) {
+        return (function() {
+          var jsx$1 = $this$1.$$scope$1.updateJob;
+          var value$1 = $this$1.$$scope$1.jobs;
+          jsx$1(value$1, job);
+          $this$1.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V(job)
+        })
+      })($this, job$2))
+    })
+  })(this));
+  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().SLAVE$undUPDATE$1, (function(this$2$1) {
+    return (function(x$6$2, slave$2) {
+      return this$2$1.$$scope$1.$apply((function($this$2, slave) {
+        return (function() {
+          var jsx$2 = $this$2.$$scope$1.updateSlave;
+          var value$2 = $this$2.$$scope$1.slaves;
+          jsx$2(value$2, slave)
+        })
+      })(this$2$1, slave$2))
+    })
+  })(this));
+  return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$11__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var array = this.$$scope$1.slaves;
+    var len = $uI(array.length);
+    var i = 0;
+    while (true) {
+      if ((i < len)) {
+        var index = i;
+        var arg1 = array[index];
+        var valueA = arg1._id;
+        var valueB = aJob.slaveID;
+        var jsx$1 = (!((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))))
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        i = ((1 + i) | 0)
+      } else {
+        break
+      }
+    };
+    var i$1 = i;
+    var opt = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+    if (opt.isEmpty__Z()) {
+      return (void 0)
+    } else {
+      var arg1$1 = opt.get__O();
+      return arg1$1
+    }
+  }
+});
+function $is_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lcom_github_ldaniels528_transgress_client_controllers_MainController)))
+}
+function $as_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj) {
+  return (($is_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "com.github.ldaniels528.transgress.client.controllers.MainController"))
+}
+function $isArrayOf_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lcom_github_ldaniels528_transgress_client_controllers_MainController)))
+}
+function $asArrayOf_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj, depth) {
+  return (($isArrayOf_Lcom_github_ldaniels528_transgress_client_controllers_MainController(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lcom.github.ldaniels528.transgress.client.controllers.MainController;", depth))
+}
+var $d_Lcom_github_ldaniels528_transgress_client_controllers_MainController = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_controllers_MainController: 0
+}, false, "com.github.ldaniels528.transgress.client.controllers.MainController", {
+  Lcom_github_ldaniels528_transgress_client_controllers_MainController: 1,
+  O: 1,
+  Lio_scalajs_npm_angularjs_Controller: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_JobHandling: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling: 1,
+  Lcom_github_ldaniels528_transgress_client_controllers_TabHandling: 1,
+  s_Product: 1,
+  s_Equals: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_MainController;
+/** @constructor */
 function $c_s_reflect_ManifestFactory$AnyManifest$() {
   $c_s_reflect_ManifestFactory$PhantomManifest.call(this)
 }
@@ -17411,6 +18383,168 @@ function $isArrayOf_sc_Set(obj, depth) {
 function $asArrayOf_sc_Set(obj, depth) {
   return (($isArrayOf_sc_Set(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.Set;", depth))
 }
+/** @constructor */
+function $c_sjs_js_ArrayOps() {
+  $c_O.call(this);
+  this.scala$scalajs$js$ArrayOps$$array$f = null
+}
+$c_sjs_js_ArrayOps.prototype = new $h_O();
+$c_sjs_js_ArrayOps.prototype.constructor = $c_sjs_js_ArrayOps;
+/** @constructor */
+function $h_sjs_js_ArrayOps() {
+  /*<skip>*/
+}
+$h_sjs_js_ArrayOps.prototype = $c_sjs_js_ArrayOps.prototype;
+$c_sjs_js_ArrayOps.prototype.seq__sc_TraversableOnce = (function() {
+  return this.seq__sc_IndexedSeq()
+});
+$c_sjs_js_ArrayOps.prototype.seq__sc_IndexedSeq = (function() {
+  return new $c_sjs_js_WrappedArray().init___sjs_js_Array(this.scala$scalajs$js$ArrayOps$$array$f)
+});
+$c_sjs_js_ArrayOps.prototype.init___ = (function() {
+  $c_sjs_js_ArrayOps.prototype.init___sjs_js_Array.call(this, []);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.head__O = (function() {
+  return $f_sc_IndexedSeqOptimized__head__O(this)
+});
+$c_sjs_js_ArrayOps.prototype.apply__I__O = (function(index) {
+  return this.scala$scalajs$js$ArrayOps$$array$f[index]
+});
+$c_sjs_js_ArrayOps.prototype.lengthCompare__I__I = (function(len) {
+  return $f_sc_IndexedSeqOptimized__lengthCompare__I__I(this, len)
+});
+$c_sjs_js_ArrayOps.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $f_sc_IndexedSeqOptimized__sameElements__sc_GenIterable__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.isEmpty__Z = (function() {
+  return $f_sc_IndexedSeqOptimized__isEmpty__Z(this)
+});
+$c_sjs_js_ArrayOps.prototype.thisCollection__sc_Traversable = (function() {
+  return this.thisCollection__scm_IndexedSeq()
+});
+$c_sjs_js_ArrayOps.prototype.equals__O__Z = (function(that) {
+  return $f_sc_GenSeqLike__equals__O__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$eq__O__scg_Growable = (function(elem) {
+  this.scala$scalajs$js$ArrayOps$$array$f.push(elem);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.thisCollection__scm_IndexedSeq = (function() {
+  var repr = this.scala$scalajs$js$ArrayOps$$array$f;
+  return new $c_sjs_js_WrappedArray().init___sjs_js_Array(repr)
+});
+$c_sjs_js_ArrayOps.prototype.toString__T = (function() {
+  return $f_sc_TraversableLike__toString__T(this)
+});
+$c_sjs_js_ArrayOps.prototype.foreach__F1__V = (function(f) {
+  $f_sc_IndexedSeqOptimized__foreach__F1__V(this, f)
+});
+$c_sjs_js_ArrayOps.prototype.result__O = (function() {
+  return this.scala$scalajs$js$ArrayOps$$array$f
+});
+$c_sjs_js_ArrayOps.prototype.iterator__sc_Iterator = (function() {
+  return new $c_sc_IndexedSeqLike$Elements().init___sc_IndexedSeqLike__I__I(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length))
+});
+$c_sjs_js_ArrayOps.prototype.sizeHintBounded__I__sc_TraversableLike__V = (function(size, boundingColl) {
+  $f_scm_Builder__sizeHintBounded__I__sc_TraversableLike__V(this, size, boundingColl)
+});
+$c_sjs_js_ArrayOps.prototype.length__I = (function() {
+  return $uI(this.scala$scalajs$js$ArrayOps$$array$f.length)
+});
+$c_sjs_js_ArrayOps.prototype.sizeHintIfCheap__I = (function() {
+  return $uI(this.scala$scalajs$js$ArrayOps$$array$f.length)
+});
+$c_sjs_js_ArrayOps.prototype.toStream__sci_Stream = (function() {
+  var this$1 = new $c_sc_IndexedSeqLike$Elements().init___sc_IndexedSeqLike__I__I(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length));
+  return $f_sc_Iterator__toStream__sci_Stream(this$1)
+});
+$c_sjs_js_ArrayOps.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBuilder = (function(b, start, sep, end) {
+  return $f_sc_TraversableOnce__addString__scm_StringBuilder__T__T__T__scm_StringBuilder(this, b, start, sep, end)
+});
+$c_sjs_js_ArrayOps.prototype.repr__O = (function() {
+  return this.scala$scalajs$js$ArrayOps$$array$f
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$eq__O__scm_Builder = (function(elem) {
+  this.scala$scalajs$js$ArrayOps$$array$f.push(elem);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
+  $f_sc_IndexedSeqOptimized__copyToArray__O__I__I__V(this, xs, start, len)
+});
+$c_sjs_js_ArrayOps.prototype.sizeHint__I__V = (function(size) {
+  /*<skip>*/
+});
+$c_sjs_js_ArrayOps.prototype.hashCode__I = (function() {
+  return $m_s_util_hashing_MurmurHash3$().seqHash__sc_Seq__I(this.seq__sc_IndexedSeq())
+});
+$c_sjs_js_ArrayOps.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (function(ev) {
+  var b = new $c_scm_MapBuilder().init___sc_GenMap($m_sci_Map$EmptyMap$());
+  var i = 0;
+  var len = $uI(this.scala$scalajs$js$ArrayOps$$array$f.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = this.scala$scalajs$js$ArrayOps$$array$f[index];
+    b.$$plus$eq__T2__scm_MapBuilder($as_T2(arg1));
+    i = ((1 + i) | 0)
+  };
+  return $as_sci_Map(b.elems$1)
+});
+$c_sjs_js_ArrayOps.prototype.init___sjs_js_Array = (function(array) {
+  this.scala$scalajs$js$ArrayOps$$array$f = array;
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.newBuilder__scm_Builder = (function() {
+  return new $c_sjs_js_ArrayOps().init___()
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
+  return $f_scg_Growable__$$plus$plus$eq__sc_TraversableOnce__scg_Growable(this, xs)
+});
+$c_sjs_js_ArrayOps.prototype.stringPrefix__T = (function() {
+  return $f_sc_TraversableLike__stringPrefix__T(this)
+});
+function $is_sjs_js_ArrayOps(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sjs_js_ArrayOps)))
+}
+function $as_sjs_js_ArrayOps(obj) {
+  return (($is_sjs_js_ArrayOps(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.scalajs.js.ArrayOps"))
+}
+function $isArrayOf_sjs_js_ArrayOps(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.sjs_js_ArrayOps)))
+}
+function $asArrayOf_sjs_js_ArrayOps(obj, depth) {
+  return (($isArrayOf_sjs_js_ArrayOps(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.scalajs.js.ArrayOps;", depth))
+}
+var $d_sjs_js_ArrayOps = new $TypeData().initClass({
+  sjs_js_ArrayOps: 0
+}, false, "scala.scalajs.js.ArrayOps", {
+  sjs_js_ArrayOps: 1,
+  O: 1,
+  scm_ArrayLike: 1,
+  scm_IndexedSeqOptimized: 1,
+  scm_IndexedSeqLike: 1,
+  sc_IndexedSeqLike: 1,
+  sc_SeqLike: 1,
+  sc_IterableLike: 1,
+  s_Equals: 1,
+  sc_TraversableLike: 1,
+  scg_HasNewBuilder: 1,
+  scg_FilterMonadic: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1,
+  sc_GenTraversableLike: 1,
+  sc_Parallelizable: 1,
+  sc_GenIterableLike: 1,
+  sc_GenSeqLike: 1,
+  sc_IndexedSeqOptimized: 1,
+  scm_Builder: 1,
+  scg_Growable: 1,
+  scg_Clearable: 1
+});
+$c_sjs_js_ArrayOps.prototype.$classData = $d_sjs_js_ArrayOps;
 function $is_sc_IndexedSeq(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sc_IndexedSeq)))
 }
@@ -20039,12 +21173,12 @@ $c_sci_Stream.prototype.flatMap__F1__scg_CanBuildFrom__O = (function(f, bf) {
 $c_sci_Stream.prototype.drop__I__sc_LinearSeqOptimized = (function(n) {
   return this.drop__I__sci_Stream(n)
 });
-$c_sci_Stream.prototype.mkString__T__T = (function(sep) {
-  return this.mkString__T__T__T__T("", sep, "")
-});
 $c_sci_Stream.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   this.force__sci_Stream();
   return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
+});
+$c_sci_Stream.prototype.mkString__T__T = (function(sep) {
+  return this.mkString__T__T__T__T("", sep, "")
 });
 $c_sci_Stream.prototype.toString__T = (function() {
   return $f_sc_TraversableOnce__mkString__T__T__T__T(this, "Stream(", ", ", ")")
@@ -22338,12 +23472,12 @@ $c_scm_WrappedArray$ofShort.prototype.apply__O__O = (function(v1) {
 $c_scm_WrappedArray$ofShort.prototype.update__I__S__V = (function(index, elem) {
   this.array$6.set(index, elem)
 });
-$c_scm_WrappedArray$ofShort.prototype.update__I__O__V = (function(index, elem) {
-  this.update__I__S__V(index, $uS(elem))
-});
 $c_scm_WrappedArray$ofShort.prototype.init___AS = (function(array) {
   this.array$6 = array;
   return this
+});
+$c_scm_WrappedArray$ofShort.prototype.update__I__O__V = (function(index, elem) {
+  this.update__I__S__V(index, $uS(elem))
 });
 $c_scm_WrappedArray$ofShort.prototype.length__I = (function() {
   return this.array$6.u.length
@@ -23043,6 +24177,18 @@ $c_sjs_js_WrappedArray.prototype.init___sjs_js_Array = (function(array) {
 $c_sjs_js_WrappedArray.prototype.stringPrefix__T = (function() {
   return "WrappedArray"
 });
+function $is_sjs_js_WrappedArray(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sjs_js_WrappedArray)))
+}
+function $as_sjs_js_WrappedArray(obj) {
+  return (($is_sjs_js_WrappedArray(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.scalajs.js.WrappedArray"))
+}
+function $isArrayOf_sjs_js_WrappedArray(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.sjs_js_WrappedArray)))
+}
+function $asArrayOf_sjs_js_WrappedArray(obj, depth) {
+  return (($isArrayOf_sjs_js_WrappedArray(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.scalajs.js.WrappedArray;", depth))
+}
 var $d_sjs_js_WrappedArray = new $TypeData().initClass({
   sjs_js_WrappedArray: 0
 }, false, "scala.scalajs.js.WrappedArray", {
@@ -23295,7 +24441,7 @@ $e.com.github = ($e.com.github || {});
 $e.com.github.ldaniels528 = ($e.com.github.ldaniels528 || {});
 $e.com.github.ldaniels528.transgress = ($e.com.github.ldaniels528.transgress || {});
 $e.com.github.ldaniels528.transgress.client = ($e.com.github.ldaniels528.transgress.client || {});
-$e.com.github.ldaniels528.transgress.client.BourneClientJSApp = $m_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$;
-$m_Lcom_github_ldaniels528_bourne_client_BourneClientJSApp$().main__V();
+$e.com.github.ldaniels528.transgress.client.QweryWebClientJSApp = $m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
+$m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$().main__V();
 }).call(this);
-//# sourceMappingURL=bourne-web-client-fastopt.js.map
+//# sourceMappingURL=broadway-web-client-fastopt.js.map

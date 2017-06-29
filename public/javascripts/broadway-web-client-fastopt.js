@@ -1960,7 +1960,7 @@ function $h_Lcom_github_ldaniels528_transgress_BytesHelper$() {
 $h_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype = $c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype;
 $c_Lcom_github_ldaniels528_transgress_BytesHelper$.prototype.init___ = (function() {
   $n_Lcom_github_ldaniels528_transgress_BytesHelper$ = this;
-  this.com$github$ldaniels528$transgress$BytesHelper$$UnitNames$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Bytes", "KB", "MB", "GB", "TB"])));
+  this.com$github$ldaniels528$transgress$BytesHelper$$UnitNames$1 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Bytes", "KB", "MB", "GB", "TB", "PB"])));
   return this
 });
 var $d_Lcom_github_ldaniels528_transgress_BytesHelper$ = new $TypeData().initClass({
@@ -2062,6 +2062,7 @@ function $m_Lcom_github_ldaniels528_transgress_BytesHelper$BytesUnitEnrichment$(
 /** @constructor */
 function $c_Lcom_github_ldaniels528_transgress_RemoteEvent$() {
   $c_O.call(this);
+  this.FEED$undUPDATE$1 = null;
   this.JOB$undUPDATE$1 = null;
   this.SLAVE$undUPDATE$1 = null
 }
@@ -2073,6 +2074,7 @@ function $h_Lcom_github_ldaniels528_transgress_RemoteEvent$() {
 }
 $h_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype = $c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype;
 $c_Lcom_github_ldaniels528_transgress_RemoteEvent$.prototype.init___ = (function() {
+  this.FEED$undUPDATE$1 = "FEED_UPDATE";
   this.JOB$undUPDATE$1 = "JOB_UPDATE";
   this.SLAVE$undUPDATE$1 = "SLAVE_UPDATE";
   return this
@@ -5406,20 +5408,20 @@ function $m_sr_Statics$() {
   return $n_sr_Statics$
 }
 /** @constructor */
-function $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$() {
+function $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
   $c_O.call(this)
 }
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype = new $h_O();
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$;
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype = new $h_O();
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
 /** @constructor */
-function $h_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$() {
+function $h_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
   /*<skip>*/
 }
-$h_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype = $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype;
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.init___ = (function() {
+$h_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype = $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.init___ = (function() {
   return this
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.controller("ActivityController", ["$scope", (function($this) {
     return (function(x$macro$7$2) {
       return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$7$2)
@@ -5454,10 +5456,10 @@ $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype
     })
   })(this)])
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.main__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.main__V = (function() {
   var self = $g.angular;
-  var array = ["ngAnimate", "ngCookies", "ngRoute", "ngSanitize", "nvd3", "angularFileUpload", "toaster", "ui.bootstrap"];
-  var self$1 = self.module("bourne", array);
+  var array = ["ngAnimate", "ngCookies", "ngRoute", "ngSanitize", "nvd3", "angularFileUpload", "hljs", "toaster", "ui.bootstrap"];
+  var self$1 = self.module("qwery", array);
   self$1.filter("duration", $m_Lcom_github_ldaniels528_transgress_client_Filters$().duration$1);
   self$1.filter("bytes", $m_Lcom_github_ldaniels528_transgress_client_Filters$().bytes$1);
   self$1.filter("bps", $m_Lcom_github_ldaniels528_transgress_client_Filters$().bps$1);
@@ -5489,10 +5491,10 @@ $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype
   })(this)];
   self$1.run(initializationFn)
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.$$js$exported$meth$main__O = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$$js$exported$meth$main__O = (function() {
   this.main__V()
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.service("JobService", ["$http", (function($this) {
     return (function(x$macro$20$2) {
       return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$20$2)
@@ -5514,23 +5516,23 @@ $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype
     })
   })(this)])
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.main = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.main = (function() {
   return this.$$js$exported$meth$main__O()
 });
-var $d_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$ = new $TypeData().initClass({
-  Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$: 0
-}, false, "com.github.ldaniels528.transgress.client.TransgressWebClientJSApp$", {
-  Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$: 1,
+var $d_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = new $TypeData().initClass({
+  Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$: 0
+}, false, "com.github.ldaniels528.transgress.client.QweryWebClientJSApp$", {
+  Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$: 1,
   O: 1,
   sjs_js_JSApp: 1
 });
-$c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$;
-var $n_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$ = (void 0);
-function $m_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$() {
-  if ((!$n_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$)) {
-    $n_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$ = new $c_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$().init___()
+$c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
+var $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = (void 0);
+function $m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$() {
+  if ((!$n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$)) {
+    $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$ = new $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$().init___()
   };
-  return $n_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$
+  return $n_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$
 }
 /** @constructor */
 function $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController() {
@@ -5718,13 +5720,29 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
       arg$outer.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$1__V()
     })
   })(this);
+  $$scope.selectWorkflow = (function(arg$outer$1) {
+    return (function(arg1$2) {
+      arg$outer$1.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$2__sjs_js_UndefOr__V(arg1$2)
+    })
+  })(this);
+  $$scope.toJSON = (function(arg$outer$2) {
+    return (function(arg1$2$1) {
+      return arg$outer$2.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$3__sjs_js_Any__T(arg1$2$1)
+    })
+  })(this);
   return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$3__sjs_js_Any__T = (function(anObject) {
+  return $as_T($g.JSON.stringify(anObject, null, 4))
 });
 $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$1__V = (function() {
   var jsx$1 = $g.console;
   var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
   jsx$1.info(s);
   this.refreshWorkflows__p1__V()
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.com$github$ldaniels528$transgress$client$controllers$WorkflowController$$$anonfun$new$2__sjs_js_UndefOr__V = (function(aWorkflow) {
+  this.$$scope$1.selectedWorkflow = aWorkflow
 });
 $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prototype.refreshWorkflows__p1__V = (function() {
   var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
@@ -5738,20 +5756,30 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
         var jsx$2 = $g.console;
         var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Loaded ", " workflow(s)"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$uI(response.data.length)]));
         jsx$2.log(s);
-        var array = response.data;
-        var i = 0;
-        var len = $uI(array.length);
-        while ((i < len)) {
-          var index = i;
-          var arg1 = array[index];
-          $this.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_transgress_client_models_Workflow__V($this.$$scope$1.workflows, arg1);
-          i = ((1 + i) | 0)
-        };
-        return $this.$$scope$1.$apply((function(this$2$1) {
+        return $this.$$scope$1.$apply((function($this$1, response$1) {
           return (function() {
-            return (void 0)
+            var array = response$1.data;
+            var i = 0;
+            var len = $uI(array.length);
+            while ((i < len)) {
+              var index = i;
+              var arg1 = array[index];
+              $this$1.updateWorkflow__p1__sjs_js_Array__Lcom_github_ldaniels528_transgress_client_models_Workflow__V($this$1.$$scope$1.workflows, arg1);
+              i = ((1 + i) | 0)
+            };
+            var jsx$4 = $this$1.$$scope$1;
+            var array$1 = response$1.data;
+            var this$5 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$1);
+            var opt = $f_sc_TraversableLike__headOption__s_Option(this$5);
+            if (opt.isEmpty__Z()) {
+              var jsx$3 = (void 0)
+            } else {
+              var arg1$1 = opt.get__O();
+              var jsx$3 = arg1$1
+            };
+            jsx$4.selectedWorkflow = jsx$3
           })
-        })($this))
+        })($this, response))
       } else if ($is_s_util_Failure(x0$1)) {
         var x3 = $as_s_util_Failure(x0$1);
         var e = x3.exception$2;
@@ -5767,13 +5795,13 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
             var s$1 = $as_T(x2$1.value$2);
             var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
             if ((($uI(s$1.length) >= 0) && ($as_T(s$1.substring(0, $uI(prefix.length))) === prefix))) {
-              var jsx$3 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$14 = new $c_sci_StringOps().init___T(s$1);
+              var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$19 = new $c_sci_StringOps().init___T(s$1);
               var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
               var n = $uI(thiz.length);
-              var $$this = this$14.repr$1;
+              var $$this = this$19.repr$1;
               var until = $uI($$this.length);
-              var body = jsx$3.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$14.repr$1, n, until));
+              var body = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$19.repr$1, n, until));
               break matchEnd7
             }
           };
@@ -5790,9 +5818,9 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
           throw new $c_s_MatchError().init___O(x1)
         };
         var value = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-        var jsx$4 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Initialization Error", body);
-        toaster.pop(jsx$4);
-        var jsx$6 = $g.console;
+        var jsx$6 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Initialization Error", body);
+        toaster.pop(jsx$6);
+        var jsx$8 = $g.console;
         var rc6$1 = false;
         var x2$2 = null;
         var x1$1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
@@ -5804,13 +5832,13 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
             var s$3 = $as_T(x2$2.value$2);
             var prefix$1 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
             if ((($uI(s$3.length) >= 0) && ($as_T(s$3.substring(0, $uI(prefix$1.length))) === prefix$1))) {
-              var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$30 = new $c_sci_StringOps().init___T(s$3);
+              var jsx$7 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$35 = new $c_sci_StringOps().init___T(s$3);
               var thiz$1 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
               var n$1 = $uI(thiz$1.length);
-              var $$this$1 = this$30.repr$1;
+              var $$this$1 = this$35.repr$1;
               var until$1 = $uI($$this$1.length);
-              var s$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$30.repr$1, n$1, until$1));
+              var s$4 = jsx$7.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$35.repr$1, n$1, until$1));
               break matchEnd7$1
             }
           };
@@ -5826,7 +5854,7 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController.prot
           };
           throw new $c_s_MatchError().init___O(x1$1)
         };
-        jsx$6.error(s$4);
+        jsx$8.error(s$4);
         return (void 0)
       } else {
         throw new $c_s_MatchError().init___O(x0$1)
@@ -14110,6 +14138,9 @@ function $f_sc_TraversableLike__isPartLikelySynthetic$1__psc_TraversableLike__T_
 function $f_sc_TraversableLike__toString__T($thiz) {
   return $thiz.mkString__T__T__T__T(($thiz.stringPrefix__T() + "("), ", ", ")")
 }
+function $f_sc_TraversableLike__headOption__s_Option($thiz) {
+  return ($thiz.isEmpty__Z() ? $m_s_None$() : new $c_s_Some().init___O($thiz.head__O()))
+}
 function $f_sc_TraversableLike__last__O($thiz) {
   var elem = $thiz.head__O();
   var lst = new $c_sr_ObjectRef().init___O(elem);
@@ -18352,6 +18383,129 @@ function $isArrayOf_sc_Set(obj, depth) {
 function $asArrayOf_sc_Set(obj, depth) {
   return (($isArrayOf_sc_Set(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.Set;", depth))
 }
+/** @constructor */
+function $c_sjs_js_ArrayOps() {
+  $c_O.call(this);
+  this.scala$scalajs$js$ArrayOps$$array$f = null
+}
+$c_sjs_js_ArrayOps.prototype = new $h_O();
+$c_sjs_js_ArrayOps.prototype.constructor = $c_sjs_js_ArrayOps;
+/** @constructor */
+function $h_sjs_js_ArrayOps() {
+  /*<skip>*/
+}
+$h_sjs_js_ArrayOps.prototype = $c_sjs_js_ArrayOps.prototype;
+$c_sjs_js_ArrayOps.prototype.seq__sc_TraversableOnce = (function() {
+  return this.seq__sc_IndexedSeq()
+});
+$c_sjs_js_ArrayOps.prototype.seq__sc_IndexedSeq = (function() {
+  return new $c_sjs_js_WrappedArray().init___sjs_js_Array(this.scala$scalajs$js$ArrayOps$$array$f)
+});
+$c_sjs_js_ArrayOps.prototype.init___ = (function() {
+  $c_sjs_js_ArrayOps.prototype.init___sjs_js_Array.call(this, []);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.head__O = (function() {
+  return $f_sc_IndexedSeqOptimized__head__O(this)
+});
+$c_sjs_js_ArrayOps.prototype.apply__I__O = (function(index) {
+  return this.scala$scalajs$js$ArrayOps$$array$f[index]
+});
+$c_sjs_js_ArrayOps.prototype.lengthCompare__I__I = (function(len) {
+  return $f_sc_IndexedSeqOptimized__lengthCompare__I__I(this, len)
+});
+$c_sjs_js_ArrayOps.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $f_sc_IndexedSeqOptimized__sameElements__sc_GenIterable__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.isEmpty__Z = (function() {
+  return $f_sc_IndexedSeqOptimized__isEmpty__Z(this)
+});
+$c_sjs_js_ArrayOps.prototype.thisCollection__sc_Traversable = (function() {
+  return this.thisCollection__scm_IndexedSeq()
+});
+$c_sjs_js_ArrayOps.prototype.equals__O__Z = (function(that) {
+  return $f_sc_GenSeqLike__equals__O__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$eq__O__scg_Growable = (function(elem) {
+  this.scala$scalajs$js$ArrayOps$$array$f.push(elem);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.thisCollection__scm_IndexedSeq = (function() {
+  var repr = this.scala$scalajs$js$ArrayOps$$array$f;
+  return new $c_sjs_js_WrappedArray().init___sjs_js_Array(repr)
+});
+$c_sjs_js_ArrayOps.prototype.toString__T = (function() {
+  return $f_sc_TraversableLike__toString__T(this)
+});
+$c_sjs_js_ArrayOps.prototype.foreach__F1__V = (function(f) {
+  $f_sc_IndexedSeqOptimized__foreach__F1__V(this, f)
+});
+$c_sjs_js_ArrayOps.prototype.result__O = (function() {
+  return this.scala$scalajs$js$ArrayOps$$array$f
+});
+$c_sjs_js_ArrayOps.prototype.iterator__sc_Iterator = (function() {
+  return new $c_sc_IndexedSeqLike$Elements().init___sc_IndexedSeqLike__I__I(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length))
+});
+$c_sjs_js_ArrayOps.prototype.sizeHintBounded__I__sc_TraversableLike__V = (function(size, boundingColl) {
+  $f_scm_Builder__sizeHintBounded__I__sc_TraversableLike__V(this, size, boundingColl)
+});
+$c_sjs_js_ArrayOps.prototype.length__I = (function() {
+  return $uI(this.scala$scalajs$js$ArrayOps$$array$f.length)
+});
+$c_sjs_js_ArrayOps.prototype.sizeHintIfCheap__I = (function() {
+  return $uI(this.scala$scalajs$js$ArrayOps$$array$f.length)
+});
+$c_sjs_js_ArrayOps.prototype.toStream__sci_Stream = (function() {
+  var this$1 = new $c_sc_IndexedSeqLike$Elements().init___sc_IndexedSeqLike__I__I(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length));
+  return $f_sc_Iterator__toStream__sci_Stream(this$1)
+});
+$c_sjs_js_ArrayOps.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBuilder = (function(b, start, sep, end) {
+  return $f_sc_TraversableOnce__addString__scm_StringBuilder__T__T__T__scm_StringBuilder(this, b, start, sep, end)
+});
+$c_sjs_js_ArrayOps.prototype.repr__O = (function() {
+  return this.scala$scalajs$js$ArrayOps$$array$f
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$eq__O__scm_Builder = (function(elem) {
+  this.scala$scalajs$js$ArrayOps$$array$f.push(elem);
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
+  $f_sc_IndexedSeqOptimized__copyToArray__O__I__I__V(this, xs, start, len)
+});
+$c_sjs_js_ArrayOps.prototype.sizeHint__I__V = (function(size) {
+  /*<skip>*/
+});
+$c_sjs_js_ArrayOps.prototype.hashCode__I = (function() {
+  return $m_s_util_hashing_MurmurHash3$().seqHash__sc_Seq__I(this.seq__sc_IndexedSeq())
+});
+$c_sjs_js_ArrayOps.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (function(ev) {
+  var b = new $c_scm_MapBuilder().init___sc_GenMap($m_sci_Map$EmptyMap$());
+  var i = 0;
+  var len = $uI(this.scala$scalajs$js$ArrayOps$$array$f.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = this.scala$scalajs$js$ArrayOps$$array$f[index];
+    b.$$plus$eq__T2__scm_MapBuilder($as_T2(arg1));
+    i = ((1 + i) | 0)
+  };
+  return $as_sci_Map(b.elems$1)
+});
+$c_sjs_js_ArrayOps.prototype.init___sjs_js_Array = (function(array) {
+  this.scala$scalajs$js$ArrayOps$$array$f = array;
+  return this
+});
+$c_sjs_js_ArrayOps.prototype.newBuilder__scm_Builder = (function() {
+  return new $c_sjs_js_ArrayOps().init___()
+});
+$c_sjs_js_ArrayOps.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
+  return $f_scg_Growable__$$plus$plus$eq__sc_TraversableOnce__scg_Growable(this, xs)
+});
+$c_sjs_js_ArrayOps.prototype.stringPrefix__T = (function() {
+  return $f_sc_TraversableLike__stringPrefix__T(this)
+});
 function $is_sjs_js_ArrayOps(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sjs_js_ArrayOps)))
 }
@@ -18364,6 +18518,33 @@ function $isArrayOf_sjs_js_ArrayOps(obj, depth) {
 function $asArrayOf_sjs_js_ArrayOps(obj, depth) {
   return (($isArrayOf_sjs_js_ArrayOps(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.scalajs.js.ArrayOps;", depth))
 }
+var $d_sjs_js_ArrayOps = new $TypeData().initClass({
+  sjs_js_ArrayOps: 0
+}, false, "scala.scalajs.js.ArrayOps", {
+  sjs_js_ArrayOps: 1,
+  O: 1,
+  scm_ArrayLike: 1,
+  scm_IndexedSeqOptimized: 1,
+  scm_IndexedSeqLike: 1,
+  sc_IndexedSeqLike: 1,
+  sc_SeqLike: 1,
+  sc_IterableLike: 1,
+  s_Equals: 1,
+  sc_TraversableLike: 1,
+  scg_HasNewBuilder: 1,
+  scg_FilterMonadic: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1,
+  sc_GenTraversableLike: 1,
+  sc_Parallelizable: 1,
+  sc_GenIterableLike: 1,
+  sc_GenSeqLike: 1,
+  sc_IndexedSeqOptimized: 1,
+  scm_Builder: 1,
+  scg_Growable: 1,
+  scg_Clearable: 1
+});
+$c_sjs_js_ArrayOps.prototype.$classData = $d_sjs_js_ArrayOps;
 function $is_sc_IndexedSeq(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sc_IndexedSeq)))
 }
@@ -24260,7 +24441,7 @@ $e.com.github = ($e.com.github || {});
 $e.com.github.ldaniels528 = ($e.com.github.ldaniels528 || {});
 $e.com.github.ldaniels528.transgress = ($e.com.github.ldaniels528.transgress || {});
 $e.com.github.ldaniels528.transgress.client = ($e.com.github.ldaniels528.transgress.client || {});
-$e.com.github.ldaniels528.transgress.client.TransgressWebClientJSApp = $m_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$;
-$m_Lcom_github_ldaniels528_transgress_client_TransgressWebClientJSApp$().main__V();
+$e.com.github.ldaniels528.transgress.client.QweryWebClientJSApp = $m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$;
+$m_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$().main__V();
 }).call(this);
-//# sourceMappingURL=transgress-web-client-fastopt.js.map
+//# sourceMappingURL=broadway-web-client-fastopt.js.map
