@@ -26,8 +26,7 @@ object CommandPrompt {
     Properties match {
       case p if p.isWin & System.console() == null => new DefaultCommandPrompt()
       case p if p.isWin => new WindowsCommandPrompt()
-      case p if p.isLinux | p.isMac => new UNIXCommandPrompt()
-      case _ => new DefaultCommandPrompt()
+      case _ => new UNIXCommandPrompt()
     }
   }
 }
