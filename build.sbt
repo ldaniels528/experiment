@@ -4,7 +4,7 @@ import sbt._
 import scala.language.postfixOps
 
 val apiVersion = "0.3.8"
-val appScalaVersion = "2.12.2"
+val appScalaVersion = "2.11.11"
 
 val akkaVersion = "2.5.2"
 val curatorVersion = "3.1.0"
@@ -49,7 +49,6 @@ lazy val cli = (project in file("./app/cli")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.scala-lang" % "jline" % "2.11.0-M3",
       "org.slf4j" % "slf4j-api" % slf4jVersion
@@ -78,10 +77,40 @@ lazy val etl = (project in file("./app/etl")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1"
+    ))
+
+lazy val spark = (project in file("./app/spark")).
+  aggregate(core).
+  dependsOn(core).
+  settings(publishingSettings: _*).
+  settings(
+    name := "qwery-spark",
+    organization := "io.scalajs",
+    description := "Qwery Spark Integration",
+    version := apiVersion,
+    scalaVersion := appScalaVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    coverageEnabled := true,
+    libraryDependencies ++= Seq(
+      //
+      // DataBricks
+      "com.databricks" %% "spark-avro" % "3.2.0",
+      "com.databricks" %% "spark-csv" % "1.5.0",
+      //
+      // Apache
+      "org.apache.avro" % "avro" % "1.8.2",
+      "org.apache.spark" %% "spark-core" % "2.1.1",
+      "org.apache.spark" %% "spark-sql" % "2.1.1",
+      "org.apache.spark" %% "spark-streaming" % "2.1.1",
+      //
+      // SLF4J
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
     ))
 
 lazy val core = (project in file(".")).
