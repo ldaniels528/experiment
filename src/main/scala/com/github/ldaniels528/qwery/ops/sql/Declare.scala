@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
+
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope, Variable, VariableRef}
 
 /**
   * Represents a Variable Declaration
@@ -8,7 +10,7 @@ case class Declare(variableRef: VariableRef, typeName: String) extends Executabl
 
   override def execute(scope: Scope): ResultSet = {
     scope += Variable(variableRef.name, value = None)
-    ResultSet.ok()
+    ResultSet.affected()
   }
 
 }

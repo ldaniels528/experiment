@@ -2,9 +2,9 @@
 
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.0")
 
-// Scala.js
+// DataBricks / Spark
 
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.15")
+addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.5")
 
 // Publishing
 
@@ -12,9 +12,10 @@ addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "1.1")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 
-// Resolvers
+// ScalaJS
 
-resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.15")
 
-resolvers += Resolver.url("scala-js-snapshots", url("http://repo.scala-js.org/repo/snapshots/"))(
-  Resolver.ivyStylePatterns)
+// Typesafe
+
+addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")

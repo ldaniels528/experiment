@@ -7,7 +7,7 @@ import java.util.UUID
 import com.github.ldaniels528.qwery.AppConstants._
 import com.github.ldaniels528.qwery.etl.actors.FileManagementActor._
 import com.github.ldaniels528.qwery.etl.actors.WorkflowManagementActor.ProcessFile
-import com.github.ldaniels528.qwery.ops.RootScope
+import com.github.ldaniels528.qwery.ops.Scope
 import org.slf4j.LoggerFactory
 
 import scala.util.Properties
@@ -37,10 +37,11 @@ object QweryETL {
 
     // load the configuration
     val config = new ETLConfig(baseDir)
+    config.loadScheduledEvents()
     config.loadTriggers()
 
     // define the root scope
-    val rootScope = RootScope()
+    val rootScope = Scope.root()
 
     // get references to the support actors
     val fileManager = config.fileManager

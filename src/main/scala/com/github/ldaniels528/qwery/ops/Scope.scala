@@ -2,13 +2,18 @@ package com.github.ldaniels528.qwery.ops
 
 import java.io.File
 
+import com.github.ldaniels528.qwery.ops.sql.{Procedure, View}
+import com.github.ldaniels528.qwery.util.FileHelper
+import com.github.ldaniels528.qwery.util.OptionHelper._
+
+import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 
 /**
   * Represents a scope
   * @author lawrence.daniels@gmail.com
   */
-trait Scope {
+trait Scope extends DataContainer {
   private lazy val functions = TrieMap[String, Function]()
   private lazy val procedures = TrieMap[String, Procedure]()
   private lazy val variables = TrieMap[String, Variable]()
@@ -25,18 +30,25 @@ trait Scope {
     * @param name the name of the desired column
     * @return the option of a value
     */
-  def get(name: String): Option[Any] = row.find(_._1.equalsIgnoreCase(name)).map(_._2)
+  override def get(name: String): Option[Any] = row.get(name)
+
+  /**
+    * Returns a column-value pair by name
+    * @param name the name of the desired column
+    * @return the option of a column-value tuple
+    */
+  override def getColumn(name: String): Option[Column] = row.getColumn(name)
+
+  /////////////////////////////////////////////////////////////////
+  //    Files
+  /////////////////////////////////////////////////////////////////
 
   /**
     * Returns the files in the currently directory
+    * @param file the given [[File file]]
     * @return a list of files
     */
-  def getFiles(file: File = new File(".")): List[File] = {
-    file match {
-      case f if f.isDirectory => f.listFiles().flatMap(getFiles).toList
-      case f => f :: Nil
-    }
-  }
+  def getFiles(file: File = new File(".")): Stream[File] = FileHelper.getFiles(file)
 
   /////////////////////////////////////////////////////////////////
   //    Functions
@@ -151,5 +163,74 @@ trait Scope {
     * @return an option of a [[View view]]
     */
   def lookupView(name: String): Option[View] = views.get(name)
+
+}
+
+/**
+  * Scope Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object Scope {
+
+  /**
+    * Creates a new scope
+    * @return a new [[Scope scope]]
+    */
+  def apply(): Scope = DefaultScope()
+
+  /**
+    * Creates a new child scope
+    * @param parent the parent scope
+    * @return a new [[Scope scope]]
+    */
+  def apply(parent: Scope, row: Row = Nil): ChildScope = ChildScope(parent, row)
+
+  /**
+    * Creates a top-level (root) scope
+    * @return a new [[Scope scope]]
+    */
+  def root(): Scope = DefaultScope().includeEnvVars()
+
+  /**
+    * Scope Enrichment
+    * @param scope the given [[Scope scope]]
+    */
+  implicit class ScopeEnrichment(val scope: Scope) extends AnyVal {
+
+    @inline
+    def includeEnvVars(): scope.type = {
+      // import the environment variables
+      System.getenv().asScala foreach { case (name, value) =>
+        scope += Variable(name = s"env.$name", value = Option(value))
+      }
+      scope
+    }
+  }
+
+  /**
+    * Represents a local ephemeral scope
+    * @author lawrence.daniels@gmail.com
+    */
+  case class ChildScope(parent: Scope, row: Row = Nil) extends Scope {
+
+    override def get(name: String): Option[Any] = getColumn(name).map(_._2)
+
+    override def getColumn(name: String): Option[(String, Any)] = super.getColumn(name) ?? parent.getColumn(name)
+
+    override def lookupFunction(name: String): Option[Function] = {
+      super.lookupFunction(name) ?? parent.lookupFunction(name)
+    }
+
+    override def lookupVariable(name: String): Option[Variable] = {
+      super.lookupVariable(name) ?? parent.lookupVariable(name)
+    }
+
+  }
+
+  /**
+    * Represents a simple scope
+    * @author lawrence.daniels@gmail.com
+    */
+  case class DefaultScope(row: Row = Nil) extends Scope
 
 }

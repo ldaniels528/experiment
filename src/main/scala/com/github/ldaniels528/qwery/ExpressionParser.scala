@@ -1,6 +1,7 @@
 package com.github.ldaniels528.qwery
 
 import com.github.ldaniels528.qwery.ExpressionParser._
+import com.github.ldaniels528.qwery.ops.Expression.Null
 import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
@@ -159,12 +160,16 @@ trait ExpressionParser {
 
   private def parseNextExpression(stream: TokenStream): Option[Expression] = {
     stream match {
+      // is is a null value?
+      case ts if ts nextIf "NULL" => Option(Null)
       // is it a Case expression?
       case ts if ts nextIf "Case" => parseCase(ts)
       // is it a special function?
       case ts if ts nextIf "Cast" => parseCast(ts)
       // is it an all fields reference?
       case ts if ts nextIf "*" => Option(AllFields)
+      // is it a field reference?
+      case ts if ts is "#" => parseFieldRef(ts)
       // is it a variable?
       case ts if ts is "@" => parseVariableRef(ts)
       // is it a quantity (e.g. "(2 + (5 * 2))")?
@@ -172,13 +177,26 @@ trait ExpressionParser {
         val expr = parseExpression(ts)
         ts expect ")"
         expr
+      // is it a join column reference (e.g. )?
+      case ts if ts.peekAhead(1).exists(_.text == ".") =>
+        val params = SQLTemplateParams(ts, "%a:alias . %a:column")
+        Option(JoinField(alias = params.atoms("alias"), columnName = params.atoms("column")))
       // is it a function?
       case ts if ts.matches(identifierRegEx) & ts.peekAhead(1).exists(_ is "(") => parseFunction(stream)
       // is it a field or constant value?
       case ts if ts.isNumeric | ts.isQuoted => Option(Expression(ts.next()))
-      case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts.next()))
+      case ts if ts.matches(identifierRegEx) | ts.isBackticks => Option(Field(ts))
       case _ => None
     }
+  }
+
+  def parseFieldRef(ts: TokenStream): Option[ColumnRef] = {
+    if (ts nextIf "#") {
+      val name = ts.next().text
+      if (isFieldIdentifier(name)) Option(ColumnRef(name))
+      else ts.die("Field identifier expected")
+    }
+    else None
   }
 
   def parseVariableRef(ts: TokenStream): Option[VariableRef] = {
@@ -298,7 +316,7 @@ trait ExpressionParser {
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
-  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
+  val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
   private val function0s = Seq(Now, Rand, Uuid)
   private val function1s = Map(
     "AVG" -> Avg.apply _,
@@ -337,8 +355,15 @@ object ExpressionParser {
   )
 
   /**
+    * Indicates whether the given name qualifies as a field identifier (e.g. "customerName")
+    * @param name the given field name
+    * @return true, if the given name qualifies as a field identifier
+    */
+  def isFieldIdentifier(name: String): Boolean = true
+
+  /**
     * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
-    * @param name the given name
+    * @param name the given identifier name
     * @return true, if the given name qualifies as an identifier
     */
   def isIdentifier(name: String): Boolean = name.matches(identifierRegEx)

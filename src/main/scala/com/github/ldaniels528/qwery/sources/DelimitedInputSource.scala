@@ -53,7 +53,7 @@ case class DelimitedInputSource(device: InputDevice, hints: Option[Hints])
     for {
       delimiter <- delimiter_?
       headers <- sampleLines.headOption.map(_.delimitedSplit(delimiter))
-      rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter)) toIterator
+      rows = sampleLines.tail.map(line => headers zip line.delimitedSplit(delimiter): Row) toIterator
     } yield (delimiter, headers, ResultSet(rows))
   }
 

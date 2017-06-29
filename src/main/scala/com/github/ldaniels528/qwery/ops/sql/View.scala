@@ -1,4 +1,6 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
+
+import com.github.ldaniels528.qwery.ops.{Executable, ResultSet, Scope}
 
 /**
   * Represents a View
@@ -12,7 +14,7 @@ case class View(name: String, query: Executable) extends Executable {
     if (once) {
       once = !once
       scope += this
-      ResultSet.ok()
+      ResultSet.affected()
     }
     else query.execute(scope)
   }

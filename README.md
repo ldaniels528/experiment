@@ -13,22 +13,27 @@ Kafka or REST services. Additionally, Qwery can be used as an ETL, REPL or libra
     * <a href="#run-tests">Running the tests</a>
 * <a href="#sql-commands">SQL Syntax and Grammar</a>
     * <a href="#select">SELECT statement</a>
+        * <a href="#join">JOINS</a>
         * <a href="#union">UNION clause</a>
         * <a href="#select-kafka">Querying Kafka topics</a>
         * <a href="#select-s3">Querying files on S3</a>
     * <a href="#built-in-functions">Built-in Functions</a>
     * <a href="#views">VIEWS</a>
     * <a href="#insert">INSERT statement</a>
+    * <a href="#update">UPDATE statement</a>
+    * <a href="#upsert">UPSERT statement</a>
     * <a href="#declare-set">DECLARE & SET statements</a> 
     * <a href="#show">SHOW statement</a>  
     * <a href="#describe">DESCRIBE statement</a>
     * <a href="#user-defined-functions">User-defined Functions</a>
     * <a href="#stored-procedures">Stored Procedures</a>
+    * <a href="#native-sql">NATIVE SQL</a>    
 * <a href="#etl">Qwery ETL</a>
     * <a href="#how-it-works">How it works</a>
         * <a href="#sample-trigger-file">Sample Trigger Configuration file</a>
         * <a href="#sample-sql-script">Sample SQL script</a>
         * <a href="#file-archival">File Archival</a>
+        * <a href="#scheduled-events">Scheduled Events</a>        
         * <a href="#building-etl">Building and running the ETL</a>
 * <a href="#repl">Qwery REPL</a>
     * <a href="#repl_start">Start the REPL</a>
@@ -52,7 +57,7 @@ a solution to that challenge.
 Qwery provides the capability of invoking SQL-like queries against:
 * Files (local, HTTP or S3)
 * Avro-encoded or JSON-based Kafka topics 
-* Database tables (Coming soon)
+* JDBC data sources
 
 Additionally, Qwery has three modes of operation:
 * ETL/Orchestration Server
@@ -79,7 +84,7 @@ sbt "project etl" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.8.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -91,7 +96,7 @@ sbt "project cli" clean assembly
 ```
 
 ```text
-[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.6.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/cli/target/scala-2.12/qwery-cli-0.3.8.bin.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -121,24 +126,31 @@ sbt clean coverage test coverageReport
 <a name="sql-commands"></a>
 ### SQL Syntax and Grammar
 
-Qwery currently supports a limited, but powerful set of SQL statements, including:
+Qwery currently supports a limited, but powerful set of SQL statements, including:   
+* CALL - used to execute a stored procedure.
+* CREATE FUNCTION - used to create user-defined functions.
+* CREATE PROCEDURE - used to create stored procedures.
 * CREATE VIEW - used to create views.
+* DECLARE - use to create (or declare) a variable.
 * DESCRIBE - shows the layout/structure of files or query results.
 * INSERT - inserts (appends or overwrites) files, Kafka topics, etc.
+* NATIVE SQL - Executes a native SQL query or statement (*JDBC only*).
 * SELECT - executes queries 
 * SET - used to sets the value of a variable
 * SHOW - returns lists of files, variables (in the current scope) or views (in the current session)
-
+* UPDATE - updates a record (*JDBC only*)
+* UPSERT - inserts (or updates) a record (*JDBC only*).
+                              
 <a name="select"></a>
 #### SELECT statement
 
-The _SELECT_ statement works as you would expect with a traditional SQL-like language, with one important difference...
+The `SELECT` statement works as you would expect with a traditional SQL-like language, with one important difference...
 You can query structure files.
 
 Count the number of (non-blank) lines in the file:
 
 ```sql
-SELECT COUNT(*) FROM "./companylist.csv";
+SELECT COUNT(*) FROM "./companylist.csv"
 ```
 ```text
 + ---------- +
@@ -151,7 +163,7 @@ SELECT COUNT(*) FROM "./companylist.csv";
 Count the number of lines that match a given set of criteria in the file:
 
 ```sql
-SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
+SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries"
 ```
 ```text
 + ---------- +
@@ -164,7 +176,7 @@ SELECT COUNT(*) FROM "./companylist.csv" WHERE Sector = "Basic Industries";
 Select fields from the file using criteria (WHERE clause):
 
 ```sql
-SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM "./companylist.csv" WHERE Industry = "EDP Services";
+SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap FROM "./companylist.csv" WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -208,15 +220,38 @@ CASE "Hello World"
  WHEN "HelloWorld" THEN "Found 1"
  WHEN "Hello" || " " || "World" THEN "Found 2"
  ELSE "Not Found"
-END;
+END AS Greeting
 ```       
 ```text
 + ---------- +
-| JSOdavyb   |
+| Greeting   |
 + ---------- +
 | Found 2    |
 + ---------- +
 ```
+
+<a name="join"></a>
+INNER JOIN clauses are supported:
+
+```sql
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
+FROM "companylist.csv" AS A
+INNER JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
+WHERE A.Industry = 'Oil/Gas Transmission'
+LIMIT 5
+```
+```text
++ ---------------------------------------------------------------------------------------------------------------------- +
+| A.Symbol  A.Name                                     A.Sector          A.Industry            A.LastSale  CurrentSale   |
++ ---------------------------------------------------------------------------------------------------------------------- +
+| CQH       Cheniere Energy Partners LP Holdings, LLC  Public Utilities  Oil/Gas Transmission  25.68       26.23         |
+| CQP       Cheniere Energy Partners, LP               Public Utilities  Oil/Gas Transmission  31.75       31.55         |
+| LNG       Cheniere Energy, Inc.                      Public Utilities  Oil/Gas Transmission  45.35       47.28         |
+| EGAS      Gas Natural Inc.                           Public Utilities  Oil/Gas Transmission  12.5        12.7          |
++ ---------------------------------------------------------------------------------------------------------------------- +
+```
+
+*NOTE:* OUTER JOIN clauses will be implemented in a future release.
 
 <a name="union"></a>
 UNION clauses are also supported:
@@ -228,7 +263,7 @@ WHERE Industry = 'Oil/Gas Transmission'
 UNION
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM 'companylist.csv'
-WHERE Industry = 'Integrated oil Companies';
+WHERE Industry = 'Integrated oil Companies'
 ```
 ```text
 + ---------------------------------------------------------------------------------------------------------------------------------- +
@@ -292,7 +327,7 @@ Query files on S3:
 SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
 FROM "s3://ldaniels3/companylist.csv"
 WITH PROPERTIES "./aws-s3.properties"
-WHERE Industry = "EDP Services";
+WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -316,7 +351,7 @@ Alternatively, you could also use profile-based authentication:
 ```sql
 SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap 
 FROM "s3://ldaniels3/companylist.csv?profile=ldaniels3&region=us-west-2"
-WHERE Industry = "EDP Services";
+WHERE Industry = "EDP Services"
 ```
 ```text
 + -------------------------------------------------------------------------------- +
@@ -359,22 +394,22 @@ WHERE Industry = "EDP Services";
 Perform date conversions:
 
 ```sql
-SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd');
+SELECT DATE_PARSE('2017-05-12', 'yyyy-MM-dd') AS EntryDate
 ```
 ```text
 + ----------------------- +
-| WsbLhYNC                |
+| EntryDate               |
 + ----------------------- +
 | 05/12/17 12:00:00 PDT   |
 + ----------------------- +
 ```
 
 ```sql
-SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
+SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy') AS EntryDate
 ```
 ```text
 + ------------ +
-| wFJMOFgd     |
+| EntryDate    |
 + ------------ +
 | 05-12-2017   |
 + ------------ +
@@ -383,7 +418,7 @@ SELECT DATE_FORMAT(DATE_PARSE('2017-05-12', 'yyyy-MM-dd'), 'MM-dd-yyyy');
 Sum values (just like you normally do with SQL) in the file:
 
 ```sql
-SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
+SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5
 ```
 ```text
 + --------------- +
@@ -396,7 +431,7 @@ SELECT SUM(LastSale) AS total FROM "./companylist.csv" LIMIT 5;
 Type-casting and column name aliases are supported:
 
 ```sql
-SELECT CAST("1234" AS Double) AS number;
+SELECT CAST("1234" AS Double) AS number
 ```
 ```text
 + -------- + 
@@ -405,6 +440,22 @@ SELECT CAST("1234" AS Double) AS number;
 | 1234.0   | 
 + -------- + 
 ```
+
+Supported types are:
+
+| Type              | Description                      | 
+|-------------------|----------------------------------|
+| Boolean           | Boolean values; `true` or `false` | 
+| Byte              | Signed 8-bit integers; range: -127 to 127 |
+| Date              | Date/Time values |
+| Double            | Double precision decimal; 32-bit floating point |  
+| Float             | Single precision decimal; 16-bit floating point |  
+| Int / Integer     | Signed 32-bit integers |  
+| Long              | Signed 64-bit integers |   
+| Short             | Signed 16-bit integers |   
+| String            | Text values | 
+| UUID              | Universally Unique Identifier (e.g. "1d8d1609-78db-4813-a87a-9cdf989bb896") |
+
 
 <a name="views"></a>
 #### VIEWS
@@ -416,7 +467,7 @@ In Qwery, views are tied to the current session; thus, one you exit the applicat
 CREATE VIEW "OilAndGas" AS
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
-WHERE Industry = "Oil/Gas Transmission";
+WHERE Industry = "Oil/Gas Transmission"
 ``` 
 ```text  
 + --------------- +
@@ -445,7 +496,7 @@ SELECT * FROM "OilAndGas";
 <a name="insert"></a>
 #### INSERT statement
 
-The _INSERT_ statement behaves very much like its RDBMS counterparts, as you can directly insert collections
+The `INSERT` statement behaves very much like its RDBMS counterparts, as you can directly insert collections
 of values, or insert the results of a query.
 
 ```sql
@@ -492,11 +543,11 @@ WHERE Industry = "Precious Metals";
 + --------------- +
 ```
 
-Moreover, _INSERT_ supports the notion of hints. You can provide "hints" to the compiler about the format you want to 
+Moreover, `INSERT` supports the notion of hints. You can provide "hints" to the compiler about the format you want to 
 read or write:
 
 ```sql
-INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
 WITH CSV FORMAT
@@ -514,7 +565,7 @@ SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv"
 ```
 
-The two _INSERT_ statements above are functionally identical.
+The two `INSERT` statements above are functionally identical.
 
 *NOTE*: When processing files via the ETL module, it is recommend to provide hints as to the input and output formats.
 
@@ -534,7 +585,115 @@ WITH CSV FORMAT;
 + --------------- +
 ```
 
-*NOTE:* The SELECT statement with INTO clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
+*NOTE:* The `SELECT` statement with `INTO` clause is merely syntactic sugar for the more verbose INSERT-SELECT grammar.
+
+Here is an example of generating fixed-width data:
+
+```sql
+INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10) WITH FIXED WIDTH 
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 4               |
++ --------------- +
+```
+
+The above example results in appending 4 fixed-width lines to the file 'fixed-data.txt', where:
+ * _Symbol_ is 10-characters wide
+ * _Name_ is 40-characters wide
+ * _Sector_ is 40-characters wide
+ * _LastTrade_ is 10-characters wide
+
+
+You can also insert records into an RDBMS like MySQL using JDBC, consider the following:
+
+```sql
+INSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, MarketCap, LastSale)
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, MarketCap,
+ CASE LastSale
+   WHEN 'n/a' THEN NULL
+   ELSE CAST(LastSale AS DOUBLE)
+ END
+FROM './companylist.csv'
+```
+```text
++ --------------- +
+| ROWS_INSERTED   |
++ --------------- +
+| 359             |
++ --------------- +
+```
+
+The MySQL table definition is as follows:
+
+```sql
+CREATE TABLE company (
+    Symbol VARCHAR(10) PRIMARY KEY,
+    Name VARCHAR(64),
+    LastSale DECIMAL(9, 4),
+    MarketCap DECIMAL(20,4),
+    Sector VARCHAR(64),
+    Industry VARCHAR(64)
+);
+```
+
+<a name="update"></a>
+#### UPDATE statement
+
+Unlike the <a href="#insert">INSERT</a> statement, `UPDATE` behaves differently from its RDBMS counterpart, as it is 
+primarily meant to update a collection of records via the results of a query.
+
+Consider the following example:
+
+```sql
+UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+SET Industry = 'Oil/Gas'
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END AS LastSale
+FROM 'companylist.csv'
+WHERE Industry = 'Oil/Gas Transmission'
+```
+```text
++ --------------- +
+| ROWS_UPDATED    |
++ --------------- +
+| 4               |
++ --------------- +
+```
+
+Notice in the example above, the `KEYED ON` clause. This clause specifies the columns that are to be used in the 
+`WHERE` clause that is generated to update each of the selected records.
+
+
+<a name="upsert"></a>
+#### UPSERT statement
+
+Additionally, there are times when you want to attempt an INSERT, but perform an UPDATE if it fails due to a primary key
+constraint. In cases like these, you'll want to use the UPSERT statement. 
+
+Consider the following example:
+
+```sql
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END
+FROM 'companylist.csv'
+```
+```text
++ ----------------------------- +
+| ROWS_INSERTED  ROWS_UPDATED   |
++ ----------------------------- +
+| 0              359            |
++ ----------------------------- +
+```
 
 <a name="declare-set"></a>
 #### DECLARE & SET statements
@@ -562,7 +721,7 @@ You can also set values from a result set:
 SET @myVariable = (SELECT 1)
 ```
 
-To display the contents of a variable, just _SELECT_ it.
+To display the contents of a variable, just `SELECT` it.
 
 ```sql
 SELECT @myVariable
@@ -661,7 +820,7 @@ DESCRIBE "./companylist.csv";
 And as you would imagine, you can "describe" the result of a query:
 
 ```sql
-DESCRIBE (SELECT Symbol, Name, Sector, Industry,  CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM "companylist.csv");
+DESCRIBE (SELECT Symbol, Name, Sector, Industry, CAST(LastSale AS DOUBLE) AS LastSale, CAST(MarketCap AS DOUBLE) AS MarketCap FROM "companylist.csv");
 ```
 ```text
 + -------------------------------------------- +
@@ -760,6 +919,59 @@ CALL copyData('Hello World');
 + ------------- +
 ```
 
+<a name="native-sql"></a>
+### Native SQL
+
+There are times when you may want to execute a native (e.g. platform specific) SQL statement to perform tasks that 
+Qwery may not support. In these situations, you can use the `NATIVE SQL` statement:
+
+```sql
+NATIVE SQL 'TRUNCATE TABLE company'
+FROM 'jdbc:mysql://localhost:3306/test'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ --------------- +
+| ROWS_AFFECTED   |
++ --------------- +
+| 0               |
++ --------------- +
+```
+
+Queries work as well:
+
+```sql
+NATIVE SQL 'SELECT * FROM company WHERE Symbol = "OCX"'
+FROM 'jdbc:mysql://localhost:3306/test'
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+```
+```text
++ ---------------------------------------------------------------------------------------------------------------------------- +
+| Symbol  Name                  LastSale  MarketCap       Sector       Industry                                                |
++ ---------------------------------------------------------------------------------------------------------------------------- +
+| OCX     OncoCyte Corporation  5.9500    174701615.2000  Health Care  Biotechnology: In Vitro & In Vivo Diagnostic Subst...   |
++ ---------------------------------------------------------------------------------------------------------------------------- +
+```
+
+You can also use string interpolation with variables:
+
+```sql
+BEGIN
+    DECLARE @symbol STRING;
+    SET @symbol = "JOB";
+    NATIVE SQL 'SELECT * FROM company WHERE Symbol = "{{ symbol }}"'
+    FROM 'jdbc:mysql://localhost:3306/test'
+    WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+END
+```
+```text
++ ---------------------------------------------------------------------------------------------- +
+| Symbol  Name            LastSale  MarketCap      Sector      Industry                          |
++ ---------------------------------------------------------------------------------------------- +
+| JOB     GEE Group Inc.  5.9800    56085774.1600  Technology  Diversified Commercial Services   |
++ ---------------------------------------------------------------------------------------------- +
+```
+
 <a name="etl"></a>
 ### Qwery ETL
 
@@ -782,15 +994,16 @@ The directory structure is as follows:
 | $QWERY_HOME/script    | The directory where Qwery looks for user-created SQL script files |
 | $QWERY_HOME/work      | The directory where Qwery processes files                     |
 
-The ETL module two things to create a workflow; a trigger configuration and a SQL script. The trigger configuration defines
-which file(s) will be processed, and the SQL script describes how data will be extracted and where it will be written.
+The ETL module requires two things to create a workflow; a trigger configuration and a SQL script. The trigger 
+configuration defines which file(s) will be processed, and the SQL script describes how data will be extracted and 
+where it will be written.
 
 <a name="sample-trigger-file"></a>
-##### Sample Trigger Configuration File
+##### Trigger Files Configuration
 
 The following is an example of a simple trigger file configuration. This example essentially directs Qwery to look for 
 files (in $QWERY_HOME/inbox) starting with "companylist" (prefix) and ending in ".csv" (suffix), and processing them 
-using the script file.
+using the script file (in $QWERY_HOME/scripts).
 
 ```json
 [{
@@ -806,7 +1019,7 @@ using the script file.
 The following is script to execute ($QWERY_HOME/scripts/companylist.sql) when the file has been observed:
 
 ```sql
-INSERT INTO "companylist.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "companylist.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT 
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "companylist.csv" 
 WITH CSV FORMAT
@@ -820,7 +1033,7 @@ As a result, Qwery supports the substitution of pre-defined variables for the in
 script which is functionally identical to the one above.
 
 ```sql
-INSERT INTO "{{ work.file.base }}.json" WITH JSON FORMAT (Symbol, Name, Sector, Industry)
+INSERT INTO "{{ work.file.base }}.json" (Symbol, Name, Sector, Industry) WITH JSON FORMAT 
 SELECT Symbol, Name, Sector, Industry, `Summary Quote`
 FROM "{{ work.file.path }}"
 WITH CSV FORMAT
@@ -878,6 +1091,22 @@ By convention, on a file has been processed, Qwery stores the file in $QWERY_HOM
 
 Example: example/archive/2017/05/28/061107/9bfc2e45-92bd-4fa4-b618-84ba554be1f8/companylist.csv
 
+
+<a name="scheduled-events"></a>
+##### Scheduled Events
+
+The following is an example of a simple scheduled event configuration. This example instructs Qwery execute the
+indicated script 'thricePerDay.sql' (found in $QWERY_HOME/scripts) three times daily. Once at 8:15am, again at 8:15pm 
+and finally at 10:45pm.
+
+```json
+[{
+  "name": "ThricePerDay",
+  "script": "thricePerDay.sql",
+  "times": ["8:15", "20:15", "22:45"]
+}]
+```
+
 <a name="building-etl"></a>
 ### Building and running the ETL
 
@@ -892,8 +1121,8 @@ After the compilation completes, you'll see a message like:
 ```text
 [info] SHA-1: 1be8ca09eefa6053fca04765813c01d134ed8d01
 [info] SHA-1: e80143d4b7b945729d5121b8d87dbc7199d89cd4
-[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar ...
-[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.6.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.8.bin.jar ...
+[info] Packaging /Users/ldaniels/git/qwery/target/scala-2.12/qwery-core-assembly-0.3.8.jar ...
 [info] Done packaging.
 [info] Done packaging.
 ```
@@ -901,7 +1130,7 @@ After the compilation completes, you'll see a message like:
 Now, you can execute the ETL distributable:
 
 ```bash
-~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.6.bin.jar
+~/Downloads/qwery/> java -jar /Users/ldaniels/git/qwery/app/etl/target/scala-2.12/qwery-etl-0.3.8.bin.jar
 ```
 
 *NOTE*: In order to run the ETL, you'll first have to define an environment variable (QWERY_HOME) telling the application 
@@ -924,7 +1153,7 @@ Once it's up and running, it should look something like the following:
 ```text
 [info] Running com.github.ldaniels528.qwery.etl.QweryETL 
 
- Qwery ETL v0.3.6
+ Qwery ETL v0.3.8
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
@@ -950,20 +1179,16 @@ Qwery offers a command line interface (CLI), which allows interactive querying o
 ```text
 ldaniels@Spartan:~$ sbt run
 
- Qwery CLI v0.3.6
+ Qwery CLI v0.3.8
          ,,,,,
          (o o)
 -----oOOo-(_)-oOOo-----
-You can executes multi-line queries here like:
 
-SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap, `Summary Quote` FROM './companylist.csv'
-WHERE Sector = 'Basic Industries'
-LIMIT 5;
-      
 Using UNIXCommandPrompt for input.
 ```
 
-From here you can input statements and queries. Just remember to end this with a semi-colon (;).
+From here you can input statements and queries. 
+*NOTE*: Just remember, queries are executed only after a blank line is entered.
 
 <a name="sdk"></a>
 ### Qwery SDK
@@ -991,13 +1216,13 @@ Let's examine the columns and values of the file
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler("DESCRIBE './companylist.csv'")
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println    
@@ -1026,7 +1251,7 @@ Execute a Query against thr local file
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler(
@@ -1036,7 +1261,7 @@ val query = QweryCompiler(
     |WHERE Industry = 'Consumer Specialties'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1058,7 +1283,7 @@ Or execute a Query against a REST-ful endpoint
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the query
 val query = QweryCompiler(
@@ -1068,7 +1293,7 @@ val query = QweryCompiler(
     |WHERE Sector = 'Oil/Gas Transmission'""".stripMargin)
     
 // execute the query    
-val results = query.execute(RootScope()) // => Iterator[Seq[(String, Any)]]
+val results = query.execute(Scope.root()) // => Iterator[Seq[(String, Any)]]
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1095,7 +1320,7 @@ records where the "Sector" field contains the text "Basic Industries", and write
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(
@@ -1106,7 +1331,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1127,7 +1352,7 @@ Alternatively, you could overwrite the file instead of appending it...
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(
@@ -1138,7 +1363,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println
@@ -1175,7 +1400,7 @@ records where the "Sector" field contains the text "Basic Industries", and write
 ```scala
 import com.github.ldaniels528.qwery._
 import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.tabular.Tabular
+import com.github.ldaniels528.qwery.Tabular
 
 // compile the statement
 val statement = QweryCompiler(
@@ -1186,7 +1411,7 @@ val statement = QweryCompiler(
     |WHERE Sector = 'Basic Industries'""".stripMargin)
 
 // execute the query
-val results = statement.execute(RootScope())
+val results = statement.execute(Scope.root())
 
 // display the results as a table
 new Tabular().transform(results) foreach println

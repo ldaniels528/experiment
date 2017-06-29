@@ -3,9 +3,9 @@ package com.github.ldaniels528.qwery.etl.workflows
 import java.util.UUID
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.etl.actors.{QweryActorSystem, ResourceReadingActor}
 import com.github.ldaniels528.qwery.etl.actors.ResourceReadingActor.ReadFile
-import com.github.ldaniels528.qwery.ops.{RootScope, Row, Scope}
+import com.github.ldaniels528.qwery.etl.actors.{QweryActorSystem, ResourceReadingActor}
+import com.github.ldaniels528.qwery.ops.{Row, Scope}
 import com.github.ldaniels528.qwery.sources.{DataResource, OutputSource, Statistics}
 
 import scala.concurrent.{Future, Promise}
@@ -30,7 +30,7 @@ case class PointToPoint(pid: UUID, source: DataResource, target: DataResource, s
     output = Option {
       val out = target.getOutputSource(scope)
         .getOrElse(throw new IllegalArgumentException(s"[$pid] No output source found for '$target'"))
-      out.open(RootScope())
+      out.open(Scope.root())
       out
     }
 

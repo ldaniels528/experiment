@@ -11,8 +11,11 @@ import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 case class Hints(append: Option[Boolean] = None,
                  avro: Option[String] = None,
                  delimiter: Option[String] = None,
+                 fields: Seq[Field] = Nil,
+                 fixed: Option[Boolean] = None,
                  gzip: Option[Boolean] = None,
                  headers: Option[Boolean] = None,
+                 jdbcDriver: Option[String] = None,
                  isJson: Option[Boolean] = None,
                  jsonPath: List[Expression] = Nil,
                  properties: Option[JProperties] = None,
@@ -27,6 +30,14 @@ case class Hints(append: Option[Boolean] = None,
 
   def asTSV: Hints = copy(delimiter = "\t", headers = true, quotedText = true, quotedNumbers = false)
 
+  def getFixedFields: Seq[Field with FixedWidth] = {
+    fields.map {
+      case field: Field with FixedWidth => field
+      case field =>
+        throw new IllegalStateException(s"Column '${field.name}' is not fixed width")
+    }
+  }
+
   def isAppend: Boolean = !isOverwrite
 
   def isEmpty: Boolean = !nonEmpty
@@ -36,7 +47,7 @@ case class Hints(append: Option[Boolean] = None,
   def isGzip: Boolean = gzip.contains(true)
 
   lazy val nonEmpty: Boolean = Seq(
-    append, avro, delimiter, gzip, headers, isJson, jsonPath, properties, quotedNumbers, quotedText
+    append, avro, delimiter, fixed, gzip, headers, isJson, jsonPath, properties, quotedNumbers, quotedText
   ).exists(_.nonEmpty)
 
   def usingFormat(format: String): Hints = {

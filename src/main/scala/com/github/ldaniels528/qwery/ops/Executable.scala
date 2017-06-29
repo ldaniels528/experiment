@@ -28,7 +28,7 @@ object Executable {
     @inline
     def toExpression = new Expression {
       override def evaluate(scope: Scope): Option[Any] = {
-        executable.execute(scope).toSeq.headOption.flatMap(_.headOption).map(_._2)
+        executable.execute(scope).toSeq.headOption.flatMap(_.columns.headOption).map(_._2)
       }
     }
 

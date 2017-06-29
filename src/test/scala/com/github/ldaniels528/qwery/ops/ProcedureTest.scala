@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.ops
 import java.io.File
 
 import com.github.ldaniels528.qwery.ops.Implicits._
+import com.github.ldaniels528.qwery.ops.sql.{Call, Insert, Procedure, Select}
 import com.github.ldaniels528.qwery.sources.DataResource
 import org.scalatest.FunSpec
 
@@ -11,7 +12,7 @@ import org.scalatest.FunSpec
   * @author Lawrence Daniels <lawrence.daniels@gmail.com>
   */
 class ProcedureTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("Procedure") {
 
@@ -40,10 +41,10 @@ class ProcedureTest extends FunSpec {
       procedure.execute(scope)
 
       info("call the procedure")
-      val resultSet = CallProcedure(name = "test5", args = Nil).execute(scope)
+      val resultSet = Call(name = "test5", args = Nil).execute(scope)
 
       info("4 records should have been inserted")
-      assert(resultSet.rows.toSeq == Seq(Seq(("ROWS_INSERTED", 4))))
+      assert(resultSet.rows.toSeq == Seq(Row(("ROWS_INSERTED", 4))))
 
       Seq("test5.csv", "test5.json").map(new File(_)) foreach { file =>
         info(s"'${file.getName}' should exist")

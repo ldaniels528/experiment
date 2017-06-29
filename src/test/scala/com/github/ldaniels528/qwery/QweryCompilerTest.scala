@@ -4,6 +4,7 @@ import com.github.ldaniels528.qwery.ops.Implicits._
 import com.github.ldaniels528.qwery.ops._
 import com.github.ldaniels528.qwery.ops.builtins.Case.When
 import com.github.ldaniels528.qwery.ops.builtins._
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.sources._
 import org.scalatest.FunSpec
 
@@ -73,6 +74,17 @@ class QweryCompilerTest extends FunSpec {
       val sql = "SELECT 1234 AS number"
       assert(QweryCompiler(sql) ==
         Select(fields = List(NamedExpression(name = "number", 1234))))
+    }
+
+    it("should support fixed-length fields") {
+      val sql =
+        """
+          |INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10)
+          |SELECT Symbol, Name, Sector, Industry, LastSale
+          |FROM 'companylist.csv'
+          |WHERE Industry = 'Oil/Gas Transmission'
+        """.stripMargin
+      info(QweryCompiler(sql).toString)
     }
 
     it("should support IS NULL conditions") {
@@ -210,7 +222,9 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test2.csv", hints = Some(Hints(append = Some(false)))),
+          target = DataResource("test2.csv", hints = Some(Hints(
+            append = Some(false),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)))),
           source = Select(
             fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             source = Option(DataResource(path = "companylist.csv")),
@@ -228,9 +242,11 @@ class QweryCompilerTest extends FunSpec {
       assert(QweryCompiler(sql) ==
         Insert(
           fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
-          target = DataResource("test3.csv", hints = Some(Hints(append = Some(true)))),
+          target = DataResource("test3.csv", hints = Some(Hints(
+            append = Some(true),
+            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply)
+          ))),
           source = InsertValues(
-            fields = List("Symbol", "Sector", "Industry", "LastSale").map(Field.apply),
             dataSets = List(
               List[Expression]("ACU", "Capital Goods", "Industrial Machinery/Components", 29.0),
               List[Expression]("EMX", "Basic Industries", "Precious Metals", 0.828)

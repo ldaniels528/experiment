@@ -6,8 +6,9 @@ import java.util.Properties
 import com.github.ldaniels528.qwery.SQLLanguageParser.{SLPExtensions, die}
 import com.github.ldaniels528.qwery.ops.NamedExpression._
 import com.github.ldaniels528.qwery.ops.builtins.Return
+import com.github.ldaniels528.qwery.ops.sql._
 import com.github.ldaniels528.qwery.ops.{Expression, _}
-import com.github.ldaniels528.qwery.sources.DataResource
+import com.github.ldaniels528.qwery.sources.{DataResource, NamedResource}
 import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.util.PeekableIterator
 import com.github.ldaniels528.qwery.util.ResourceHelper._
@@ -42,7 +43,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     var results = SQLTemplateParams()
     val tags = new PeekableIterator(template.split("[ ]").map(_.trim))
     while (tags.hasNext) {
-      processNextTag(tags.next(), tags) match {
+      processNextTag(tags.next(), results, tags) match {
         case Success(params) => results = results + params
         case Failure(e) => throw SyntaxException(e.getMessage, stream)
       }
@@ -56,12 +57,12 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tags the [[PeekableIterator iteration]] of tags
     * @return the option of the resultant [[SQLTemplateParams template parameters]]
     */
-  private def processNextTag(aTag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
+  private def processNextTag(aTag: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
     // optionally required tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
-    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), tags)
+    case tag if tag.startsWith("?") => extractOptional(tag.drop(1), params, tags)
 
     // optionally required child-tag? (e.g. "?ORDER +?BY +?%o:sortFields" => "ORDER BY Symbol DESC")
-    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), tags)
+    case tag if tag.startsWith("+?") => processNextTag(aTag = tag.drop(2), params, tags)
 
     // atom? (e.g. "%a:table" => "'./tickers.csv'")
     case tag if tag.startsWith("%a:") => extractIdentifier(tag.drop(3))
@@ -84,6 +85,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // field names? (e.g. "%F:fields" => "field1, field2, ..., fieldN")
     case tag if tag.startsWith("%F:") => extractListOfFields(tag.drop(3))
 
+    // joins? (e.g. "%J:joins" => "INNER JOIN 'stocks.csv' ON A.symbol = B.ticker")
+    case tag if tag.startsWith("%J:") => extractJoins(tag.drop(3), params)
+
     // numeric? (e.g. "%n:limit" => "100")
     case tag if tag.startsWith("%n:") => extractNumericValue(tag.drop(3))
 
@@ -105,19 +109,25 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     // repeat start/end tag? (e.g. "%R:valueSet {{ VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
     case tag if tag.startsWith("%R:") =>
       if (!tags.nextOption.contains("{{")) throw new IllegalArgumentException("Start of sequence '{{' expected")
-      processRepeatedSequence(name = tag.drop(3), tags)
+      processRepeatedSequence(name = tag.drop(3), params, tags)
 
     // source or sub-query? (e.g. "%s:source" => "'AddressBook'" | "( SELECT firstName, lastName FROM AddressBook )")
     case tag if tag.startsWith("%s:") => extractSourceOrQuery(tag.drop(3))
 
+    // update field assignments
+    case tag if tag.startsWith("%U:") => extractFieldAssignmentExpressions(tag.drop(3))
+
     // variable reference? (e.g. "%v:variable" => "SET @variable = 5")
     case tag if tag.startsWith("%v:") => extractVariableReference(tag.drop(3))
+
+    // insert values or selection? (e.g. "%V:insertSource" => "VALUES (1, 2, 3)" | "SELECT 1, 2, 3")
+    case tag if tag.startsWith("%V:") => extractInsertSelection(tag.drop(3))
 
     // with hints? (e.g. "%w:hints" => "WITH JSON FORMAT")
     case tag if tag.startsWith("%w:") => extractWithClause(tag.drop(3))
 
     // executable? (e.g. "%X:code" => "CREATE PROCEDURE test AS SHOW FILES")
-    case tag if tag.startsWith("%X:") => extractSQLCode(tag.drop(3))
+    case tag if tag.startsWith("%X:") => extractSQLCommand(tag.drop(3))
 
     // must be literal text (e.g. "FROM")
     case text => extractKeyWord(text)
@@ -131,6 +141,21 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
   private def extractAssignableExpression(name: String): Try[SQLTemplateParams] = Try {
     val expr = parseExpression(stream).getOrElse(die("Expression expected"))
     SQLTemplateParams(assignables = Map(name -> expr))
+  }
+
+  /**
+    * Extracts a collection of field assignment expressions (e.g. "active = 1, ready = 0, total = subtotal + 1")
+    * @param name the given identifier name (e.g. "fields")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractFieldAssignmentExpressions(name: String) = Try {
+    var assignments: List[(String, Expression)] = Nil
+    val template = "%a:name = %e:expression"
+    do {
+      val params = SQLTemplateParams(stream, template)
+      assignments = params.atoms("name") -> params.assignables("expression") :: assignments
+    } while (stream nextIf ",")
+    SQLTemplateParams(keyValuePairs = Map(name -> assignments.reverse))
   }
 
   /**
@@ -173,6 +198,44 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     SQLTemplateParams(atoms = Map(name -> value))
   }
 
+  private def extractInsertSelection(name: String) = Try {
+    import SQLLanguageParser.{parseInsertValues, parseNext}
+    val source = stream match {
+      case ts if ts.is("VALUES") => parseInsertValues(ts)
+      case ts => parseNext(ts)
+    }
+    SQLTemplateParams(sources = Map(name -> source))
+  }
+
+  /**
+    * Extracts JOIN statements from the token stream
+    * @example {{{ INNER JOIN './companylist.csv' AS A ON A.Symbol = B.Symbol }}}
+    * @example {{{ JOIN './companylist.csv' AS A ON A.Symbol = B.Symbol }}}
+    * @param name the given named identifier
+    * @return an [[Describe executable]]
+    */
+  private def extractJoins(name: String, aggParams: SQLTemplateParams) = Try {
+    var joins: List[Join] = Nil
+    while (stream.is("JOIN") || stream.is("INNER") || stream.is("OUTER")) {
+      stream match {
+        case ts if ts.is("JOIN") | ts.nextIf("INNER") =>
+          val params = SQLTemplateParams(ts, "JOIN %a:joinPath AS %a:joinAlias ON %c:joinCond %w:joinHints")
+          joins = InnerJoin(
+            leftAlias = aggParams.sources("source") match {
+              case NamedResource(alias, _) => Some(alias)
+              case _ => None
+            },
+            right = NamedResource(
+              name = params.atoms("joinAlias"),
+              resource = DataResource(params.atoms("joinPath"), hints = params.hints.get("joinHints"))
+            ),
+            condition = params.conditions("joinCond")) :: joins
+        case _ => die("Syntax error: Invalid JOIN expression")
+      }
+    }
+    SQLTemplateParams(joins = Map(name -> joins.reverse))
+  }
+
   private def extractKeyWord(keyword: String) = Try {
     if (!stream.nextIf(keyword)) die(s"$keyword expected") else SQLTemplateParams()
   }
@@ -202,10 +265,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     */
   private def extractListOfFields(name: String) = Try {
     var fields: List[Field] = Nil
-    do {
-      fields = fields ::: stream.nextOption.map(t => Field(t.text)).getOrElse(die("Unexpected end of statement")) :: Nil
-    } while (stream nextIf ",")
-    SQLTemplateParams(fields = Map(name -> fields))
+    do fields = Field(stream) :: fields while (stream nextIf ",")
+    SQLTemplateParams(fields = Map(name -> fields.reverse))
   }
 
   /**
@@ -270,8 +331,8 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tag  the tag to be executed (e.g. "%a:name")
     * @param tags the [[PeekableIterator iterator]]
     */
-  private def extractOptional(tag: String, tags: PeekableIterator[String]): Try[SQLTemplateParams] = Try {
-    processNextTag(aTag = tag, tags) match {
+  private def extractOptional(tag: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = Try {
+    processNextTag(aTag = tag, params, tags) match {
       case Success(result) => result
       case Failure(e) =>
         while (tags.peek.exists(_.startsWith("+?"))) {
@@ -307,25 +368,28 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractQuery(name: String) = Try {
-    val executable = stream match {
-      case ts if ts is "SELECT" => SQLLanguageParser.parseSelect(ts)
-      case ts if ts nextIf "(" =>
-        val result = SQLLanguageParser.parseNext(stream)
-        stream expect ")"
-        result
-      case _ => die("Sub-query expected")
-    }
-    SQLTemplateParams(sources = Map(name -> executable))
+    SQLTemplateParams(sources = Map(name -> extractQueryOption.getOrElse(die("Sub-query expected"))))
   }
 
-  def extractQueryOption: Option[Executable] = stream match {
-    case ts if ts is "SELECT" =>
-      Option(SQLLanguageParser.parseSelect(stream))
-    case ts if ts nextIf "(" =>
-      val result = Option(SQLLanguageParser.parseNext(stream))
-      stream expect ")"
-      result
-    case _ => None
+  /**
+    * Parses a source expression; either a direct or via query
+    * @return the option of a [[Executable query resource]]
+    */
+  private def extractQueryOption: Option[Executable] = {
+    import SQLLanguageParser._
+
+    val outcome = stream match {
+      case ts if ts is "SELECT" => Option(parseSelect(stream))
+      case ts if ts nextIf "(" =>
+        val result = Option(parseNext(stream))
+        stream expect ")"
+        result
+      case _ => None
+    }
+    // is there as alias?
+    outcome map { query =>
+      if (stream nextIf "AS") NamedResource(name = stream.next().text, query) else query
+    }
   }
 
   /**
@@ -357,10 +421,12 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       case ts if ts.isQuoted => DataResource(ts.next().text)
       case _ => die("Source or sub-query expected")
     }
-    SQLTemplateParams(sources = Map(name -> executable))
+    // is there as alias?
+    val resource = if (stream nextIf "AS") NamedResource(name = stream.next().text, executable) else executable
+    SQLTemplateParams(sources = Map(name -> resource))
   }
 
-  private def extractSQLCode(name: String) = Try {
+  private def extractSQLCommand(name: String) = Try {
     SQLTemplateParams(sources = Map(name -> SQLLanguageParser.parseNext(stream)))
   }
 
@@ -389,7 +455,9 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withAvro = "WITH AVRO %a:avro"
     val withCompression = "WITH %C(compression,GZIP) COMPRESSION"
     val withDelimiter = "WITH DELIMITER %a:delimiter"
+    val withFixed = "WITH FIXED %a:fixedType"
     val withFormat = "WITH %C(format,CSV,JSON,PSV,TSV) FORMAT"
+    val withJdbcDriver = "WITH JDBC DRIVER %a:jdbcDriver"
     val withJsonPath = "WITH JSON PATH ( %E:jsonPath )"
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
@@ -409,6 +477,11 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withHeader) =>
           val params = p.process(withHeader)
           hints = hints.copy(headers = params.atoms.get("column").map(_.equalsIgnoreCase("HEADERS")))
+        // WITH FIXED WIDTHS
+        case p if p.matches(withFixed) =>
+          val params = p.process(withFixed)
+          if (!params.atoms.get("fixedType").exists(_.equalsIgnoreCase("WIDTH"))) stream.die("Keyword WIDTH expected")
+          hints = hints.copy(fixed = Some(true))
         // WITH [GZIP] COMPRESSION
         case p if p.matches(withCompression) =>
           val params = p.process(withCompression)
@@ -417,6 +490,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withDelimiter) =>
           val params = p.process(withDelimiter)
           hints = hints.copy(delimiter = params.atoms.get("delimiter"))
+        // WITH JDBC 'com.mysql.jdbc.Driver'
+        case p if p.matches(withJdbcDriver) =>
+          val params = p.process(withJdbcDriver)
+          hints = hints.copy(jdbcDriver = params.atoms.get("jdbcDriver"))
         // WITH JSON PATH ( elem1, elem2, .., elemN )
         case p if p.matches(withJsonPath) =>
           val params = p.process(withJsonPath)
@@ -456,7 +533,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     * @param tags the [[PeekableIterator iterator]]
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def processRepeatedSequence(name: String, tags: PeekableIterator[String]) = Try {
+  private def processRepeatedSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]) = Try {
     // extract the repeated sequence
     val repeatedTagsSeq = extractRepeatedSequence(tags)
     var paramSet: List[SQLTemplateParams] = Nil
@@ -466,7 +543,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
       val count = paramSet.size
       val repeatedTags = new PeekableIterator(repeatedTagsSeq)
       while (repeatedTags.hasNext) {
-        result = processNextTag(repeatedTags.next(), repeatedTags)
+        result = processNextTag(repeatedTags.next(), params, repeatedTags)
         result.foreach(params => paramSet = paramSet ::: params :: Nil)
       }
 
@@ -518,11 +595,14 @@ object SQLLanguageParser {
     case ts if ts is "DECLARE" => parseDeclare(ts)
     case ts if ts is "DESCRIBE" => parseDescribe(ts)
     case ts if ts is "INSERT" => parseInsert(ts)
+    case ts if ts is "UPDATE" => parseUpdate(ts)
+    case ts if ts is "UPSERT" => parseUpsert(ts)
+    case ts if ts is "NATIVE SQL" => parseNativeSQL(ts)
     case ts if ts is "RETURN" => parseReturn(ts)
     case ts if ts is "SELECT" => parseSelect(ts)
     case ts if ts is "SET" => parseSet(ts)
     case ts if ts is "SHOW" => parseShow(ts)
-    case _ => die("Unrecognized command")
+    case ts => die(s"Unrecognized command near '${ts.peek.map(_.text).orNull}'")
   }
 
   /**
@@ -544,11 +624,11 @@ object SQLLanguageParser {
   /**
     * Parses a CALL statement
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[CallProcedure executable]]
+    * @return an [[Call executable]]
     */
-  private def parseCall(ts: TokenStream): CallProcedure = {
+  private def parseCall(ts: TokenStream): Call = {
     val params = SQLTemplateParams(ts, "CALL %a:name ?( +?%A:args +?)")
-    CallProcedure(name = params.atoms("name"), args = params.expressions.getOrElse("args", Nil))
+    Call(name = params.atoms("name"), args = params.expressions.getOrElse("args", Nil))
   }
 
   /**
@@ -644,7 +724,7 @@ object SQLLanguageParser {
     * }}}
     * @example
     * {{{
-    * INSERT INTO 'companylist.json' WITH FORMAT JSON (Symbol, Name, Sector, Industry)
+    * INSERT INTO 'companylist.json' (Symbol, Name, Sector, Industry) WITH FORMAT JSON
     * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
     * FROM 'companylist.csv' WITH FORMAT CSV
     * WHERE Industry = 'Oil/Gas Transmission'
@@ -653,42 +733,45 @@ object SQLLanguageParser {
     * @return an [[Insert executable]]
     */
   private def parseInsert(stream: TokenStream): Insert = {
-    val parser = SQLLanguageParser(stream)
-    val params = parser.process("INSERT %C(mode,INTO,OVERWRITE) %a:target %w:hints ( %F:fields )")
+    val params = SQLTemplateParams(stream, "INSERT %C(mode,INTO,OVERWRITE) %a:target ( %F:fields ) %w:hints %V:source")
     val append = params.atoms("mode").equalsIgnoreCase("INTO")
-    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append)))
+    val fields = params.fields("fields")
+    val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append), fields = fields))
     Insert(
       target = DataResource(params.atoms("target"), hints),
-      fields = params.fields("fields"),
-      source = stream match {
-        case ts if ts.is("VALUES") => parseInsertValues(params.fields("fields"), ts, parser)
-        case ts => parseNext(ts)
-      })
+      source = params.sources("source"),
+      fields = fields)
   }
 
   /**
     * Parses an INSERT VALUES clause
-    * @param fields the corresponding fields
-    * @param ts     the [[TokenStream token stream]]
-    * @param parser the implicit [[SQLLanguageParser language parser]]
+    * @param ts the [[TokenStream token stream]]
     * @return the resulting [[InsertValues modifications]]
     */
-  private def parseInsertValues(fields: Seq[Field], ts: TokenStream, parser: SQLLanguageParser): InsertValues = {
-    val valueSets = parser.process("%R:valueSet {{ VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
+  private def parseInsertValues(ts: TokenStream): InsertValues = {
+    val valueSets = SQLTemplateParams(ts, "%R:valueSet {{ VALUES ( %E:values ) }}").repeatedSets.get("valueSet") match {
       case Some(sets) => sets.flatMap(_.expressions.get("values"))
-      case None =>
-        throw SyntaxException("VALUES clause could not be parsed", ts)
+      case None => ts.die("VALUES clause could not be parsed")
     }
-    if (!valueSets.forall(_.size == fields.size))
-      throw SyntaxException("The number of fields must match the number of values", ts)
-    InsertValues(fields, valueSets)
+    InsertValues(valueSets)
+  }
+
+  /**
+    * Parses a NATIVE SQL statement
+    * @param ts the [[TokenStream token stream]]
+    * @return an [[NativeSQL executable]]
+    */
+  private def parseNativeSQL(ts: TokenStream): Executable = {
+    val params = SQLTemplateParams(ts, "NATIVE SQL %e:sql FROM %a:jdbcUrl %w:hints")
+    NativeSQL(query = params.assignables("sql"), jdbcUrl = params.atoms("jdbcUrl"), hints = params.hints.get("hints"))
   }
 
   /**
     * Parses a RETURN statement
-    * @return {{{ RETURN }}}
-    * @return {{{ RETURN "Hello World" }}}
+    * @example {{{ RETURN }}}
+    * @example {{{ RETURN "Hello World" }}}
     * @param ts the [[TokenStream token stream]]
+    * @return an [[Return executable]]
     */
   private def parseReturn(ts: TokenStream): Return = {
     val params = SQLTemplateParams(ts, "RETURN ?%e:expression")
@@ -703,6 +786,14 @@ object SQLLanguageParser {
     * WHERE exchange = 'NASDAQ'
     * LIMIT 5
     * }}}
+    * @example
+    * {{{
+    * SELECT A.symbol, A.exchange, A.lastSale AS lastSaleA, B.lastSale AS lastSaleB
+    * FROM 'companlist.csv' AS A
+    * INNER JOIN 'companlist2.csv' AS B ON B.Symbol = A.Symbol
+    * WHERE A.exchange = 'NASDAQ'
+    * LIMIT 5
+    * }}}
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Select executable]]
     */
@@ -711,7 +802,7 @@ object SQLLanguageParser {
       """
         |SELECT ?TOP +?%n:top %E:fields
         |?%C(mode,INTO,OVERWRITE) +?%a:target +?%w:targetHints
-        |?FROM +?%s:source +?%w:sourceHints
+        |?FROM +?%s:source +?%w:sourceHints %J:joins
         |?WHERE +?%c:condition
         |?GROUP +?BY +?%F:groupBy
         |?ORDER +?BY +?%o:orderBy
@@ -723,6 +814,7 @@ object SQLLanguageParser {
       source = params.sources.get("source").map(_.withHints(params.hints.get("sourceHints"))),
       condition = params.conditions.get("condition"),
       groupFields = params.fields.getOrElse("groupBy", Nil),
+      joins = params.joins.getOrElse("joins", Nil),
       orderedColumns = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
@@ -758,7 +850,7 @@ object SQLLanguageParser {
     */
   private def parseSet(ts: TokenStream): Assignment = {
     val params = SQLTemplateParams(ts, "SET %v:name = %q:expression")
-    Assignment(variableRef = params.variables("name"), value = params.assignables("expression"))
+    Assignment(reference = params.variables("name"), value = params.assignables("expression"))
   }
 
   /**
@@ -772,6 +864,58 @@ object SQLLanguageParser {
     val entityType = params.atoms("entityType")
     if (!Show.isValidEntityType(entityType)) die(s"Invalid entity type '$entityType'")
     Show(entityType)
+  }
+
+  /**
+    * Parses an UPDATE statement
+    * @example
+    * {{{
+    * UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+    * SET Active = 1, Processed = 0
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM 'companylist.csv' WITH FORMAT CSV
+    * WHERE Industry = 'Oil/Gas Transmission'
+    * }}}
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Update executable]]
+    */
+  private def parseUpdate(stream: TokenStream): Update = {
+    val params = SQLTemplateParams(stream, "UPDATE %a:target SET %U:assignments KEYED ON %F:keyFields %w:hints %V:source")
+    Update(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      source = params.sources("source"),
+      assignments = params.keyValuePairs("assignments"),
+      keyedOn = params.fields("keyFields"))
+  }
+
+  /**
+    * Parses an UPSERT statement
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * SELECT Symbol, Name, Sector, Industry, LastSale
+    * FROM 'companylist.csv'
+    * WHERE Symbol = #Symbol
+    * }}}
+    * @example
+    * {{{
+    * UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+    * KEYED ON Symbol
+    * WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+    * VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
+    * }}}
+    */
+  private def parseUpsert(stream: TokenStream): Upsert = {
+    val params = SQLTemplateParams(stream, "UPSERT INTO %a:target ( %F:fields ) KEYED ON %F:keyFields %w:hints %V:source")
+    Upsert(
+      target = DataResource(params.atoms("target"), params.hints.get("hints")),
+      source = params.sources("source"),
+      fields = params.fields("fields"),
+      keyedOn = params.fields("keyFields"))
   }
 
   private def die[A](message: String): A = throw new IllegalStateException(message)

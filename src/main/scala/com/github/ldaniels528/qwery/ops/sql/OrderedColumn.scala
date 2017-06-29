@@ -1,4 +1,4 @@
-package com.github.ldaniels528.qwery.ops
+package com.github.ldaniels528.qwery.ops.sql
 
 /**
   * Represents an ordered column

@@ -8,19 +8,21 @@ import com.github.ldaniels528.qwery.util.OptionHelper._
   * Represents a CASE expression
   *
   * Syntax 1:
+  * @example
   * {{{
   * CASE primary-expr
-  *   WHEN expr1 THEN result-expr1
-  *   WHEN expr2 THEN result-expr2
+  *   WHEN expr1 THEN result1
+  *   WHEN expr2 THEN result2
   *   ELSE expr3
   * END
   * }}}
   *
   * Syntax 2:
+  * @example
   * {{{
   * CASE
-  *   WHEN primary-expr = expr1 THEN result-expr1
-  *   WHEN primary-expr = expr2 THEN result-expr2
+  *   WHEN value1 = expr1 THEN result1
+  *   WHEN value2 = expr2 THEN result2
   *   ELSE expr3
   * END
   * }}}
@@ -42,7 +44,7 @@ object Case {
   /**
     * Represents a WHEN condition
     * @param condition the given [[Condition condition]]
-    * @param result    the given [[Expression result]]
+    * @param result    the given [[Expression result expression]]
     */
   case class When(condition: Condition, result: Expression)
 

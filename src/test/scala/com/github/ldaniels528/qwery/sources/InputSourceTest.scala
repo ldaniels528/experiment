@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.sources
 
-import com.github.ldaniels528.qwery.ops.{Hints, RootScope}
+import com.github.ldaniels528.qwery.ops.{Hints, Scope}
 import com.github.ldaniels528.qwery.util.OptionHelper.Risky._
 import org.scalatest.FunSpec
 
@@ -9,7 +9,7 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class InputSourceTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("InputSource") {
 

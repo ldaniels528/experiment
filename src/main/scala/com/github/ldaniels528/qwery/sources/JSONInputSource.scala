@@ -2,15 +2,15 @@ package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{InputDevice, Record}
 import com.github.ldaniels528.qwery.ops.{Hints, Row, Scope}
-import com.github.ldaniels528.qwery.util.JSONHelper._
-import net.liftweb.json.JsonAST.JValue
-import net.liftweb.json.parse
+import com.github.ldaniels528.qwery.util.JSONSupport
+
+import scala.language.postfixOps
 
 /**
   * JSON Input Source
   * @author lawrence.daniels@gmail.com
   */
-case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends InputSource {
+case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends InputSource with JSONSupport {
   private var buffer: List[Row] = Nil
   private val jsonPath = hints.map(_.jsonPath).getOrElse(Nil)
 
@@ -19,10 +19,7 @@ case class JSONInputSource(device: InputDevice, hints: Option[Hints]) extends In
     else {
       device.read() match {
         case Some(Record(bytes, _, _)) =>
-          val json = jsonPath.map(_.getAsString(scope)).foldLeft[JValue](parse(new String(bytes))) { (jv, elem) =>
-            elem.map(jv \ _) getOrElse jv
-          }
-          val rows = parseResults(json)
+          val rows = parseRows(jsonString = new String(bytes), jsonPath = jsonPath.flatMap(_.getAsString(scope)))
           buffer = rows ::: buffer
           getNext
         case None => getNext

@@ -6,7 +6,6 @@ import java.util.zip.GZIPInputStream
 import com.github.ldaniels528.qwery.devices.DeviceHelper._
 import com.github.ldaniels528.qwery.devices.InputDevice._
 import com.github.ldaniels528.qwery.ops.{Hints, Scope}
-import org.slf4j.LoggerFactory
 
 import scala.io.{BufferedSource, Source}
 
@@ -15,7 +14,6 @@ import scala.io.{BufferedSource, Source}
   * @author lawrence.daniels@gmail.com
   */
 case class TextFileInputDevice(path: String, hints: Option[Hints]) extends InputDevice {
-  private lazy val log = LoggerFactory.getLogger(getClass)
   private var reader: Option[BufferedSource] = None
   private var lines: Iterator[String] = Iterator.empty
   private var offset: Long = _
@@ -37,7 +35,7 @@ case class TextFileInputDevice(path: String, hints: Option[Hints]) extends Input
     (if (lines.hasNext) Option(lines.next()).map(_.getBytes()) else None) map { bytes =>
       offset += 1
       statsGen.update(records = 1, bytesRead = bytes.length) foreach { stats =>
-        log.info(stats.toString)
+        //log.info(stats.toString)
       }
       Record(bytes, offset)
     }
@@ -64,7 +62,8 @@ object TextFileInputDevice extends InputDeviceFactory with SourceUrlParser {
     */
   override def parseInputURL(path: String, hints: Option[Hints]): Option[InputDevice] = {
     path.toLowerCase() match {
-      case _ if path.startsWith("file://") => Option(TextFileInputDevice(path.drop(7), hints))
+      case s if s.startsWith("files://") => Option(DirectoryInputDevice(path.drop(8), hints))
+      case s if s.startsWith("file://") => Option(TextFileInputDevice(path.drop(7), hints))
       case uri if uri.startsWith("http://") | uri.startsWith("https://") => Option(TextFileInputDevice(path, hints))
       case _ if new File(path).exists() => Option(TextFileInputDevice(path, hints))
       case _ => None

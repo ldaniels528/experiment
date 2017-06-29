@@ -6,16 +6,30 @@ import sbt._
 
 import scala.language.postfixOps
 
-val appVersion = "0.3.6"
-val appScalaVersion = "2.12.2"
-val scalaJsIOVersion = "0.4.0-pre5"
+val appVersion = "0.3.9pre"
+val appScalaVersion = "2.11.11"
+val scalaVersion_2_12 = "2.12.2"
+val scalaJsIOVersion = "0.4.0"
 
 val akkaVersion = "2.5.2"
 val curatorVersion = "3.1.0"
 val kafkaVersion = "0.10.2.1"
 val slf4jVersion = "1.7.25"
 
-homepage := Some(url("https://github.com/ldaniels528/qwery"))
+lazy val root = (project in file("./app/bundle")).
+  aggregate(cli, etl).
+  dependsOn(cli, etl).
+  settings(publishingSettings: _*).
+  settings(
+    name := "qwery-bundle",
+    organization := "io.scalajs",
+    description := "Qwery Application Bundle",
+    version := appVersion,
+    scalaVersion := appScalaVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true
+  )
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Scala (JVM)
@@ -24,9 +38,10 @@ homepage := Some(url("https://github.com/ldaniels528/qwery"))
 lazy val cli = (project in file("./app/cli")).
   aggregate(core).
   dependsOn(core).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-cli",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "Qwery CLI Application",
     version := appVersion,
     scalaVersion := appScalaVersion,
@@ -43,7 +58,6 @@ lazy val cli = (project in file("./app/cli")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.scala-lang" % "jline" % "2.11.0-M3",
       "org.slf4j" % "slf4j-api" % slf4jVersion
@@ -52,9 +66,10 @@ lazy val cli = (project in file("./app/cli")).
 lazy val etl = (project in file("./app/etl")).
   aggregate(core).
   dependsOn(core).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-etl",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "Qwery ETL and Orchestration Server",
     version := appVersion,
     scalaVersion := appScalaVersion,
@@ -71,16 +86,47 @@ lazy val etl = (project in file("./app/etl")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1"
     ))
 
+lazy val spark = (project in file("./app/spark")).
+  aggregate(core).
+  dependsOn(core).
+  settings(publishingSettings: _*).
+  settings(
+    name := "qwery-spark",
+    organization := "io.scalajs",
+    description := "Qwery Spark Integration",
+    version := appVersion,
+    scalaVersion := appScalaVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    coverageEnabled := true,
+    libraryDependencies ++= Seq(
+      //
+      // DataBricks
+      "com.databricks" %% "spark-avro" % "3.2.0",
+      "com.databricks" %% "spark-csv" % "1.5.0",
+      //
+      // Apache
+      "org.apache.avro" % "avro" % "1.8.2",
+      "org.apache.spark" %% "spark-core" % "2.1.1",
+      "org.apache.spark" %% "spark-sql" % "2.1.1",
+      "org.apache.spark" %% "spark-streaming" % "2.1.1",
+      //
+      // SLF4J
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
+    ))
+
 lazy val core = (project in file(".")).
+  settings(publishingSettings: _*).
   settings(
     name := "qwery-core",
-    organization := "com.github.ldaniels528",
+    organization := "io.scalajs",
     description := "A SQL-like query language for performing ETL",
     version := appVersion,
     scalaVersion := appScalaVersion,
@@ -91,17 +137,20 @@ lazy val core = (project in file(".")).
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
       "com.twitter" %% "bijection-avro" % "0.9.5",
+      "commons-io" % "commons-io" % "2.5",
       "log4j" % "log4j" % "1.2.17",
+      "mysql" % "mysql-connector-java" % "5.1.42",
       "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",
       //
-      // Akka
+      // TypeSafe
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
+      "com.typesafe.play" %% "play-json" % "2.6.0",
       //
-      // Kafka/Zookeeper
+      // Apache
       "org.apache.avro" % "avro" % "1.8.1",
       "org.apache.curator" % "curator-framework" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
       "org.apache.curator" % "curator-test" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
@@ -263,8 +312,8 @@ lazy val publishingSettings = Seq(
           <id>ldaniels528</id>
           <name>Lawrence Daniels</name>
           <email>lawrence.daniels@gmail.com</email>
-          <organization>com.github.ldaniels528</organization>
-          <organizationUrl>https://github.com/ldaniels528</organizationUrl>
+          <organization>io.scalajs</organization>
+          <organizationUrl>https://github.com/scalajs-io</organizationUrl>
           <roles>
             <role>Project-Administrator</role>
             <role>Developer</role>
@@ -278,4 +327,4 @@ lazy val publishingSettings = Seq(
 addCommandAlias("fastOptJSCopy", ";fastOptJS;copyJS")
 
 // loads the Scalajs-io root project at sbt startup
-onLoad in Global := (Command.process("project cli", _: State)) compose (onLoad in Global).value
+onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value

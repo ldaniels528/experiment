@@ -4,44 +4,61 @@ DESIGN NOTES / IDEAS
 *       Fixed-length Format testing
 ************************************************************************
 
-SELECT
-    WIDTH(Symbol, 10) AS Symbol,
-    WIDTH(Name, 64) AS Name,
-    WIDTH(Sector, 30) AS Sector,
-    WIDTH(Industry, 30) AS Industry,
-    WIDTH(`Summary Quote`, 128) AS `Summary Quote`
+INSERT INTO 'fixed-data.txt' (Symbol^10, Name^40, Sector^40, Industry^40, LastTrade^10) WITH FIXED WIDTH
+SELECT Symbol, Name, Sector, Industry, LastSale
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
 
-Comments: This works for writing fixed-length fields, but what about reading?
 
-SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-FROM 'companylist.csv'
-WHERE Industry = 'Oil/Gas Transmission'
-WITH FIXED COLUMNS (
-    Symbol WIDTH 10,
-    Name WIDTH 64,
-    Sector WIDTH 30,
-    Industry WIDTH 30,
-    `Summary Quote` WIDTH 128
-)
+************************************************************************
+*       Directories of Files
+************************************************************************
 
-INSERT INTO 'fixed-data.txt' (Symbol, Name, Sector, Industry)
-WITH FIXED COLUMNS (
-    Symbol WIDTH 8,
-    Name WIDTH 32,
-    Sector WIDTH 20,
-    Industry WIDTH 20
-)
-SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+select * from 'files://./data/NASDAQ/*.txt' with csv format where `<ticker>` = 'AAPL' limit 30;
+
+************************************************************************
+*      JOIN testing
+************************************************************************
+
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM "companylist.csv" AS A
+INNER JOIN "companylist.csv" AS B ON B.Symbol = A.Symbol
+
+SELECT Symbol, Name, Sector, Industry, LastSale
+FROM "companylist.csv"
+INNER JOIN "companylist.csv" AS B ON B.Symbol = Symbol
+
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
+FROM "companylist.csv" AS A
+INNER JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
+WHERE A.Industry = 'Oil/Gas Transmission'
+LIMIT 5
+
+SELECT A.Symbol, A.Name, A.Sector, A.Industry, A.LastSale, B.LastSale AS CurrentSale
+FROM "companylist.csv" AS A
+JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
+
+************************************************************************
+*      UPSERT testing
+************************************************************************
+
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END
 FROM 'companylist.csv'
-WITH FIXED COLUMNS (
-    Symbol WIDTH 10,
-    Name WIDTH 64,
-    Sector WIDTH 30,
-    Industry WIDTH 30,
-    `Summary Quote` WIDTH 128
-)
+
+UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastTrade)
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+VALUES ('CQH','Cheniere Energy Partners LP Holdings, LLC','Public Utilities','Oil/Gas Transmission', 25.68)
+
+UPDATE 'jdbc:mysql://localhost:3306/test?table=company'
+SET Industry = 'Oil/Gas'
+KEYED ON Symbol
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END AS LastSale
+FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
 
 ************************************************************************
@@ -65,7 +82,7 @@ INTO "./companylist.json"
 FROM "companylist.csv"
 WITH CSV FORMAT;
 
-INSERT OVERWRITE "file://test2.json" (Symbol, Sector, Industry, LastSale)
+INSERT OVERWRITE "file://test2.csv" (Symbol, Sector, Industry, LastTrade)
 SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
 WHERE Industry = "Precious Metals";
 
@@ -76,7 +93,6 @@ WHERE Industry = "Precious Metals";
 ************************************************************************
 *       GROUP BY testing
 ************************************************************************
-
 
 SELECT Process, COUNT(*) as Total
 INTO './report-info.csv'
@@ -89,17 +105,20 @@ SELECT Process, COUNT(*) as Total FROM 'report-data.csv' group by Process;
 *       JSON testing
 ************************************************************************
 
-SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
+SELECT * FROM './data/mfw/1495582154423.json' WITH JSON PATH ('data') LIMIT 1;
 
-SELECT `data.Id`, `data.CreatedById`, `data.city`, `data.state`, `data.AnnualRevenue`, `data.Type`, `data.SystemModstamp` FROM '1495582154423.json';
+SELECT `data.Id`, `data.CreatedById`, `data.city`, `data.state`, `data.AnnualRevenue`, `data.Type`, `data.SystemModstamp`
+FROM './data/mfw/1495582154423.json';
 
-SELECT Id, CreatedById, city, state, AnnualRevenue, Type, SystemModstamp FROM '1495582154423.json' WITH JSON PATH ('data');
+SELECT Id, CreatedById, city, state, country, AnnualRevenue, Type, SystemModstamp
+FROM './data/mfw/1495582154423.json'
+WITH JSON PATH ('data');
 
-DESCRIBE (SELECT * FROM '1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582154423.json' WITH JSON PATH ('data') LIMIT 1);
 
-DESCRIBE (SELECT * FROM '1495582154423.json' LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582154423.json' LIMIT 1);
 
-DESCRIBE (SELECT * FROM '1495582940879.json' LIMIT 1);
+DESCRIBE (SELECT * FROM './data/mfw/1495582940879.json' LIMIT 1);
 
 ************************************************************************
 *       Union testing

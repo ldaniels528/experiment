@@ -6,18 +6,9 @@ package com.github.ldaniels528.qwery
   */
 package object ops {
 
-  type Column = (String, Any)
-
-  type Row = Seq[Column]
-
   /**
-    * Row Enrichmnent
-    * @param row the given [[Row row]] of data
+    * Represents a column or name-value pair
     */
-  final implicit class RowEnrichment(val row: Row) extends AnyVal {
-
-    def get(name: String): Option[Any] = row.find { case (key, _) => key == name }.map(_._2)
-
-  }
+  type Column = (String, Any)
 
 }

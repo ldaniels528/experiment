@@ -1,14 +1,15 @@
 package com.github.ldaniels528.qwery.sources
 
 import com.github.ldaniels528.qwery.devices.{OutputDevice, Record}
-import com.github.ldaniels528.qwery.ops._
-import com.github.ldaniels528.qwery.sources.FixedLengthOutputSource.FixedField
+import com.github.ldaniels528.qwery.ops.{Field, FixedWidth, Hints, Row}
+import com.github.ldaniels528.qwery.sources.FixedWidthOutputSource._
 
 /**
-  * Fixed-length Output Source
+  * Fixed-width Output Source
   * @author lawrence.daniels@gmail.com
   */
-case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]) extends OutputSource {
+case class FixedWidthOutputSource(device: OutputDevice, hints: Option[Hints]) extends OutputSource {
+  private val fields = getFixedFields(hints)
   private var offset = 0L
 
   override def write(row: Row): Unit = {
@@ -34,13 +35,10 @@ case class FixedLengthOutputSource(device: OutputDevice, fields: Seq[FixedField]
   * Fixed-length Output Source Companion
   * @author lawrence.daniels@gmail.com
   */
-object FixedLengthOutputSource {
+object FixedWidthOutputSource {
 
-  /**
-    * Represents a fixed-length field
-    * @param name  the field name
-    * @param width the field width
-    */
-  case class FixedField(name: String, width: Int)
+  def getFixedFields(hints: Option[Hints]): Seq[Field with FixedWidth] = {
+    hints.map(_.getFixedFields).getOrElse(throw new IllegalStateException("No columns defined"))
+  }
 
 }

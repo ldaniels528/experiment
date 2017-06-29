@@ -3,7 +3,7 @@ package com.github.ldaniels528.qwery.ops.builtins
 import java.util.Date
 
 import com.github.ldaniels528.qwery.ops.Implicits._
-import com.github.ldaniels528.qwery.ops.RootScope
+import com.github.ldaniels528.qwery.ops.Scope
 import org.scalatest.FunSpec
 
 /**
@@ -11,7 +11,7 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class InternalFunctionTest extends FunSpec {
-  private val scope = RootScope()
+  private val scope = Scope.root()
 
   describe("Left") {
     it("should extract a substring for N characters from left to right") {
