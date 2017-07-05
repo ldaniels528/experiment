@@ -1,0 +1,4 @@
+{
+  "supervisor": "localhost:9000",
+  "controlPort": "1337"
+}

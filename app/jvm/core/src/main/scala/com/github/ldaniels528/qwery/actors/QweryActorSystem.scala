@@ -1,11 +1,11 @@
-package com.github.ldaniels528.qwery.etl.actors
+package com.github.ldaniels528.qwery.actors
 
 import java.net.URL
 
 import akka.actor._
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
 
 /**
@@ -14,6 +14,7 @@ import scala.reflect.ClassTag
   */
 class QweryActorSystem {
   val system = ActorSystem("qwery")
+  val dispatcher: ExecutionContextExecutor = system.dispatcher
   val scheduler: Scheduler = system.scheduler
   val akkaConf: Config = getResource("/application.conf") match {
     case Some(url) => ConfigFactory.parseURL(url)

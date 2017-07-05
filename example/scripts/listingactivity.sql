@@ -8,3 +8,4 @@ INTO "{{ work.path }}/{{ work.file.base }}.json.gz"
 WITH GZIP COMPRESSION
 WITH JSON FORMAT
 FROM "{{ work.file.path }}"
+WITH CSV FORMAT

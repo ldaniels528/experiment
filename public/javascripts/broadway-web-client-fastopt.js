@@ -1919,7 +1919,7 @@ function $f_sci_VectorPointer__initFrom__sci_VectorPointer__I__V($thiz, that, de
 /** @constructor */
 function $c_Lcom_github_ldaniels528_transgress_AppConstants$() {
   $c_O.call(this);
-  this.Version$1 = 0.0
+  this.Version$1 = null
 }
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = new $h_O();
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_AppConstants$;
@@ -1929,7 +1929,7 @@ function $h_Lcom_github_ldaniels528_transgress_AppConstants$() {
 }
 $h_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype;
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.init___ = (function() {
-  this.Version$1 = 0.1;
+  this.Version$1 = "0.3.9pre";
   return this
 });
 var $d_Lcom_github_ldaniels528_transgress_AppConstants$ = new $TypeData().initClass({
@@ -17289,8 +17289,7 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
   $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V(this);
   $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__$$init$__V(this);
   $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V(this);
-  var value = $m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1;
-  $$scope.version = ("" + value);
+  $$scope.version = $m_sjsr_RuntimeString$().valueOf__O__T($m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1);
   $$scope.init = (function(arg$outer) {
     return (function() {
       arg$outer.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V()
@@ -17331,8 +17330,8 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
       return $this.$$scope$1.$apply((function($this$1, job) {
         return (function() {
           var jsx$1 = $this$1.$$scope$1.updateJob;
-          var value$1 = $this$1.$$scope$1.jobs;
-          jsx$1(value$1, job);
+          var value = $this$1.$$scope$1.jobs;
+          jsx$1(value, job);
           $this$1.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V(job)
         })
       })($this, job$2))
@@ -17343,8 +17342,8 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
       return this$2$1.$$scope$1.$apply((function($this$2, slave) {
         return (function() {
           var jsx$2 = $this$2.$$scope$1.updateSlave;
-          var value$2 = $this$2.$$scope$1.slaves;
-          jsx$2(value$2, slave)
+          var value$1 = $this$2.$$scope$1.slaves;
+          jsx$2(value$1, slave)
         })
       })(this$2$1, slave$2))
     })

@@ -5,17 +5,21 @@ import java.io.File
 import java.util.UUID
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.etl.actors.{FileManagementActor, QweryActorSystem, WorkflowManagementActor}
+import com.github.ldaniels528.qwery.actors.QweryActorSystem
+import com.github.ldaniels528.qwery.etl.ETLConfig.loadProcessingConfig
+import com.github.ldaniels528.qwery.etl.actors._
 import com.github.ldaniels528.qwery.etl.events.ScheduledEvent
 import com.github.ldaniels528.qwery.etl.triggers._
 import com.github.ldaniels528.qwery.ops.Scope
+import com.github.ldaniels528.qwery.util.JSONSupport
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.io.Source
 
 /**
-  * ETL Configuration
+  * ETL Worker/Watcher Configuration
   * @author lawrence.daniels@gmail.com
   */
 class ETLConfig(val baseDir: File) {
@@ -24,16 +28,23 @@ class ETLConfig(val baseDir: File) {
   private val triggers = TrieMap[String, Trigger]()
 
   // define the processing directories
-  val archiveDir: File = new File(baseDir, "archive")
-  val configDir: File = new File(baseDir, "config")
-  val failedDir: File = new File(baseDir, "failed")
-  val inboxDir: File = new File(baseDir, "inbox")
-  val scriptsDir: File = new File(baseDir, "scripts")
-  val workDir: File = new File(baseDir, "work")
+  val archiveDir = new File(baseDir, "archive")
+  val configDir = new File(baseDir, "config")
+  val failedDir = new File(baseDir, "failed")
+  val inboxDir = new File(baseDir, "inbox")
+  val scriptsDir = new File(baseDir, "scripts")
+  val workDir = new File(baseDir, "work")
+
+  // define the worker properties
+  private val processCfg = loadProcessingConfig(configDir)
+  val supervisor: String = processCfg.flatMap(_.supervisor) getOrElse "localhost:9000"
+  val controlPort: String = processCfg.flatMap(_.controlPort) getOrElse "1337"
 
   // create the support actors
-  val fileManager: ActorRef = QweryActorSystem.createActor(name = "fm", () => new FileManagementActor(this))
-  val workflowManager: ActorRef = QweryActorSystem.createActor(name = "wm", () => new WorkflowManagementActor(this))
+  val fileManager: ActorRef = QweryActorSystem.createActor(name = "fileMgr", () => new FileManagementActor(this))
+  val jobManager: ActorRef = QweryActorSystem.createActor(name = "jobMgr", () => new JobManagementActor(this))
+  val slaveManager: ActorRef = QweryActorSystem.createActor(name = "slaveMgr", () => new SlaveManagementActor(this))
+  val workflowManager: ActorRef = QweryActorSystem.createActor(name = "workMgr", () => new WorkflowManagementActor(this))
 
   // installation checks
   ensureSubdirectories(baseDir)
@@ -77,6 +88,13 @@ class ETLConfig(val baseDir: File) {
   def lookupTrigger(scope: Scope, file: String): Option[Trigger] = triggers.find(_._2.accepts(scope, file)).map(_._2)
 
   /**
+    * Attempts to find a trigger by name
+    * @param name the name of the triger
+    * @return an option of a [[Trigger]]
+    */
+  def lookupTriggerByName(name: String): Option[Trigger] = triggers.find(_._1.equalsIgnoreCase(name)).map(_._2)
+
+  /**
     * Loads the scheduled events found in ./config/scheduled-events.json
     */
   def loadScheduledEvents(): Unit = {
@@ -93,5 +111,30 @@ class ETLConfig(val baseDir: File) {
   def loadTriggers(): Unit = {
     FileTrigger.loadTriggers(this, configDir) foreach add
   }
+
+}
+
+/**
+  * ETL Configuration Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object ETLConfig extends JSONSupport {
+  private[this] lazy val log = LoggerFactory.getLogger(getClass)
+
+  /**
+    * Loads the optional processing.json configuration file
+    * @param configDir the given [[File configuration directory]]
+    * @return an option of the [[ProcessingConfig processing configuration]]
+    */
+  def loadProcessingConfig(configDir: File): Option[ProcessingConfig] = {
+    val configFile = new File(configDir, "processing.json")
+    if (configFile.exists()) {
+      val processingConfigJs = parseJsonAs[ProcessingConfig](Source.fromFile(configFile).mkString)
+      Some(processingConfigJs)
+    }
+    else None
+  }
+
+  case class ProcessingConfig(supervisor: Option[String], controlPort: Option[String])
 
 }

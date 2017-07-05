@@ -6,7 +6,7 @@ import io.scalajs.npm.moment.Moment
 import scala.scalajs.js
 
 /**
-  * Represents a generic Transgress configuration
+  * Represents a generic Broadway configuration
   * @author lawrence.daniels@gmail.com
   */
 @js.native

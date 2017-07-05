@@ -1,24 +1,22 @@
 <div ng-controller="ActivityController" ng-init="init()">
     <div class="col-md-12">
         <div class="row">
-            <div class="col-md-2 slave_header">ID</div>
             <div class="col-md-6 slave_header">Host</div>
-            <div class="col-md-1 slave_header">Jobs</div>
-            <div class="col-md-1 slave_header">Utilization</div>
+            <div class="col-md-2 slave_header">Jobs</div>
+            <div class="col-md-2 slave_header">Utilization</div>
             <div class="col-md-2 slave_header">Last Updated</div>
         </div>
 
         <div class="row" ng-repeat="slave in slaves">
-            <div class="col-md-2 center">
-                <i class="fa clickable" ng-class="slave.expanded ? 'fa-minus-square-o' : 'fa-plus-square-o'" ng-click="collapseExpand(slave)"></i>
-                {{ slave._id }}
-            </div>
             <div class="col-md-6 center">
-                <span ng-show="slave.name">{{ slave.name }} (<span class="small">{{ slave.host }}:{{ slave.port }}</span>)</span>
+                <i class="fa clickable" ng-class="slave.expanded ? 'fa-minus-square-o' : 'fa-plus-square-o'" ng-click="collapseExpand(slave)"></i>
+                <span ng-show="slave.name">
+                    {{ slave.name }} (<span class="small">{{ slave.host }}:{{ slave.port }}</span>)
+                </span>
                 <span ng-hide="slave.name">{{ slave.host }}:{{ slave.port }}</span>
             </div>
-            <div class="col-md-1 center">{{ slave.concurrency | number }} / {{ slave.maxConcurrency | number }}</div>
-            <div class="col-md-1 center">{{ utilization(slave) | number:1 }}%</div>
+            <div class="col-md-2 center">{{ slave.concurrency | number }} / {{ slave.maxConcurrency | number }}</div>
+            <div class="col-md-2 center">{{ utilization(slave) | number:1 }}%</div>
             <div class="col-md-2 center">{{ slave.lastUpdated | date:'MM/dd/yyyy HH:mm:ss' }}</div>
 
             <!-- Slave's activity -->

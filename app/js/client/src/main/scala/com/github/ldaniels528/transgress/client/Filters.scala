@@ -5,7 +5,7 @@ import com.github.ldaniels528.transgress.BytesHelper._
 import scala.scalajs.js
 
 /**
-  * Bourne Filters
+  * Broadway Filters
   * @author lawrence.daniels@gmail.com
   */
 object Filters {

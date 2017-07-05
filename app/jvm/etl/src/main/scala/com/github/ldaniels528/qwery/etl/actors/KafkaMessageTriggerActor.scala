@@ -10,6 +10,7 @@ class KafkaMessageTriggerActor extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case message =>
+      log.warning(s"Unexpected message '$message' (${Option(message).map(_.getClass.getName).orNull})")
       unhandled(message)
   }
 

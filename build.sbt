@@ -7,26 +7,25 @@ import sbt._
 import scala.language.postfixOps
 
 val appVersion = "0.3.9pre"
-val appScalaVersion = "2.11.11"
-val scalaVersion_2_12 = "2.12.2"
+val scalaJvmVersion = "2.11.11"
+val scalaJsVersion = "2.12.2"
 val scalaJsIOVersion = "0.4.0"
 
 val akkaVersion = "2.5.2"
-val curatorVersion = "3.1.0"
 val kafkaVersion = "0.10.2.1"
+val playVersion = "2.6.0"
+val playWsStandaloneVersion = "1.0.0"
+val scalatestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
-
-lazy val copyJS = TaskKey[Unit]("copyJS", "Copy JavaScript files to root directory")
-copyJS := {
-  val out_dir = baseDirectory.value
-  val supervisor_dir = out_dir / "app" / "js" / "supervisor" / "target" / "scala-2.12"
-  val files1 = Seq("", ".map") map ("broadway-supervisor-fastopt.js" + _) map (s => (supervisor_dir / s, out_dir / s))
-  IO.copy(files1, overwrite = true)
-}
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Scala (JVM)
 /////////////////////////////////////////////////////////////////////////////////
+
+lazy val testDependencies = Seq(
+  libraryDependencies ++= Seq(
+    "org.scalatest" %% "scalatest" % scalatestVersion % "test"
+  ))
 
 lazy val root = (project in file("./app/jvm/bundle")).
   aggregate(cli, etl).
@@ -35,9 +34,9 @@ lazy val root = (project in file("./app/jvm/bundle")).
   settings(
     name := "qwery-bundle",
     organization := "io.scalajs",
-    description := "Qwery Application Bundle",
+    description := "Broadway Application Bundle",
     version := appVersion,
-    scalaVersion := appScalaVersion,
+    scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true
@@ -45,12 +44,13 @@ lazy val root = (project in file("./app/jvm/bundle")).
 
 lazy val core = (project in file("./app/jvm/core")).
   settings(publishingSettings: _*).
+  settings(testDependencies: _*).
   settings(
     name := "qwery-core",
     organization := "io.scalajs",
     description := "A SQL-like query language for performing ETL",
     version := appVersion,
-    scalaVersion := appScalaVersion,
+    scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
@@ -61,7 +61,6 @@ lazy val core = (project in file("./app/jvm/core")).
       "commons-io" % "commons-io" % "2.5",
       "log4j" % "log4j" % "1.2.17",
       "mysql" % "mysql-connector-java" % "5.1.42",
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",
       //
@@ -70,11 +69,11 @@ lazy val core = (project in file("./app/jvm/core")).
       "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.play" %% "play-json" % "2.6.0",
+      "com.typesafe.play" %% "play-ahc-ws-standalone" % playWsStandaloneVersion,
+      "com.typesafe.play" %% "play-ws-standalone-json" % playWsStandaloneVersion,
       //
       // Apache
       "org.apache.avro" % "avro" % "1.8.1",
-      "org.apache.curator" % "curator-framework" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
-      "org.apache.curator" % "curator-test" % curatorVersion exclude("org.slf4j", "slf4j-log4j12"),
       "org.apache.kafka" %% "kafka" % kafkaVersion,
       "org.apache.kafka" % "kafka-clients" % kafkaVersion
     ))
@@ -83,12 +82,13 @@ lazy val cli = (project in file("./app/jvm/cli")).
   aggregate(core).
   dependsOn(core).
   settings(publishingSettings: _*).
+  settings(testDependencies: _*).
   settings(
     name := "qwery-cli",
     organization := "io.scalajs",
     description := "Qwery CLI Application",
     version := appVersion,
-    scalaVersion := appScalaVersion,
+    scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
@@ -102,7 +102,6 @@ lazy val cli = (project in file("./app/jvm/cli")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
       "org.scala-lang" % "jline" % "2.11.0-M3",
       "org.slf4j" % "slf4j-api" % slf4jVersion
     ))
@@ -111,12 +110,13 @@ lazy val etl = (project in file("./app/jvm/etl")).
   aggregate(core).
   dependsOn(core).
   settings(publishingSettings: _*).
+  settings(testDependencies: _*).
   settings(
     name := "qwery-etl",
     organization := "io.scalajs",
-    description := "Qwery ETL and Orchestration Server",
+    description := "Broadway ETL Worker/Orchestration Server",
     version := appVersion,
-    scalaVersion := appScalaVersion,
+    scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
@@ -130,21 +130,20 @@ lazy val etl = (project in file("./app/jvm/etl")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "net.liftweb" %% "lift-json" % "3.0.1"
+      "org.slf4j" % "slf4j-api" % slf4jVersion
     ))
 
 lazy val spark = (project in file("./app/jvm/spark")).
   aggregate(core).
   dependsOn(core).
   settings(publishingSettings: _*).
+  settings(testDependencies: _*).
   settings(
     name := "qwery-spark",
     organization := "io.scalajs",
     description := "Qwery Spark Integration",
     version := appVersion,
-    scalaVersion := appScalaVersion,
+    scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
@@ -170,10 +169,18 @@ lazy val spark = (project in file("./app/jvm/spark")).
 //      Scala.js (JavaScript/Node)
 /////////////////////////////////////////////////////////////////////////////////
 
+lazy val copyJS = TaskKey[Unit]("copyJS", "Copy JavaScript files to root directory")
+copyJS := {
+  val out_dir = baseDirectory.value
+  val supervisor_dir = out_dir / "app" / "js" / "supervisor" / "target" / s"scala-${scalaJsVersion.take(4)}"
+  val files1 = Seq("", ".map") map ("broadway-supervisor-fastopt.js" + _) map (s => (supervisor_dir / s, out_dir / s))
+  IO.copy(files1, overwrite = true)
+}
+
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-feature", "-deprecation"),
   scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-  scalaVersion := scalaVersion_2_12,
+  scalaVersion := scalaJsVersion,
   autoCompilerPlugins := true,
   relativeSourceMaps := true,
   homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
@@ -182,32 +189,22 @@ lazy val commonSettings = Seq(
 lazy val appSettings = Seq(
   scalacOptions ++= Seq("-feature", "-deprecation"),
   scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-  scalaVersion := scalaVersion_2_12,
+  scalaVersion := scalaJsVersion,
   scalaJSModuleKind := ModuleKind.CommonJSModule,
   autoCompilerPlugins := true,
   relativeSourceMaps := true,
   homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
   resolvers += Resolver.sonatypeRepo("releases"))
 
-lazy val uiSettings = Seq(
-  scalacOptions ++= Seq("-feature", "-deprecation"),
-  scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-  scalaVersion := scalaVersion_2_12,
-  autoCompilerPlugins := true,
-  relativeSourceMaps := true,
-  homepage := Some(url("https://github.com/ldaniels528/broadway.js")),
-  resolvers += Resolver.sonatypeRepo("releases"))
-
-lazy val testDependencies = Seq(
+lazy val testJsDependencies = Seq(
   libraryDependencies ++= Seq(
-    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
-    "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
+    "org.scalatest" %%% "scalatest" % scalatestVersion % "test"
   ))
 
 lazy val common_core = (project in file("./app/js/common/core"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings: _*)
-  .settings(testDependencies: _*)
+  .settings(testJsDependencies: _*)
   .settings(
     name := "broadway-common-core",
     organization := "com.github.ldaniels528",
@@ -220,7 +217,7 @@ lazy val common_cli = (project in file("./app/js/common/cli"))
   .dependsOn(common_core)
   .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings: _*)
-  .settings(testDependencies: _*)
+  .settings(testJsDependencies: _*)
   .settings(
     name := "broadway-common-cli",
     organization := "com.github.ldaniels528",
@@ -235,8 +232,8 @@ lazy val client = (project in file("./app/js/client"))
   .aggregate(common_core)
   .dependsOn(common_core)
   .enablePlugins(ScalaJSPlugin)
-  .settings(uiSettings: _*)
-  .settings(testDependencies: _*)
+  .settings(commonSettings: _*)
+  .settings(testJsDependencies: _*)
   .settings(
     name := "broadway-web-client",
     organization := "com.github.ldaniels528",
@@ -255,7 +252,7 @@ lazy val supervisor = (project in file("./app/js/supervisor"))
   .dependsOn(common_core, common_cli)
   .enablePlugins(ScalaJSPlugin)
   .settings(appSettings: _*)
-  .settings(testDependencies: _*)
+  .settings(testJsDependencies: _*)
   .settings(
     name := "broadway-supervisor",
     organization := "com.github.ldaniels528",
@@ -278,12 +275,12 @@ lazy val webapp = (project in file("."))
   .dependsOn(client, supervisor)
   .enablePlugins(ScalaJSPlugin)
   .settings(appSettings: _*)
-  .settings(testDependencies: _*)
+  .settings(testJsDependencies: _*)
   .settings(
     name := "broadway-webapp",
     organization := "com.github.ldaniels528",
     version := appVersion,
-    scalaVersion := scalaVersion_2_12,
+    scalaVersion := scalaJsVersion,
     relativeSourceMaps := true,
     compile in Compile <<=
       (compile in Compile) dependsOn (fastOptJS in(client, Compile)),

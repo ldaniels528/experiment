@@ -71,6 +71,7 @@ case class MainController($scope: MainScope, $interval: Interval, $location: Loc
 
     // and update them every 3 minutes
     $interval(() => $scope.refreshJobs(js.undefined), 3.minute)
+    ()
   }
 
   /**

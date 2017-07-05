@@ -42,6 +42,7 @@ class SlaveRoutes(app: Application with WsRouting, db: Db)(implicit ec: Executio
     * Registers a slave
     */
   app.post("/api/slave", (request: Request, response: Response, next: NextFunction) => {
+    logger.info("Attempt registration...")
     val body = request.bodyAs[SlaveData]
     val form = for {
       host <- body.host

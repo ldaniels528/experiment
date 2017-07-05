@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.devices
 
+import java.util.UUID
+
 import com.github.ldaniels528.qwery.ops.Scope
 import com.github.ldaniels528.qwery.sources.{Statistics, StatisticsGenerator}
 
@@ -9,6 +11,8 @@ import com.github.ldaniels528.qwery.sources.{Statistics, StatisticsGenerator}
   */
 trait Device {
   protected val statsGen = new StatisticsGenerator()
+
+  val deviceId: UUID = UUID.randomUUID()
 
   def close(): Unit
 

@@ -1,5 +1,7 @@
 package com.github.ldaniels528.qwery.sources
 
+import java.util.UUID
+
 import com.github.ldaniels528.qwery.devices.Device
 import com.github.ldaniels528.qwery.ops.Scope
 
@@ -13,8 +15,13 @@ trait IOSource {
 
   def device: Device
 
+  def sourceId: UUID = device.deviceId
+
   def getStatistics: Option[Statistics] = device.getStatistics
 
-  def open(scope: Scope): Unit = device.open(scope)
+  def open(scope: Scope): Unit = {
+    device.open(scope)
+    scope.add(sourceId, this)
+  }
 
 }

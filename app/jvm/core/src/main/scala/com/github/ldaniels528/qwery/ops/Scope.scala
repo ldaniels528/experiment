@@ -1,8 +1,10 @@
 package com.github.ldaniels528.qwery.ops
 
 import java.io.File
+import java.util.UUID
 
 import com.github.ldaniels528.qwery.ops.sql.{Procedure, View}
+import com.github.ldaniels528.qwery.sources.IOSource
 import com.github.ldaniels528.qwery.util.FileHelper
 import com.github.ldaniels528.qwery.util.OptionHelper._
 
@@ -14,6 +16,7 @@ import scala.collection.concurrent.TrieMap
   * @author lawrence.daniels@gmail.com
   */
 trait Scope extends DataContainer {
+  private lazy val sources = TrieMap[UUID, IOSource]()
   private lazy val functions = TrieMap[String, Function]()
   private lazy val procedures = TrieMap[String, Procedure]()
   private lazy val variables = TrieMap[String, Variable]()
@@ -72,6 +75,30 @@ trait Scope extends DataContainer {
     * @return an option of a [[Function function]]
     */
   def lookupFunction(name: String): Option[Function] = functions.get(name)
+
+  /////////////////////////////////////////////////////////////////
+  //    I/O Source
+  /////////////////////////////////////////////////////////////////
+
+  /**
+    * Adds a statistics source to the scope
+    * @param uuid   the unique identifier of the statistics source
+    * @param source the given [[IOSource statistics source]]
+    */
+  def add(uuid: UUID, source: IOSource): Unit = sources(uuid) = source
+
+  /**
+    * Returns a statistics source by UUID
+    * @param uuid the unique identifier of the statistics source
+    * @return the option of a [[IOSource statistics source]]
+    */
+  def getSource(uuid: UUID): Option[IOSource] = sources.get(uuid)
+
+  /**
+    * Returns all statistics sources
+    * @return the collection of [[IOSource statistics sources]]
+    */
+  def getSources: Iterable[IOSource] = sources.values
 
   /////////////////////////////////////////////////////////////////
   //    Procedures
@@ -216,6 +243,12 @@ object Scope {
     override def get(name: String): Option[Any] = getColumn(name).map(_._2)
 
     override def getColumn(name: String): Option[(String, Any)] = super.getColumn(name) ?? parent.getColumn(name)
+
+    override def add(uuid: UUID, source: IOSource): Unit = parent.add(uuid, source)
+
+    override def getSource(uuid: UUID): Option[IOSource] = parent.getSource(uuid)
+
+    override def getSources: Iterable[IOSource] = parent.getSources
 
     override def lookupFunction(name: String): Option[Function] = {
       super.lookupFunction(name) ?? parent.lookupFunction(name)

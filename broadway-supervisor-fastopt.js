@@ -1525,7 +1525,7 @@ function $f_sci_VectorPointer__initFrom__sci_VectorPointer__I__V($thiz, that, de
 /** @constructor */
 function $c_Lcom_github_ldaniels528_transgress_AppConstants$() {
   $c_O.call(this);
-  this.Version$1 = 0.0
+  this.Version$1 = null
 }
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = new $h_O();
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_AppConstants$;
@@ -1535,7 +1535,7 @@ function $h_Lcom_github_ldaniels528_transgress_AppConstants$() {
 }
 $h_Lcom_github_ldaniels528_transgress_AppConstants$.prototype = $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype;
 $c_Lcom_github_ldaniels528_transgress_AppConstants$.prototype.init___ = (function() {
-  this.Version$1 = 0.1;
+  this.Version$1 = "0.3.9pre";
   return this
 });
 var $d_Lcom_github_ldaniels528_transgress_AppConstants$ = new $TypeData().initClass({
@@ -7162,7 +7162,7 @@ $c_Lcom_github_ldaniels528_transgress_server_Supervisor$.prototype.init___ = (fu
 $c_Lcom_github_ldaniels528_transgress_server_Supervisor$.prototype.main__V = (function() {
   var this$15 = this.logger$1;
   var arg$macro$1 = $m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1;
-  var this$1 = new $c_sci_StringOps().init___T("Starting the Bourne Server v%.1f...");
+  var this$1 = new $c_sci_StringOps().init___T("Starting the Bourne Server v%s...");
   var array = [arg$macro$1];
   var jsx$2 = $m_sjsr_RuntimeString$();
   var $$this = this$1.repr$1;

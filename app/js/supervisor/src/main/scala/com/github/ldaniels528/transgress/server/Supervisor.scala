@@ -18,7 +18,7 @@ import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
 /**
-  * Transgress Supervisor
+  * Broadway Supervisor
   * @author lawrence.daniels@gmail.com
   */
 object Supervisor extends js.JSApp {
@@ -26,7 +26,7 @@ object Supervisor extends js.JSApp {
 
   @JSExport
   override def main(): Unit = {
-    logger.info(f"Starting the Bourne Server v$Version%.1f...")
+    logger.info(f"Starting the Broadway Server v$Version...")
 
     // determine the port to listen on
     val startTime = js.Date.now()

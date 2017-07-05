@@ -4,7 +4,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, UUID}
 
-import com.github.ldaniels528.qwery.etl.actors.QweryActorSystem
+import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.{ETLConfig, ScriptSupport}
 import com.github.ldaniels528.qwery.ops.{Executable, Scope}
 import com.github.ldaniels528.qwery.util.JSONSupport

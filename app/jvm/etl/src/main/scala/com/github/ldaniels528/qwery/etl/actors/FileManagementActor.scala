@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import akka.actor.{Actor, ActorLogging}
+import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.actors.FileManagementActor._
 import com.github.ldaniels528.qwery.util.DurationHelper._
 
@@ -27,7 +28,9 @@ class FileManagementActor(config: ETLConfig) extends Actor with ActorLogging {
     case ArchiveFile(file, compress) => storeFile(file, compress)
     case MoveFile(file, directory) => moveFile(file, directory)
     case WatchFile(directory, callback) => registerWatch(directory, callback)
-    case message => unhandled(message)
+    case message =>
+      log.warning(s"Unexpected message '$message' (${Option(message).map(_.getClass.getName).orNull})")
+      unhandled(message)
   }
 
   /**
