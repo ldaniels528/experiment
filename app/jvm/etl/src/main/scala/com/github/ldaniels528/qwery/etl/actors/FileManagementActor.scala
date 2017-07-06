@@ -63,9 +63,14 @@ class FileManagementActor(config: ETLConfig) extends Actor with ActorLogging {
       if (watchKey.isEmpty) watchKey = Option(watcher.poll())
       else {
         watchKey.foreach(_.pollEvents().asScala.foreach { event =>
-          val file = new File(directory, event.context().toString)
-          if (!watchedFiles.contains(file.getCanonicalPath)) {
-            callback(file)
+          Option(event.context()).map(_.toString) match {
+            case Some(content) =>
+              val file = new File(directory, content)
+              if (!watchedFiles.contains(file.getCanonicalPath)) {
+                callback(file)
+              }
+            case None =>
+              log.info("Context was null")
           }
         })
       }

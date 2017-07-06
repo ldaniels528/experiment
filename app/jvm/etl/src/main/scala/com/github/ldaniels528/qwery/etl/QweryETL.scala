@@ -3,7 +3,6 @@ package etl
 
 import java.io.File
 import java.net.InetAddress
-import java.util.Date
 
 import akka.pattern.ask
 import akka.util.Timeout
@@ -12,6 +11,7 @@ import com.github.ldaniels528.qwery.actors.QweryActorSystem
 import com.github.ldaniels528.qwery.etl.actors.FileManagementActor._
 import com.github.ldaniels528.qwery.etl.actors.JobManagementActor._
 import com.github.ldaniels528.qwery.etl.actors.JobStates.JobState
+import com.github.ldaniels528.qwery.etl.actors.JobStatistics._
 import com.github.ldaniels528.qwery.etl.actors.WorkflowManagementActor.ProcessFile
 import com.github.ldaniels528.qwery.etl.actors._
 import com.github.ldaniels528.qwery.etl.triggers.Trigger
@@ -78,12 +78,15 @@ object QweryETL extends FileMoving {
     * @param rootScope the [[Scope root scope]]
     * @param config    the [[ETLConfig ETL configuration]]
     */
-  private def checkForJobs(rootScope: Scope)(implicit config: ETLConfig, ec: ExecutionContext) = {
+  private def checkForJobs(rootScope: Scope)(implicit config: ETLConfig, ec: ExecutionContext): Unit = {
     implicit val timeout: Timeout = 30.seconds
 
     slaveID_? foreach { slaveID =>
       (config.jobManager ? CheckForJobs(slaveID)).mapTo[Option[Job]] onComplete {
-        case Success(Some(job)) => processJob(job, rootScope)
+        case Success(Some(job)) =>
+          processJob(job, rootScope) onComplete { _ =>
+            checkForJobs(rootScope)
+          }
         case Success(None) =>
         case Failure(e) =>
           log.error("Failed job checkout", e)
@@ -133,19 +136,22 @@ object QweryETL extends FileMoving {
         implicit val timeout: Timeout = 4.hours
 
         log.info(s"Processing file '${workFile.getAbsolutePath}' using '${trigger.name}'...")
-        val refreshCycle = QweryActorSystem.scheduler.schedule(initialDelay = 5.seconds, interval = 5.seconds) {
-          rootScope.getSources foreach (src => log.info(src.getStatistics.map(_.toString).orNull))
+        val refreshCycle = QweryActorSystem.scheduler.schedule(initialDelay = 2.seconds, interval = 5.seconds) {
+          val stats = rootScope.getSources.flatMap(_.getStatistics).toList
+          updateStatistics(job, stats)
+          stats foreach (stat => log.info(stat.toString))
         }
 
         val startTime = System.currentTimeMillis()
-        val outcome = (
+        val outcome = {
           for {
             _ <- updateJobState(job, JobStates.RUNNING)
             resultSet <- (config.workflowManager ? ProcessFile(workFile, trigger, rootScope)).mapTo[ResultSet]
             _ <- updateJobState(job, JobStates.SUCCESS)
-            _ <- resultSet.statistics.map(updateStatistics(job, _)) getOrElse Future.successful(None)
+            _ <- updateStatistics(job, statsList = rootScope.getSources.flatMap(_.getStatistics).toList)
+              .recoverWith { case e => Future.successful(None) }
           } yield resultSet
-          ) recoverWith { case e =>
+        } recoverWith { case e =>
           log.error(s"[$pid] Failed during processing: ${e.getMessage}")
           updateJobState(job = job.copy(message = e.getMessage), JobStates.FAILED) map { _ => ResultSet() }
         }
@@ -161,9 +167,13 @@ object QweryETL extends FileMoving {
             log.error(s"[$pid] Process failed for '${job.input.orNull}': ${e.getMessage}", e)
             moveToFailed(pid, workFile)
         }
+        outcome
+
       case None =>
         log.warn("The work file could not be determined.")
-        updateJobState(job, JobStates.STOPPED)
+        updateJobState(job, JobStates.STOPPED) map { _ =>
+          ResultSet()
+        }
     }
   }
 
@@ -172,7 +182,7 @@ object QweryETL extends FileMoving {
     * @param config the [[ETLConfig ETL configuration]]
     */
   private def registerAsSlave()(implicit config: ETLConfig, ec: ExecutionContext) = {
-    implicit val timeout: Timeout = 30.seconds
+    implicit val timeout: Timeout = 45.seconds
 
     val address = InetAddress.getLocalHost
     log.info(s"Registering myself (${address.getHostName}) as a slave...")
@@ -195,7 +205,7 @@ object QweryETL extends FileMoving {
     * @param config    the [[ETLConfig ETL configuration]]
     */
   private def scheduleJob(file: File, rootScope: Scope, trigger: Trigger)(implicit config: ETLConfig, ec: ExecutionContext) = {
-    implicit val timeout: Timeout = 30.seconds
+    implicit val timeout: Timeout = 45.seconds
 
     log.info(s"Trigger '${trigger.name}' accepts '${file.getName}'")
     val job = Job(
@@ -210,7 +220,7 @@ object QweryETL extends FileMoving {
 
     //config.workflowManager ? ProcessFile(file, trigger, rootScope)
     (config.jobManager ? CreateJob(job)).mapTo[Option[Job]] onComplete {
-      case Success(job_?) => log.info(s"scheduled job: ${job_?.orNull}")
+      case Success(job_?) =>
       case Failure(e) =>
         log.error("Job creation failed", e)
     }
@@ -224,7 +234,7 @@ object QweryETL extends FileMoving {
     * @return the promise of the option of the updated job
     */
   private def updateJobState(job: Job, state: JobState)(implicit config: ETLConfig, ec: ExecutionContext): Future[Option[Job]] = {
-    implicit val timeout: Timeout = 30.seconds
+    implicit val timeout: Timeout = 45.seconds
 
     log.info(s"Updating state for job # ${job._id.orNull} to '$state'")
     val outcome = (config.jobManager ? ChangeJobState(job, state)).mapTo[Option[Job]]
@@ -238,25 +248,15 @@ object QweryETL extends FileMoving {
 
   /**
     * Updates the statistics for the given job
-    * @param job    the [[Job job]] to update
-    * @param stats  the [[Statistics statistics]]
-    * @param config the [[ETLConfig ETL configuration]]
+    * @param job       the [[Job job]] to update
+    * @param statsList the [[Statistics statistics]]
+    * @param config    the [[ETLConfig ETL configuration]]
     * @return the promise of the option of the updated job
     */
-  private def updateStatistics(job: Job, stats: Statistics)(implicit config: ETLConfig, ec: ExecutionContext): Future[Option[Job]] = {
-    implicit val timeout: Timeout = 30.seconds
+  private def updateStatistics(job: Job, statsList: List[Statistics])(implicit config: ETLConfig, ec: ExecutionContext): Future[Option[Job]] = {
+    implicit val timeout: Timeout = 15.seconds
 
-    log.info(s"Updating statistics for job # ${job._id.orNull}")
-    val jobStats = JobStatistics(
-      cpuLoad = getCpuLoad,
-      totalInserted = stats.totalRecords,
-      bytesRead = stats.bytesRead,
-      bytesPerSecond = stats.bytesPerSecond,
-      recordsDelta = stats.recordsDelta,
-      recordsPerSecond = stats.recordsPerSecond,
-      pctComplete = stats.pctComplete,
-      completionTime = stats.completionTime.map(t => new Date(t.toLong))
-    )
+    val jobStats = statsList.map(stats => (stats: JobStatistics).copy(cpuLoad = getCpuLoad))
     (config.jobManager ? UpdateStatistics(job, jobStats)).mapTo[Option[Job]]
   }
 

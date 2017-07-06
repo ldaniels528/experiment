@@ -36,7 +36,7 @@ trait JobClient extends RESTSupport {
     post(s"$baseUrl/api/jobs", body = Json.toJson(job)).map(_.body[JsValue].asOpt[List[Job]].flatMap(_.headOption))
   }
 
-  def updateStatistics(job: Job, stats: JobStatistics)(implicit ec: ExecutionContext): Future[Option[Job]] = {
+  def updateStatistics(job: Job, stats: List[JobStatistics])(implicit ec: ExecutionContext): Future[Option[Job]] = {
     job._id match {
       case Some(jobId) =>
         patch(s"$baseUrl/api/job/$jobId/statistics", Json.toJson(stats))

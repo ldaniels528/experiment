@@ -3,6 +3,7 @@ package com.github.ldaniels528.qwery.actors
 import java.net.URL
 
 import akka.actor._
+import akka.routing.RoundRobinPool
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -27,6 +28,10 @@ class QweryActorSystem {
 
   def createActor[T <: Actor : ClassTag](factory: () => T): ActorRef = system.actorOf(Props(factory()))
 
+  def createActor[T <: Actor : ClassTag](name: String, instances: Int)(factory: () => T): ActorRef = {
+    system.actorOf(RoundRobinPool(nrOfInstances = instances).props(Props(factory())), name)
+  }
+
   def createActor[T <: Actor : ClassTag](name: String, factory: () => T): ActorRef = {
     system.actorOf(Props(factory()), name = name)
   }
@@ -36,6 +41,7 @@ class QweryActorSystem {
   private def getResource(path: String): Option[URL] = Option(getClass.getResource(path))
 
 }
+
 /**
   * Qwery Actor System Companion
   * @author lawrence.daniels@gmail.com

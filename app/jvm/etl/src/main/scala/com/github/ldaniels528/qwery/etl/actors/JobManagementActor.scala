@@ -39,6 +39,6 @@ object JobManagementActor {
 
   case class ChangeJobState(job: Job, state: JobState)
 
-  case class UpdateStatistics(job: Job, stats: JobStatistics)
+  case class UpdateStatistics(job: Job, stats: List[JobStatistics])
 
 }

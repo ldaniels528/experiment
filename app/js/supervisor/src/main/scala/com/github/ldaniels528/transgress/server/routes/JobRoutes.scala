@@ -83,7 +83,7 @@ class JobRoutes(app: Application with WsRouting, db: Db)(implicit ec: ExecutionC
     */
   app.patch("/api/job/:id/statistics", (request: Request, response: Response, next: NextFunction) => {
     val jobId = request.params.apply("id")
-    val statistics = request.bodyAs[StatisticsLike]
+    val statistics = request.bodyAs[js.Array[StatisticsLike]]
     jobDAO.updateStatistics(jobId, statistics).toFuture onComplete {
       case Success(result) if result.value != null =>
         WebSocketHandler.emit(JOB_UPDATE, result.value)

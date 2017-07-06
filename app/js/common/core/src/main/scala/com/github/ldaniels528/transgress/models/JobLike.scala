@@ -28,7 +28,7 @@ trait JobLike extends js.Object {
 
   def state: js.UndefOr[JobState]
 
-  def statistics: js.UndefOr[StatisticsLike]
+  def statistics: js.UndefOr[js.Array[StatisticsLike]]
 
   def workflowName: js.UndefOr[String]
 

@@ -18,7 +18,7 @@ case class Job(_id: Option[String] = None,
                processingHost: Option[String],
                slaveID: Option[String],
                message: Option[String] = None,
-               statistics: Option[JobStatistics] = None)
+               statistics: Option[Seq[JobStatistics]] = None)
 
 /**
   * Job Companion

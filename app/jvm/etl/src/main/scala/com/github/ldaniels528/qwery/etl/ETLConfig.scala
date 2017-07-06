@@ -42,9 +42,9 @@ class ETLConfig(val baseDir: File) {
 
   // create the support actors
   val fileManager: ActorRef = QweryActorSystem.createActor(name = "fileMgr", () => new FileManagementActor(this))
-  val jobManager: ActorRef = QweryActorSystem.createActor(name = "jobMgr", () => new JobManagementActor(this))
+  val jobManager: ActorRef = QweryActorSystem.createActor(name = "jobMgr", instances = 5)(() => new JobManagementActor(this))
   val slaveManager: ActorRef = QweryActorSystem.createActor(name = "slaveMgr", () => new SlaveManagementActor(this))
-  val workflowManager: ActorRef = QweryActorSystem.createActor(name = "workMgr", () => new WorkflowManagementActor(this))
+  val workflowManager: ActorRef = QweryActorSystem.createActor(name = "workMgr", instances = 5)(() => new WorkflowManagementActor(this))
 
   // installation checks
   ensureSubdirectories(baseDir)
@@ -119,7 +119,6 @@ class ETLConfig(val baseDir: File) {
   * @author lawrence.daniels@gmail.com
   */
 object ETLConfig extends JSONSupport {
-  private[this] lazy val log = LoggerFactory.getLogger(getClass)
 
   /**
     * Loads the optional processing.json configuration file

@@ -22,7 +22,7 @@ class Job(var _id: js.UndefOr[String] = js.undefined,
           var lastUpdated: js.UndefOr[Double] = js.undefined,
           var message: js.UndefOr[String] = js.undefined,
           var processingHost: js.UndefOr[String] = js.undefined,
-          var statistics: js.UndefOr[StatisticsLike] = js.undefined)
+          var statistics: js.UndefOr[js.Array[StatisticsLike]] = js.undefined)
   extends JobLike with Expandable
 
 /**

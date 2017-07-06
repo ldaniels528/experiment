@@ -65,7 +65,7 @@ object JobDAO {
     }
 
     @inline
-    def updateStatistics(id: String, statistics: StatisticsLike): js.Promise[FindAndModifyWriteOpResult] = {
+    def updateStatistics(id: String, statistics: js.Array[StatisticsLike]): js.Promise[FindAndModifyWriteOpResult] = {
       dao.findOneAndUpdate(
         filter = "_id" $eq new ObjectID(id),
         update = doc($set("statistics" -> statistics, "lastUpdated" -> js.Date.now())),
@@ -103,4 +103,4 @@ class JobData(var _id: js.UndefOr[ObjectID] = js.undefined,
               var state: js.UndefOr[JobState],
               var lastUpdated: js.UndefOr[Double] = js.undefined,
               var message: js.UndefOr[String] = js.undefined,
-              var statistics: js.UndefOr[StatisticsLike] = js.undefined) extends JobLike
+              var statistics: js.UndefOr[js.Array[StatisticsLike]] = js.undefined) extends JobLike

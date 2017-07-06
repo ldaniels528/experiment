@@ -9,7 +9,6 @@ SELECT Symbol, Name, Sector, Industry, LastSale
 FROM 'companylist.csv'
 WHERE Industry = 'Oil/Gas Transmission'
 
-
 ************************************************************************
 *       Directories of Files
 ************************************************************************
@@ -150,6 +149,22 @@ END;
 SELECT getData('Hello World');
 
 SHOW FUNCTIONS;
+
+
+SELECT `<ticker>` AS symbol, DATE_PARSE(`<date>`, "yyyyMMdd") AS tradeDate,`<open>` AS open,`<high>` AS high,`<low>` AS low,`<close>` AS close,`<vol>` AS volume
+FROM "tmp/NASDAQ_20120910.txt"
+WITH CSV FORMAT
+LIMIT 5
+
++ ------------------------------------------------------------------- +
+| symbol  tradeDate              open   high   low    close  volume   |
++ ------------------------------------------------------------------- +
+| AAC     09/10/12 12:00:00 PDT  10.07  10.07  10.07  10.07  0        |
+| AACC    09/10/12 12:00:00 PDT  6.67   6.74   6.6    6.69   19000    |
+| AACOW   09/10/12 12:00:00 PDT  0.3    0.3    0.3    0.3    200      |
+| AAIT    09/10/12 12:00:00 PDT  25.28  25.28  25.28  25.28  0        |
+| AAME    09/10/12 12:00:00 PDT  2.66   2.67   2.65   2.67   4100     |
++ ------------------------------------------------------------------- +
 
 ************************************************************************
 *       Procedures

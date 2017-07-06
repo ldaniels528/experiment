@@ -21,8 +21,10 @@ trait FileMoving {
         val year = new SimpleDateFormat("yyyy").format(ts)
         val month = new SimpleDateFormat("MM").format(ts)
         val day = new SimpleDateFormat("dd").format(ts)
-        val time = new SimpleDateFormat("hhmmss").format(ts)
-        val archiveFile = Seq(year, month, day, time, file.getName)
+        val hour = new SimpleDateFormat("HH").format(ts)
+        val minute = new SimpleDateFormat("mm").format(ts)
+        val second = new SimpleDateFormat("ss").format(ts)
+        val archiveFile = Seq(year, month, day, hour, minute, second, file.getName)
           .foldLeft(config.archiveDir) { (directory, name) => new File(directory, name) }
         log.info(s"Moving '${file.getName}' to '${archiveFile.getAbsolutePath}'")
         val archiveDirectory = archiveFile.getParentFile
