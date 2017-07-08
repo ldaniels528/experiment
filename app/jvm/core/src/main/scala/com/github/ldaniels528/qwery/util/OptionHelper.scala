@@ -20,9 +20,41 @@ object OptionHelper {
     */
   implicit class OptionalExtensions[T](val opA: Option[T]) extends AnyVal {
 
+    @inline
     def ??(opB: => Option[T]): Option[T] = if (opA.isDefined) opA else opB
 
+    @inline
     def orDie(message: String): T = opA.getOrElse(throw new IllegalStateException(message))
+
+  }
+
+  /**
+    * Optional double extensions
+    */
+  implicit class OptionalDoubleExtensions(val opA: Option[Double]) extends AnyVal {
+
+    @inline
+    def orZero: Double = opA.getOrElse(0d)
+
+  }
+
+  /**
+    * Optional integer extensions
+    */
+  implicit class OptionalIntExtensions(val opA: Option[Int]) extends AnyVal {
+
+    @inline
+    def orZero: Int = opA.getOrElse(0)
+
+  }
+
+  /**
+    * Optional integer extensions
+    */
+  implicit class OptionalLongExtensions(val opA: Option[Long]) extends AnyVal {
+
+    @inline
+    def orZero: Long = opA.getOrElse(0L)
 
   }
 

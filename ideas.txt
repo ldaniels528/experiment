@@ -41,6 +41,11 @@ JOIN "companylist2.csv" AS B ON B.Symbol = A.Symbol
 *      UPSERT testing
 ************************************************************************
 
+INSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
+WITH JDBC DRIVER 'com.mysql.jdbc.Driver'
+SELECT Symbol, Name, Sector, Industry, CASE LastSale WHEN 'n/a' THEN NULL ELSE LastSale END
+FROM 'companylist.csv'
+
 UPSERT INTO 'jdbc:mysql://localhost:3306/test?table=company' (Symbol, Name, Sector, Industry, LastSale)
 KEYED ON Symbol
 WITH JDBC DRIVER 'com.mysql.jdbc.Driver'

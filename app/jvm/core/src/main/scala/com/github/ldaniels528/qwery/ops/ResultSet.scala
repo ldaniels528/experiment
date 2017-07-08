@@ -1,5 +1,6 @@
 package com.github.ldaniels528.qwery.ops
 
+import com.github.ldaniels528.qwery.util.OptionHelper._
 import com.github.ldaniels528.qwery.sources.Statistics
 
 /**
@@ -24,15 +25,25 @@ object ResultSet {
   def affected(count: Long = 1) = ResultSet(rows = Iterator(Seq("ROWS_AFFECTED" -> count)))
 
   def inserted(count: Long, statistics: Option[Statistics]): ResultSet = {
-    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> count)), statistics = statistics)
+    ResultSet(rows = Iterator(Seq(
+      "ROWS_INSERTED" -> statistics.map(_.totalRecords).getOrElse(count),
+      "ROWS_REJECTED" -> statistics.map(_.failures).orZero
+    )), statistics = statistics)
   }
 
   def updated(count: Long, statistics: Option[Statistics]): ResultSet = {
-    ResultSet(rows = Iterator(Seq("ROWS_UPDATED" -> count)), statistics = statistics)
+    ResultSet(rows = Iterator(Seq(
+      "ROWS_UPDATED" -> statistics.map(_.totalRecords).getOrElse(count),
+      "ROWS_REJECTED" -> statistics.map(_.failures).orZero
+    )), statistics = statistics)
   }
 
   def upserted(inserted: Long, updated: Long, statistics: Option[Statistics]): ResultSet = {
-    ResultSet(rows = Iterator(Seq("ROWS_INSERTED" -> inserted, "ROWS_UPDATED" -> updated)), statistics = statistics)
+    ResultSet(rows = Iterator(Seq(
+      "ROWS_INSERTED" -> inserted,
+      "ROWS_UPDATED" -> updated,
+      "ROWS_REJECTED" -> statistics.map(_.failures).orZero
+    )), statistics = statistics)
   }
 
 }

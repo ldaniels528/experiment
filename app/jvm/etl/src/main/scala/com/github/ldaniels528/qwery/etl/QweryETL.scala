@@ -36,12 +36,15 @@ object QweryETL extends FileMoving {
     * Startup method
     * @param args the given commandline arguments
     */
-  def main(args: Array[String]): Unit = run()
+  def main(args: Array[String]): Unit = {
+    val userWorkerConfig_? = args.headOption
+    run(userWorkerConfig_?)
+  }
 
   /**
     * Starts the worker process
     */
-  def run(): Unit = {
+  def run(userWorkerConfig_? : Option[String]): Unit = {
     println(welcome("ETL"))
 
     // get the home directory
@@ -49,7 +52,7 @@ object QweryETL extends FileMoving {
       .getOrElse(throw new IllegalStateException(s"You must set environment variable '$envHome'"))
 
     // load the configuration
-    implicit val config = new ETLConfig(baseDir)
+    implicit val config = new ETLConfig(baseDir, userWorkerConfig_?)
     config.loadScheduledEvents()
     config.loadTriggers()
 
@@ -85,6 +88,7 @@ object QweryETL extends FileMoving {
       (config.jobManager ? CheckForJobs(slaveID)).mapTo[Option[Job]] onComplete {
         case Success(Some(job)) =>
           processJob(job, rootScope) onComplete { _ =>
+            // immediately look for another job
             checkForJobs(rootScope)
           }
         case Success(None) =>
@@ -214,7 +218,7 @@ object QweryETL extends FileMoving {
       inputSize = file.length().toDouble,
       state = JobStates.NEW,
       workflowName = trigger.name,
-      processingHost = s"${InetAddress.getLocalHost.getHostAddress}:${config.controlPort}",
+      processingHost = s"${InetAddress.getLocalHost.getHostAddress}:${config.workerConfig.controlPort}",
       slaveID = slaveID_?
     )
 

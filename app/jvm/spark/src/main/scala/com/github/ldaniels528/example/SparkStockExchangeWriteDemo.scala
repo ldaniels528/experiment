@@ -28,7 +28,7 @@ object SparkStockExchangeWriteDemo extends App {
             Some((year, month, exchange, ticker, date.toLong, open.toDouble, high.toDouble, low.toDouble, close.toDouble, vol.toLong))
           case _ => None
         }
-    }
+    } 
   }
 
   // create the data frame
@@ -66,5 +66,7 @@ object SparkStockExchangeWriteDemo extends App {
       .partitionBy("year", "month", "exchange")
       .parquet(s"./tmp/P$now")
   }
+
+  case class StockData(year: Int, month: Int, exchange: String, ticker: String, date: Long, open: Double, high: Double, low: Double, close: Double, vol: Long)
 
 }

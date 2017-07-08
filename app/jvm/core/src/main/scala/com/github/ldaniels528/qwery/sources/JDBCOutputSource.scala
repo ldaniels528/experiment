@@ -43,7 +43,9 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
     }
   }
 
-  override def write(record: Record): Any = ()
+  override def write(record: Record): Any = {
+    throw new IllegalStateException("Illegal write attempt")
+  }
 
   override def write(row: Row): Unit = insert(row) match {
     case Success(count_?) =>
@@ -52,6 +54,7 @@ case class JDBCOutputSource(url: String, tableName: String, hints: Option[Hints]
         statsGen.update(records = inserted + updated)
       }
     case Failure(e) =>
+      offset += 1
       statsGen.update(failures = 1)
       log.error(s"Record #$offset failed: ${e.getMessage}")
   }

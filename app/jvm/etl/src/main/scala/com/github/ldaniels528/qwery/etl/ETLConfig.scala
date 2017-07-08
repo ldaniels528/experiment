@@ -6,7 +6,6 @@ import java.util.UUID
 
 import akka.actor.ActorRef
 import com.github.ldaniels528.qwery.actors.QweryActorSystem
-import com.github.ldaniels528.qwery.etl.ETLConfig.loadProcessingConfig
 import com.github.ldaniels528.qwery.etl.actors._
 import com.github.ldaniels528.qwery.etl.events.ScheduledEvent
 import com.github.ldaniels528.qwery.etl.triggers._
@@ -16,13 +15,12 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.io.Source
 
 /**
   * ETL Worker/Watcher Configuration
   * @author lawrence.daniels@gmail.com
   */
-class ETLConfig(val baseDir: File) {
+class ETLConfig(val baseDir: File, userWorkerConfig_? : Option[String]) {
   private lazy val log = LoggerFactory.getLogger(getClass)
   private val scheduledEvents = TrieMap[UUID, ScheduledEvent]()
   private val triggers = TrieMap[String, Trigger]()
@@ -36,9 +34,10 @@ class ETLConfig(val baseDir: File) {
   val workDir = new File(baseDir, "work")
 
   // define the worker properties
-  private val processCfg = loadProcessingConfig(configDir)
-  val supervisor: String = processCfg.flatMap(_.supervisor) getOrElse "localhost:9000"
-  val controlPort: String = processCfg.flatMap(_.controlPort) getOrElse "1337"
+  val workerConfig: WorkerConfig = {
+    val configFile = userWorkerConfig_?.map(new File(_)) getOrElse new File(configDir, "worker.json")
+    WorkerConfig.load(configFile)
+  }
 
   // create the support actors
   val fileManager: ActorRef = QweryActorSystem.createActor(name = "fileMgr", () => new FileManagementActor(this))
@@ -120,20 +119,5 @@ class ETLConfig(val baseDir: File) {
   */
 object ETLConfig extends JSONSupport {
 
-  /**
-    * Loads the optional processing.json configuration file
-    * @param configDir the given [[File configuration directory]]
-    * @return an option of the [[ProcessingConfig processing configuration]]
-    */
-  def loadProcessingConfig(configDir: File): Option[ProcessingConfig] = {
-    val configFile = new File(configDir, "processing.json")
-    if (configFile.exists()) {
-      val processingConfigJs = parseJsonAs[ProcessingConfig](Source.fromFile(configFile).mkString)
-      Some(processingConfigJs)
-    }
-    else None
-  }
-
-  case class ProcessingConfig(supervisor: Option[String], controlPort: Option[String])
 
 }

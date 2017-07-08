@@ -13,7 +13,7 @@ import com.github.ldaniels528.qwery.etl.rest.JobClient
 class JobManagementActor(config: ETLConfig) extends Actor with ActorLogging with JobClient {
   private implicit val dispatcher = context.dispatcher
 
-  override def baseUrl = s"http://${config.supervisor}"
+  override def baseUrl = s"http://${config.workerConfig.supervisor}"
 
   override def receive: Receive = {
     case ChangeJobState(job, state) => reflect(changeState(job, state))
@@ -26,18 +26,18 @@ class JobManagementActor(config: ETLConfig) extends Actor with ActorLogging with
   }
 
 }
-                                                    
+
 /**
   * Job Management Actor Companion
   * @author lawrence.daniels@gmail.com
   */
 object JobManagementActor {
 
+  case class ChangeJobState(job: Job, state: JobState)
+
   case class CheckForJobs(slaveID: String)
 
   case class CreateJob(job: Job)
-
-  case class ChangeJobState(job: Job, state: JobState)
 
   case class UpdateStatistics(job: Job, stats: List[JobStatistics])
 

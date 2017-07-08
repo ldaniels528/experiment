@@ -11,7 +11,7 @@ import com.github.ldaniels528.qwery.etl.rest.SlaveClient
 class SlaveManagementActor(config: ETLConfig) extends Actor with ActorLogging with SlaveClient {
   private implicit val dispatcher = context.dispatcher
 
-  override def baseUrl: String = s"http://${config.supervisor}"
+  override def baseUrl: String = s"http://${config.workerConfig.supervisor}"
 
   override def receive: Receive = {
     case request: RegistrationRequest => reflect(registerSlave(request))
