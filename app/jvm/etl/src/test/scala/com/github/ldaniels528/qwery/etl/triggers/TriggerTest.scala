@@ -26,7 +26,7 @@ class TriggerTest extends FunSpec {
           """.stripMargin))
 
       val results = trigger.execute(scope, path = "companylist.csv").toSeq
-      assert(results == Seq(Row("ROWS_INSERTED" -> 4)))
+      assert(results == Seq(Row(Seq("ROWS_INSERTED" -> 4, "ROWS_REJECTED" -> 0))))
     }
 
   }

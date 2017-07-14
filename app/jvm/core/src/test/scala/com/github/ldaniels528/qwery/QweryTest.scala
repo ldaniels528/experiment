@@ -204,7 +204,7 @@ class QweryTest extends FunSpec {
           |VALUES ("FAX", "Aberdeen Asia-Pacific Income Fund Inc", 5, 1266332595)
           |VALUES ("ACU", "Acme United Corporation.", 29, 96496195)""".stripMargin)
       val results = query.execute(scope).toSeq
-      assert(results == Stream(Row("ROWS_INSERTED" -> 3)))
+      assert(results == Stream(Row(Seq("ROWS_INSERTED" -> 4, "ROWS_REJECTED" -> 0))))
     }
 
     it("should write filtered results from one source (CSV) to another (CSV)") {
@@ -215,7 +215,7 @@ class QweryTest extends FunSpec {
           |FROM 'companylist.csv'
           |WHERE Industry = 'Precious Metals'""".stripMargin)
       val results = query.execute(scope).toSeq
-      assert(results == Stream(Row("ROWS_INSERTED" -> 34)))
+      assert(results == Stream(Row(Seq("ROWS_INSERTED" -> 35, "ROWS_REJECTED" -> 0))))
     }
 
     it("should overwrite/append filtered results from one source (CSV) to another (CSV)") {
@@ -235,8 +235,8 @@ class QweryTest extends FunSpec {
       )
       val results = queries.map(_.execute(scope).toSeq)
       assert(results == Seq(
-        Seq(Row("ROWS_INSERTED" -> 34)),
-        Seq(Row("ROWS_INSERTED" -> 5))
+        Seq(Row(Seq("ROWS_INSERTED" -> 35, "ROWS_REJECTED" -> 0))),
+        Seq(Row(Seq("ROWS_INSERTED" -> 6, "ROWS_REJECTED" -> 0)))
       ))
     }
 
@@ -248,7 +248,7 @@ class QweryTest extends FunSpec {
           |FROM 'companylist.csv'
           |WHERE Sector = 'Basic Industries'""".stripMargin)
       val results = query.execute(scope).toSeq
-      assert(results == Stream(Row("ROWS_INSERTED" -> 44)))
+      assert(results == Stream(Row(Seq("ROWS_INSERTED" -> 44, "ROWS_REJECTED" -> 0))))
     }
 
     it("should extract filtered results from a URL") {
