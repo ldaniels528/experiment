@@ -71,25 +71,26 @@ object QweryETL extends FileMoving {
 
     log.info("Hello.")
 
-    // schedule job queries every 30 seconds
+    // register this worker for job assignments
     QweryActorSystem.scheduler.scheduleOnce(0.seconds)(registerAsSlave())
-    QweryActorSystem.scheduler.schedule(15.seconds, 30.seconds)(checkForJobs(rootScope = Scope.root()))
   }
 
   /**
     * Checks out the next available job
-    * @param rootScope the [[Scope root scope]]
     * @param config    the [[ETLConfig ETL configuration]]
     */
-  private def checkForJobs(rootScope: Scope)(implicit config: ETLConfig, ec: ExecutionContext): Unit = {
+  private def checkForJobs()(implicit config: ETLConfig, ec: ExecutionContext): Unit = {
     implicit val timeout: Timeout = 30.seconds
 
     slaveID_? foreach { slaveID =>
       (config.jobManager ? CheckForJobs(slaveID)).mapTo[Option[Job]] onComplete {
         case Success(Some(job)) =>
-          processJob(job, rootScope) onComplete { _ =>
-            // immediately look for another job
-            checkForJobs(rootScope)
+          processJob(job, Scope.root()) onComplete {
+            case Success(_) =>
+              // immediately look for another job
+              checkForJobs()
+            case Failure(e) =>
+              log.error(s"[${job.workflowName}/${job._id.orNull}] Failed during process: ${e.getMessage}")
           }
         case Success(None) =>
         case Failure(e) =>
@@ -196,6 +197,12 @@ object QweryETL extends FileMoving {
       case Success(response_?) =>
         slaveID_? = response_?.flatMap(_._id)
         log.info(s"slaveID: ${slaveID_?.orNull}")
+
+        // schedule job queries every 30 seconds
+        QweryActorSystem.scheduler.schedule(0.seconds, 30.seconds) {
+          log.info(s"[Slave ${slaveID_?.orNull}] Checking for jobs...")
+          checkForJobs()
+        }
       case Failure(e) =>
         log.error("Registration request failed", e)
     }

@@ -31,7 +31,7 @@
                             <th class="col-md-2 stats_header right">Bytes Read</th>
                             <th class="col-md-1 stats_header right">Bytes/sec</th>
                         </tr>
-                        <tr ng-repeat="job in slave.jobs"
+                        <tr ng-repeat="job in slave.jobs | orderBy:'-lastUpdated' | limitTo:5"
                             ng-click="selectJob(job)"
                             ng-class="selectedJob == job ? 'highlight' : ''"
                             class="clickable">

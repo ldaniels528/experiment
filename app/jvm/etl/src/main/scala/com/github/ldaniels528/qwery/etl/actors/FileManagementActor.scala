@@ -2,8 +2,8 @@ package com.github.ldaniels528.qwery.etl
 package actors
 
 import java.io.File
+import java.nio.file.Paths
 import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_MODIFY}
-import java.nio.file.{Paths, WatchKey}
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -58,22 +58,19 @@ class FileManagementActor(config: ETLConfig) extends Actor with ActorLogging {
     val watcher = path.getFileSystem.newWatchService()
     Seq(ENTRY_CREATE, ENTRY_MODIFY) foreach (path.register(watcher, _))
 
-    var watchKey: Option[WatchKey] = None
-    QweryActorSystem.scheduler.schedule(0.seconds, 1.second) {
-      if (watchKey.isEmpty) watchKey = Option(watcher.poll())
-      else {
-        watchKey.foreach(_.pollEvents().asScala.foreach { event =>
-          Option(event.context()).map(_.toString) match {
-            case Some(content) =>
-              val file = new File(directory, content)
-              if (!watchedFiles.contains(file.getCanonicalPath)) {
-                callback(file)
-              }
-            case None =>
-              log.info("Context was null")
-          }
-        })
-      }
+    QweryActorSystem.scheduler.schedule(0.seconds, 15.second) {
+      Option(watcher.poll()).foreach(_.pollEvents().asScala.foreach { event =>
+        Option(event.context()).map(_.toString) match {
+          case Some(content) =>
+            val file = new File(directory, content)
+            if (!watchedFiles.contains(file.getCanonicalPath)) {
+              callback(file)
+              watchedFiles.remove(file.getCanonicalPath)
+            }
+          case None =>
+            log.warning(s"Context was null (event: '${event.kind}', context: '${event.context}')")
+        }
+      })
     }
 
     // process any pre-existing files

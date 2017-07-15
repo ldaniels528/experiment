@@ -1,6 +1,6 @@
 <div ng-controller="DashboardController" ng-init="init()">
     <div>
-        <div class="jobs_shown">{{ jobs.length }} jobs shown (<span style="color: #00ffcc">{{ getRunningJobs().length || 0}} active</span>)</div>
+        <div class="jobs_shown">{{ getRunningJobs().length }} jobs shown (<span style="color: #00ffcc">{{ (jobs.length - getRunningJobs().length) || 0}} successes</span>)</div>
         <div ng-class="selectedJob ? 'col-md-6' : 'col-md-12'">
             <div class="row">
                 <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'" class="bold left">Workflow</div>
@@ -8,7 +8,7 @@
                 <div ng-hide="selectedJob" class="col-md-4 bold center">Host</div>
                 <div ng-hide="selectedJob" class="col-md-2 bold center">State</div>
             </div>
-            <div ng-repeat="job in jobs"
+            <div ng-repeat="job in getDashboardJobs() | orderBy:'-state'"
                  ng-click="selectJob(job)"
                  ng-class="selectedJob == job ? 'highlight' : ''" class="row">
                 <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'">

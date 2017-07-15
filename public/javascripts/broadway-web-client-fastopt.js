@@ -5568,7 +5568,8 @@ var $d_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController 
 $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController.prototype.$classData = $d_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController;
 /** @constructor */
 function $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController() {
-  $c_O.call(this)
+  $c_O.call(this);
+  this.$$scope$1 = null
 }
 $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype = new $h_O();
 $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.constructor = $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController;
@@ -5578,12 +5579,35 @@ function $h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardContr
 }
 $h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype;
 $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope = (function($$scope) {
+  this.$$scope$1 = $$scope;
   $$scope.init = (function(arg$outer) {
     return (function() {
       arg$outer.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V()
     })
   })(this);
+  $$scope.getDashboardJobs = (function(arg$outer$1) {
+    return (function() {
+      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_Array()
+    })
+  })(this);
   return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_Array = (function() {
+  var array = this.$$scope$1.jobs;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var value = arg1.state;
+    var elem = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
+    if ((((value !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(elem, value)) !== true)) {
+      array$1.push(arg1)
+    };
+    i = ((1 + i) | 0)
+  };
+  return array$1
 });
 $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V = (function() {
   var jsx$1 = $g.console;
@@ -22424,20 +22448,20 @@ function $h_sci_$colon$colon() {
   /*<skip>*/
 }
 $h_sci_$colon$colon.prototype = $c_sci_$colon$colon.prototype;
-$c_sci_$colon$colon.prototype.head__O = (function() {
-  return this.head$5
-});
 $c_sci_$colon$colon.prototype.productPrefix__T = (function() {
   return "::"
+});
+$c_sci_$colon$colon.prototype.head__O = (function() {
+  return this.head$5
 });
 $c_sci_$colon$colon.prototype.productArity__I = (function() {
   return 2
 });
-$c_sci_$colon$colon.prototype.tail__sci_List = (function() {
-  return this.tl$5
-});
 $c_sci_$colon$colon.prototype.isEmpty__Z = (function() {
   return false
+});
+$c_sci_$colon$colon.prototype.tail__sci_List = (function() {
+  return this.tl$5
 });
 $c_sci_$colon$colon.prototype.productElement__I__O = (function(x$1) {
   switch (x$1) {

@@ -1,6 +1,9 @@
 package com.github.ldaniels528.transgress.client
 package controllers
 
+import io.scalajs.util.OptionHelper._
+import com.github.ldaniels528.transgress.client.models.Job
+import com.github.ldaniels528.transgress.models.JobStates
 import io.scalajs.dom.html.browser._
 import io.scalajs.npm.angularjs.{Controller, Scope}
 
@@ -23,6 +26,11 @@ class DashboardController($scope: DashboardScope) extends Controller {
     console.info(s"Initializing ${getClass.getSimpleName}...")
   }
 
+  $scope.getDashboardJobs = () => {
+    $scope.jobs.filterNot(_.state.contains(JobStates.SUCCESS))
+  }
+
+
 }
 
 /**
@@ -33,5 +41,6 @@ class DashboardController($scope: DashboardScope) extends Controller {
 trait DashboardScope extends Scope with JobHandlingScope {
   // functions
   var init: js.Function0[Unit] = js.native
+  var getDashboardJobs: js.Function0[js.Array[Job]] = js.native
 
 }
