@@ -20,7 +20,8 @@ case class Hints(append: Option[Boolean] = None,
                  jsonPath: List[Expression] = Nil,
                  properties: Option[JProperties] = None,
                  quotedNumbers: Option[Boolean] = None,
-                 quotedText: Option[Boolean] = None) {
+                 quotedText: Option[Boolean] = None,
+                 sparkMaster: Option[String] = None) {
 
   def asCSV: Hints = copy(delimiter = ",", headers = true, quotedText = true, quotedNumbers = false)
 

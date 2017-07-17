@@ -12,11 +12,13 @@ val scalaJsVersion = "2.12.2"
 val scalaJsIOVersion = "0.4.0"
 
 val akkaVersion = "2.5.2"
+val jacksonVersion = "2.8.9"
 val kafkaVersion = "0.10.2.1"
 val playVersion = "2.6.0"
 val playWsStandaloneVersion = "1.0.0"
-val scalatestVersion = "3.0.1"
+val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
+val sparkVersion = "2.1.1"
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Scala (JVM)
@@ -24,7 +26,7 @@ val slf4jVersion = "1.7.25"
 
 lazy val testDependencies = Seq(
   libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % scalatestVersion % "test"
+    "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
   ))
 
 lazy val root = (project in file("./app/jvm/bundle")).
@@ -42,7 +44,7 @@ lazy val root = (project in file("./app/jvm/bundle")).
     autoCompilerPlugins := true
   )
 
-lazy val core = (project in file("./app/jvm/core")).
+lazy val jvm_core = (project in file("./app/jvm/core")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -57,12 +59,34 @@ lazy val core = (project in file("./app/jvm/core")).
     coverageEnabled := true,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk-s3" % "1.11.129",
-      "com.twitter" %% "bijection-avro" % "0.9.5",
       "commons-io" % "commons-io" % "2.5",
-      "log4j" % "log4j" % "1.2.17",
       "mysql" % "mysql-connector-java" % "5.1.42",
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.liftweb" %% "lift-json" % "3.0.1",
+      //
+      // Avro
+      "com.twitter" %% "bijection-avro" % "0.9.5",
+      "org.apache.avro" % "avro" % "1.8.2",
+      //
+      // Jackson
+      "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+      "com.fasterxml.jackson.core" % "jackson-databind" % jacksonVersion,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion,
+      //
+      // Kafka
+      "org.apache.kafka" %% "kafka" % kafkaVersion,
+      "org.apache.kafka" % "kafka-clients" % kafkaVersion,
+      //
+      // Spark
+      "com.databricks" %% "spark-avro" % "3.2.0",
+      "com.databricks" %% "spark-csv" % "1.5.0",
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-streaming" % sparkVersion,
+      //
+      // SLF4J
+      "log4j" % "log4j" % "1.2.17",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test",
       //
       // TypeSafe
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -70,17 +94,12 @@ lazy val core = (project in file("./app/jvm/core")).
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.play" %% "play-json" % "2.6.0",
       "com.typesafe.play" %% "play-ahc-ws-standalone" % playWsStandaloneVersion,
-      "com.typesafe.play" %% "play-ws-standalone-json" % playWsStandaloneVersion,
-      //
-      // Apache
-      "org.apache.avro" % "avro" % "1.8.1",
-      "org.apache.kafka" %% "kafka" % kafkaVersion,
-      "org.apache.kafka" % "kafka-clients" % kafkaVersion
+      "com.typesafe.play" %% "play-ws-standalone-json" % playWsStandaloneVersion
     ))
 
 lazy val cli = (project in file("./app/jvm/cli")).
-  aggregate(core).
-  dependsOn(core).
+  aggregate(jvm_core).
+  dependsOn(jvm_core).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -102,13 +121,18 @@ lazy val cli = (project in file("./app/jvm/cli")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
+      //
+      // General Dependencies
       "org.scala-lang" % "jline" % "2.11.0-M3",
-      "org.slf4j" % "slf4j-api" % slf4jVersion
+      //
+      // SLF4J
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
     ))
 
 lazy val etl = (project in file("./app/jvm/etl")).
-  aggregate(core).
-  dependsOn(core).
+  aggregate(jvm_core).
+  dependsOn(jvm_core).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -130,12 +154,15 @@ lazy val etl = (project in file("./app/jvm/etl")).
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "org.slf4j" % "slf4j-api" % slf4jVersion
+      //
+      // SLF4J
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
     ))
 
 lazy val spark = (project in file("./app/jvm/spark")).
-  aggregate(core).
-  dependsOn(core).
+  aggregate(jvm_core).
+  dependsOn(jvm_core).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -149,16 +176,6 @@ lazy val spark = (project in file("./app/jvm/spark")).
     autoCompilerPlugins := true,
     coverageEnabled := true,
     libraryDependencies ++= Seq(
-      //
-      // DataBricks
-      "com.databricks" %% "spark-avro" % "3.2.0",
-      "com.databricks" %% "spark-csv" % "1.5.0",
-      //
-      // Apache
-      "org.apache.avro" % "avro" % "1.8.2",
-      "org.apache.spark" %% "spark-core" % "2.1.1",
-      "org.apache.spark" %% "spark-sql" % "2.1.1",
-      "org.apache.spark" %% "spark-streaming" % "2.1.1",
       //
       // SLF4J
       "org.slf4j" % "slf4j-api" % slf4jVersion,
@@ -198,7 +215,7 @@ lazy val appSettings = Seq(
 
 lazy val testJsDependencies = Seq(
   libraryDependencies ++= Seq(
-    "org.scalatest" %%% "scalatest" % scalatestVersion % "test"
+    "org.scalatest" %%% "scalatest" % scalaTestVersion % "test"
   ))
 
 lazy val common_core = (project in file("./app/js/common/core"))

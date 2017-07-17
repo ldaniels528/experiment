@@ -56,3 +56,5 @@ fixed-data.txt
 data
 fixed-data.csv
 tmp
+.idea/
+node_modules/

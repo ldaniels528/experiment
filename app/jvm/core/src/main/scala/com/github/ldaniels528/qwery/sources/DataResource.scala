@@ -9,7 +9,7 @@ import com.github.ldaniels528.qwery.ops.{Executable, Hints, ResultSet, Scope}
 case class DataResource(path: String, hints: Option[Hints] = Some(Hints())) extends Executable {
 
   override def execute(scope: Scope): ResultSet = {
-    scope.lookupView(scope.expand(path)) match {
+    scope.lookupView(getRealPath(scope)) match {
       case Some(view) => view.execute(scope)
       case None => getInputSource(scope).map(_.execute(scope))
         .getOrElse(throw new IllegalStateException(s"No input source found for path '$path'"))
@@ -21,13 +21,23 @@ case class DataResource(path: String, hints: Option[Hints] = Some(Hints())) exte
     * @param scope the given [[Scope scope]]
     * @return an option of an [[InputSource input source]]
     */
-  def getInputSource(scope: Scope): Option[InputSource] = InputSource(path = scope.expand(path), hints)
+  @inline
+  def getInputSource(scope: Scope): Option[InputSource] = InputSource(path = getRealPath(scope), hints)
 
   /**
     * Retrieves the output source that corresponds to the path
     * @param scope the given [[Scope scope]]
     * @return an option of an [[OutputSource output source]]
     */
-  def getOutputSource(scope: Scope): Option[OutputSource] = OutputSource(path = scope.expand(path), hints)
+  @inline
+  def getOutputSource(scope: Scope): Option[OutputSource] = OutputSource(path = getRealPath(scope), hints)
+
+  /**
+    * Returns the "real" (or expanded) path
+    * @param scope the given [[Scope scope]]
+    * @return the "real" (or expanded) path
+    */
+  @inline
+  def getRealPath(scope: Scope): String = scope.expand(path)
 
 }

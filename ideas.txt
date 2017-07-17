@@ -16,6 +16,15 @@ WHERE Industry = 'Oil/Gas Transmission'
 select * from 'files://./data/NASDAQ/*.txt' with csv format where `<ticker>` = 'AAPL' limit 30;
 
 ************************************************************************
+*      Spark testing
+************************************************************************
+
+SPARK INSERT OVERWRITE "./scratch" (Symbol, Sector, Industry, LastTrade)
+WITH CSV FORMAT
+SELECT Symbol, Sector, Industry, LastSale FROM "./companylist.csv"
+WHERE Industry = "Precious Metals";
+
+************************************************************************
 *      JOIN testing
 ************************************************************************
 

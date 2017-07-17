@@ -462,6 +462,7 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
     val withHeader = "WITH COLUMN %C(column,HEADERS)"
     val withProps = "WITH PROPERTIES %a:props"
     val withQuoted = "WITH QUOTED %C(quoted,NUMBERS,TEXT)"
+    val withSparkMaster = "WITH SPARK MASTER %a:master"
     val parser = SQLLanguageParser(stream)
     var hints = Hints()
 
@@ -512,6 +513,10 @@ class SQLLanguageParser(stream: TokenStream) extends ExpressionParser {
         case p if p.matches(withFormat) =>
           val params = p.process(withFormat)
           params.atoms.get("format").foreach(format => hints = hints.usingFormat(format = format))
+        // WITH SPARK MASTER ['local']
+        case p if p.matches(withSparkMaster) =>
+          val params = p.process(withSparkMaster)
+          params.atoms.get("master").foreach(master => hints = hints.copy(sparkMaster = Some(master)))
         case _ =>
           die("Syntax error")
       }
@@ -602,6 +607,7 @@ object SQLLanguageParser {
     case ts if ts is "SELECT" => parseSelect(ts)
     case ts if ts is "SET" => parseSet(ts)
     case ts if ts is "SHOW" => parseShow(ts)
+    case ts if ts nextIf "SPARK" => parseSpark(ts)
     case ts => die(s"Unrecognized command near '${ts.peek.map(_.text).orNull}'")
   }
 
@@ -732,15 +738,21 @@ object SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Insert executable]]
     */
-  private def parseInsert(stream: TokenStream): Insert = {
+  private def parseInsert(stream: TokenStream, spark: Boolean = false): Executable = {
     val params = SQLTemplateParams(stream, "INSERT %C(mode,INTO,OVERWRITE) %a:target ( %F:fields ) %w:hints %V:source")
     val append = params.atoms("mode").equalsIgnoreCase("INTO")
     val fields = params.fields("fields")
     val hints = (params.hints.get("hints") ?? Option(Hints())).map(_.copy(append = Some(append), fields = fields))
-    Insert(
-      target = DataResource(params.atoms("target"), hints),
-      source = params.sources("source"),
-      fields = fields)
+    if (spark)
+      InsertSpark(
+        target = DataResource(params.atoms("target"), hints),
+        source = params.sources("source"),
+        fields = fields)
+    else
+      Insert(
+        target = DataResource(params.atoms("target"), hints),
+        source = params.sources("source"),
+        fields = fields)
   }
 
   /**
@@ -864,6 +876,16 @@ object SQLLanguageParser {
     val entityType = params.atoms("entityType")
     if (!Show.isValidEntityType(entityType)) die(s"Invalid entity type '$entityType'")
     Show(entityType)
+  }
+
+  /**
+    * Parses the next query or statement from the stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Executable]]
+    */
+  def parseSpark(stream: TokenStream): Executable = stream match {
+    case ts if ts is "INSERT" => parseInsert(ts, spark = true)
+    case ts => die(s"Unrecognized Spark command near '${ts.peek.map(_.text).orNull}'")
   }
 
   /**
