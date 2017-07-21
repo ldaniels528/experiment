@@ -127,6 +127,7 @@ lazy val etl = (project in file("./app/jvm/etl")).
     assemblyMergeStrategy in assembly := {
       case PathList("log4j.properties", _*) => MergeStrategy.discard
       case PathList("META-INF", _*) => MergeStrategy.discard
+      case fileName if fileName.toLowerCase == "reference.conf" => MergeStrategy.concat
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
