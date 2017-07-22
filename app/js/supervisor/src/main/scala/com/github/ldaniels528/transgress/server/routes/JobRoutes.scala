@@ -14,6 +14,7 @@ import io.scalajs.npm.mongodb._
 import io.scalajs.npm.request.{Request => Client}
 import io.scalajs.util.JsUnderOrHelper._
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -53,6 +54,22 @@ class JobRoutes(app: Application with WsRouting, db: Db)(implicit ec: ExecutionC
       case None => JobStates.values.toJSArray
     }
     jobDAO.findByState(states: _*).toArray().toFuture onComplete {
+      case Success(jobs) => response.send(jobs); next()
+      case Failure(e) => response.internalServerError(e); next()
+    }
+  })
+
+  /**
+    * Retrieve historical jobs
+    */
+  app.get("/api/jobs/history", (request: Request, response: Response, next: NextFunction) => {
+    val (start, end) = (request.params.get("start").map(_.toDouble), request.params.get("end").map(_.toDouble)) match {
+      case (Some(startDate), Some(endDate)) => startDate -> endDate
+      case (Some(startDate), None) => (startDate, js.Date.now())
+      case (None, Some(endDate)) => (endDate - 7.days.toMillis, endDate)
+      case (None, None) => (js.Date.now() - 24.hours.toMillis, js.Date.now())
+    }
+    jobDAO.find[JobData](doc("lastUpdated" $gte start, "lastUpdated" $lte end)).toArray().toFuture onComplete {
       case Success(jobs) => response.send(jobs); next()
       case Failure(e) => response.internalServerError(e); next()
     }
@@ -128,7 +145,7 @@ class JobRoutes(app: Application with WsRouting, db: Db)(implicit ec: ExecutionC
     val jobID = request.params.apply("jobID")
     val slaveID = request.params.apply("slaveID")
     for {
-      endpoint_? <- slaveDAO.findOneByID(slaveID) flatMap  {
+      endpoint_? <- slaveDAO.findOneByID(slaveID) flatMap {
         case Some(slave) => Future.successful(slave.getEndpoint.toOption)
         case None => Future.failed(js.JavaScriptException(s"Slave $slaveID not found"))
       }

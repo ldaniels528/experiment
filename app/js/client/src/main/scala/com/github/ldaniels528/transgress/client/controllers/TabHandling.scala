@@ -21,8 +21,8 @@ trait TabHandling {
   /////////////////////////////////////////////////////////
 
   $scope.tabs = js.Array(
-    new AppTab(name = "Activity", uri = "/activity", icon = "fa-tasks"),
     new AppTab(name = "Dashboard", uri = "/dashboard", icon = "fa-stack-overflow"),
+    new AppTab(name = "Activity", uri = "/activity", icon = "fa-tasks"),
     //new AppTab(name = "Slaves", uri = "/slaves", icon = "fa-android"),
     //new AppTab(name = "Triggers", uri = "/triggers", icon = "fa-cogs"),
     new AppTab(name = "Workflows", uri = "/workflows", icon = "fa-th-large")

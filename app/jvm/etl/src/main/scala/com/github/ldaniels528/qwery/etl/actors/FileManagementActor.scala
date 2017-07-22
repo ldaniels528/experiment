@@ -3,9 +3,10 @@ package actors
 
 import java.io.File
 import java.nio.file.Paths
-import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_MODIFY}
+import java.nio.file.StandardWatchEventKinds.{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY}
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging}
 import com.github.ldaniels528.qwery.actors.QweryActorSystem
@@ -56,21 +57,22 @@ class FileManagementActor(config: ETLConfig) extends Actor with ActorLogging {
   private def registerWatch(directory: File, callback: FileWatchCallback) = {
     val path = Paths.get(directory.getAbsolutePath)
     val watcher = path.getFileSystem.newWatchService()
-    Seq(ENTRY_CREATE, ENTRY_MODIFY) foreach (path.register(watcher, _))
+    val watchKey = path.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+    log.info(s"Registering directory '${directory.getCanonicalPath}'...")
 
-    QweryActorSystem.scheduler.schedule(0.seconds, 15.second) {
-      Option(watcher.poll()).foreach(_.pollEvents().asScala.foreach { event =>
-        Option(event.context()).map(_.toString) match {
-          case Some(content) =>
-            val file = new File(directory, content)
-            if (!watchedFiles.contains(file.getCanonicalPath)) {
-              callback(file)
-              watchedFiles.remove(file.getCanonicalPath)
-            }
-          case None =>
-            log.warning(s"Context was null (event: '${event.kind}', context: '${event.context}')")
+    QweryActorSystem.scheduler.schedule(0.seconds, 15.seconds) {
+      log.info(s"Polling directory '${directory.getCanonicalPath}' for changes...")
+      for {
+        //watchKey <- Option(watcher.poll(1, TimeUnit.SECONDS))
+        event <- watchKey.pollEvents().asScala
+        context <- Option(event.context())
+      } {
+        val file = new File(directory, context.toString)
+        log.info(s"Investigating '${file.getCanonicalPath}'...")
+        if (!watchedFiles.contains(file.getCanonicalPath)) {
+          try callback(file) finally watchedFiles.remove(file.getCanonicalPath)
         }
-      })
+      }
     }
 
     // process any pre-existing files

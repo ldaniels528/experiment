@@ -2,7 +2,7 @@ package com.github.ldaniels528.transgress
 package client
 
 import com.github.ldaniels528.transgress.client.controllers._
-import com.github.ldaniels528.transgress.client.services.{JobService, SlaveService, WebSocketService, WorkflowService}
+import com.github.ldaniels528.transgress.client.services._
 import io.scalajs.npm.angularjs.uirouter.{RouteProvider, RouteTo}
 import io.scalajs.npm.angularjs.{Module, Scope, Timeout, angular}
 

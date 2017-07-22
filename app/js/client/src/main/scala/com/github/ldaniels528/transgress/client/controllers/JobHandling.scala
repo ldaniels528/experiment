@@ -8,7 +8,9 @@ import io.scalajs.npm.angularjs.toaster.Toaster
 import io.scalajs.npm.angularjs.{Controller, Scope}
 import io.scalajs.util.JsUnderOrHelper._
 
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
+import scala.util.{Failure, Success}
 
 /**
   * Job Handling
@@ -28,15 +30,25 @@ trait JobHandling {
   /////////////////////////////////////////////////////////
 
   $scope.jobs = js.Array()
+  $scope.jobHistory = js.Array()
 
   /////////////////////////////////////////////////////////
   //    Public Methods
   /////////////////////////////////////////////////////////
 
-  /**
-    * Returns only the currently running jobs
-    */
-  $scope.getRunningJobs = () => $scope.jobs.filterNot(_.state.contains(JobStates.SUCCESS))
+  $scope.loadJobHistory = (aStart: js.UndefOr[js.Date], aEnd: js.UndefOr[js.Date]) => {
+    val result = for (start <- aStart; end <- aEnd) yield (start, end)
+    result.toOption match {
+      case Some((start, end)) =>
+        jobService.getJobHistory(start, end).toFuture onComplete {
+          case Success(response) =>
+            $scope.$apply(() => $scope.jobHistory = response.data)
+          case Failure(e) =>
+            toaster.error("Error Loading History", e.getMessage)
+        }
+      case None =>
+    }
+  }
 
   /**
     * Returns a colored bulb based on the status of the given job
@@ -48,7 +60,7 @@ trait JobHandling {
       case PAUSED => "images/statuses/yellowlight.gif"
       case QUEUED => "images/statuses/bluelight.png"
       case RUNNING => "images/statuses/loading16.gif"
-      case STOPPED => "images/statuses/redlight.png"
+      case FAILED | STOPPED => "images/statuses/redlight.png"
       case SUCCESS => "images/statuses/greenlight.png"
       case _ => js.undefined
     }
@@ -61,6 +73,7 @@ trait JobHandling {
     job.state flatMap {
       case NEW => "status_new"
       case CLAIMED => "status_claimed"
+      case FAILED => "status_failed"
       case PAUSED => "status_paused"
       case QUEUED => "status_queued"
       case RUNNING => "status_running"
@@ -69,6 +82,11 @@ trait JobHandling {
       case _ => js.undefined
     }
   }
+
+  /**
+    * Returns only the currently running jobs
+    */
+  $scope.getRunningJobs = () => $scope.jobs.filterNot(_.state.contains(JobStates.SUCCESS))
 
   $scope.isPausable = (aJob: js.UndefOr[Job]) => aJob.exists { job =>
     job.state.contains(JobStates.RUNNING) && !isJobOperation
@@ -121,15 +139,17 @@ trait JobHandlingScope extends js.Any {
 
   // variables
   var jobs: js.Array[Job] = js.native
+  var jobHistory: js.Array[Job] = js.native
   var pausing: js.UndefOr[Boolean] = js.native
   var resuming: js.UndefOr[Boolean] = js.native
   var stopping: js.UndefOr[Boolean] = js.native
   var selectedJob: js.UndefOr[Job] = js.native
 
   // functions
-  var getRunningJobs: js.Function0[js.Array[Job]] = js.native
+  var loadJobHistory: js.Function2[js.UndefOr[js.Date], js.UndefOr[js.Date], Unit] = js.native
   var getJobStatusBulb: js.Function1[js.UndefOr[Job], js.UndefOr[String]] = js.native
   var getJobStatusClass: js.Function1[js.UndefOr[Job], js.UndefOr[String]] = js.native
+  var getRunningJobs: js.Function0[js.Array[Job]] = js.native
   var isPausable: js.Function1[js.UndefOr[Job], Boolean] = js.native
   var isResumable: js.Function1[js.UndefOr[Job], Boolean] = js.native
   var isRunning: js.Function1[js.UndefOr[Job], Boolean] = js.native

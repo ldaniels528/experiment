@@ -51,14 +51,16 @@ case class MainController($scope: MainScope, $interval: Interval, $location: Loc
     val outcome = for {
       slaves <- slaveService.getSlaves().toFuture.map(_.data)
       jobs <- jobService.getJobs().toFuture.map(_.data)
-    } yield (slaves, jobs)
+      jobHistory <- jobService.getJobHistory().toFuture.map(_.data)
+    } yield (slaves, jobs, jobHistory)
 
     outcome onComplete {
-      case Success((slaves, jobs)) =>
+      case Success((slaves, jobs, jobHistory)) =>
         console.log(s"Loaded slaves and jobs in ${js.Date.now() - startTime} msecs...")
         $scope.$apply { () =>
           $scope.slaves = slaves
           $scope.jobs = jobs
+          $scope.jobHistory = jobHistory
 
           slaves foreach { slave =>
             slave.jobs = jobs.filter(_.slaveID ?== slave._id)

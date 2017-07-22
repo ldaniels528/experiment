@@ -27,6 +27,17 @@ class JobService($http: Http) extends Service {
 
   /**
     * Pauses the given job
+    * @param start the given start date
+    * @param end   the given end date
+    * @return the promise of the historical [[Job jobs]]
+    */
+  def getJobHistory(start: js.UndefOr[js.Date] = js.undefined, end: js.UndefOr[js.Date] = js.undefined): js.Promise[HttpResponse[js.Array[Job]]] = {
+    val params = List(start.map("start=" + _.getTime), end.map("end=" + _.getTime)).flatMap(_.toOption).mkString("&")
+    $http.get[js.Array[Job]](s"/api/jobs/history?$params")
+  }
+
+  /**
+    * Pauses the given job
     * @param jobId    the given job ID
     * @param  slaveId the given slave ID
     * @return the promise of the [[Job updated job]]

@@ -1,14 +1,37 @@
 <div ng-controller="DashboardController" ng-init="init()">
+    <div class="row">
+        <div class="col-md-6">
+            <table>
+               <tr>
+                   <td ng-repeat="state in jobStates">
+                       <span ng-show="state === selectedJobState" class="dashboard_selected_state">{{ state }}</span>
+                       <span ng-hide="state === selectedJobState" class="dashboard_state">
+                           <a ng-click="updateJobState(state)">{{ state }}</a>
+                       </span>
+                       &nbsp;
+                   </td>
+               </tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <div class="pull-right" style="margin-right: 10px">
+                Max Results:
+                <select ng-model="maxResults" ng-options="value as value for value in maxResultsSet">
+                </select>
+            </div>
+        </div>
+    </div>
     <div>
-        <div class="jobs_shown">{{ getRunningJobs().length }} jobs shown (<span style="color: #00ffcc">{{ (jobs.length - getRunningJobs().length) || 0}} successes</span>)</div>
-        <div ng-class="selectedJob ? 'col-md-6' : 'col-md-12'">
+        <div class="jobs_shown">{{ getDashboardJobs().length }} job(s) shown</div>
+        <div class="warning" ng-hide="getDashboardJobs().length">No matching jobs found</div>
+        <div ng-show="getDashboardJobs().length" ng-class="selectedJob ? 'col-md-6' : 'col-md-12'">
             <div class="row">
                 <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'" class="bold left">Workflow</div>
-                <div ng-class="selectedJob ? 'col-md-7' : 'col-md-4'" class="bold left">File / Input</div>
-                <div ng-hide="selectedJob" class="col-md-4 bold center">Host</div>
-                <div ng-hide="selectedJob" class="col-md-2 bold center">State</div>
+                <div ng-class="selectedJob ? 'col-md-7' : 'col-md-4'" class="bold left">Source</div>
+                <div ng-hide="selectedJob" class="col-md-4 bold center">Status</div>
+                <div ng-hide="selectedJob" class="col-md-2 bold center">Last Updated</div>
             </div>
-            <div ng-repeat="job in getDashboardJobs() | orderBy:'-state'"
+            <div ng-repeat="job in getDashboardJobs() | orderBy:'-lastUpdated'"
                  ng-click="selectJob(job)"
                  ng-class="selectedJob == job ? 'highlight' : ''" class="row">
                 <div ng-class="selectedJob ? 'col-md-5' : 'col-md-2'">
@@ -16,21 +39,11 @@
                 </div>
                 <div ng-class="selectedJob ? 'col-md-7' : 'col-md-4'">{{ job.name }}</div>
                 <div ng-hide="selectedJob" class="col-md-4">
-                    <span ng-show="job.processingHost">
-                        <span ng-show="getSlaveForJob(job).name">{{ getSlaveForJob(job).name }}</span>
-                        <span ng-hide="getSlaveForJob(job).name">{{ job.processingHost }}</span>
-                    </span>
-                    <span ng-hide="job.processingHost" class="null">(UNCLAIMED)</span>
+                    <span ng-show="job.state === 'SUCCESS'" class="status_success">100%</span>
+                    <span ng-hide="job.state === 'SUCCESS'" ng-class="getJobStatusClass(job)">{{ getJobCompletion(job) || 0 | number:1 }}%</span>
                 </div>
                 <div ng-hide="selectedJob" class="col-md-2">
-                    <span ng-hide="job.message">
-                        <span ng-class="getJobStatusClass(job)">{{ job.state }}</span>
-                        <span ng-show="isRunning(job) && job.statistics.completionTime">
-                            <span class="null">&#8212;</span>
-                            {{ job.statistics.completionTime | duration }}
-                        </span>
-                    </span>
-                    <span ng-show="job.message" class="error">{{ job.message }}</span>
+                    {{ job.lastUpdated | date:'MM/dd/yy HH:mm:ss' }}
                 </div>
             </div>
         </div>

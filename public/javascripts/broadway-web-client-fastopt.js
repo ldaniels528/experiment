@@ -1105,7 +1105,29 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpand
     })
   })($thiz)
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$3__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$14__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+    return ((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))
+  } else {
+    return false
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
   if ((aJob === (void 0))) {
     return (void 0)
   } else {
@@ -1113,33 +1135,42 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__c
     if ((value === (void 0))) {
       return (void 0)
     } else {
-      var x0$1 = $as_T(value);
-      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$1) ? "images/statuses/offlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$1) ? "images/statuses/yellowlight.gif" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$1) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$1) ? "images/statuses/loading16.gif" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$1) ? "images/statuses/redlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$1) ? "images/statuses/greenlight.png" : (void 0))))))))
+      var x0$3 = $as_T(value);
+      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$3) ? "status_new" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$3) ? "status_claimed" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().FAILED$1 === x0$3) ? "status_failed" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$3) ? "status_paused" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$3) ? "status_queued" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$3) ? "status_running" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$3) ? "status_stopped" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$3) ? "status_success" : (void 0)))))))))
     }
   }
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_Array($thiz) {
-  var array = $thiz.$$scope$1.jobs;
-  var array$1 = [];
-  var i = 0;
-  var len = $uI(array.length);
-  while ((i < len)) {
-    var index = i;
-    var arg1 = array[index];
-    var valueA = arg1.state;
-    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
-    if ((((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value)) !== true)) {
-      array$1.push(arg1)
-    };
-    i = ((1 + i) | 0)
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$22__sjs_js_UndefOr__V($thiz, aJob) {
+  var jsx$2 = $thiz.$$scope$1;
+  if ((aJob === (void 0))) {
+    var jsx$1 = (void 0)
+  } else {
+    var opt = $m_s_Option$().apply__O__s_Option(aJob);
+    if (opt.isEmpty__Z()) {
+      var jsx$1 = (void 0)
+    } else {
+      var arg1 = opt.get__O();
+      var jsx$1 = arg1
+    }
   };
-  return array$1
+  jsx$2.selectedJob = jsx$1
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$13__sjs_js_UndefOr__Z($thiz, aJob) {
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$20__sjs_js_UndefOr__Z($thiz, aJob) {
   if ((aJob !== (void 0))) {
     var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
-    return ((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      var jsx$1 = true
+    } else {
+      var valueA$1 = aJob.state;
+      var value$1 = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
+    };
+    if (jsx$1) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
   } else {
     return false
   }
@@ -1194,81 +1225,112 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__i
 }
 function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V($thiz) {
   $thiz.$$scope$1.jobs = [];
-  $thiz.$$scope$1.getRunningJobs = (function(arg$outer) {
-    return (function() {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_Array(arg$outer)
+  $thiz.$$scope$1.jobHistory = [];
+  $thiz.$$scope$1.loadJobHistory = (function(arg$outer) {
+    return (function(arg1$2, arg2$2) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_UndefOr__sjs_js_UndefOr__V(arg$outer, arg1$2, arg2$2)
     })
   })($thiz);
   $thiz.$$scope$1.getJobStatusBulb = (function(arg$outer$1) {
-    return (function(arg1$2) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$3__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$1, arg1$2)
+    return (function(arg1$2$1) {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$1, arg1$2$1)
     })
   })($thiz);
   $thiz.$$scope$1.getJobStatusClass = (function(arg$outer$2) {
-    return (function(arg1$2$1) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$2, arg1$2$1)
-    })
-  })($thiz);
-  $thiz.$$scope$1.isPausable = (function(arg$outer$3) {
     return (function(arg1$2$2) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z(arg$outer$3, arg1$2$2)
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__sjs_js_UndefOr(arg$outer$2, arg1$2$2)
     })
   })($thiz);
-  $thiz.$$scope$1.isResumable = (function(arg$outer$4) {
+  $thiz.$$scope$1.getRunningJobs = (function(arg$outer$3) {
+    return (function() {
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$12__sjs_js_Array(arg$outer$3)
+    })
+  })($thiz);
+  $thiz.$$scope$1.isPausable = (function(arg$outer$4) {
     return (function(arg1$2$3) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$11__sjs_js_UndefOr__Z(arg$outer$4, arg1$2$3)
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$14__sjs_js_UndefOr__Z(arg$outer$4, arg1$2$3)
     })
   })($thiz);
-  $thiz.$$scope$1.isRunning = (function(arg$outer$5) {
+  $thiz.$$scope$1.isResumable = (function(arg$outer$5) {
     return (function(arg1$2$4) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$13__sjs_js_UndefOr__Z(arg$outer$5, arg1$2$4)
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$16__sjs_js_UndefOr__Z(arg$outer$5, arg1$2$4)
     })
   })($thiz);
-  $thiz.$$scope$1.isStoppable = (function(arg$outer$6) {
+  $thiz.$$scope$1.isRunning = (function(arg$outer$6) {
     return (function(arg1$2$5) {
-      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$15__sjs_js_UndefOr__Z(arg$outer$6, arg1$2$5)
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__Z(arg$outer$6, arg1$2$5)
     })
   })($thiz);
-  $thiz.$$scope$1.selectJob = (function(arg$outer$7) {
+  $thiz.$$scope$1.isStoppable = (function(arg$outer$7) {
     return (function(arg1$2$6) {
-      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$17__sjs_js_UndefOr__V(arg$outer$7, arg1$2$6)
+      return $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$20__sjs_js_UndefOr__Z(arg$outer$7, arg1$2$6)
     })
   })($thiz);
-  $thiz.$$scope$1.updateJob = (function(arg$outer$8) {
-    return (function(arg1$2$7, arg2$2) {
-      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__sjs_js_UndefOr__V(arg$outer$8, arg1$2$7, arg2$2)
+  $thiz.$$scope$1.selectJob = (function(arg$outer$8) {
+    return (function(arg1$2$7) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$22__sjs_js_UndefOr__V(arg$outer$8, arg1$2$7)
+    })
+  })($thiz);
+  $thiz.$$scope$1.updateJob = (function(arg$outer$9) {
+    return (function(arg1$2$8, arg2$2$1) {
+      $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$23__sjs_js_UndefOr__sjs_js_UndefOr__V(arg$outer$9, arg1$2$8, arg2$2$1)
     })
   })($thiz)
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
-  if ((aJob === (void 0))) {
-    return (void 0)
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$1__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aStart, aEnd) {
+  if ((aStart === (void 0))) {
+    var result = (void 0)
+  } else if ((aEnd === (void 0))) {
+    var result = (void 0)
   } else {
-    var value = aJob.state;
-    if ((value === (void 0))) {
-      return (void 0)
-    } else {
-      var x0$2 = $as_T(value);
-      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$2) ? "status_new" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$2) ? "status_claimed" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$2) ? "status_paused" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$2) ? "status_queued" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$2) ? "status_running" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$2) ? "status_stopped" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$2) ? "status_success" : (void 0))))))))
-    }
+    var value = new $c_T2().init___O__O(aStart, aEnd);
+    var result = value
+  };
+  var x1 = ((result === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(result));
+  matchEnd6: {
+    if ($is_s_Some(x1)) {
+      var x2 = $as_s_Some(x1);
+      var p3 = $as_T2(x2.value$2);
+      if ((p3 !== null)) {
+        var start$3 = p3.$$und1$f;
+        var end = p3.$$und2$f;
+        var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+        var p = $thiz.jobService$1.getJobHistory__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_Promise(start$3, end);
+        jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
+          return (function(x0$1$2) {
+            var x0$1 = $as_s_util_Try(x0$1$2);
+            if ($is_s_util_Success(x0$1)) {
+              var x2$1 = $as_s_util_Success(x0$1);
+              var response = x2$1.value$2;
+              return this$2$1.$$scope$1.$apply((function($this, response$1) {
+                return (function() {
+                  $this.$$scope$1.jobHistory = response$1.data
+                })
+              })(this$2$1, response))
+            } else if ($is_s_util_Failure(x0$1)) {
+              var x3 = $as_s_util_Failure(x0$1);
+              var e = x3.exception$2;
+              var toaster = this$2$1.toaster$1;
+              var body = e.getMessage__T();
+              var value$1 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+              var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$1, "Error Loading History", body);
+              return toaster.pop(jsx$2)
+            } else {
+              throw new $c_s_MatchError().init___O(x0$1)
+            }
+          })
+        })($thiz)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+        break matchEnd6
+      }
+    };
+    var x = $m_s_None$();
+    if ((x === x1)) {
+      break matchEnd6
+    };
+    throw new $c_s_MatchError().init___O(x1)
   }
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$17__sjs_js_UndefOr__V($thiz, aJob) {
-  var jsx$2 = $thiz.$$scope$1;
-  if ((aJob === (void 0))) {
-    var jsx$1 = (void 0)
-  } else {
-    var opt = $m_s_Option$().apply__O__s_Option(aJob);
-    if (opt.isEmpty__Z()) {
-      var jsx$1 = (void 0)
-    } else {
-      var arg1 = opt.get__O();
-      var jsx$1 = arg1
-    }
-  };
-  jsx$2.selectedJob = jsx$1
-}
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aJobs, aJob) {
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$23__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aJobs, aJob) {
   if ((aJobs !== (void 0))) {
     if ((aJob !== (void 0))) {
       var len = $uI(aJobs.length);
@@ -1306,40 +1368,7 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__c
     }
   }
 }
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z($thiz, aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-}
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$15__sjs_js_UndefOr__Z($thiz, aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      var jsx$1 = true
-    } else {
-      var valueA$1 = aJob.state;
-      var value$1 = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
-      var jsx$1 = ((valueA$1 !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA$1, value$1))
-    };
-    if (jsx$1) {
-      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-}
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$11__sjs_js_UndefOr__Z($thiz, aJob) {
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$16__sjs_js_UndefOr__Z($thiz, aJob) {
   if ((aJob !== (void 0))) {
     var valueA = aJob.state;
     var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1;
@@ -1358,6 +1387,36 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__c
   } else {
     return false
   }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$6__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var value = aJob.state;
+    if ((value === (void 0))) {
+      return (void 0)
+    } else {
+      var x0$2 = $as_T(value);
+      return (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().NEW$1 === x0$2) ? "images/statuses/offlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().CLAIMED$1 === x0$2) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().PAUSED$1 === x0$2) ? "images/statuses/yellowlight.gif" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().QUEUED$1 === x0$2) ? "images/statuses/bluelight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1 === x0$2) ? "images/statuses/loading16.gif" : ((($m_Lcom_github_ldaniels528_transgress_models_JobStates$().FAILED$1 === x0$2) || ($m_Lcom_github_ldaniels528_transgress_models_JobStates$().STOPPED$1 === x0$2)) ? "images/statuses/redlight.png" : (($m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1 === x0$2) ? "images/statuses/greenlight.png" : (void 0))))))))
+    }
+  }
+}
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$12__sjs_js_Array($thiz) {
+  var array = $thiz.$$scope$1.jobs;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var valueA = arg1.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
+    if ((((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value)) !== true)) {
+      array$1.push(arg1)
+    };
+    i = ((1 + i) | 0)
+  };
+  return array$1
 }
 function $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__com$github$ldaniels528$transgress$client$controllers$SlaveHandling$$$anonfun$$init$$7__sjs_js_UndefOr__sjs_js_UndefOr($thiz, aSlave) {
   if ((aSlave === (void 0))) {
@@ -1465,7 +1524,7 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling_
   })($thiz)
 }
 function $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V($thiz) {
-  $thiz.$$scope$1.tabs = [new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Activity", "/activity", "fa-tasks"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Dashboard", "/dashboard", "fa-stack-overflow"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Workflows", "/workflows", "fa-th-large")];
+  $thiz.$$scope$1.tabs = [new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Dashboard", "/dashboard", "fa-stack-overflow"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Activity", "/activity", "fa-tasks"), new ($a_Lcom_github_ldaniels528_transgress_client_controllers_AppTab())("Workflows", "/workflows", "fa-th-large")];
   $thiz.$$scope$1.selectedTab = $thiz.$$scope$1.tabs[0];
   $thiz.$$scope$1.changeTab = (function(arg$outer) {
     return (function(arg1$2) {
@@ -2281,6 +2340,7 @@ function $c_Lcom_github_ldaniels528_transgress_models_JobStates$() {
   $c_O.call(this);
   this.NEW$1 = null;
   this.CLAIMED$1 = null;
+  this.FAILED$1 = null;
   this.QUEUED$1 = null;
   this.RUNNING$1 = null;
   this.PAUSED$1 = null;
@@ -2297,6 +2357,7 @@ $h_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype = $c_Lcom_gith
 $c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.init___ = (function() {
   this.NEW$1 = "NEW";
   this.CLAIMED$1 = "CLAIMED";
+  this.FAILED$1 = "FAILED";
   this.QUEUED$1 = "QUEUED";
   this.RUNNING$1 = "RUNNING";
   this.PAUSED$1 = "PAUSED";
@@ -2305,7 +2366,7 @@ $c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.init___ = (fun
   return this
 });
 $c_Lcom_github_ldaniels528_transgress_models_JobStates$.prototype.values__sc_Iterator = (function() {
-  return $as_sc_IterableLike($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.NEW$1, this.QUEUED$1, this.RUNNING$1, this.STOPPED$1, this.SUCCESS$1]))).iterator__sc_Iterator()
+  return $as_sc_IterableLike($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.NEW$1, this.QUEUED$1, this.RUNNING$1, this.FAILED$1, this.STOPPED$1, this.SUCCESS$1]))).iterator__sc_Iterator()
 });
 var $d_Lcom_github_ldaniels528_transgress_models_JobStates$ = new $TypeData().initClass({
   Lcom_github_ldaniels528_transgress_models_JobStates$: 0
@@ -5423,36 +5484,36 @@ $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.init
 });
 $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.controller("ActivityController", ["$scope", (function($this) {
-    return (function(x$macro$7$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$7$2)
+    return (function(x$macro$1$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$1$2)
     })
   })(this)]);
   module.controller("DashboardController", ["$scope", (function(this$2$1) {
-    return (function(x$macro$8$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController().init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope(x$macro$8$2)
+    return (function(x$macro$2$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController().init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope(x$macro$2$2)
     })
   })(this)]);
   module.controller("MainController", ["$scope", "$interval", "$location", "toaster", "JobService", "SlaveService", (function(this$3$1) {
-    return (function(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13$2, x$macro$14$2) {
-      var x$macro$13 = $as_Lcom_github_ldaniels528_transgress_client_services_JobService(x$macro$13$2);
-      var x$macro$14 = $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$14$2);
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController().init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13, x$macro$14)
+    return (function(x$macro$3$2, x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7$2, x$macro$8$2) {
+      var x$macro$7 = $as_Lcom_github_ldaniels528_transgress_client_services_JobService(x$macro$7$2);
+      var x$macro$8 = $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$8$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController().init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$3$2, x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7, x$macro$8)
     })
   })(this)]);
   module.controller("SlaveController", ["$scope", (function(this$4$1) {
-    return (function(x$macro$15$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController().init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope(x$macro$15$2)
+    return (function(x$macro$9$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController().init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope(x$macro$9$2)
     })
   })(this)]);
   module.controller("TriggerController", ["$scope", (function(this$5$1) {
-    return (function(x$macro$16$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController().init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope(x$macro$16$2)
+    return (function(x$macro$10$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController().init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope(x$macro$10$2)
     })
   })(this)]);
   module.controller("WorkflowController", ["$scope", "toaster", "WorkflowService", (function(this$6$1) {
-    return (function(x$macro$17$2, x$macro$18$2, x$macro$19$2) {
-      var x$macro$19 = $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$19$2);
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$17$2, x$macro$18$2, x$macro$19)
+    return (function(x$macro$11$2, x$macro$12$2, x$macro$13$2) {
+      var x$macro$13 = $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$13$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$11$2, x$macro$12$2, x$macro$13)
     })
   })(this)])
 });
@@ -5496,23 +5557,23 @@ $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$$js
 });
 $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.service("JobService", ["$http", (function($this) {
-    return (function(x$macro$20$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$20$2)
+    return (function(x$macro$14$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$14$2)
     })
   })(this)]);
   module.service("SlaveService", ["$http", (function(this$2$1) {
-    return (function(x$macro$21$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$21$2)
+    return (function(x$macro$15$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$15$2)
     })
   })(this)]);
   module.service("WebSocketService", ["$rootScope", "$http", "$location", "$timeout", "toaster", (function(this$3$1) {
-    return (function(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2)
+    return (function(x$macro$16$2, x$macro$17$2, x$macro$18$2, x$macro$19$2, x$macro$20$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$16$2, x$macro$17$2, x$macro$18$2, x$macro$19$2, x$macro$20$2)
     })
   })(this)]);
   module.service("WorkflowService", ["$http", (function(this$4$1) {
-    return (function(x$macro$27$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$27$2)
+    return (function(x$macro$21$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$21$2)
     })
   })(this)])
 });
@@ -5578,21 +5639,7 @@ function $h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardContr
   /*<skip>*/
 }
 $h_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype;
-$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope = (function($$scope) {
-  this.$$scope$1 = $$scope;
-  $$scope.init = (function(arg$outer) {
-    return (function() {
-      arg$outer.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V()
-    })
-  })(this);
-  $$scope.getDashboardJobs = (function(arg$outer$1) {
-    return (function() {
-      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_Array()
-    })
-  })(this);
-  return this
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__sjs_js_Array = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$9__sjs_js_Array = (function() {
   var array = this.$$scope$1.jobs;
   var array$1 = [];
   var i = 0;
@@ -5600,19 +5647,157 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.pro
   while ((i < len)) {
     var index = i;
     var arg1 = array[index];
-    var value = arg1.state;
-    var elem = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().SUCCESS$1;
-    if ((((value !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(elem, value)) !== true)) {
+    if (($m_sr_BoxesRunTime$().equals__O__O__Z(arg1.state, this.$$scope$1.selectedJobState) !== false)) {
       array$1.push(arg1)
     };
     i = ((1 + i) | 0)
   };
-  return array$1
+  var elem$1 = null;
+  elem$1 = array$1;
+  var value = this.$$scope$1.maxResults;
+  if ((value === (void 0))) {
+    var value$2 = (void 0)
+  } else {
+    var x$4 = $as_T(value);
+    var this$9 = new $c_sci_StringOps().init___T(x$4);
+    var this$11 = $m_jl_Integer$();
+    var $$this = this$9.repr$1;
+    var value$1 = this$11.parseInt__T__I__I($$this, 10);
+    var value$2 = value$1
+  };
+  if ((value$2 === (void 0))) {
+    var value$3 = (void 0)
+  } else {
+    var count = $uI(value$2);
+    var array$2 = elem$1;
+    var x = ((count > 0) ? count : 0);
+    var y = $uI(array$2.length);
+    var hi = ((x < y) ? x : y);
+    var array$3 = [];
+    var i$1 = 0;
+    while ((i$1 < hi)) {
+      var index$1 = i$1;
+      var elem = array$2[index$1];
+      array$3.push(elem);
+      i$1 = ((1 + i$1) | 0)
+    };
+    var value$3 = array$3
+  };
+  return ((value$3 === (void 0)) ? elem$1 : value$3)
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$1__V = (function() {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$3__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var value = aJob.statistics;
+    if ((value === (void 0))) {
+      return (void 0)
+    } else {
+      var len = $uI(value.length);
+      var i = 0;
+      while (true) {
+        if ((i < len)) {
+          var index = i;
+          var arg1 = value[index];
+          var value$1 = arg1.pctComplete;
+          var jsx$1 = (!(value$1 !== (void 0)))
+        } else {
+          var jsx$1 = false
+        };
+        if (jsx$1) {
+          i = ((1 + i) | 0)
+        } else {
+          break
+        }
+      };
+      var i$1 = i;
+      var opt = ((i$1 < $uI(value.length)) ? new $c_s_Some().init___O(value[i$1]) : $m_s_None$());
+      if (opt.isEmpty__Z()) {
+        var value$2 = (void 0)
+      } else {
+        var arg1$1 = opt.get__O();
+        var value$2 = arg1$1
+      };
+      if ((value$2 === (void 0))) {
+        return (void 0)
+      } else {
+        var value$3 = value$2.pctComplete;
+        if ((value$3 === (void 0))) {
+          return (void 0)
+        } else {
+          var pctComplete = $uD(value$3);
+          return pctComplete
+        }
+      }
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__V = (function() {
   var jsx$1 = $g.console;
   var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
   jsx$1.info(s)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$14__sjs_js_UndefOr__V = (function(aState) {
+  this.$$scope$1.selectedJobState = aState
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope = (function($$scope) {
+  this.$$scope$1 = $$scope;
+  var this$1 = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().values__sc_Iterator();
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+    return (function(x$1$2) {
+      var x$1 = $as_T(x$1$2);
+      return x$1
+    })
+  })(this));
+  var col = new $c_sc_Iterator$$anon$10().init___sc_Iterator__F1(this$1, f);
+  var result = [];
+  while (col.hasNext__Z()) {
+    var arg1 = col.next__O();
+    $uI(result.push(arg1))
+  };
+  $$scope.jobStates = result;
+  var array = $$scope.jobStates;
+  var this$6 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array);
+  var opt = $f_sc_TraversableLike__headOption__s_Option(this$6);
+  if (opt.isEmpty__Z()) {
+    var jsx$1 = (void 0)
+  } else {
+    var arg1$1 = opt.get__O();
+    var jsx$1 = arg1$1
+  };
+  $$scope.selectedJobState = jsx$1;
+  $$scope.maxResultsSet = ["25", "50", "100", "250"];
+  var array$1 = $$scope.maxResultsSet;
+  var this$11 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$1);
+  var opt$1 = $f_sc_TraversableLike__headOption__s_Option(this$11);
+  if (opt$1.isEmpty__Z()) {
+    var jsx$2 = (void 0)
+  } else {
+    var arg1$2 = opt$1.get__O();
+    var jsx$2 = arg1$2
+  };
+  $$scope.maxResults = jsx$2;
+  $$scope.init = (function(arg$outer) {
+    return (function() {
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$2__V()
+    })
+  })(this);
+  $$scope.getJobCompletion = (function(arg$outer$1) {
+    return (function(arg1$2$1) {
+      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$3__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2$1)
+    })
+  })(this);
+  $$scope.getDashboardJobs = (function(arg$outer$2) {
+    return (function() {
+      return arg$outer$2.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$9__sjs_js_Array()
+    })
+  })(this);
+  $$scope.updateJobState = (function(arg$outer$3) {
+    return (function(arg1$2$2) {
+      arg$outer$3.com$github$ldaniels528$transgress$client$controllers$DashboardController$$$anonfun$new$14__sjs_js_UndefOr__V(arg1$2$2)
+    })
+  })(this);
+  return this
 });
 var $d_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController = new $TypeData().initClass({
   Lcom_github_ldaniels528_transgress_client_controllers_DashboardController: 0
@@ -5906,6 +6091,76 @@ function $h_Lcom_github_ldaniels528_transgress_client_services_JobService() {
   /*<skip>*/
 }
 $h_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype = $c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype;
+$c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.getJobHistory__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_Promise = (function(start, end) {
+  $m_sci_List$();
+  if ((start === (void 0))) {
+    var jsx$2 = (void 0)
+  } else {
+    var value = ("start=" + $uD(start.getTime()));
+    var jsx$2 = value
+  };
+  if ((end === (void 0))) {
+    var jsx$1 = (void 0)
+  } else {
+    var value$1 = ("end=" + $uD(end.getTime()));
+    var jsx$1 = value$1
+  };
+  var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$2, jsx$1]);
+  var this$14 = $m_sci_List$();
+  var cbf = this$14.ReusableCBFInstance$2;
+  var this$22 = $as_sci_List($f_sc_TraversableLike__to__scg_CanBuildFrom__O(xs, cbf));
+  var f = (function(this$3$1) {
+    return (function(x$3$2) {
+      var xo = ((x$3$2 === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(x$3$2));
+      return xo.toList__sci_List()
+    })
+  })(this);
+  var this$21 = $m_sci_List$();
+  var bf = this$21.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$22 === $m_sci_Nil$())) {
+      var jsx$3 = $m_sci_Nil$()
+    } else {
+      var rest = this$22;
+      var found = new $c_sr_BooleanRef().init___Z(false);
+      var h = new $c_sr_ObjectRef().init___O(null);
+      var t = new $c_sr_ObjectRef().init___O(null);
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1 = rest.head__O();
+        $as_sc_GenTraversableOnce(f(arg1)).seq__sc_TraversableOnce().foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, found$1, h$1, t$1) {
+          return (function(b$2) {
+            if ((!found$1.elem$1)) {
+              h$1.elem$1 = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              t$1.elem$1 = $as_sci_$colon$colon(h$1.elem$1);
+              found$1.elem$1 = true
+            } else {
+              var nx = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              $as_sci_$colon$colon(t$1.elem$1).tl$5 = nx;
+              t$1.elem$1 = nx
+            }
+          })
+        })(this$22, found, h, t)));
+        var this$26 = rest;
+        rest = this$26.tail__sci_List()
+      };
+      var jsx$3 = ((!found.elem$1) ? $m_sci_Nil$() : $as_sci_$colon$colon(h.elem$1))
+    }
+  } else {
+    $m_sci_List$();
+    var b = new $c_scm_ListBuffer().init___();
+    var these = this$22;
+    while ((!these.isEmpty__Z())) {
+      var arg1$1 = these.head__O();
+      var xs$1 = $as_sc_GenTraversableOnce(f(arg1$1)).seq__sc_TraversableOnce();
+      b.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(xs$1);
+      var this$28 = these;
+      these = this$28.tail__sci_List()
+    };
+    var jsx$3 = b.toList__sci_List()
+  };
+  var params = $as_sc_TraversableOnce(jsx$3).mkString__T__T("&");
+  return this.$$http$1.get(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["/api/jobs/history?", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([params])))
+});
 $c_Lcom_github_ldaniels528_transgress_client_services_JobService.prototype.init___Lio_scalajs_npm_angularjs_http_Http = (function($$http) {
   this.$$http$1 = $$http;
   return this
@@ -6705,6 +6960,25 @@ function $f_s_Product2__productElement__I__O($thiz, n) {
     }
     case 1: {
       return $thiz.$$und2$f;
+      break
+    }
+    default: {
+      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + n))
+    }
+  }
+}
+function $f_s_Product3__productElement__I__O($thiz, n) {
+  switch (n) {
+    case 0: {
+      return $thiz.$$und1$1;
+      break
+    }
+    case 1: {
+      return $thiz.$$und2$1;
+      break
+    }
+    case 2: {
+      return $thiz.$$und3$1;
       break
     }
     default: {
@@ -11043,6 +11317,9 @@ $c_sc_AbstractIterator.prototype.seq__sc_TraversableOnce = (function() {
 $c_sc_AbstractIterator.prototype.isEmpty__Z = (function() {
   return $f_sc_Iterator__isEmpty__Z(this)
 });
+$c_sc_AbstractIterator.prototype.mkString__T__T = (function(sep) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, "", sep, "")
+});
 $c_sc_AbstractIterator.prototype.toString__T = (function() {
   return $f_sc_Iterator__toString__T(this)
 });
@@ -12195,6 +12472,9 @@ function $h_s_Option() {
   /*<skip>*/
 }
 $h_s_Option.prototype = $c_s_Option.prototype;
+$c_s_Option.prototype.toList__sci_List = (function() {
+  return (this.isEmpty__Z() ? $m_sci_Nil$() : new $c_sci_$colon$colon().init___O__sci_List(this.get__O(), $m_sci_Nil$()))
+});
 $c_s_Option.prototype.isDefined__Z = (function() {
   return (!this.isEmpty__Z())
 });
@@ -13521,6 +13801,79 @@ var $d_T2 = new $TypeData().initClass({
   Ljava_io_Serializable: 1
 });
 $c_T2.prototype.$classData = $d_T2;
+/** @constructor */
+function $c_T3() {
+  $c_O.call(this);
+  this.$$und1$1 = null;
+  this.$$und2$1 = null;
+  this.$$und3$1 = null
+}
+$c_T3.prototype = new $h_O();
+$c_T3.prototype.constructor = $c_T3;
+/** @constructor */
+function $h_T3() {
+  /*<skip>*/
+}
+$h_T3.prototype = $c_T3.prototype;
+$c_T3.prototype.productPrefix__T = (function() {
+  return "Tuple3"
+});
+$c_T3.prototype.productArity__I = (function() {
+  return 3
+});
+$c_T3.prototype.equals__O__Z = (function(x$1) {
+  if ((this === x$1)) {
+    return true
+  } else if ($is_T3(x$1)) {
+    var Tuple3$1 = $as_T3(x$1);
+    return (($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und1$1, Tuple3$1.$$und1$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und2$1, Tuple3$1.$$und2$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und3$1, Tuple3$1.$$und3$1))
+  } else {
+    return false
+  }
+});
+$c_T3.prototype.productElement__I__O = (function(n) {
+  return $f_s_Product3__productElement__I__O(this, n)
+});
+$c_T3.prototype.toString__T = (function() {
+  return (((((("(" + this.$$und1$1) + ",") + this.$$und2$1) + ",") + this.$$und3$1) + ")")
+});
+$c_T3.prototype.init___O__O__O = (function(_1, _2, _3) {
+  this.$$und1$1 = _1;
+  this.$$und2$1 = _2;
+  this.$$und3$1 = _3;
+  return this
+});
+$c_T3.prototype.hashCode__I = (function() {
+  var this$2 = $m_s_util_hashing_MurmurHash3$();
+  return this$2.productHash__s_Product__I__I(this, (-889275714))
+});
+$c_T3.prototype.productIterator__sc_Iterator = (function() {
+  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
+});
+function $is_T3(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.T3)))
+}
+function $as_T3(obj) {
+  return (($is_T3(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.Tuple3"))
+}
+function $isArrayOf_T3(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.T3)))
+}
+function $asArrayOf_T3(obj, depth) {
+  return (($isArrayOf_T3(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.Tuple3;", depth))
+}
+var $d_T3 = new $TypeData().initClass({
+  T3: 0
+}, false, "scala.Tuple3", {
+  T3: 1,
+  O: 1,
+  s_Product3: 1,
+  s_Product: 1,
+  s_Equals: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_T3.prototype.$classData = $d_T3;
 /** @constructor */
 function $c_jl_ArrayIndexOutOfBoundsException() {
   $c_jl_IndexOutOfBoundsException.call(this)
@@ -16685,7 +17038,198 @@ function $h_Lcom_github_ldaniels528_transgress_client_controllers_MainController
   /*<skip>*/
 }
 $h_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype = $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype;
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$36__sjs_js_UndefOr__V = (function(aJob) {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productPrefix__T = (function() {
+  return "MainController"
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productArity__I = (function() {
+  return 6
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$13__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
+  if ((aJob === (void 0))) {
+    return (void 0)
+  } else {
+    var array = this.$$scope$1.slaves;
+    var len = $uI(array.length);
+    var i = 0;
+    while (true) {
+      if ((i < len)) {
+        var index = i;
+        var arg1 = array[index];
+        var valueA = arg1._id;
+        var valueB = aJob.slaveID;
+        var jsx$1 = (!((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))))
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        i = ((1 + i) | 0)
+      } else {
+        break
+      }
+    };
+    var i$1 = i;
+    var opt = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+    if (opt.isEmpty__Z()) {
+      return (void 0)
+    } else {
+      var arg1$1 = opt.get__O();
+      return arg1$1
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.equals__O__Z = (function(x$1) {
+  if ((this === x$1)) {
+    return true
+  } else if ($is_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1)) {
+    var MainController$1 = $as_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1);
+    if (((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$scope$1, MainController$1.$$scope$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$interval$1, MainController$1.$$interval$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$location$1, MainController$1.$$location$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.toaster$1, MainController$1.toaster$1))) {
+      var x = this.jobService$1;
+      var x$2 = MainController$1.jobService$1;
+      var jsx$1 = (x === x$2)
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      var x$3 = this.slaveService$1;
+      var x$4 = MainController$1.slaveService$1;
+      return (x$3 === x$4)
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productElement__I__O = (function(x$1) {
+  switch (x$1) {
+    case 0: {
+      return this.$$scope$1;
+      break
+    }
+    case 1: {
+      return this.$$interval$1;
+      break
+    }
+    case 2: {
+      return this.$$location$1;
+      break
+    }
+    case 3: {
+      return this.toaster$1;
+      break
+    }
+    case 4: {
+      return this.jobService$1;
+      break
+    }
+    case 5: {
+      return this.slaveService$1;
+      break
+    }
+    default: {
+      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$31__sjs_js_UndefOr__V = (function(aJob) {
+  if ((aJob !== (void 0))) {
+    var value = aJob._id;
+    if ((value !== (void 0))) {
+      var jobId = $as_T(value);
+      var value$1 = (0, this.$$scope$1.getSlaveForJob)(aJob);
+      if ((value$1 !== (void 0))) {
+        var value$2 = value$1._id;
+        if ((value$2 !== (void 0))) {
+          var slaveId = $as_T(value$2);
+          this.$$scope$1.resuming = true;
+          var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+          var p = this.jobService$1.resumeJob__T__T__sjs_js_Promise(jobId, slaveId);
+          jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+            return (function(x0$5$2) {
+              var x0$5 = $as_s_util_Try(x0$5$2);
+              if ($is_s_util_Success(x0$5)) {
+                var x2 = $as_s_util_Success(x0$5);
+                var response = x2.value$2;
+                return $this.$$scope$1.$apply((function($this$1, response$1) {
+                  return (function() {
+                    $this$1.$$scope$1.resuming = false;
+                    var jsx$2 = $this$1.$$scope$1.updateJob;
+                    var value$3 = $this$1.$$scope$1.jobs;
+                    var value$4 = response$1.data;
+                    jsx$2(value$3, value$4)
+                  })
+                })($this, response))
+              } else if ($is_s_util_Failure(x0$5)) {
+                var x3 = $as_s_util_Failure(x0$5);
+                var e = x3.exception$2;
+                $this.$$scope$1.resuming = false;
+                var toaster = $this.toaster$1;
+                var value$5 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+                var jsx$3 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$5, "Failed to resume job");
+                toaster.pop(jsx$3);
+                var jsx$7 = $g.console;
+                var jsx$6 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to resume job: ", ""]));
+                var rc6 = false;
+                var x2$1 = null;
+                var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+                matchEnd7: {
+                  var jsx$4;
+                  if ($is_s_Some(x1)) {
+                    rc6 = true;
+                    x2$1 = $as_s_Some(x1);
+                    var s = $as_T(x2$1.value$2);
+                    var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                    if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+                      var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+                      var this$41 = new $c_sci_StringOps().init___T(s);
+                      var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+                      var n = $uI(thiz.length);
+                      var $$this = this$41.repr$1;
+                      var until = $uI($$this.length);
+                      var jsx$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$41.repr$1, n, until));
+                      break matchEnd7
+                    }
+                  };
+                  if (rc6) {
+                    var s$2 = $as_T(x2$1.value$2);
+                    var jsx$4 = s$2;
+                    break matchEnd7
+                  };
+                  var x = $m_s_None$();
+                  if ((x === x1)) {
+                    var jsx$4 = "Cause unknown";
+                    break matchEnd7
+                  };
+                  throw new $c_s_MatchError().init___O(x1)
+                };
+                var s$1 = jsx$6.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$4]));
+                jsx$7.error(s$1);
+                return (void 0)
+              } else {
+                throw new $c_s_MatchError().init___O(x0$5)
+              }
+            })
+          })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+        }
+      }
+    }
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.toString__T = (function() {
+  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V = (function(job) {
+  var value = (0, this.$$scope$1.getSlaveForJob)(job);
+  if ((value !== (void 0))) {
+    var value$1 = value.jobs;
+    if ((value$1 === (void 0))) {
+      var value$2 = [];
+      value.jobs = value$2
+    };
+    (0, this.$$scope$1.updateJob)(value.jobs, job)
+  }
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$38__sjs_js_UndefOr__V = (function(aJob) {
   if ((aJob !== (void 0))) {
     var value = aJob._id;
     if ((value !== (void 0))) {
@@ -16769,36 +17313,72 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
     }
   }
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productPrefix__T = (function() {
-  return "MainController"
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$28__V = (function() {
+  var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
+  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+    return (function(x0$4$2) {
+      var x0$4 = $as_s_util_Try(x0$4$2);
+      if ($is_s_util_Success(x0$4)) {
+        var x2 = $as_s_util_Success(x0$4);
+        var response = x2.value$2;
+        return $this.$$scope$1.$apply((function($this$1, response$1) {
+          return (function() {
+            $this$1.$$scope$1.slaves = response$1.data
+          })
+        })($this, response))
+      } else if ($is_s_util_Failure(x0$4)) {
+        var x3 = $as_s_util_Failure(x0$4);
+        var e = x3.exception$2;
+        var toaster = $this.toaster$1;
+        var value = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
+        var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Error loading slave");
+        toaster.pop(jsx$2);
+        var jsx$6 = $g.console;
+        var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Error loading slave: ", ""]));
+        var rc6 = false;
+        var x2$1 = null;
+        var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
+        matchEnd7: {
+          var jsx$3;
+          if ($is_s_Some(x1)) {
+            rc6 = true;
+            x2$1 = $as_s_Some(x1);
+            var s = $as_T(x2$1.value$2);
+            var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+            if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
+              var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
+              var this$15 = new $c_sci_StringOps().init___T(s);
+              var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
+              var n = $uI(thiz.length);
+              var $$this = this$15.repr$1;
+              var until = $uI($$this.length);
+              var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$15.repr$1, n, until));
+              break matchEnd7
+            }
+          };
+          if (rc6) {
+            var s$2 = $as_T(x2$1.value$2);
+            var jsx$3 = s$2;
+            break matchEnd7
+          };
+          var x = $m_s_None$();
+          if ((x === x1)) {
+            var jsx$3 = "Cause unknown";
+            break matchEnd7
+          };
+          throw new $c_s_MatchError().init___O(x1)
+        };
+        var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
+        jsx$6.error(s$1);
+        return (void 0)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$4)
+      }
+    })
+  })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productArity__I = (function() {
-  return 6
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.equals__O__Z = (function(x$1) {
-  if ((this === x$1)) {
-    return true
-  } else if ($is_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1)) {
-    var MainController$1 = $as_Lcom_github_ldaniels528_transgress_client_controllers_MainController(x$1);
-    if (((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$scope$1, MainController$1.$$scope$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$interval$1, MainController$1.$$interval$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$location$1, MainController$1.$$location$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.toaster$1, MainController$1.toaster$1))) {
-      var x = this.jobService$1;
-      var x$2 = MainController$1.jobService$1;
-      var jsx$1 = (x === x$2)
-    } else {
-      var jsx$1 = false
-    };
-    if (jsx$1) {
-      var x$3 = this.slaveService$1;
-      var x$4 = MainController$1.slaveService$1;
-      return (x$3 === x$4)
-    } else {
-      return false
-    }
-  } else {
-    return false
-  }
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$21__sjs_js_UndefOr__V = (function(aJobStates) {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$23__sjs_js_UndefOr__V = (function(aJobStates) {
   if ((aJobStates === (void 0))) {
     var col = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().values__sc_Iterator();
     if ($is_sjs_js_ArrayOps(col)) {
@@ -16916,125 +17496,205 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
     })
   })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productElement__I__O = (function(x$1) {
-  switch (x$1) {
-    case 0: {
-      return this.$$scope$1;
-      break
-    }
-    case 1: {
-      return this.$$interval$1;
-      break
-    }
-    case 2: {
-      return this.$$location$1;
-      break
-    }
-    case 3: {
-      return this.toaster$1;
-      break
-    }
-    case 4: {
-      return this.jobService$1;
-      break
-    }
-    case 5: {
-      return this.slaveService$1;
-      break
-    }
-    default: {
-      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
-    }
-  }
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.hashCode__I = (function() {
+  var this$2 = $m_s_util_hashing_MurmurHash3$();
+  return this$2.productHash__s_Product__I__I(this, (-889275714))
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$29__sjs_js_UndefOr__V = (function(aJob) {
-  if ((aJob !== (void 0))) {
-    var value = aJob._id;
-    if ((value !== (void 0))) {
-      var jobId = $as_T(value);
-      var value$1 = (0, this.$$scope$1.getSlaveForJob)(aJob);
-      if ((value$1 !== (void 0))) {
-        var value$2 = value$1._id;
-        if ((value$2 !== (void 0))) {
-          var slaveId = $as_T(value$2);
-          this.$$scope$1.resuming = true;
-          var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-          var p = this.jobService$1.resumeJob__T__T__sjs_js_Promise(jobId, slaveId);
-          jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-            return (function(x0$5$2) {
-              var x0$5 = $as_s_util_Try(x0$5$2);
-              if ($is_s_util_Success(x0$5)) {
-                var x2 = $as_s_util_Success(x0$5);
-                var response = x2.value$2;
-                return $this.$$scope$1.$apply((function($this$1, response$1) {
-                  return (function() {
-                    $this$1.$$scope$1.resuming = false;
-                    var jsx$2 = $this$1.$$scope$1.updateJob;
-                    var value$3 = $this$1.$$scope$1.jobs;
-                    var value$4 = response$1.data;
-                    jsx$2(value$3, value$4)
-                  })
-                })($this, response))
-              } else if ($is_s_util_Failure(x0$5)) {
-                var x3 = $as_s_util_Failure(x0$5);
-                var e = x3.exception$2;
-                $this.$$scope$1.resuming = false;
-                var toaster = $this.toaster$1;
-                var value$5 = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-                var jsx$3 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value$5, "Failed to resume job");
-                toaster.pop(jsx$3);
-                var jsx$7 = $g.console;
-                var jsx$6 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to resume job: ", ""]));
-                var rc6 = false;
-                var x2$1 = null;
-                var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-                matchEnd7: {
-                  var jsx$4;
-                  if ($is_s_Some(x1)) {
-                    rc6 = true;
-                    x2$1 = $as_s_Some(x1);
-                    var s = $as_T(x2$1.value$2);
-                    var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                    if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-                      var jsx$5 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-                      var this$41 = new $c_sci_StringOps().init___T(s);
-                      var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-                      var n = $uI(thiz.length);
-                      var $$this = this$41.repr$1;
-                      var until = $uI($$this.length);
-                      var jsx$4 = jsx$5.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$41.repr$1, n, until));
-                      break matchEnd7
-                    }
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V = (function() {
+  var jsx$1 = $g.console;
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
+  jsx$1.info(s);
+  var startTime = $uD($g.Date.now());
+  var jsx$2 = $m_sjs_js_Thenable$ThenableOps$();
+  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  var this$3 = jsx$2.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p);
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
+    return (function(x$1$2) {
+      return x$1$2.data
+    })
+  })(this));
+  var executor = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+  var this$12 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$3, f, executor);
+  var f$5 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
+    return (function(slaves$2) {
+      var jsx$3 = $m_sjs_js_Thenable$ThenableOps$();
+      var p$1 = this$2$1.jobService$1.getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise($m_sci_Nil$(), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+      var this$5 = jsx$3.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p$1);
+      var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$1) {
+        return (function(x$2$2) {
+          return x$2$2.data
+        })
+      })(this$2$1));
+      var executor$1 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+      var this$11 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$5, f$1, executor$1);
+      var f$4 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$2, slaves) {
+        return (function(jobs$2) {
+          var jsx$4 = $m_sjs_js_Thenable$ThenableOps$();
+          var p$2 = this$2$2.jobService$1.getJobHistory__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_Promise((void 0), (void 0));
+          var this$9 = jsx$4.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p$2);
+          var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$2) {
+            return (function(x$3$2) {
+              return x$3$2.data
+            })
+          })(this$2$2));
+          var executor$2 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+          var this$10 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$9, f$2, executor$2);
+          var f$3 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$3, slaves$2$1, jobs) {
+            return (function(jobHistory$2) {
+              return new $c_T3().init___O__O__O(slaves$2$1, jobs, jobHistory$2)
+            })
+          })(this$2$2, slaves, jobs$2));
+          var executor$3 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+          return $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$10, f$3, executor$3)
+        })
+      })(this$2$1, slaves$2));
+      var executor$4 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+      return $f_s_concurrent_Future__flatMap__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$11, f$4, executor$4)
+    })
+  })(this));
+  var executor$5 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
+  var outcome = $f_s_concurrent_Future__flatMap__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$12, f$5, executor$5);
+  outcome.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$3$1, startTime$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_s_util_Try(x0$1$2);
+      if ($is_s_util_Success(x0$1)) {
+        var x2 = $as_s_util_Success(x0$1);
+        var p3 = $as_T3(x2.value$2);
+        if ((p3 !== null)) {
+          var slaves$1 = p3.$$und1$1;
+          var jobs$1 = p3.$$und2$1;
+          var jobHistory = p3.$$und3$1;
+          var jsx$5 = $g.console;
+          var s$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Loaded slaves and jobs in ", " msecs..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([($uD($g.Date.now()) - startTime$1)]));
+          jsx$5.log(s$1);
+          return this$3$1.$$scope$1.$apply((function($this$3, slaves$3, jobs$3, jobHistory$1) {
+            return (function() {
+              $this$3.$$scope$1.slaves = slaves$3;
+              $this$3.$$scope$1.jobs = jobs$3;
+              $this$3.$$scope$1.jobHistory = jobHistory$1;
+              var i = 0;
+              var len = $uI(slaves$3.length);
+              while ((i < len)) {
+                var index = i;
+                var arg1 = slaves$3[index];
+                var array = [];
+                var i$1 = 0;
+                var len$1 = $uI(jobs$3.length);
+                while ((i$1 < len$1)) {
+                  var index$1 = i$1;
+                  var arg1$1 = jobs$3[index$1];
+                  var valueA = arg1$1.slaveID;
+                  var valueB = arg1._id;
+                  if ((((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))) !== false)) {
+                    array.push(arg1$1)
                   };
-                  if (rc6) {
-                    var s$2 = $as_T(x2$1.value$2);
-                    var jsx$4 = s$2;
-                    break matchEnd7
-                  };
-                  var x = $m_s_None$();
-                  if ((x === x1)) {
-                    var jsx$4 = "Cause unknown";
-                    break matchEnd7
-                  };
-                  throw new $c_s_MatchError().init___O(x1)
+                  i$1 = ((1 + i$1) | 0)
                 };
-                var s$1 = jsx$6.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$4]));
-                jsx$7.error(s$1);
-                return (void 0)
-              } else {
-                throw new $c_s_MatchError().init___O(x0$5)
+                arg1.jobs = array;
+                i = ((1 + i) | 0)
               }
             })
-          })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
+          })(this$3$1, slaves$1, jobs$1, jobHistory))
         }
-      }
-    }
-  }
+      };
+      if ($is_s_util_Failure(x0$1)) {
+        var x4 = $as_s_util_Failure(x0$1);
+        var e = x4.exception$2;
+        var jsx$6 = $g.console;
+        var s$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to retrieve slaves and jobs: ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([e.getMessage__T()]));
+        jsx$6.log(s$2);
+        e.printStackTrace__Ljava_io_PrintStream__V($m_jl_System$().err$1);
+        return (void 0)
+      };
+      throw new $c_s_MatchError().init___O(x0$1)
+    })
+  })(this, startTime)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
+  var jsx$8 = this.$$interval$1;
+  var jsx$7 = $m_Lio_scalajs_util_DurationHelper$();
+  var this$33 = new $c_s_concurrent_duration_package$DurationInt().init___I(3);
+  var unit = $m_ju_concurrent_TimeUnit$().MINUTES$1;
+  jsx$8((function(this$4$1) {
+    return (function() {
+      (0, this$4$1.$$scope$1.refreshJobs)((void 0))
+    })
+  })(this), jsx$7.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$33.scala$concurrent$duration$DurationInt$$n$1, unit)))
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.toString__T = (function() {
-  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productIterator__sc_Iterator = (function() {
+  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
 });
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$14__sjs_js_UndefOr__V = (function(aJob) {
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService = (function($$scope, $$interval, $$location, toaster, jobService, slaveService) {
+  this.$$scope$1 = $$scope;
+  this.$$interval$1 = $$interval;
+  this.$$location$1 = $$location;
+  this.toaster$1 = toaster;
+  this.jobService$1 = jobService;
+  this.slaveService$1 = slaveService;
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__$$init$__V(this);
+  $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V(this);
+  $$scope.version = $m_sjsr_RuntimeString$().valueOf__O__T($m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1);
+  $$scope.init = (function(arg$outer) {
+    return (function() {
+      arg$outer.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V()
+    })
+  })(this);
+  $$scope.getSlaveForJob = (function(arg$outer$1) {
+    return (function(arg1$2) {
+      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$13__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2)
+    })
+  })(this);
+  $$scope.pauseJob = (function(arg$outer$2) {
+    return (function(arg1$2$1) {
+      arg$outer$2.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$16__sjs_js_UndefOr__V(arg1$2$1)
+    })
+  })(this);
+  $$scope.refreshJobs = (function(arg$outer$3) {
+    return (function(arg1$2$2) {
+      arg$outer$3.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$23__sjs_js_UndefOr__V(arg1$2$2)
+    })
+  })(this);
+  $$scope.refreshSlaves = (function(arg$outer$4) {
+    return (function() {
+      arg$outer$4.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$28__V()
+    })
+  })(this);
+  $$scope.resumeJob = (function(arg$outer$5) {
+    return (function(arg1$2$3) {
+      arg$outer$5.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$31__sjs_js_UndefOr__V(arg1$2$3)
+    })
+  })(this);
+  $$scope.stopJob = (function(arg$outer$6) {
+    return (function(arg1$2$4) {
+      arg$outer$6.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$38__sjs_js_UndefOr__V(arg1$2$4)
+    })
+  })(this);
+  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().JOB$undUPDATE$1, (function($this) {
+    return (function(x$6$2, job$2) {
+      return $this.$$scope$1.$apply((function($this$1, job) {
+        return (function() {
+          var jsx$1 = $this$1.$$scope$1.updateJob;
+          var value = $this$1.$$scope$1.jobs;
+          jsx$1(value, job);
+          $this$1.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V(job)
+        })
+      })($this, job$2))
+    })
+  })(this));
+  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().SLAVE$undUPDATE$1, (function(this$2$1) {
+    return (function(x$7$2, slave$2) {
+      return this$2$1.$$scope$1.$apply((function($this$2, slave) {
+        return (function() {
+          var jsx$2 = $this$2.$$scope$1.updateSlave;
+          var value$1 = $this$2.$$scope$1.slaves;
+          jsx$2(value$1, slave)
+        })
+      })(this$2$1, slave$2))
+    })
+  })(this));
+  return this
+});
+$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$16__sjs_js_UndefOr__V = (function(aJob) {
   if ((aJob !== (void 0))) {
     var value = aJob._id;
     if ((value !== (void 0))) {
@@ -17115,295 +17775,6 @@ $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototyp
           })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
         }
       }
-    }
-  }
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V = (function(job) {
-  var value = (0, this.$$scope$1.getSlaveForJob)(job);
-  if ((value !== (void 0))) {
-    var value$1 = value.jobs;
-    if ((value$1 === (void 0))) {
-      var value$2 = [];
-      value.jobs = value$2
-    };
-    (0, this.$$scope$1.updateJob)(value.jobs, job)
-  }
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$26__V = (function() {
-  var jsx$1 = $m_sjs_js_Thenable$ThenableOps$();
-  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
-  jsx$1.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-    return (function(x0$4$2) {
-      var x0$4 = $as_s_util_Try(x0$4$2);
-      if ($is_s_util_Success(x0$4)) {
-        var x2 = $as_s_util_Success(x0$4);
-        var response = x2.value$2;
-        return $this.$$scope$1.$apply((function($this$1, response$1) {
-          return (function() {
-            $this$1.$$scope$1.slaves = response$1.data
-          })
-        })($this, response))
-      } else if ($is_s_util_Failure(x0$4)) {
-        var x3 = $as_s_util_Failure(x0$4);
-        var e = x3.exception$2;
-        var toaster = $this.toaster$1;
-        var value = $m_Lio_scalajs_npm_angularjs_toaster_package$().DANGER$1;
-        var jsx$2 = new ($a_Lio_scalajs_npm_angularjs_toaster_ToasterOptions())(value, "Error loading slave");
-        toaster.pop(jsx$2);
-        var jsx$6 = $g.console;
-        var jsx$5 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Error loading slave: ", ""]));
-        var rc6 = false;
-        var x2$1 = null;
-        var x1 = $m_s_Option$().apply__O__s_Option(e.getMessage__T());
-        matchEnd7: {
-          var jsx$3;
-          if ($is_s_Some(x1)) {
-            rc6 = true;
-            x2$1 = $as_s_Some(x1);
-            var s = $as_T(x2$1.value$2);
-            var prefix = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-            if ((($uI(s.length) >= 0) && ($as_T(s.substring(0, $uI(prefix.length))) === prefix))) {
-              var jsx$4 = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$ExceptionExtensions$();
-              var this$15 = new $c_sci_StringOps().init___T(s);
-              var thiz = $m_Lio_scalajs_npm_angularjs_AngularJsHelper$().io$scalajs$npm$angularjs$AngularJsHelper$$HttpError$1;
-              var n = $uI(thiz.length);
-              var $$this = this$15.repr$1;
-              var until = $uI($$this.length);
-              var jsx$3 = jsx$4.cleanUp$extension__jl_Throwable__T__T(e, $m_sci_StringOps$().slice$extension__T__I__I__T(this$15.repr$1, n, until));
-              break matchEnd7
-            }
-          };
-          if (rc6) {
-            var s$2 = $as_T(x2$1.value$2);
-            var jsx$3 = s$2;
-            break matchEnd7
-          };
-          var x = $m_s_None$();
-          if ((x === x1)) {
-            var jsx$3 = "Cause unknown";
-            break matchEnd7
-          };
-          throw new $c_s_MatchError().init___O(x1)
-        };
-        var s$1 = jsx$5.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$3]));
-        jsx$6.error(s$1);
-        return (void 0)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$4)
-      }
-    })
-  })(this)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1)
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.hashCode__I = (function() {
-  var this$2 = $m_s_util_hashing_MurmurHash3$();
-  return this$2.productHash__s_Product__I__I(this, (-889275714))
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V = (function() {
-  var jsx$1 = $g.console;
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Initializing ", "..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$objectGetClass(this).getSimpleName__T()]));
-  jsx$1.info(s);
-  var startTime = $uD($g.Date.now());
-  var jsx$2 = $m_sjs_js_Thenable$ThenableOps$();
-  var p = this.slaveService$1.getSlaves__s_concurrent_ExecutionContext__sjs_js_Promise($m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
-  var this$3 = jsx$2.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p);
-  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this) {
-    return (function(x$1$2) {
-      return x$1$2.data
-    })
-  })(this));
-  var executor = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-  var this$7 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$3, f, executor);
-  var f$3 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
-    return (function(slaves$2) {
-      var jsx$3 = $m_sjs_js_Thenable$ThenableOps$();
-      var p$1 = this$2$1.jobService$1.getJobs__sc_Seq__s_concurrent_ExecutionContext__sjs_js_Promise($m_sci_Nil$(), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
-      var this$5 = jsx$3.toFuture$extension__sjs_js_Thenable__s_concurrent_Future(p$1);
-      var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$1) {
-        return (function(x$2$2) {
-          return x$2$2.data
-        })
-      })(this$2$1));
-      var executor$1 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-      var this$6 = $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$5, f$1, executor$1);
-      var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$2, slaves) {
-        return (function(jobs$2) {
-          return new $c_T2().init___O__O(slaves, jobs$2)
-        })
-      })(this$2$1, slaves$2));
-      var executor$2 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-      return $f_s_concurrent_Future__map__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$6, f$2, executor$2)
-    })
-  })(this));
-  var executor$3 = $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1;
-  var outcome = $f_s_concurrent_Future__flatMap__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$3, executor$3);
-  outcome.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$3$1, startTime$1) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        var x2 = $as_s_util_Success(x0$1);
-        var p3 = $as_T2(x2.value$2);
-        if ((p3 !== null)) {
-          var slaves$1 = p3.$$und1$f;
-          var jobs = p3.$$und2$f;
-          var jsx$4 = $g.console;
-          var s$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Loaded slaves and jobs in ", " msecs..."])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([($uD($g.Date.now()) - startTime$1)]));
-          jsx$4.log(s$1);
-          return this$3$1.$$scope$1.$apply((function($this$2, slaves$3, jobs$1) {
-            return (function() {
-              $this$2.$$scope$1.slaves = slaves$3;
-              $this$2.$$scope$1.jobs = jobs$1;
-              var i = 0;
-              var len = $uI(slaves$3.length);
-              while ((i < len)) {
-                var index = i;
-                var arg1 = slaves$3[index];
-                var array = [];
-                var i$1 = 0;
-                var len$1 = $uI(jobs$1.length);
-                while ((i$1 < len$1)) {
-                  var index$1 = i$1;
-                  var arg1$1 = jobs$1[index$1];
-                  var valueA = arg1$1.slaveID;
-                  var valueB = arg1._id;
-                  if ((((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))) !== false)) {
-                    array.push(arg1$1)
-                  };
-                  i$1 = ((1 + i$1) | 0)
-                };
-                arg1.jobs = array;
-                i = ((1 + i) | 0)
-              }
-            })
-          })(this$3$1, slaves$1, jobs))
-        }
-      };
-      if ($is_s_util_Failure(x0$1)) {
-        var x4 = $as_s_util_Failure(x0$1);
-        var e = x4.exception$2;
-        var jsx$5 = $g.console;
-        var s$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Failed to retrieve slaves and jobs: ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([e.getMessage__T()]));
-        jsx$5.log(s$2);
-        e.printStackTrace__Ljava_io_PrintStream__V($m_jl_System$().err$1);
-        return (void 0)
-      };
-      throw new $c_s_MatchError().init___O(x0$1)
-    })
-  })(this, startTime)), $m_sjs_concurrent_JSExecutionContext$Implicits$().queue$1);
-  var jsx$7 = this.$$interval$1;
-  var jsx$6 = $m_Lio_scalajs_util_DurationHelper$();
-  var this$28 = new $c_s_concurrent_duration_package$DurationInt().init___I(3);
-  var unit = $m_ju_concurrent_TimeUnit$().MINUTES$1;
-  jsx$7((function(this$4$1) {
-    return (function() {
-      (0, this$4$1.$$scope$1.refreshJobs)((void 0))
-    })
-  })(this), jsx$6.duration2Int__s_concurrent_duration_Duration__I($m_s_concurrent_duration_package$DurationInt$().durationIn$extension__I__ju_concurrent_TimeUnit__s_concurrent_duration_FiniteDuration(this$28.scala$concurrent$duration$DurationInt$$n$1, unit)))
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.productIterator__sc_Iterator = (function() {
-  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService = (function($$scope, $$interval, $$location, toaster, jobService, slaveService) {
-  this.$$scope$1 = $$scope;
-  this.$$interval$1 = $$interval;
-  this.$$location$1 = $$location;
-  this.toaster$1 = toaster;
-  this.jobService$1 = jobService;
-  this.slaveService$1 = slaveService;
-  $f_Lcom_github_ldaniels528_transgress_client_controllers_CollapseExpandHandling__$$init$__V(this);
-  $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__$$init$__V(this);
-  $f_Lcom_github_ldaniels528_transgress_client_controllers_SlaveHandling__$$init$__V(this);
-  $f_Lcom_github_ldaniels528_transgress_client_controllers_TabHandling__$$init$__V(this);
-  $$scope.version = $m_sjsr_RuntimeString$().valueOf__O__T($m_Lcom_github_ldaniels528_transgress_AppConstants$().Version$1);
-  $$scope.init = (function(arg$outer) {
-    return (function() {
-      arg$outer.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$1__V()
-    })
-  })(this);
-  $$scope.getSlaveForJob = (function(arg$outer$1) {
-    return (function(arg1$2) {
-      return arg$outer$1.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$11__sjs_js_UndefOr__sjs_js_UndefOr(arg1$2)
-    })
-  })(this);
-  $$scope.pauseJob = (function(arg$outer$2) {
-    return (function(arg1$2$1) {
-      arg$outer$2.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$14__sjs_js_UndefOr__V(arg1$2$1)
-    })
-  })(this);
-  $$scope.refreshJobs = (function(arg$outer$3) {
-    return (function(arg1$2$2) {
-      arg$outer$3.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$21__sjs_js_UndefOr__V(arg1$2$2)
-    })
-  })(this);
-  $$scope.refreshSlaves = (function(arg$outer$4) {
-    return (function() {
-      arg$outer$4.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$26__V()
-    })
-  })(this);
-  $$scope.resumeJob = (function(arg$outer$5) {
-    return (function(arg1$2$3) {
-      arg$outer$5.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$29__sjs_js_UndefOr__V(arg1$2$3)
-    })
-  })(this);
-  $$scope.stopJob = (function(arg$outer$6) {
-    return (function(arg1$2$4) {
-      arg$outer$6.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$36__sjs_js_UndefOr__V(arg1$2$4)
-    })
-  })(this);
-  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().JOB$undUPDATE$1, (function($this) {
-    return (function(x$5$2, job$2) {
-      return $this.$$scope$1.$apply((function($this$1, job) {
-        return (function() {
-          var jsx$1 = $this$1.$$scope$1.updateJob;
-          var value = $this$1.$$scope$1.jobs;
-          jsx$1(value, job);
-          $this$1.updateSlaveJobs__Lcom_github_ldaniels528_transgress_client_models_Job__V(job)
-        })
-      })($this, job$2))
-    })
-  })(this));
-  $$scope.$on($m_Lcom_github_ldaniels528_transgress_RemoteEvent$().SLAVE$undUPDATE$1, (function(this$2$1) {
-    return (function(x$6$2, slave$2) {
-      return this$2$1.$$scope$1.$apply((function($this$2, slave) {
-        return (function() {
-          var jsx$2 = $this$2.$$scope$1.updateSlave;
-          var value$1 = $this$2.$$scope$1.slaves;
-          jsx$2(value$1, slave)
-        })
-      })(this$2$1, slave$2))
-    })
-  })(this));
-  return this
-});
-$c_Lcom_github_ldaniels528_transgress_client_controllers_MainController.prototype.com$github$ldaniels528$transgress$client$controllers$MainController$$$anonfun$new$11__sjs_js_UndefOr__sjs_js_UndefOr = (function(aJob) {
-  if ((aJob === (void 0))) {
-    return (void 0)
-  } else {
-    var array = this.$$scope$1.slaves;
-    var len = $uI(array.length);
-    var i = 0;
-    while (true) {
-      if ((i < len)) {
-        var index = i;
-        var arg1 = array[index];
-        var valueA = arg1._id;
-        var valueB = aJob.slaveID;
-        var jsx$1 = (!((valueA !== (void 0)) && ((valueB !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueB, valueA))))
-      } else {
-        var jsx$1 = false
-      };
-      if (jsx$1) {
-        i = ((1 + i) | 0)
-      } else {
-        break
-      }
-    };
-    var i$1 = i;
-    var opt = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
-    if (opt.isEmpty__Z()) {
-      return (void 0)
-    } else {
-      var arg1$1 = opt.get__O();
-      return arg1$1
     }
   }
 });
@@ -18134,6 +18505,9 @@ $c_sci_StringOps.prototype.thisCollection__sc_Traversable = (function() {
 $c_sci_StringOps.prototype.equals__O__Z = (function(x$1) {
   return $m_sci_StringOps$().equals$extension__T__O__Z(this.repr$1, x$1)
 });
+$c_sci_StringOps.prototype.mkString__T__T = (function(sep) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, "", sep, "")
+});
 $c_sci_StringOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
 });
@@ -18292,6 +18666,9 @@ $c_scm_ArrayOps$ofRef.prototype.thisCollection__sc_Traversable = (function() {
 $c_scm_ArrayOps$ofRef.prototype.equals__O__Z = (function(x$1) {
   return $m_scm_ArrayOps$ofRef$().equals$extension__AO__O__Z(this.repr$1, x$1)
 });
+$c_scm_ArrayOps$ofRef.prototype.mkString__T__T = (function(sep) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, "", sep, "")
+});
 $c_scm_ArrayOps$ofRef.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
 });
@@ -18448,6 +18825,9 @@ $c_sjs_js_ArrayOps.prototype.thisCollection__sc_Traversable = (function() {
 });
 $c_sjs_js_ArrayOps.prototype.equals__O__Z = (function(that) {
   return $f_sc_GenSeqLike__equals__O__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.mkString__T__T = (function(sep) {
+  return $f_sc_TraversableOnce__mkString__T__T__T__T(this, "", sep, "")
 });
 $c_sjs_js_ArrayOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $f_sc_TraversableOnce__mkString__T__T__T__T(this, start, sep, end)
@@ -22448,20 +22828,20 @@ function $h_sci_$colon$colon() {
   /*<skip>*/
 }
 $h_sci_$colon$colon.prototype = $c_sci_$colon$colon.prototype;
-$c_sci_$colon$colon.prototype.productPrefix__T = (function() {
-  return "::"
-});
 $c_sci_$colon$colon.prototype.head__O = (function() {
   return this.head$5
+});
+$c_sci_$colon$colon.prototype.productPrefix__T = (function() {
+  return "::"
 });
 $c_sci_$colon$colon.prototype.productArity__I = (function() {
   return 2
 });
-$c_sci_$colon$colon.prototype.isEmpty__Z = (function() {
-  return false
-});
 $c_sci_$colon$colon.prototype.tail__sci_List = (function() {
   return this.tl$5
+});
+$c_sci_$colon$colon.prototype.isEmpty__Z = (function() {
+  return false
 });
 $c_sci_$colon$colon.prototype.productElement__I__O = (function(x$1) {
   switch (x$1) {

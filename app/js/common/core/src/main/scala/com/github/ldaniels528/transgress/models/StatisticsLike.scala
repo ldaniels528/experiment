@@ -13,5 +13,5 @@ class StatisticsLike(val cpuLoad: Double,
                      val bytesPerSecond: Double,
                      val recordsDelta: Double,
                      val recordsPerSecond: Double,
-                     val pctComplete: Double,
+                     val pctComplete: js.UndefOr[Double],
                      val completionTime: Double) extends js.Object

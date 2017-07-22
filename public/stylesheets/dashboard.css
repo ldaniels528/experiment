@@ -6,6 +6,15 @@
     padding: 10px;
 }
 
+.dashboard_selected_state {
+    font-weight: bold;
+    color: #888888;
+}
+
+.dashboard_state {
+    pointer: cursor;
+}
+
 .jobs_shown {
     font-size: 12pt;
     background-color: #6699ff;
@@ -27,6 +36,10 @@
 
 .status_claimed {
     color: #4466ff;
+}
+
+.status_failed {
+    color: #ff0000;
 }
 
 .status_new {
