@@ -1,5 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Scala template
+.DS_Store
+
 *.class
 *.log
 
