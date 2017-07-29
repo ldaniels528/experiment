@@ -1,6 +1,6 @@
 package com.github.ldaniels528.qwery.util
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 /**
   * Duration Utilities
@@ -9,5 +9,7 @@ import scala.concurrent.duration.Duration
 object DurationHelper {
 
   implicit def duration2Long(duration: Duration): Long = duration.toMillis
+
+  implicit def long2duration(value: Long): FiniteDuration = value.millis
 
 }

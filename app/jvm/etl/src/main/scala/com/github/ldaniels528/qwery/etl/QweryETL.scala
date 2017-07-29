@@ -7,8 +7,8 @@ import java.net.InetAddress
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.ldaniels528.qwery.AppConstants._
+import com.github.ldaniels528.qwery.actors.FileWatchingActor.Watch
 import com.github.ldaniels528.qwery.actors.QweryActorSystem
-import com.github.ldaniels528.qwery.etl.actors.FileManagementActor._
 import com.github.ldaniels528.qwery.etl.actors.JobManagementActor._
 import com.github.ldaniels528.qwery.etl.actors.JobStates.JobState
 import com.github.ldaniels528.qwery.etl.actors.JobStatistics._
@@ -33,7 +33,7 @@ object QweryETL extends FileMoving {
   private var slaveID_? : Option[String] = None
 
   /**
-    * Startup method
+    * Application entrypoint
     * @param args the given commandline arguments
     */
   def main(args: Array[String]): Unit = {
@@ -60,7 +60,7 @@ object QweryETL extends FileMoving {
     implicit val dispatcher = QweryActorSystem.dispatcher
 
     // start a file watch for "$QWERY_HOME/inbox/"
-    config.fileManager ! WatchFile(config.inboxDir, { file =>
+    config.fileWatcher ! Watch(config.inboxDir.toPath, { file =>
       val rootScope = Scope.root()
       config.lookupTrigger(rootScope, file.getName) match {
         case Some(trigger) => scheduleJob(file, rootScope, trigger)

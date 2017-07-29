@@ -5,7 +5,7 @@ import java.io.File
 import java.util.UUID
 
 import akka.actor.ActorRef
-import com.github.ldaniels528.qwery.actors.QweryActorSystem
+import com.github.ldaniels528.qwery.actors.{FileWatchingActor, QweryActorSystem}
 import com.github.ldaniels528.qwery.etl.actors._
 import com.github.ldaniels528.qwery.etl.events.ScheduledEvent
 import com.github.ldaniels528.qwery.etl.triggers._
@@ -41,6 +41,7 @@ class ETLConfig(val baseDir: File, userWorkerConfig_? : Option[String]) {
 
   // create the support actors
   val fileManager: ActorRef = QweryActorSystem.createActor(name = "fileMgr", () => new FileManagementActor(this))
+  val fileWatcher: ActorRef = QweryActorSystem.createActor(name = "fileWatcher", () => new FileWatchingActor())
   val jobManager: ActorRef = QweryActorSystem.createActor(name = "jobMgr", instances = 5)(() => new JobManagementActor(this))
   val slaveManager: ActorRef = QweryActorSystem.createActor(name = "slaveMgr", () => new SlaveManagementActor(this))
   val workflowManager: ActorRef = QweryActorSystem.createActor(name = "workMgr", instances = 5)(() => new WorkflowManagementActor(this))
@@ -117,7 +118,4 @@ class ETLConfig(val baseDir: File, userWorkerConfig_? : Option[String]) {
   * ETL Configuration Companion
   * @author lawrence.daniels@gmail.com
   */
-object ETLConfig extends JSONSupport {
-
-
-}
+object ETLConfig extends JSONSupport

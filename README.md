@@ -1108,12 +1108,12 @@ and finally at 10:45pm.
 ```
 
 <a name="building-etl"></a>
-### Building and running the ETL
+### Building and running the ETL/Worker
 
-Building (and assembling) the ETL is simple:
+Building (and assembling) the ETL/Worker is simple:
 
 ```bash
-~/Downloads/qwery/> sbt "project etl" clean assembly 
+~/Downloads/qwery/> sbt "project worker_jvm" clean assembly 
 ```
 
 After the compilation completes, you'll see a message like:

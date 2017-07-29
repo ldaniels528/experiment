@@ -1,0 +1,9 @@
+{
+  "supervisor": "localhost:9000",
+  "directories": [
+    {
+      "source": "./tmp",
+      "target": "./example/inbox"
+    }
+  ]
+}

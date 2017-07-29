@@ -1268,6 +1268,19 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__c
   };
   jsx$2.selectedJob = jsx$1
 }
+function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z($thiz, aJob) {
+  if ((aJob !== (void 0))) {
+    var valueA = aJob.state;
+    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
+    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
+      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
+    } else {
+      return false
+    }
+  } else {
+    return false
+  }
+}
 function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$18__sjs_js_UndefOr__sjs_js_UndefOr__V($thiz, aJobs, aJob) {
   if ((aJobs !== (void 0))) {
     if ((aJob !== (void 0))) {
@@ -1304,19 +1317,6 @@ function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__c
         }
       }
     }
-  }
-}
-function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$9__sjs_js_UndefOr__Z($thiz, aJob) {
-  if ((aJob !== (void 0))) {
-    var valueA = aJob.state;
-    var value = $m_Lcom_github_ldaniels528_transgress_models_JobStates$().RUNNING$1;
-    if (((valueA !== (void 0)) && $m_sr_BoxesRunTime$().equals__O__O__Z(valueA, value))) {
-      return (!$f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__isJobOperation__pLcom_github_ldaniels528_transgress_client_controllers_JobHandling__Z($thiz))
-    } else {
-      return false
-    }
-  } else {
-    return false
   }
 }
 function $f_Lcom_github_ldaniels528_transgress_client_controllers_JobHandling__com$github$ldaniels528$transgress$client$controllers$JobHandling$$$anonfun$$init$$15__sjs_js_UndefOr__Z($thiz, aJob) {
@@ -5423,36 +5423,36 @@ $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.init
 });
 $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureControllers__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.controller("ActivityController", ["$scope", (function($this) {
-    return (function(x$macro$7$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$7$2)
+    return (function(x$macro$1$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_ActivityController().init___Lcom_github_ldaniels528_transgress_client_controllers_ActivityScope(x$macro$1$2)
     })
   })(this)]);
   module.controller("DashboardController", ["$scope", (function(this$2$1) {
-    return (function(x$macro$8$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController().init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope(x$macro$8$2)
+    return (function(x$macro$2$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_DashboardController().init___Lcom_github_ldaniels528_transgress_client_controllers_DashboardScope(x$macro$2$2)
     })
   })(this)]);
   module.controller("MainController", ["$scope", "$interval", "$location", "toaster", "JobService", "SlaveService", (function(this$3$1) {
-    return (function(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13$2, x$macro$14$2) {
-      var x$macro$13 = $as_Lcom_github_ldaniels528_transgress_client_services_JobService(x$macro$13$2);
-      var x$macro$14 = $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$14$2);
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController().init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$9$2, x$macro$10$2, x$macro$11$2, x$macro$12$2, x$macro$13, x$macro$14)
+    return (function(x$macro$3$2, x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7$2, x$macro$8$2) {
+      var x$macro$7 = $as_Lcom_github_ldaniels528_transgress_client_services_JobService(x$macro$7$2);
+      var x$macro$8 = $as_Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$8$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_MainController().init___Lcom_github_ldaniels528_transgress_client_controllers_MainScope__Lio_scalajs_npm_angularjs_Interval__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_JobService__Lcom_github_ldaniels528_transgress_client_services_SlaveService(x$macro$3$2, x$macro$4$2, x$macro$5$2, x$macro$6$2, x$macro$7, x$macro$8)
     })
   })(this)]);
   module.controller("SlaveController", ["$scope", (function(this$4$1) {
-    return (function(x$macro$15$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController().init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope(x$macro$15$2)
+    return (function(x$macro$9$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_SlaveController().init___Lcom_github_ldaniels528_transgress_client_controllers_SlaveScope(x$macro$9$2)
     })
   })(this)]);
   module.controller("TriggerController", ["$scope", (function(this$5$1) {
-    return (function(x$macro$16$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController().init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope(x$macro$16$2)
+    return (function(x$macro$10$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_TriggerController().init___Lcom_github_ldaniels528_transgress_client_controllers_TriggerScope(x$macro$10$2)
     })
   })(this)]);
   module.controller("WorkflowController", ["$scope", "toaster", "WorkflowService", (function(this$6$1) {
-    return (function(x$macro$17$2, x$macro$18$2, x$macro$19$2) {
-      var x$macro$19 = $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$19$2);
-      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$17$2, x$macro$18$2, x$macro$19)
+    return (function(x$macro$11$2, x$macro$12$2, x$macro$13$2) {
+      var x$macro$13 = $as_Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$13$2);
+      return new $c_Lcom_github_ldaniels528_transgress_client_controllers_WorkflowController().init___Lcom_github_ldaniels528_transgress_client_controllers_WorkflowScope__Lio_scalajs_npm_angularjs_toaster_Toaster__Lcom_github_ldaniels528_transgress_client_services_WorkflowService(x$macro$11$2, x$macro$12$2, x$macro$13)
     })
   })(this)])
 });
@@ -5496,23 +5496,23 @@ $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.$$js
 });
 $c_Lcom_github_ldaniels528_transgress_client_QweryWebClientJSApp$.prototype.configureServices__p1__Lio_scalajs_npm_angularjs_Module__V = (function(module) {
   module.service("JobService", ["$http", (function($this) {
-    return (function(x$macro$20$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$20$2)
+    return (function(x$macro$14$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_JobService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$14$2)
     })
   })(this)]);
   module.service("SlaveService", ["$http", (function(this$2$1) {
-    return (function(x$macro$21$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$21$2)
+    return (function(x$macro$15$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_SlaveService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$15$2)
     })
   })(this)]);
   module.service("WebSocketService", ["$rootScope", "$http", "$location", "$timeout", "toaster", (function(this$3$1) {
-    return (function(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$22$2, x$macro$23$2, x$macro$24$2, x$macro$25$2, x$macro$26$2)
+    return (function(x$macro$16$2, x$macro$17$2, x$macro$18$2, x$macro$19$2, x$macro$20$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WebSocketService().init___Lio_scalajs_npm_angularjs_Scope__Lio_scalajs_npm_angularjs_http_Http__Lio_scalajs_npm_angularjs_Location__Lio_scalajs_npm_angularjs_Timeout__Lio_scalajs_npm_angularjs_toaster_Toaster(x$macro$16$2, x$macro$17$2, x$macro$18$2, x$macro$19$2, x$macro$20$2)
     })
   })(this)]);
   module.service("WorkflowService", ["$http", (function(this$4$1) {
-    return (function(x$macro$27$2) {
-      return new $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$27$2)
+    return (function(x$macro$21$2) {
+      return new $c_Lcom_github_ldaniels528_transgress_client_services_WorkflowService().init___Lio_scalajs_npm_angularjs_http_Http(x$macro$21$2)
     })
   })(this)])
 });

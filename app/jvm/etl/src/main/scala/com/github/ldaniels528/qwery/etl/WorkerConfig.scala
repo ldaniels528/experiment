@@ -2,7 +2,7 @@ package com.github.ldaniels528.qwery.etl
 
 import java.io.File
 
-import com.github.ldaniels528.qwery.etl.ETLConfig.parseJsonAs
+import com.github.ldaniels528.qwery.util.JSONSupport
 
 import scala.io.Source
 
@@ -17,7 +17,7 @@ case class WorkerConfig(supervisor: String, controlPort: String)
   * Worker configuration
   * @author lawrence.daniels@gmail.com
   */
-object WorkerConfig {
+object WorkerConfig extends JSONSupport {
 
   /**
     * Loads the optional ETL worker (worker.json) configuration file

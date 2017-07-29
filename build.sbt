@@ -29,14 +29,14 @@ lazy val testDependencies = Seq(
     "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
   ))
 
-lazy val root = (project in file("./app/jvm/bundle")).
-  aggregate(cli, etl).
-  dependsOn(cli, etl).
+lazy val jvm_apps = (project in file("./app/jvm/apps")).
+  aggregate(cli, worker_jvm, watcher_jvm).
+  dependsOn(cli, worker_jvm, watcher_jvm).
   settings(publishingSettings: _*).
   settings(
-    name := "qwery-bundle",
+    name := "qwery-jvm-apps",
     organization := "io.scalajs",
-    description := "Broadway Application Bundle",
+    description := "Broadway JVM Application Bundle",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -103,9 +103,9 @@ lazy val cli = (project in file("./app/jvm/cli")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-cli",
+    name := "broadway-cli",
     organization := "io.scalajs",
-    description := "Qwery CLI Application",
+    description := "Broadway CLI Application",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -130,15 +130,15 @@ lazy val cli = (project in file("./app/jvm/cli")).
       "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
     ))
 
-lazy val etl = (project in file("./app/jvm/etl")).
+lazy val worker_jvm = (project in file("./app/jvm/etl")).
   aggregate(jvm_core).
   dependsOn(jvm_core).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-etl",
+    name := "broadway-worker",
     organization := "io.scalajs",
-    description := "Broadway ETL Worker/Orchestration Server",
+    description := "Broadway Worker/Orchestration Server",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -146,6 +146,37 @@ lazy val etl = (project in file("./app/jvm/etl")).
     autoCompilerPlugins := true,
     coverageEnabled := true,
     mainClass in assembly := Some("com.github.ldaniels528.qwery.etl.QweryETL"),
+    test in assembly := {},
+    assemblyJarName in assembly := s"${name.value}-${version.value}.bin.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("log4j.properties", _*) => MergeStrategy.discard
+      case PathList("META-INF", _*) => MergeStrategy.discard
+      case fileName if fileName.toLowerCase == "reference.conf" => MergeStrategy.concat
+      case _ => MergeStrategy.first
+    },
+    libraryDependencies ++= Seq(
+      //
+      // SLF4J
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "test"
+    ))
+
+lazy val watcher_jvm = (project in file("./app/jvm/watcher")).
+  aggregate(jvm_core).
+  dependsOn(jvm_core).
+  settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "broadway-watcher",
+    organization := "io.scalajs",
+    description := "Broadway Watcher (File Mover)",
+    version := appVersion,
+    scalaVersion := scalaJvmVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    coverageEnabled := true,
+    mainClass in assembly := Some("com.github.ldaniels528.broadway.watcher.WatcherApp"),
     test in assembly := {},
     assemblyJarName in assembly := s"${name.value}-${version.value}.bin.jar",
     assemblyMergeStrategy in assembly := {
@@ -353,5 +384,5 @@ lazy val publishingSettings = Seq(
 // add the alias
 addCommandAlias("fastOptJSCopy", ";fastOptJS;copyJS")
 
-// loads the Scalajs-io root project at sbt startup
-onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value
+// loads the Scalajs-io jvm_apps project at sbt startup
+onLoad in Global := (Command.process("project jvm_apps", _: State)) compose (onLoad in Global).value
