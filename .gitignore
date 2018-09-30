@@ -9,6 +9,7 @@
 .cache
 .history
 .lib/
+temp/*
 dist/*
 target/
 lib_managed/
@@ -60,3 +61,7 @@ fixed-data.csv
 tmp
 .idea/
 node_modules/
+./samples/awsdhubnp-consumer-ma-exporter-pixall/
+./samples/sales_transaction_data/
+metastore_db/
+
