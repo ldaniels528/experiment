@@ -1,11 +1,8 @@
 package com.qwery.platform.spark
 
-import com.qwery.models.Insert.DataRow
 import com.qwery.models.Location
 import com.qwery.models.expressions.Expression
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Row}
-import org.slf4j.LoggerFactory
+import org.apache.spark.sql.DataFrame
 
 /**
   * Represents a SQL-like Insert operation
@@ -23,7 +20,6 @@ case class SparkInsert(destination: SparkInvokable, source: SparkInvokable, fiel
   * @author lawrence.daniels@gmail.com
   */
 object SparkInsert {
-  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Represents a writable sink
@@ -39,19 +35,13 @@ object SparkInsert {
 
   /**
     * Represents a readable spout
-    * @param values the given readable values
+    * @param rows     the given rows of data
     * @param resolver the optional [[SparkColumnResolver]]
     */
-  case class Spout(values: List[DataRow], resolver: Option[SparkColumnResolver] = None) extends SparkInvokable {
+  case class Spout(rows: List[List[Any]], resolver: Option[SparkColumnResolver]) extends SparkInvokable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
-      import SparkQweryCompiler.Implicits._
-      resolver map { theResolver =>
-        val columns = theResolver.resolve
-        val rows = values.map(row => Row(row.map(_.asAny): _*))
-        val rdd = rc.spark.sparkContext.makeRDD(rows)
-        val schema = StructType(fields = columns.map(_.compile))
-        logger.info(s"schema: $schema")
-        rc.spark.sqlContext.createDataFrame(rdd, schema)
+      resolver map { aResolver =>
+        rc.createDataSet(columns = aResolver.resolve, data = rows)
       }
     }
   }

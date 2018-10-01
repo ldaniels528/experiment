@@ -4,7 +4,7 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 import com.qwery.models.StorageFormats.StorageFormat
-import com.qwery.models.expressions.VariableRef
+import com.qwery.models.expressions.{RowSetVariableRef, VariableRef}
 import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
 
@@ -108,10 +108,11 @@ trait SQLLanguageParser {
       // indirect query/variable?
       case ts if ts nextIf "(" =>
         val result = parseNext(ts)
-        stream expect ")"
+        ts expect ")"
         result
       // variable (e.g. "@name")?
-      case ts if ts nextIf "@" => VariableRef(ts.next().text)
+      case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
+      case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
       // table (e.g. "Months")?
       case ts if ts.isBackticks | ts.isText => TableRef.parse(ts.next().text)
       // unknown
@@ -123,7 +124,7 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses an assignment
+    * Parses a SET statement
     * @example
     * {{{
     *   SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 )
@@ -149,9 +150,9 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return
     */
-  protected def parseCall(ts: TokenStream): CallProcedure = {
+  protected def parseCall(ts: TokenStream): ProcedureCall = {
     val params = SQLTemplateParams(ts, "CALL %a:name ( %E:args )")
-    CallProcedure(name = params.atoms("name"), args = params.expressions("args"))
+    ProcedureCall(name = params.atoms("name"), args = params.expressions("args"))
   }
 
   /**
@@ -480,6 +481,11 @@ trait SQLLanguageParser {
       where = params.conditions.get("condition"))
   }
 
+  /**
+    * Determines the storage format
+    * @param formatString the storage format class or string
+    * @return the [[StorageFormat]]
+    */
   private def determineStorageFormat(formatString: String): StorageFormat = formatString.toUpperCase() match {
     case s if s.contains("AVRO") => StorageFormats.AVRO
     case s if s.contains("CSV") => StorageFormats.CSV

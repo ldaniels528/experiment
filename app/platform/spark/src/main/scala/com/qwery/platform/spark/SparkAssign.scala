@@ -11,7 +11,7 @@ import org.apache.spark.sql.DataFrame
 case class SparkAssign(variable: VariableRef, value: SparkInvokable) extends SparkInvokable {
   override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
     val result = value.execute(input)
-    rc.updateVariable(variable.name, result)
+    rc.updateDataSet(variable.name, result)
     result
   }
 }

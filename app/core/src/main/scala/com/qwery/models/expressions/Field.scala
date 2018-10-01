@@ -69,14 +69,4 @@ case class ConstantField(value: Expression) extends Field {
   lazy val name: String = alias.getOrElse(NamedExpression.randomName)
 }
 
-/**
-  * Represents a reference to a function
-  * @author lawrence.daniels@gmail.com
-  */
-case class FunctionRef(name: String, args: Seq[Expression]) extends Field
 
-/**
-  * Represents a reference to a variable
-  * @author lawrence.daniels@gmail.com
-  */
-case class VariableRef(name: String) extends Field

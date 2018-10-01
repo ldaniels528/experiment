@@ -7,6 +7,12 @@ import org.slf4j.LoggerFactory
   * Spark Console
   * @author lawrence.daniels@gmail.com
   */
+sealed trait SparkConsole extends SparkInvokable
+
+/**
+  * Spark Console Singleton
+  * @author lawrence.daniels@gmail.com
+  */
 object SparkConsole {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
@@ -16,7 +22,7 @@ object SparkConsole {
     * {{{ DEBUG 'This is a debug message.' }}}
     * @param text the text to print
     */
-  def debug(text: String): SparkInvokable = new SparkInvokable {
+  def debug(text: String): SparkConsole = new SparkConsole {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       logger.debug(text)
       None
@@ -29,7 +35,7 @@ object SparkConsole {
     * {{{ ERROR 'This is a informational message.' }}}
     * @param text the text to print
     */
-  def error(text: String): SparkInvokable = new SparkInvokable {
+  def error(text: String): SparkConsole = new SparkConsole {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       logger.error(text)
       None
@@ -42,7 +48,7 @@ object SparkConsole {
     * {{{ INFO 'This is a informational message.' }}}
     * @param text the text to print
     */
-  def info(text: String): SparkInvokable = new SparkInvokable {
+  def info(text: String): SparkConsole = new SparkConsole {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       logger.info(text)
       None
@@ -55,7 +61,7 @@ object SparkConsole {
     * {{{ PRINT 'This is it!' }}}
     * @author lawrence.daniels@gmail.com
     */
-  def print(text: String): SparkInvokable = new SparkInvokable {
+  def print(text: String): SparkConsole = new SparkConsole {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       println(text)
       None
@@ -68,7 +74,7 @@ object SparkConsole {
     * {{{ WARN 'This is a warning message.' }}}
     * @param text the text to print
     */
-  def warn(text: String): SparkInvokable = new SparkInvokable {
+  def warn(text: String): SparkConsole = new SparkConsole {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       logger.warn(text)
       None

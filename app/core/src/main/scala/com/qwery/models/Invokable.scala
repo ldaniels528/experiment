@@ -21,7 +21,7 @@ object Invokable {
   final implicit class InvokableEnriched(val invokable: Invokable) extends AnyVal {
 
     @inline def isQuery: Boolean = invokable match {
-      case _: CallProcedure => true
+      case _: ProcedureCall => true
       case _: Select => true
       case _: Union => true
       case _ => false

@@ -1,26 +1,33 @@
 package com.qwery.platform.spark
 
 import com.qwery.models.Column
-import com.qwery.models.expressions.Expression
 import org.apache.spark.sql.DataFrame
-import org.slf4j.LoggerFactory
 
 /**
   * Spark Procedure
   * @param name   the name of the procedure
   * @param params the procedure's parameters
-  * @param code   the procedure's code
+  * @param code   the procedure's executable code
   */
 case class SparkProcedure(name: String, params: Seq[Column], code: SparkInvokable) {
-  private val logger = LoggerFactory.getLogger(getClass)
 
-  def invoke(args: List[Expression])(implicit rc: SparkQweryContext): Option[DataFrame] = {
+  /**
+    * Invokes the procedure
+    * @param args the procedure-call arguments
+    * @param rc   the implicit [[SparkQweryContext]]
+    * @return the option of a [[DataFrame]]
+    */
+  def invoke(args: List[Any])(implicit rc: SparkQweryContext): Option[DataFrame] = {
     import com.qwery.util.OptionHelper.Implicits.Risky._
-    import rc.spark.implicits._
 
-    val inputArgs = params zip args map { case (param, arg) => param.name -> arg.asString } // TODO fix type issue
-    logger.info(s"$name <= ${inputArgs map { case (k, v) => s"('$k', '$v')" } mkString ", "}")
-    code.execute(input = inputArgs.toDF())
+    // create a new scope
+    rc.withScope { scope =>
+      // populate the scope with the input arguments
+      params zip args foreach { case (param, value) => scope(param.name) = value }
+
+      // also create a data set containing the same data
+      code.execute(input = rc.createDataSet(columns = params, data = List(args)))
+    }
   }
 
 }

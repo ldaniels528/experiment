@@ -161,7 +161,7 @@ trait ExpressionParser {
       // is it an all fields reference?
       case ts if ts nextIf "*" => AllFields
       // is it a variable? (e.g. @totalCost)
-      case ts if ts is "@" => parseVariableRef(ts)
+      case ts if (ts is "@") | (ts is "$") => parseVariableRef(ts)
       // is it a quantity (e.g. "(2 + (x * 2))")?
       case ts if ts is "(" => parseQuantity(ts)
       // is is a null value?
@@ -190,12 +190,12 @@ trait ExpressionParser {
     Option(BasicField(name = params.atoms("column")).as(params.atoms.get("alias")))
   }
 
-  def parseVariableRef(ts: TokenStream): Option[VariableRef] = {
-    if (ts nextIf "@") {
-      if (ts.isIdentifier) Option(VariableRef(ts.next().text))
-      else ts.die("Variable identifier expected")
+  def parseVariableRef(stream: TokenStream): Option[VariableRef] = {
+    stream match {
+      case ts if ts nextIf "@" => Option(RowSetVariableRef(ts.next().text))
+      case ts if ts nextIf "$" => Option(LocalVariableRef(ts.next().text))
+      case ts => ts.die("Variable expected")
     }
-    else None
   }
 
   /**

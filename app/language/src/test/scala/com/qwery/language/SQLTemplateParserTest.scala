@@ -86,7 +86,7 @@ class SQLTemplateParserTest extends FunSpec {
       )))
       verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Query or variable expected")
       verify(text = "@addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> VariableRef(name = "addressBook")
+        "variable" -> RowSetVariableRef(name = "addressBook")
       )))
     }
 
@@ -98,7 +98,7 @@ class SQLTemplateParserTest extends FunSpec {
         "table" -> TableRef.parse("AddressBook")
       )))
       verify(text = "@addressBook", template = "%q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> VariableRef(name = "addressBook")
+        "variable" -> RowSetVariableRef(name = "addressBook")
       )))
     }
 
@@ -133,13 +133,13 @@ class SQLTemplateParserTest extends FunSpec {
         "values" -> Insert.Values(List(List(1d, 2d, 3d)))
       )))
       verify(text = "@addressBook", template = "%V:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> VariableRef(name = "addressBook")
+        "variable" -> RowSetVariableRef(name = "addressBook")
       )))
     }
 
     it("should parse variable reference tags (%v)") {
       verify(text = "@variable", template = "%v:variable")(SQLTemplateParams(variables = Map(
-        "variable" -> VariableRef("variable")
+        "variable" -> RowSetVariableRef("variable")
       )))
     }
 

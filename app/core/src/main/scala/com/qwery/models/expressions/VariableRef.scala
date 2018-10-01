@@ -1,0 +1,22 @@
+package com.qwery.models.expressions
+
+/**
+  * Represents a reference to a variable
+  * @author lawrence.daniels@gmail.com
+  */
+sealed trait VariableRef extends Field {
+  def name: String
+}
+
+/**
+  * Represents a reference to a local variable
+  * @param name the name of the variable
+  */
+case class LocalVariableRef(name: String) extends VariableRef
+
+/**
+  * Represents a reference to a row-set variable
+  * @param name the name of the variable
+  */
+case class RowSetVariableRef(name: String) extends VariableRef
+

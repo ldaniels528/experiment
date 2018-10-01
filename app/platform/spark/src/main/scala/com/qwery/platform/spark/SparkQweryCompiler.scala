@@ -7,7 +7,7 @@ import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes._
 import com.qwery.models.StorageFormats._
 import com.qwery.models._
-import com.qwery.models.expressions.{Condition, Expression, VariableRef}
+import com.qwery.models.expressions.{Condition, Expression, RowSetVariableRef}
 import com.qwery.platform.spark.SparkQweryCompiler.Implicits._
 import com.qwery.platform.spark.SparkSelect.SparkJoin
 import com.qwery.util.OptionHelper._
@@ -88,7 +88,7 @@ object SparkQweryCompiler {
   def read(tableOrView: TableLike)(implicit rc: SparkQweryContext): Option[DataFrame] = {
     import Implicits._
     tableOrView match {
-      case SparkLogicalTable(_, columns, source) => rc.toDataFrame(columns, source)
+      case SparkLogicalTable(_, columns, source) => rc.createDataSet(columns, source)
       case table: Table =>
         val df = table.inputFormat match {
           case AVRO => rc.spark.read.avro(table.location)
@@ -103,14 +103,12 @@ object SparkQweryCompiler {
           case JSON => rc.spark.read.json(table.location)
           case PARQUET => rc.spark.read.parquet(table.location)
           case ORC => rc.spark.read.orc(table.location)
-          case format =>
-            die(s"Storage format $format is not supported for reading")
+          case format => die(s"Storage format $format is not supported for reading")
         }
         // rename the columns
         Option(df.toDF(table.columns.map(_.name): _*))
       case view: View => view.query.compile.execute(input = None)
-      case unknown =>
-        throw die(s"Unrecognized table type '$unknown' (${unknown.getClass.getName})")
+      case unknown => die(s"Unrecognized table type '$unknown' (${unknown.getClass.getName})")
     }
   }
 
@@ -141,19 +139,17 @@ object SparkQweryCompiler {
         case JSON => writer.json(table.location)
         case PARQUET => writer.parquet(table.location)
         case ORC => writer.orc(table.location)
-        case format =>
-          die(s"Storage format $format is not supported for writing")
+        case format => die(s"Storage format $format is not supported for writing")
       }
-    case view: View =>
-      throw die(s"View '${view.name}' cannot be modified")
+    case view: View => die(s"View '${view.name}' cannot be modified")
   }
 
   /**
     * Returns a data frame representing a result set
     * @param name the name of the variable
     */
-  case class ReadVariableByReference(name: String, alias: Option[String]) extends SparkInvokable {
-    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getQuery(name, alias)
+  case class ReadRowSetByReference(name: String, alias: Option[String]) extends SparkInvokable {
+    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getDataSet(name, alias)
   }
 
   /**
@@ -161,7 +157,7 @@ object SparkQweryCompiler {
     * @param name the name of the table
     */
   case class ReadTableOrViewByReference(name: String, alias: Option[String]) extends SparkInvokable {
-    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getQuery(name, alias)
+    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getDataSet(name, alias)
   }
 
   /**
@@ -210,7 +206,7 @@ object SparkQweryCompiler {
         StructField(name = column.name, dataType = toSparkType(column.`type`), nullable = column.nullable)
 
       @inline def toSparkType(`type`: ColumnType): DataType =
-        sparkTypeMapping.getOrElse(`type`, throw die(s"Type '${`type`}' could not be mapped to Spark"))
+        sparkTypeMapping.getOrElse(`type`, die(s"Type '${`type`}' could not be mapped to Spark"))
     }
 
     /**
@@ -234,8 +230,7 @@ object SparkQweryCompiler {
           case NOT(c) => !c.compile
           case OR(a, b) => a.compile || b.compile
           case RLIKE(a, b) => a.compile rlike b.asString
-          case unknown =>
-            throw die(s"Unrecognized condition '$unknown' [${unknown.getClass.getSimpleName}]")
+          case unknown => die(s"Unrecognized condition '$unknown' [${unknown.getClass.getSimpleName}]")
         }
       }
     }
@@ -256,12 +251,12 @@ object SparkQweryCompiler {
             val op = callUDF(name, args.map(_.compile): _*)
             ref.alias.map(alias => op.as(alias)) getOrElse op
           case Literal(value) => lit(value)
+          case LocalVariableRef(name) => lit(rc.getVariable(name))
           case Modulo(a, b) => a.compile % b.compile
           case Multiply(a, b) => a.compile * b.compile
           case pow: Pow => die(s"Unsupported feature '**' (power) in $pow")
           case Subtract(a, b) => a.compile - b.compile
-          case unknown =>
-            throw die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
+          case unknown => die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
         }
       }
     }
@@ -273,7 +268,6 @@ object SparkQweryCompiler {
     final implicit class InvokableCompiler(val invokable: Invokable) extends AnyVal {
       def compile(implicit rc: SparkQweryContext): SparkInvokable = invokable match {
         case Assign(variableRef, value) => SparkAssign(variableRef, value = value.compile)
-        case CallProcedure(name, args) => SparkCallProcedure(name, args)
         case Console.Debug(text) => SparkConsole.debug(text)
         case Console.Error(text) => SparkConsole.error(text)
         case Console.Info(text) => SparkConsole.info(text)
@@ -285,23 +279,27 @@ object SparkQweryCompiler {
         case Include(paths) => incorporateSources(paths)
         case Insert(destination, source, fields) =>
           SparkInsert(destination = destination.compile, fields = fields, source = source match {
-            case Insert.Values(values) => SparkInsert.Spout(values, resolver = Option(SparkLocationColumnResolver(destination.target)))
+            case Insert.Values(values) =>
+              SparkInsert.Spout(
+                rows = values.map(_.map(_.asAny)),
+                resolver = Option(SparkLocationColumnResolver(destination.target)))
             case op => op.compile
           })
         case Insert.Into(target) => SparkInsert.Sink(target = target, append = true)
         case Insert.Overwrite(target) => SparkInsert.Sink(target = target, append = false)
-        case Insert.Values(values) => SparkInsert.Spout(values, resolver = None)
+        case Insert.Values(values) => SparkInsert.Spout(rows = values.map(_.map(_.asAny)), resolver = None)
         case MainProgram(name, code, hiveSupport, streaming) => SparkMain(name, code.compile, hiveSupport, streaming)
+        case ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.compile))
         case Return(value) => SparkReturn(value = value.map(_.compile))
         case select@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
           SparkSelect(columns, from.map(_.compile), joins.map(_.compile), groupBy, orderBy, where, limit, select.alias)
         case SQL(ops) => SparkSQL(ops.map(_.compile))
         case ref@TableRef(name) => ReadTableOrViewByReference(name, ref.alias)
         case Show(dataSet, limit) => SparkShow(dataSet.compile, limit)
-        case Update(table, assignments, where) => throw die(s"UPDATE is not yet supported")
+        case Update(table, assignments, where) => die(s"UPDATE is not yet supported")
         case ref@Union(query0, query1) => SparkUnion(query0 = query0.compile, query1 = query1.compile, ref.alias)
-        case ref@VariableRef(name) => ReadVariableByReference(name, ref.alias)
-        case unknown => throw die(s"Unhandled operation '$unknown'")
+        case ref@RowSetVariableRef(name) => ReadRowSetByReference(name, ref.alias)
+        case unknown => die(s"Unhandled operation '$unknown'")
       }
 
       private def incorporateSources(paths: Seq[String])(implicit rc: SparkQweryContext): SparkInvokable = {
@@ -363,8 +361,7 @@ object SparkQweryCompiler {
         tableLike match {
           case table: Table => table.columns
           case table: LogicalTable => table.columns
-          case table =>
-            throw die(s"Could not resolve columns for '${table.name}'")
+          case table => die(s"Could not resolve columns for '${table.name}'")
         }
       }
     }

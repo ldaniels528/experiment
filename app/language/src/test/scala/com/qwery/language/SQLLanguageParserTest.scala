@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
-import com.qwery.models.expressions.{Field, VariableRef}
+import com.qwery.models.expressions.{Field, RowSetVariableRef}
 import org.scalatest.FunSpec
 
 /**
@@ -36,7 +36,7 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support CALL statements") {
       val results = sqlLanguageParser.parse("CALL computeArea(length, width)")
-      assert(results == CallProcedure(name = "computeArea", args = List("length", "width").map(Field.apply)))
+      assert(results == ProcedureCall(name = "computeArea", args = List("length", "width").map(Field.apply)))
     }
 
     it("should support CREATE EXTERNAL TABLE statements") {
@@ -89,7 +89,7 @@ class SQLLanguageParserTest extends FunSpec {
         code = Return(Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           from = TableRef.parse("Customers"),
-          where = Field("Industry") === VariableRef(name = "industry")
+          where = Field("Industry") === RowSetVariableRef(name = "industry")
         ))
       )))
     }
@@ -140,13 +140,14 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support DEBUG, ERROR, INFO, PRINT and WARN statements") {
       import Console._
-      val tests = Map[String, (String => Invokable, String)](elems =
-        "DEBUG" -> (Debug, "This is a debug message"),
-        "ERROR" -> (Error, "This is an error message"),
-        "INFO" -> (Info, "This is an informational message"),
-        "PRINT" -> (Print, "This message will be printed to STDOUT"),
-        "WARN" -> (Warn, "This is a warning message"))
-      tests foreach { case (command, (opCode, message)) =>
+      case class Expected(command: String, opCode: String => Console, message: String)
+      val tests = Seq(
+        Expected("DEBUG", Debug.apply, "This is a debug message"),
+        Expected("ERROR", Error.apply, "This is an error message"),
+        Expected("INFO", Info.apply, "This is an informational message"),
+        Expected("PRINT", Print.apply, "This message will be printed to STDOUT"),
+        Expected("WARN", Warn.apply, "This is a warning message"))
+      tests foreach { case Expected(command, opCode, message) =>
         val results = sqlLanguageParser.parse(s"$command '$message'")
         assert(results == opCode(message))
       }
@@ -380,7 +381,7 @@ class SQLLanguageParserTest extends FunSpec {
            |  )
            |}
            |""".stripMargin)
-      assert(results == SQL(Assign(variable = VariableRef(name = "customers"),
+      assert(results == SQL(Assign(variable = RowSetVariableRef(name = "customers"),
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           from = TableRef.parse("Customers"),
@@ -391,7 +392,7 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support SHOW statements") {
       val results = sqlLanguageParser.parse("SHOW @theResults LIMIT 5")
-      assert(results == Show(rows = VariableRef(name = "theResults"), limit = 5))
+      assert(results == Show(rows = RowSetVariableRef(name = "theResults"), limit = 5))
     }
 
     it("should support UNION statements") {
