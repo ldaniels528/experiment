@@ -16,15 +16,46 @@ class SparkQweryCompilerTest extends FunSpec {
     import com.qwery.models.expressions.Expression.Implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("should compile and execute CREATE FUNCTION statements") {
+    it("should support CREATE FUNCTION statements") {
       val sql = SQL(
-        Create(UserDefinedFunction(name = "nullFix", `class` = "com.github.ldaniels528.qwery.NullFix", jar = None))
-      )
+        // create the input table
+        Create(Table(name = "Securities",
+          columns = List(
+            Column(name = "Symbol", `type` = ColumnTypes.STRING),
+            Column(name = "Name", `type` = ColumnTypes.STRING),
+            Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
+            Column(name = "Sector", `type` = ColumnTypes.STRING),
+            Column(name = "Industry", `type` = ColumnTypes.STRING)),
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
+          inputFormat = StorageFormats.CSV,
+          location = "./samples/companylist/csv/"
+        )),
+
+        // create the function
+        Create(UserDefinedFunction(name = "currency", `class` = "com.github.ldaniels528.qwery.Currency", jar = None)),
+
+        // project/transform the data
+        Select(
+          fields = List(
+            Field(descriptor = "Symbol"),
+            Field(descriptor = "Name"),
+            Field(descriptor = "LastSale"),
+            FunctionCall(name = "currency", List(Field(descriptor = "MarketCap"))),
+            Field(descriptor = "IPOyear"),
+            Field(descriptor = "Sector"),
+            Field(descriptor = "Industry")),
+          from = Table("Securities"),
+          where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
+          orderBy = List(OrderColumn(name = "Symbol"))
+        ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
-      df.foreach(_.show(5))
+      val df = compiler.compile(sql).execute(input = None)
+      df.foreach(_.show(20))
     }
 
     it("should support CREATE LOGICAL TABLE statements") {
@@ -33,16 +64,15 @@ class SparkQweryCompilerTest extends FunSpec {
           name = "SpecialSecurities",
           columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
           source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01))))),
-        Select(fields = List(AllFields), from = TableRef("SpecialSecurities"))
+        Select(fields = List(AllFields), from = Table("SpecialSecurities"))
       )
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 
-    it("should compile and execute CREATE VIEW statements") {
+    it("should support CREATE VIEW statements") {
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -50,36 +80,34 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
-            Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
-            Column(name = "Reserved", `type` = ColumnTypes.STRING)),
-          inputFormat = StorageFormats.CSV,
-          outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+            Column(name = "SummaryQuote", `type` = ColumnTypes.STRING)),
+          inputFormat = StorageFormats.JSON,
+          nullValue = "n/a",
+          location = "./samples/companylist/json/"
         )),
 
         // create a view on the table
         Create(View(name = "OilGasTransmissions",
           Select(
-            fields = Seq('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved).map(s => Field(s.name)),
-            from = TableRef.parse("Securities"),
-            where = Field("Industry") === "Oil/Gas Transmission"
+            fields = Seq('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote).map(s => Field(s.name)),
+            from = Table("Securities"),
+            where = Field("Industry") === "Oil/Gas Transmission" && IsNotNull(Field("IPOyear"))
           ))),
 
         // select the records via the view
-        Select(fields = Seq(AllFields), from = TableRef.parse("OilGasTransmissions"))
+        Select(fields = Seq(AllFields), from = Table("OilGasTransmissions"))
       )
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 
-    it("should compile and execute a SELECT w/ORDER BY & LIMIT") {
+    it("should support SELECT w/ORDER BY & LIMIT statements") {
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -87,15 +115,17 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
           inputFormat = StorageFormats.CSV,
-          outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+          location = "./samples/companylist/csv/"
         )),
 
         // project/transform the data
@@ -108,18 +138,18 @@ class SparkQweryCompilerTest extends FunSpec {
             Field(descriptor = "IPOyear"),
             Field(descriptor = "Sector"),
             Field(descriptor = "Industry")),
-          from = TableRef.parse("Securities"),
+          from = Table("Securities"),
+          where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
           orderBy = List(OrderColumn(name = "Symbol")),
-          limit = 100
+          limit = 5
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 
-    it("should compile and execute a SELECT w/GROUP BY & ORDER BY") {
+    it("should support SELECT w/GROUP BY & ORDER BY statements") {
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -127,15 +157,17 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
           inputFormat = StorageFormats.CSV,
-          outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+          location = "./samples/companylist/csv/"
         )),
 
         // project/transform the data
@@ -148,19 +180,18 @@ class SparkQweryCompilerTest extends FunSpec {
             Max(Field(descriptor = "LastSale")).as("MaxLastSale"),
             Min(Field(descriptor = "LastSale")).as("MinLastSale"),
             Count(AllFields).as("Companies")),
-          from = TableRef.parse("Securities"),
+          from = Table("Securities"),
           where = Field("Sector") === "Basic Industries",
           groupBy = List("Sector", "Industry"),
           orderBy = List(OrderColumn(name = "Sector"), OrderColumn(name = "Industry"))
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 
-    it("should compile and execute INSERT-VALUES") {
+    it("should support INSERT-VALUES statements") {
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -174,9 +205,11 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
           inputFormat = StorageFormats.CSV,
-          outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+          location = "./samples/companylist/csv/"
         )),
 
         // create the output table
@@ -191,7 +224,9 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
-          inputFormat = StorageFormats.JSON,
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
           outputFormat = StorageFormats.JSON,
           location = "./temp/json/"
         )),
@@ -199,21 +234,20 @@ class SparkQweryCompilerTest extends FunSpec {
         // select the records via the view
         {
           val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved).map(s => Field(s.name))
-          Insert(Overwrite(TableRef.parse("OilGasSecurities")),
+          Insert(Overwrite(Table("OilGasSecurities")),
             Values(values = List(
-              List("AAPL", "Apple Inc.", 215.49, "$1040.8B", "1980", "Technology", "Computer Manufacturing", "https://www.nasdaq.com/symbol/aapl", "")
+              List("AAPL", "Apple Inc.", 215.49, "$1040.8B", "1980", "Technology", "Computer Manufacturing", "https://www.nasdaq.com/symbol/aapl", "n/a")
             )),
             fields = fields)
         }
       )
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 
-    it("should compile and execute INSERT-SELECT") {
+    it("should support INSERT-SELECT statements") {
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -221,15 +255,15 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
-          inputFormat = StorageFormats.CSV,
-          outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+          nullValue = "n/a",
+          inputFormat = StorageFormats.JSON,
+          location = "./samples/companylist/json/"
         )),
 
         // create the output table
@@ -238,13 +272,15 @@ class SparkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
-          inputFormat = StorageFormats.CSV,
+          fieldDelimiter = ",",
+          headersIncluded = true,
+          nullValue = "n/a",
           outputFormat = StorageFormats.CSV,
           location = "./temp/oil-gas/"
         )),
@@ -252,18 +288,16 @@ class SparkQweryCompilerTest extends FunSpec {
         // select the records via the view
         {
           val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved).map(s => Field(s.name))
-          Insert(Overwrite(TableRef.parse("OilGasSecurities")),
+          Insert(Overwrite(Table("OilGasSecurities")),
             Select(
               fields = fields,
-              from = TableRef.parse("Securities"),
+              from = Table("Securities"),
               where = Field("Industry") === "Oil/Gas Transmission"),
             fields = fields)
-        }
-      )
+        })
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
-      val operation = compiler.compile(sql)
-      val df = operation.execute(input = None)
+      val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
     }
 

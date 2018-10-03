@@ -45,9 +45,14 @@ class SQLTemplateParserTest extends FunSpec {
       verify(text = "field1, field2, field3", template = "%F:fields")(SQLTemplateParams(fields = Map("fields" -> List("field1", "field2", "field3").map(Field.apply))))
     }
 
+    it("should parse storage format tags (%f)") {
+      verify(text = "INPUTFORMAT 'CSV' OUTPUTFORMAT 'JSON'", template = "%f:formats")(SQLTemplateParams(atoms = Map("formats.input" -> "CSV", "formats.output" -> "JSON")))
+      verify(text = "OUTPUTFORMAT 'CSV' INPUTFORMAT 'JSON'", template = "%f:formats")(SQLTemplateParams(atoms = Map("formats.input" -> "JSON", "formats.output" -> "CSV")))
+    }
+
     it("should parse join tags (%J)") {
       verify(text = "INNER JOIN Securities AS A ON A.symbol = B.ticker", template = "%J:joins")(SQLTemplateParams(joins = Map("joins" -> List(
-        Join(source = TableRef.parse("A.Securities"), condition = Field("A.symbol") === Field("B.ticker"), `type` = JoinTypes.INNER)
+        Join(source = Table("Securities").as("A"), condition = Field("A.symbol") === Field("B.ticker"), `type` = JoinTypes.INNER)
       ))))
     }
 
@@ -57,11 +62,11 @@ class SQLTemplateParserTest extends FunSpec {
     }
 
     it("should parse location tags (%L)") {
-      verify(text = "LOCATION '/temp/assets/csv/'", template = "%L:location")(SQLTemplateParams(locations = Map( "location" -> LocationRef("/temp/assets/csv/"))))
-      verify(text = "TABLE assets", template = "%L:table")(SQLTemplateParams(locations = Map( "table" -> TableRef.parse("assets"))))
-      verify(text = "TABLE `the assets`", template = "%L:table")(SQLTemplateParams(locations = Map( "table" -> TableRef.parse("the assets"))))
-      verify(text = "assets", template = "%L:table")(SQLTemplateParams(locations = Map( "table" -> TableRef.parse("assets"))))
-      verify(text = "`the assets`", template = "%L:table")(SQLTemplateParams(locations = Map( "table" -> TableRef.parse("the assets"))))
+      verify(text = "LOCATION '/temp/assets/csv/'", template = "%L:location")(SQLTemplateParams(locations = Map("location" -> LocationRef("/temp/assets/csv/"))))
+      verify(text = "TABLE assets", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("assets"))))
+      verify(text = "TABLE `the assets`", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("the assets"))))
+      verify(text = "assets", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("assets"))))
+      verify(text = "`the assets`", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("the assets"))))
     }
 
     it("should parse numeric tags (%n)") {
@@ -82,7 +87,7 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse direct query tags (%Q)") {
       verify(text = "SELECT firstName, lastName FROM AddressBook", template = "%Q:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = TableRef.parse("AddressBook"))
+        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = Table("AddressBook"))
       )))
       verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Query or variable expected")
       verify(text = "@addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
@@ -92,10 +97,10 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse query source (queries, tables and variables) tags (%q)") {
       verify(text = "( SELECT firstName, lastName FROM AddressBook )", template = "%q:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = TableRef.parse("AddressBook"))
+        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = Table("AddressBook"))
       )))
       verify(text = "AddressBook", template = "%q:table")(SQLTemplateParams(sources = Map(
-        "table" -> TableRef.parse("AddressBook")
+        "table" -> Table("AddressBook")
       )))
       verify(text = "@addressBook", template = "%q:variable")(SQLTemplateParams(sources = Map(
         "variable" -> RowSetVariableRef(name = "addressBook")
@@ -127,7 +132,7 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse insert values (queries, VALUES and variables) tags (%V)") {
       verify(text = "( SELECT * FROM AddressBook )", template = "%V:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List(AllFields), from = TableRef.parse("AddressBook"))
+        "query" -> Select(fields = List(AllFields), from = Table("AddressBook"))
       )))
       verify(text = "VALUES (1, 2, 3)", template = "%V:values")(SQLTemplateParams(sources = Map(
         "values" -> Insert.Values(List(List(1d, 2d, 3d)))
@@ -141,6 +146,19 @@ class SQLTemplateParserTest extends FunSpec {
       verify(text = "@variable", template = "%v:variable")(SQLTemplateParams(variables = Map(
         "variable" -> RowSetVariableRef("variable")
       )))
+    }
+
+    it("should parse WITH tags (%W)") {
+      verify(text =
+        """|with arguments as @app_args
+           |with environment as @os_env
+           |with batch processing
+           |""".stripMargin, template = "%W:settings")(SQLTemplateParams(
+        atoms = Map("settings.processing" -> "batch"),
+        variables = Map(
+          "settings.arguments" -> RowSetVariableRef("app_args"),
+          "settings.environment" -> RowSetVariableRef("os_env")
+        )))
     }
 
     it("should parse optionally required tags (?, +?)") {
@@ -161,7 +179,7 @@ class SQLTemplateParserTest extends FunSpec {
     Try(SQLTemplateParams(TokenStream(text), template)) match {
       case Success(_) => fail("Negative test failure")
       case Failure(e) =>
-        info(s"'$template' <~ '$text' [${e.getMessage}]")
+        info(s"'$template' <!~ '$text' [${e.getMessage}]")
         assert(e.getMessage.contains(failure), s"'$text' ~> '$template' failed")
     }
   }

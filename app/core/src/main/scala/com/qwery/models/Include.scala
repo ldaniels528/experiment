@@ -2,6 +2,6 @@ package com.qwery.models
 
 /**
   * Include sources
-  * @param paths the given source paths for which to load and incorporate into the current program
+  * @param path the given source path for which to load and incorporate into the current program
   */
-case class Include(paths: Seq[String]) extends Invokable
+case class Include(path: String) extends Invokable

@@ -32,8 +32,7 @@ object Column {
   def apply(descriptor: String): Column = descriptor.split("[ ]").toList match {
     case name :: _type :: _nullable :: Nil => Column(name = name, `type` = ColumnTypes.withName(_type.toUpperCase), nullable = _nullable == "true")
     case name :: _type :: Nil => Column(name = name, `type` = ColumnTypes.withName(_type.toUpperCase))
-    case unknown =>
-      throw new IllegalStateException(s"Invalid column descriptor '$unknown'")
+    case unknown => die(s"Invalid column descriptor '$unknown'")
   }
 }
 
@@ -101,9 +100,26 @@ case class Table(name: String,
                  columns: List[Column],
                  fieldDelimiter: Option[String] = None,
                  fieldTerminator: Option[String] = None,
-                 inputFormat: StorageFormat,
-                 outputFormat: StorageFormat,
+                 headersIncluded: Option[Boolean] = None,
+                 nullValue: Option[String] = None,
+                 properties: Option[java.util.Properties] = None,
+                 inputFormat: Option[StorageFormat] = None,
+                 outputFormat: Option[StorageFormat] = None,
                  location: String) extends TableLike
+
+/**
+  * Table Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object Table {
+
+  /**
+    * Creates a reference to a table by name
+    * @param name the given table name
+    * @return a [[TableRef table reference]]
+    */
+  def apply(name: String): TableRef = TableRef(name)
+}
 
 /**
   * Represents a View definition

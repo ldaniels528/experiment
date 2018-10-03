@@ -23,15 +23,15 @@ class FlinkQweryCompilerTest extends FunSpec {
             Column(name = "Symbol", `type` = ColumnTypes.STRING),
             Column(name = "Name", `type` = ColumnTypes.STRING),
             Column(name = "LastSale", `type` = ColumnTypes.DOUBLE),
-            Column(name = "MarketCap", `type` = ColumnTypes.DOUBLE),
-            Column(name = "IPOyear", `type` = ColumnTypes.INTEGER),
+            Column(name = "MarketCap", `type` = ColumnTypes.STRING),
+            Column(name = "IPOyear", `type` = ColumnTypes.STRING),
             Column(name = "Sector", `type` = ColumnTypes.STRING),
             Column(name = "Industry", `type` = ColumnTypes.STRING),
             Column(name = "SummaryQuote", `type` = ColumnTypes.STRING),
             Column(name = "Reserved", `type` = ColumnTypes.STRING)),
           inputFormat = StorageFormats.CSV,
           outputFormat = StorageFormats.CSV,
-          location = "./samples/companylist/"
+          location = "./samples/companylist/csv/"
         )),
 
         // project/transform the data
@@ -44,7 +44,7 @@ class FlinkQweryCompilerTest extends FunSpec {
             Field(descriptor = "IPOyear"),
             Field(descriptor = "Sector"),
             Field(descriptor = "Industry")),
-          from = TableRef.parse("Securities"),
+          from = Table("Securities"),
           orderBy = List(OrderColumn(name = "Symbol")),
           limit = 100
         ))

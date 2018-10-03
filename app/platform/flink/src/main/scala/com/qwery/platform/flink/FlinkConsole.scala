@@ -49,6 +49,19 @@ object FlinkConsole {
   }
 
   /**
+    * LOG statement
+    * @example
+    * {{{ LOG 'This is a log message.' }}}
+    * @param text the text to print
+    */
+  def log(text: String): FlinkInvokable = new FlinkInvokable {
+    override def execute(input: Option[DataFrame])(implicit rc: FlinkQweryContext): Option[DataFrame] = {
+      logger.info(text)
+      None
+    }
+  }
+
+  /**
     * PRINT statement
     * @example
     * {{{ PRINT 'This is it!' }}}

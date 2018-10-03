@@ -15,8 +15,7 @@ begin
     )
     /*row format delimited
     fields terminated by ','*/
-    stored as inputformat 'JSON'
-    outputformat 'JSON'
+    stored as outputformat 'JSON'
     location './temp/flink/companylist/json/';
 
 end

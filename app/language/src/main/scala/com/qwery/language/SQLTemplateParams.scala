@@ -20,10 +20,10 @@ import com.qwery.models.expressions._
   * @param sources       the named collection of queries
   * @param variables     the named collection of variables
   */
-case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
+case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
+                             atoms: Map[String, String] = Map.empty,
                              columns: Map[String, List[Column]] = Map.empty,
                              conditions: Map[String, Condition] = Map.empty,
-                             assignables: Map[String, Expression] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
                              joins: Map[String, List[Join]] = Map.empty,
@@ -39,10 +39,10 @@ case class SQLTemplateParams(atoms: Map[String, String] = Map.empty,
 
   def +(that: SQLTemplateParams): SQLTemplateParams = {
     this.copy(
+      assignables = this.assignables ++ that.assignables,
       atoms = this.atoms ++ that.atoms,
       columns = this.columns ++ that.columns,
       conditions = this.conditions ++ that.conditions,
-      assignables = this.assignables ++ that.assignables,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
       joins = this.joins ++ that.joins,

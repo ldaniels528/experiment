@@ -15,8 +15,7 @@ begin
     )
     /*row format delimited
     fields terminated by ','*/
-    stored as inputformat 'CSV'
-    outputformat 'CSV'
+    stored as outputformat 'CSV'
     location './temp/flink/companylist/csv/';
 
 end

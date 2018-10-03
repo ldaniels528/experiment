@@ -39,6 +39,14 @@ object Console {
   case class Info(text: String) extends Console
 
   /**
+    * LOG statement
+    * @example
+    * {{{ LOG 'This is a log message.' }}}
+    * @param text the text to print
+    */
+  case class Log(text: String) extends Console
+
+  /**
     * PRINT statement
     * @example
     * {{{ PRINT 'This is will be printed to STDOUT.' }}}

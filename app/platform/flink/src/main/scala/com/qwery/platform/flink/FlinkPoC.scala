@@ -27,7 +27,7 @@ object FlinkPoC extends App {
   def poc1(): Unit = {
     // setup the input table
     val inputSource = CsvTableSource.builder
-      .path("./samples/companylist/")
+      .path("./samples/companylist/csv/")
       .ignoreFirstLine
       .fieldDelimiter(",")
       .quoteCharacter('"')

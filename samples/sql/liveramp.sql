@@ -31,10 +31,7 @@ begin
         month INTEGER,
         day INTEGER
     )
-    row format delimited
-    fields terminated by ','
     stored as inputformat 'PARQUET'
-    outputformat 'PARQUET'
     location './temp/awsdhubnp-consumer-ma-exporter-pixall/';
 
     /**
@@ -54,8 +51,7 @@ begin
     )
     row format delimited
     fields terminated by ','
-    stored as inputformat 'CSV'
-    outputformat 'CSV'
+    stored as outputformat 'CSV'
     location './temp/flink/liveramp/csv/';
 
     ----------------------------------------------------------------

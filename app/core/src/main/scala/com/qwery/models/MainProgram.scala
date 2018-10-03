@@ -1,5 +1,7 @@
 package com.qwery.models
 
+import com.qwery.models.expressions.VariableRef
+
 /**
   * Main Program - application entry point
   * {{{
@@ -21,5 +23,7 @@ package com.qwery.models
   */
 case class MainProgram(name: String,
                        code: Invokable,
-                       hiveSupport: Boolean,
-                       streaming: Boolean) extends Invokable
+                       arguments: Option[VariableRef] = None,
+                       environment: Option[VariableRef] = None,
+                       hiveSupport: Boolean = false,
+                       streaming: Boolean = false) extends Invokable

@@ -56,8 +56,7 @@ case class SparkSelect(fields: Seq[Expression],
     */
   def decode(aggField: Field): (String, String) = aggField match {
     case fx: SQLFunction1 => fx.field.getName -> fx.name
-    case unknown =>
-      throw new IllegalArgumentException(s"Unhandled aggregate expression $unknown")
+    case unknown => die(s"Unhandled aggregate expression $unknown")
   }
 
   /**

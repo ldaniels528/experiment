@@ -16,7 +16,8 @@ begin
     row format delimited
     fields terminated by ','
     stored as inputformat 'CSV'
-    outputformat 'CSV'
+    with headers on
+    with null values as 'n/a'
     location './samples/companylist/csv/';
 
 end

@@ -1,7 +1,6 @@
 package com.qwery.language
 
 import com.qwery.models.expressions._
-import com.qwery.language.ExpressionParser._
 import org.scalatest.FunSpec
 
 /**
@@ -14,32 +13,36 @@ class ExpressionParserTest extends FunSpec {
     import com.qwery.models.expressions.Expression.Implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("""should identify "100" as a constant""") {
-      assert(TokenStream("100 = 1").isConstant)
+    it("""should parse conditional expression "100 < 1" (conditional expression)""") {
+      verify("100 < 1", Literal(100) < 1)
     }
 
-    it("""should identify "'Hello World'" as a constant""") {
-      assert(TokenStream("'Hello World' = 1").isConstant)
+    it("""should parse "'Hello World' = 'Goodbye'" (conditional expression)""") {
+      verify("'Hello World' = 'Goodbye'", Literal("Hello World") === "Goodbye")
     }
 
-    it("""should identify "`Symbol`" as a field""") {
-      assert(TokenStream("`Symbol` = 100").isField)
+    it("""should parse "`Symbol` = 'AAPL'" (conditional expression)""") {
+      verify("`Symbol` = 'AAPL'", Field("Symbol") === "AAPL")
     }
 
-    it("""should identify "Symbol" as a field""") {
-      assert(TokenStream("Symbol = 100").isField)
+    it("""should parse "A.Symbol = 'AMD'" (conditional expression)""") {
+      verify("A.Symbol = 'AMD'", Field("A.Symbol") === "AMD")
     }
 
-    it("""should identify "A.Symbol" as a JOIN column""") {
-      assert(TokenStream("A.Symbol = 100").isJoinColumn)
+    it("""should parse "Sum(A.LastSale) >= 5000" (conditional expression)""") {
+      verify("Sum(A.LastSale) >= 5000", Sum(Field("A.LastSale")) >= 5000)
     }
 
-    it("""should identify "Sum(A.Symbol)" as a function""") {
-      assert(TokenStream("Sum(A.Symbol) = 100").isFunction)
+    it("""should parse "Min(A.LastSale) <= 1" (conditional expression)""") {
+      verify("Min(A.LastSale) <= 1", Min(Field("A.LastSale")) <= 1)
     }
 
-    it("""should NOT identify "ABC + (1 * x)" as a function""") {
-      assert(!TokenStream("ABC + (1 * x)").isFunction)
+    it("""should parse "y + (x * 2)" (expression)""") {
+      verify("y + (x * 2)", Add(Field("y"), Field("x") * 2))
+    }
+
+    it("""should parse "y + (x / 2)" (expression)""") {
+      verify("y + (x / 2)", Add(Field("y"), Field("x") / 2))
     }
 
     it("""should parse "LastSale = 100" (equal)""") {
@@ -145,6 +148,10 @@ class ExpressionParserTest extends FunSpec {
       verify("Count(*)", Count(AllFields))
     }
 
+    it("should parse user-defined function (UDF) calls: toDecimal(MarketCap)") {
+      verify("toDecimal(MarketCap)", FunctionCall(name = "toDecimal")(Field("MarketCap")))
+    }
+
     it("should parse functions (Min)") {
       verify("Min(LastSale)", Min(Field("LastSale")))
     }
@@ -171,6 +178,14 @@ class ExpressionParserTest extends FunSpec {
 
     it("should parse functions (Sum)") {
       verify("Sum(LastSale)", Sum(Field("LastSale")))
+    }
+
+    it("should parse local variables: \"$total\"") {
+      verify("$total", LocalVariableRef("total"))
+    }
+
+    it("should parse row set variables: \"@results\"") {
+      verify("@results", RowSetVariableRef("results"))
     }
 
   }

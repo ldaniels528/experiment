@@ -18,8 +18,7 @@ object QwerySparkCLI {
     // check the command line arguments
     val (file, cliArgs) = args.toList match {
       case path :: _args => new File(path) -> _args
-      case _ =>
-        throw new IllegalArgumentException(s"java ${getClass.getName} <scriptFile> [<arg1> .. <argN>]")
+      case _ => die(s"java ${getClass.getName} <scriptFile> [<arg1> .. <argN>]")
     }
 
     // load the script and execute the code

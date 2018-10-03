@@ -35,7 +35,7 @@ case class Join(source: Invokable, condition: Condition, `type`: JoinType)
   */
 object JoinTypes extends Enumeration {
   type JoinType = Value
-  val INNER, LEFT_OUTER, RIGHT_OUTER, FULL_OUTER: JoinType = Value
+  val CROSS, INNER, LEFT_OUTER, RIGHT_OUTER, FULL_OUTER: JoinType = Value
 }
 
 /**

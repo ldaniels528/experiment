@@ -81,7 +81,7 @@ trait ExpressionParser {
           }
         }
       // must be a user-defined function
-      case ts => Option(FunctionRef(name = ts.next().text, parseArguments(ts)))
+      case ts => Option(FunctionCall(name = ts.next().text, parseArguments(ts)))
     }
   }
 

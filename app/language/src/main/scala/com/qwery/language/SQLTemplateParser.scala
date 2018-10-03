@@ -77,6 +77,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     // field names? (e.g. "%F:fields" => "field1, field2, ..., fieldN")
     case tag if tag.startsWith("%F:") => extractListOfFields(tag drop 3)
 
+    // I/O format? (e.g. "%f:format" => "INPUTFORMAT 'CSV'" | "OUTPUTFORMAT 'JSON'")
+    case tag if tag.startsWith("%f:") => extractStorageFormat(tag drop 3)
+
     // joins? (e.g. "%J:joins" => "INNER JOIN 'stocks.csv' ON A.symbol = B.ticker")
     case tag if tag.startsWith("%J:") => extractJoins(tag drop 3, params)
 
@@ -108,7 +111,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     case tag if tag.startsWith("%r`") & tag.endsWith("`") => extractRegEx(pattern = tag.drop(3).dropRight(1))
 
     // repeated sequence tag? (e.g. "%R:valueSet {{ VALUES ( %E:values ) }}" => "VALUES (123, 456) VALUES (345, 678)")
-    case tag if tag.startsWith("%R:") => extractRepeatSequence(name = tag drop 3, params, tags)
+    case tag if tag.startsWith("%R:") => extractRepeatedSequence(name = tag drop 3, params, tags)
 
     // table tag? (e.g. "Customers")
     case tag if tag.startsWith("%t:") => extractTable(tag drop 3)
@@ -122,8 +125,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     // insert values (queries, VALUES and variables)? (e.g. "%V:data" => "(SELECT ...)" | "VALUES (...)" | "@numbers")
     case tag if tag.startsWith("%V:") => extractInsertSource(tag drop 3)
 
-    // with clause
-    case tag if tag.startsWith("%W:") => extractWithClause(tag drop 3)
+    // MAIN PROGRAM ... WITH clause
+    case tag if tag.startsWith("%W:") => extractWithForMainClause(tag drop 3)
+
+    // TABLE ... WITH clause
+    case tag if tag.startsWith("%w:") => extractWithForTableClause(tag drop 3)
 
     // must be literal text (e.g. "FROM")
     case text => expectKeyword(text)
@@ -234,7 +240,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
   private def extractJoins(name: String, aggParams: SQLTemplateParams) = Try {
-    val predicates = Seq("FULL", "JOIN", "INNER", "LEFT", "RIGHT", "OUTER")
+    val predicates = Seq("CROSS", "FULL", "JOIN", "INNER", "LEFT", "RIGHT", "OUTER")
     var joins: List[Join] = Nil
 
     def join(ts: TokenStream, `type`: JoinType): Join = {
@@ -244,6 +250,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
 
     while (predicates.exists(stream is _)) {
       stream match {
+        case ts if ts nextIf "CROSS JOIN" =>
+          joins = join(ts, `type` = JoinTypes.CROSS) :: joins
         case ts if (ts nextIf "FULL JOIN") | (ts nextIf "FULL OUTER JOIN") =>
           joins = join(ts, `type` = JoinTypes.FULL_OUTER) :: joins
         case ts if (ts nextIf "LEFT JOIN") | (ts nextIf "LEFT OUTER JOIN") =>
@@ -346,8 +354,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
         LocationRef(ts.next().text)
       case ts if ts nextIf "TABLE" =>
         if (!ts.isBackticks && !ts.isText) ts.die("expected a string literal representing a table name")
-        TableRef.parse(ts.next().text)
-      case ts if ts.isBackticks | ts.isText => TableRef.parse(ts.next().text)
+        Table(ts.next().text)
+      case ts if ts.isBackticks | ts.isText => Table(ts.next().text)
       case ts => ts.die("Table or location expected")
     }
 
@@ -448,7 +456,12 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     if (stream.matches(pattern)) SQLTemplateParams() else stream.die(s"Did not match the expected pattern '$pattern'")
   }
 
-  private def extractRepeatSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]) = Try {
+  /**
+    * Parses repeated sequences
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractRepeatedSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]) = Try {
     if (!tags.nextOption.contains("{{")) stream.die("Start of sequence '{{' expected")
     else {
       // extract the repeated sequence
@@ -469,6 +482,24 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       }
       SQLTemplateParams(repeatedSets = Map(name -> paramSet.filterNot(_.isEmpty).reverse))
     }
+  }
+
+  /**
+    * Parses storage formats
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractStorageFormat(name: String) = Try {
+    var params = SQLTemplateParams()
+    var done = false
+    while (!done) {
+      stream match {
+        case ts if ts nextIf "INPUTFORMAT" => params += SQLTemplateParams(ts, s"%a:$name.input")
+        case ts if ts nextIf "OUTPUTFORMAT" => params += SQLTemplateParams(ts, s"%a:$name.output")
+        case _ => done = true
+      }
+    }
+    params
   }
 
   private def extractTable(name: String) = Try {
@@ -494,21 +525,36 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   }
 
   /**
-    * Parses a WITH clauses (e.g. "WITH ARGUMENTS AS @args")
+    * Parses a [MAIN PROGRAM ...] WITH clauses (e.g. "WITH ARGUMENTS AS @args")
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractWithClause(name: String) = Try {
-    val mapping = scala.collection.mutable.Map[String, String]()
+  private def extractWithForMainClause(name: String) = Try {
     var template = SQLTemplateParams()
     while (stream nextIf "WITH") {
       stream match {
-        case ts if ts is "ARGUMENTS" => template += SQLTemplateParams(ts, "ARGUMENTS AS %v:name")
-        case ts if ts is "ENVIRONMENT" => template += SQLTemplateParams(ts, "ENVIRONMENT AS %v:name")
-        case ts if ts nextIf "HIVE SUPPORT" => template += SQLTemplateParams(atoms = Map("hiveSupport" -> "true"))
-        case ts if ts(1).exists(_ is "PROCESSING") => template += SQLTemplateParams(ts, "%C(processing|BATCH|STREAM) PROCESSING")
-        case ts =>
-          ts.die("Invalid WITH expression")
+        case ts if ts nextIf "ARGUMENTS" => template += SQLTemplateParams(ts, s"AS %v:$name.arguments")
+        case ts if ts nextIf "ENVIRONMENT" => template += SQLTemplateParams(ts, s"AS %v:$name.environment")
+        case ts if ts nextIf "HIVE SUPPORT" => template += SQLTemplateParams(atoms = Map(s"$name.hiveSupport" -> "true"))
+        case ts if ts(1).exists(_ is "PROCESSING") => template += SQLTemplateParams(ts, s"%C($name.processing|BATCH|STREAM) PROCESSING")
+        case ts => ts.die("Invalid WITH expression")
+      }
+    }
+    template
+  }
+
+  /**
+    * Parses a [TABLE ...] WITH clauses (e.g. "WITH HEADERS ON")
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractWithForTableClause(name: String) = Try {
+    var template = SQLTemplateParams()
+    while (stream nextIf "WITH") {
+      stream match {
+        case ts if ts nextIf "HEADERS" => template += SQLTemplateParams(ts, s"%C($name.headers|ON|OFF)")
+        case ts if ts nextIf "NULL" => template += SQLTemplateParams(ts, s"VALUES AS %a:$name.nullValue")
+        case ts => ts.die("Invalid WITH expression")
       }
     }
     template
@@ -550,7 +596,7 @@ object SQLTemplateParser {
       */
     @inline def chooserParams: Array[String] = {
       val s = tag.drop(3).dropRight(1)
-      s.indexWhere(!_.isLetterOrDigit) match {
+      s.indexWhere(c => !c.isLetterOrDigit && c != '.' && c != '_') match {
         case -1 => throw new IllegalArgumentException("Chooser tags require a non-alphanumeric delimiter")
         case index =>
           val delimiter = s(index)

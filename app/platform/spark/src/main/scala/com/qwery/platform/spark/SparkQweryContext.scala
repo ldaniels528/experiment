@@ -32,7 +32,6 @@ class SparkQweryContext() extends QweryContext {
   private def createSparkSession(mainProgram: Option[SparkMain]): SparkSession = {
     mainProgram.foreach(app => logger.info(s"Starting Application '${app.name}'..."))
     val builder = SparkSession.builder()
-      .master("local[*]") // TODO use environment variable to override this
       .appName(mainProgram.map(_.name) || "Untitled")
       .config("spark.sql.warehouse.dir", Properties.tmpDir)
 
@@ -40,7 +39,13 @@ class SparkQweryContext() extends QweryContext {
     mainProgram foreach { app =>
       if (app.hiveSupport) builder.enableHiveSupport()
     }
-    builder.getOrCreate()
+
+    // attempt to connect to th cluster
+    try builder.getOrCreate() catch {
+      case _: Exception =>
+        builder.master("local[*]")
+        builder.getOrCreate()
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -177,4 +182,3 @@ class SparkQweryContext() extends QweryContext {
   }
 
 }
-

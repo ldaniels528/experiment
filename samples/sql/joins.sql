@@ -14,7 +14,9 @@ main program 'Joins' with batch processing {
             IPOyear STRING, Sector STRING, Industry STRING, SummaryQuote STRING, Reserved STRING)
         row format delimited
         fields terminated by ','
-        stored as inputformat 'CSV' outputformat 'CSV'
+        stored as inputformat 'CSV'
+        with headers on
+        with null values as 'n/a'
         location './samples/companylist/csv/';
 
     /* define the SelectSecurities table */

@@ -13,7 +13,7 @@ import com.qwery.platform.spark.SparkSelect.SparkJoin
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.functions.{callUDF, lit}
 import org.apache.spark.sql.types.{DataType, StructField}
-import org.apache.spark.sql.{DataFrame, SaveMode, Column => SparkColumn}
+import org.apache.spark.sql.{DataFrame, DataFrameReader, DataFrameWriter, SaveMode, Column => SparkColumn}
 import org.slf4j.LoggerFactory
 
 /**
@@ -86,27 +86,22 @@ object SparkQweryCompiler {
     * @return the [[DataFrame]]
     */
   def read(tableOrView: TableLike)(implicit rc: SparkQweryContext): Option[DataFrame] = {
-    import Implicits._
+    import SparkQweryCompiler.Implicits._
+    import com.qwery.util.OptionHelper.Implicits.Risky._
     tableOrView match {
-      case SparkLogicalTable(_, columns, source) => rc.createDataSet(columns, source)
+      case SparkLogicalTable(name, columns, source) =>
+        rc.createDataSet(columns, source).map { df => df.createOrReplaceTempView(name); df }
       case table: Table =>
-        val df = table.inputFormat match {
-          case AVRO => rc.spark.read.avro(table.location)
-          case CSV =>
-            rc.spark.read
-              .option("header", "true")
-              .option("nullValue", "")
-              .option("delimiter", table.fieldDelimiter || ",")
-              .option("inferSchema", "true")
-              .csv(table.location)
-          case JDBC => die("JDBC tables are not yet supported")
-          case JSON => rc.spark.read.json(table.location)
-          case PARQUET => rc.spark.read.parquet(table.location)
-          case ORC => rc.spark.read.orc(table.location)
+        val reader = rc.spark.read.tableOptions(table)
+        table.inputFormat.orFail("Table input format was not specified") match {
+          case AVRO => reader.avro(table.location)
+          case CSV => reader.schema(rc.createSchema(table.columns)).csv(table.location)
+          case JDBC => reader.jdbc(table.location, table.name, table.properties || new java.util.Properties())
+          case JSON => reader.json(table.location)
+          case PARQUET => reader.parquet(table.location)
+          case ORC => reader.orc(table.location)
           case format => die(s"Storage format $format is not supported for reading")
         }
-        // rename the columns
-        Option(df.toDF(table.columns.map(_.name): _*))
       case view: View => view.query.compile.execute(input = None)
       case unknown => die(s"Unrecognized table type '$unknown' (${unknown.getClass.getName})")
     }
@@ -131,15 +126,15 @@ object SparkQweryCompiler {
     */
   def write(source: DataFrame, destination: TableLike, append: Boolean)(implicit rc: SparkQweryContext): Unit = destination match {
     case table: Table =>
-      val writer = source.write.mode(if (append) SaveMode.Append else SaveMode.Overwrite)
-      table.outputFormat match {
+      val writer = source.write.tableOptions(table).mode(if (append) SaveMode.Append else SaveMode.Overwrite)
+      table.outputFormat.orFail("Table output format was not specified") match {
         case AVRO => writer.avro(table.location)
-        case CSV => writer.option("header", "true").option("inferSchema", "true").option("nullValue", "").csv(table.location)
-        case JDBC => die("JDBC tables are not yet supported")
+        case CSV => writer.csv(table.location)
+        case JDBC => writer.jdbc(table.location, table.name, table.properties || new java.util.Properties())
         case JSON => writer.json(table.location)
         case PARQUET => writer.parquet(table.location)
         case ORC => writer.orc(table.location)
-        case format => die(s"Storage format $format is not supported for writing")
+        case format => die(s"Storage format '$format' is not supported for writing")
       }
     case view: View => die(s"View '${view.name}' cannot be modified")
   }
@@ -236,6 +231,42 @@ object SparkQweryCompiler {
     }
 
     /**
+      * DataFrame Reader Enrichment
+      * @param dataFrameReader the given [[DataFrameReader]]
+      */
+    final implicit class DataFrameReaderEnriched(val dataFrameReader: DataFrameReader) extends AnyVal {
+      @inline def tableOptions(tableLike: TableLike): DataFrameReader = {
+        var dfr: DataFrameReader = dataFrameReader
+        tableLike match {
+          case table: Table =>
+            table.fieldDelimiter.foreach(delimiter => dfr = dfr.option("delimiter", delimiter))
+            table.headersIncluded.foreach(enabled => dfr = dfr.option("header", enabled.toString))
+            table.nullValue.foreach(value => dfr = dfr.option("nullValue", value))
+          case _ =>
+        }
+        dfr
+      }
+    }
+
+    /**
+      * DataFrame Writer Enrichment
+      * @param dataFrameWriter the given [[DataFrameWriter]]
+      */
+    final implicit class DataFrameWriterEnriched[T](val dataFrameWriter: DataFrameWriter[T]) extends AnyVal {
+      @inline def tableOptions(tableLike: TableLike): DataFrameWriter[T] = {
+        var dfw: DataFrameWriter[T] = dataFrameWriter
+        tableLike match {
+          case table: Table =>
+            table.fieldDelimiter.foreach(delimiter => dfw = dfw.option("delimiter", delimiter))
+            table.headersIncluded.foreach(enabled => dfw = dfw.option("header", enabled.toString))
+            table.nullValue.foreach(value => dfw = dfw.option("nullValue", value))
+          case _ =>
+        }
+        dfw
+      }
+    }
+
+    /**
       * Expression compiler
       * @param expression the given [[Expression]]
       */
@@ -247,7 +278,7 @@ object SparkQweryCompiler {
           case Add(a, b) => a.compile + b.compile
           case ref@BasicField(name) => ref.alias.map(alias => /*col(name).as(alias)*/ $"$alias.$name") || $"$name" //col(name)
           case Divide(a, b) => a.compile + b.compile
-          case ref@FunctionRef(name, args) =>
+          case ref@FunctionCall(name, args) =>
             val op = callUDF(name, args.map(_.compile): _*)
             ref.alias.map(alias => op.as(alias)) getOrElse op
           case Literal(value) => lit(value)
@@ -271,12 +302,13 @@ object SparkQweryCompiler {
         case Console.Debug(text) => SparkConsole.debug(text)
         case Console.Error(text) => SparkConsole.error(text)
         case Console.Info(text) => SparkConsole.info(text)
+        case Console.Log(text) => SparkConsole.log(text)
         case Console.Print(text) => SparkConsole.print(text)
         case Console.Warn(text) => SparkConsole.warn(text)
         case Create(procedure: Procedure) => RegisterProcedure(procedure)
         case Create(tableOrView: TableLike) => RegisterTableOrView(tableOrView)
         case Create(udf: UserDefinedFunction) => SparkRegisterUDF(udf)
-        case Include(paths) => incorporateSources(paths)
+        case Include(path) => incorporateSources(path)
         case Insert(destination, source, fields) =>
           SparkInsert(destination = destination.compile, fields = fields, source = source match {
             case Insert.Values(values) =>
@@ -288,11 +320,11 @@ object SparkQweryCompiler {
         case Insert.Into(target) => SparkInsert.Sink(target = target, append = true)
         case Insert.Overwrite(target) => SparkInsert.Sink(target = target, append = false)
         case Insert.Values(values) => SparkInsert.Spout(rows = values.map(_.map(_.asAny)), resolver = None)
-        case MainProgram(name, code, hiveSupport, streaming) => SparkMain(name, code.compile, hiveSupport, streaming)
+        case MainProgram(name, code, args, env, hive, streaming) => SparkMain(name, code.compile, args, env, hive, streaming)
         case ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.compile))
         case Return(value) => SparkReturn(value = value.map(_.compile))
-        case select@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
-          SparkSelect(columns, from.map(_.compile), joins.map(_.compile), groupBy, orderBy, where, limit, select.alias)
+        case ref@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
+          SparkSelect(columns, from.map(_.compile), joins.map(_.compile), groupBy, orderBy, where, limit, ref.alias)
         case SQL(ops) => SparkSQL(ops.map(_.compile))
         case ref@TableRef(name) => ReadTableOrViewByReference(name, ref.alias)
         case Show(dataSet, limit) => SparkShow(dataSet.compile, limit)
@@ -302,9 +334,9 @@ object SparkQweryCompiler {
         case unknown => die(s"Unhandled operation '$unknown'")
       }
 
-      private def incorporateSources(paths: Seq[String])(implicit rc: SparkQweryContext): SparkInvokable = {
+      private def incorporateSources(path: String)(implicit rc: SparkQweryContext): SparkInvokable = {
         val sqlLanguageParser = new SQLLanguageParser {}
-        val ops = paths map (new File(_).getCanonicalFile) map { file =>
+        val ops = Seq(path) map (new File(_).getCanonicalFile) map { file =>
           logger.info(s"Merging source file '${file.getAbsolutePath}'...")
           sqlLanguageParser.parse(file).compile
         }

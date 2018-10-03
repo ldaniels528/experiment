@@ -1,5 +1,6 @@
 package com.qwery.platform.spark
 
+import com.qwery.models.expressions.VariableRef
 import org.apache.spark.sql.DataFrame
 
 /**
@@ -8,6 +9,8 @@ import org.apache.spark.sql.DataFrame
   */
 case class SparkMain(name: String,
                      code: SparkInvokable,
+                     arguments: Option[VariableRef],
+                     environment: Option[VariableRef],
                      hiveSupport: Boolean,
                      streaming: Boolean) extends SparkInvokable {
   override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {

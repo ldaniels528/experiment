@@ -147,7 +147,7 @@ object FlinkQweryCompiler {
     * @param name the name of the table
     */
   case class ReadTableOrViewByReference(name: String, alias: Option[String]) extends FlinkInvokable {
-    override def execute(input: Option[DataFrame])(implicit rc: FlinkQweryContext): Option[DataFrame] = TableRef.parse(name).getQuery
+    override def execute(input: Option[DataFrame])(implicit rc: FlinkQweryContext): Option[DataFrame] = Table(name).getQuery
   }
 
   /**
@@ -211,6 +211,7 @@ object FlinkQweryCompiler {
         case Console.Debug(text) => FlinkConsole.debug(text)
         case Console.Error(text) => FlinkConsole.error(text)
         case Console.Info(text) => FlinkConsole.info(text)
+        case Console.Log(text) => FlinkConsole.log(text)
         case Console.Print(text) => FlinkConsole.print(text)
         case Console.Warn(text) => FlinkConsole.warn(text)
         case Include(paths) => incorporateSources(paths)
@@ -222,7 +223,7 @@ object FlinkQweryCompiler {
         case Insert.Into(target) => FlinkInsert.Sink(target = target, append = true)
         case Insert.Overwrite(target) => FlinkInsert.Sink(target = target, append = false)
         case Insert.Values(values) => FlinkInsert.Spout(values, target = None)
-        case MainProgram(name, code, hiveSupport, streaming) => FlinkMain(name, code.compile, streaming)
+        case MainProgram(name, code, args, env, hive, streaming) => FlinkMain(name, code.compile, args, env, hive, streaming)
         case ref@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
           FlinkSelect(columns, from.map(_.compile), joins, groupBy, orderBy, where, limit, ref.alias)
         case Show(dataSet, limit) => FlinkShow(dataSet.compile, limit)
@@ -231,9 +232,9 @@ object FlinkQweryCompiler {
         case unknown => die(s"Unhandled operation '$unknown'")
       }
 
-      private def incorporateSources(paths: Seq[String])(implicit rc: FlinkQweryContext): FlinkInvokable = {
+      private def incorporateSources(path: String)(implicit rc: FlinkQweryContext): FlinkInvokable = {
         val sqlLanguageParser = new SQLLanguageParser {}
-        val ops = paths map (new File(_).getCanonicalFile) map { file =>
+        val ops = Seq(path) map (new File(_).getCanonicalFile) map { file =>
           logger.info(s"Merging source file '${file.getAbsolutePath}'...")
           sqlLanguageParser.parse(file).compile
         }

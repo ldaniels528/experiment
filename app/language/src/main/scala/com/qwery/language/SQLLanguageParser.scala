@@ -74,7 +74,7 @@ trait SQLLanguageParser {
         result
       case ts =>
         ts.decode(tuples =
-          "{" -> parseCodeBlock,
+          "{" -> parseBeginToEndBraces,
           "BEGIN" -> parseBeginToEnd,
           "CALL" -> parseCall,
           "CREATE" -> parseCreate,
@@ -114,7 +114,7 @@ trait SQLLanguageParser {
       case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
       case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
       // table (e.g. "Months")?
-      case ts if ts.isBackticks | ts.isText => TableRef.parse(ts.next().text)
+      case ts if ts.isBackticks | ts.isText => Table(ts.next().text)
       // unknown
       case ts => ts.die("Query, table or variable expected")
     }
@@ -145,6 +145,13 @@ trait SQLLanguageParser {
   protected def parseBeginToEnd(ts: TokenStream): SQL = parseSequence(ts, startElem = "BEGIN", endElem = "END")
 
   /**
+    * Parses a { ... } block
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[SQL code block]]
+    */
+  protected def parseBeginToEndBraces(ts: TokenStream): SQL = parseSequence(ts, startElem = "{", endElem = "}")
+
+  /**
     * Parses a CALL statement
     * @example {{{ CALL testInserts('Oil/Gas Transmission') }}}
     * @param ts the given [[TokenStream token stream]]
@@ -154,13 +161,6 @@ trait SQLLanguageParser {
     val params = SQLTemplateParams(ts, "CALL %a:name ( %E:args )")
     ProcedureCall(name = params.atoms("name"), args = params.expressions("args"))
   }
-
-  /**
-    * Parses a { ... } block
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[SQL code block]]
-    */
-  protected def parseCodeBlock(ts: TokenStream): SQL = parseSequence(ts, startElem = "{", endElem = "}")
 
   /**
     * Parses a console DEBUG statement
@@ -193,10 +193,10 @@ trait SQLLanguageParser {
     * Parses a console LOG statement
     * @example {{{ LOG 'This is a log message' }}}
     * @param ts the [[TokenStream token stream]]
-    * @return the [[Console.Info]]
+    * @return the [[Console.Log]]
     */
-  protected def parseConsoleLog(ts: TokenStream): Console.Info =
-    Console.Info(text = SQLTemplateParams(ts, "LOG %a:text").atoms("text"))
+  protected def parseConsoleLog(ts: TokenStream): Console.Log =
+    Console.Log(text = SQLTemplateParams(ts, "LOG %a:text").atoms("text"))
 
   /**
     * Parses a console PRINT statement
@@ -264,16 +264,18 @@ trait SQLLanguageParser {
          |?PARTITIONED +?BY +?( +?%P:partitions +?)
          |?ROW +?FORMAT +?DELIMITED
          |?FIELDS +?TERMINATED +?BY +?%a:delimiter
-         |?STORED +?AS +?INPUTFORMAT +?%a:inputFormat
-         |?OUTPUTFORMAT +?%a:outputFormat
+         |?STORED +?AS +?%f:formats
+         |?%w:props
          |?LOCATION +?%a:path
          |""".stripMargin)
     Create(Table(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
       fieldDelimiter = params.atoms.get("delimiter"),
-      inputFormat = determineStorageFormat(params.atoms("inputFormat")),
-      outputFormat = determineStorageFormat(params.atoms("outputFormat")),
+      inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
+      outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
+      headersIncluded = params.atoms.get("props.headers").map(_.equalsIgnoreCase("ON")),
+      nullValue = params.atoms.get("props.nullValue"),
       location = params.atoms.getOrElse("path", ts.die("No location specified"))
     ))
   }
@@ -320,7 +322,7 @@ trait SQLLanguageParser {
     */
   protected def parseInclude(ts: TokenStream): Include = {
     val params = SQLTemplateParams(ts, "INCLUDE %a:path")
-    Include(paths = List(params.atoms("path")))
+    Include(path = params.atoms("path"))
   }
 
   /**
@@ -358,6 +360,7 @@ trait SQLLanguageParser {
     *   WITH ARGUMENTS AS @args
     *   WITH ENVIRONMENT AS @env
     *   WITH BATCH PROCESSING
+    *   WITH STREAM PROCESSING
     *   WITH HIVE SUPPORT
     * AS
     * BEGIN
@@ -374,8 +377,10 @@ trait SQLLanguageParser {
     MainProgram(
       name = params.atoms("name"),
       code = params.sources("code"),
-      hiveSupport = params.atoms.get("hiveSupport").nonEmpty,
-      streaming = params.atoms.get("processing").map(_.toLowerCase).contains("stream")
+      arguments = params.variables.get("props.arguments"),
+      environment = params.variables.get("props.environment"),
+      hiveSupport = params.atoms.get("props.hiveSupport").nonEmpty,
+      streaming = params.atoms.get("props.processing").exists(_.equalsIgnoreCase("STREAM"))
     )
   }
 
