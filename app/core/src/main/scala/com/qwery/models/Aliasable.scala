@@ -1,5 +1,7 @@
 package com.qwery.models
 
+import com.qwery.models.expressions.Expression
+
 /**
   * Represents an "aliasable" entity; one that can be renamed
   * @author lawrence.daniels@gmail.com
@@ -9,10 +11,7 @@ trait Aliasable {
 
   def alias: Option[String] = _alias
 
-  def as(alias: String): this.type = {
-    this._alias = Option(alias)
-    this
-  }
+  def as(alias: String): this.type = as(alias = Option(alias))
 
   def as(alias: Option[String]): this.type = {
     this._alias = alias
@@ -28,13 +27,24 @@ trait Aliasable {
 object Aliasable {
 
   /**
-    * Aliasing Enrichment
-    * @param invokable the [[Invokable]]
+    * Expression Aliases
+    * @param expression the given [[Expression]] to alias
     */
-  final implicit class AliasEnrichment[T <: Invokable](val invokable: T) extends AnyVal {
+  final implicit class ExpressionAliases[T <: Expression](val expression: T) extends AnyVal {
+    @inline def as(alias: String): T = expression match {
+      case aliasable: Aliasable => aliasable.as(alias).asInstanceOf[T]
+      case _ => die(s"Instance type '${expression.getClass.getSimpleName}' does not support aliases")
+    }
+  }
+
+  /**
+    * Invokable Aliases
+    * @param invokable the given [[Invokable]] to alias
+    */
+  final implicit class InvokableAliases[T <: Invokable](val invokable: T) extends AnyVal {
     @inline def as(alias: String): T = invokable match {
       case aliasable: Aliasable => aliasable.as(alias).asInstanceOf[T]
-      case _ => throw new IllegalArgumentException(s"Instance type '${invokable.getClass.getSimpleName}' does not support aliases")
+      case _ => die(s"Instance type '${invokable.getClass.getSimpleName}' does not support aliases")
     }
   }
 

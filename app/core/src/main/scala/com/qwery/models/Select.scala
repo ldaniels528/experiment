@@ -1,7 +1,7 @@
 package com.qwery.models
 
 import com.qwery.models.JoinTypes.JoinType
-import com.qwery.models.expressions.{Condition, Expression}
+import com.qwery.models.expressions.{Condition, Expression, Field}
 
 /**
   * Represents a SQL-like SELECT statement
@@ -16,14 +16,14 @@ import com.qwery.models.expressions.{Condition, Expression}
 case class Select(fields: Seq[Expression],
                   from: Option[Invokable] = None,
                   joins: Seq[Join] = Nil,
-                  groupBy: Seq[String] = Nil,
+                  groupBy: Seq[Field] = Nil,
                   orderBy: Seq[OrderColumn] = Nil,
                   where: Option[Condition] = None,
                   limit: Option[Int] = None) extends Invokable with Aliasable
 
 /**
   * Represents a JOIN clause
-  * @param source     the [[TableRef table]] or [[Invokable query]]
+  * @param source    the [[TableRef table]] or [[Invokable query]]
   * @param condition the [[Condition conditional expression]]
   * @param `type`    the given [[JoinType]]
   */
@@ -40,14 +40,15 @@ object JoinTypes extends Enumeration {
 
 /**
   * Order Column
-  * @param name      the name of the column
-  * @param ascending indicates whether the column is ascending (or conversly descending)
+  * @param name        the name of the column
+  * @param isAscending indicates whether the column is ascending (or conversly descending)
   */
-case class OrderColumn(name: String, ascending: Boolean = true) extends Aliasable
+case class OrderColumn(name: String, isAscending: Boolean) extends Aliasable
 
 /**
   * Represents a Union operation; which combines two queries.
-  * @param query0 the first query
-  * @param query1 the second query
+  * @param query0     the first query
+  * @param query1     the second query
+  * @param isDistinct indicates wthether the results should be distinct
   */
-case class Union(query0: Invokable, query1: Invokable) extends Invokable with Aliasable
+case class Union(query0: Invokable, query1: Invokable, isDistinct: Boolean = false) extends Invokable with Aliasable

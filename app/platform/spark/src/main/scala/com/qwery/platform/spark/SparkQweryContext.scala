@@ -1,11 +1,14 @@
 package com.qwery.platform.spark
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.qwery.models._
 import com.qwery.platform.spark.SparkQweryCompiler.read
 import com.qwery.platform.{QweryContext, Scope}
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -17,22 +20,43 @@ import scala.util.Properties
   */
 class SparkQweryContext() extends QweryContext {
   private val logger = LoggerFactory.getLogger(getClass)
+  private val isInitialized = new AtomicBoolean(false)
+  private val defaultAppName = "Untitled"
 
   // the optional main program configuration
-  var mainProgram: Option[SparkMain] = None
-
-  // start the Spark context
-  lazy val spark: SparkSession = createSparkSession(mainProgram)
+  private var sparkSession_? : Option[SparkSession] = None
+  private var streamingContext_? : Option[StreamingContext] = None
 
   /**
-    * Creates a new Spark session
-    * @param mainProgram the optional [[SparkMain]]
     * @return the [[SparkSession]]
     */
-  private def createSparkSession(mainProgram: Option[SparkMain]): SparkSession = {
-    mainProgram.foreach(app => logger.info(s"Starting Application '${app.name}'..."))
+  lazy val spark: SparkSession = sparkSession_? || createSparkSession(mainProgram = None)
+
+  /**
+    * @return the option of a [[StreamingContext]]
+    */
+  lazy val ssc: StreamingContext = streamingContext_? orFail "Spark Streaming Context is not initialized"
+
+  /**
+    * Initializes this context
+    * @param mainProgram the optional [[SparkMainProgram]]
+    */
+  def init(mainProgram: Option[SparkMainProgram]): Unit = {
+    if (isInitialized.compareAndSet(false, true)) {
+      logger.info(s"Starting Application '${mainProgram.map(_.name) || defaultAppName}'...")
+      sparkSession_? = Option(createSparkSession(mainProgram))
+      streamingContext_? = if (mainProgram.exists(_.streaming)) sparkSession_?.map(createStreamingContext(_, mainProgram)) else None
+    }
+  }
+
+  /**
+    * Creates a new Spark Session
+    * @param mainProgram the optional [[SparkMainProgram]]
+    * @return the [[SparkSession]]
+    */
+  private def createSparkSession(mainProgram: Option[SparkMainProgram]): SparkSession = {
     val builder = SparkSession.builder()
-      .appName(mainProgram.map(_.name) || "Untitled")
+      .appName(mainProgram.map(_.name) || defaultAppName)
       .config("spark.sql.warehouse.dir", Properties.tmpDir)
 
     // set the optional stuff
@@ -46,6 +70,18 @@ class SparkQweryContext() extends QweryContext {
         builder.master("local[*]")
         builder.getOrCreate()
     }
+  }
+
+  /**
+    * Creates a new Spark Streaming Context
+    * @param spark       the [[SparkSession]]
+    * @param mainProgram the [[SparkMainProgram]]
+    * @return the [[StreamingContext]]
+    */
+  private def createStreamingContext(spark: SparkSession, mainProgram: Option[SparkMainProgram]): StreamingContext = {
+    logger.info("Initializing the Spark streaming context...")
+    val streamingOptions = mainProgram.flatMap(_.streamingOptions)
+    new StreamingContext(spark.sparkContext, Seconds(streamingOptions.flatMap(_.batchDuration) || 1L))
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -100,7 +136,10 @@ class SparkQweryContext() extends QweryContext {
     * @param name  the name of the variable to update
     * @param value the updated value
     */
-  def updateDataSet(name: String, value: Option[DataFrame]): Unit = dataSets(name) = value
+  def updateDataSet(name: String, value: Option[DataFrame]): Option[DataFrame] = {
+    dataSets(name) = value
+    value
+  }
 
   ////////////////////////////////////////////////////////////////////////
   //      Procedure methods

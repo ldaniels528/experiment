@@ -1,48 +1,13 @@
 package com.qwery.models
 
-import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.StorageFormats.StorageFormat
 
 /**
-  * Represents physical and logical tables (e.g. tables and views)
+  * Represents logic and physical table structures (e.g. tables, inline tables and views)
   * @author lawrence.daniels@gmail.com
   */
 trait TableLike extends Invokable {
   def name: String
-}
-
-/**
-  * Represents a table column
-  * @param name     the column name
-  * @param `type`   the given [[ColumnType column type]]
-  * @param nullable indicates whether the column may contain nulls
-  */
-case class Column(name: String, `type`: ColumnType = ColumnTypes.STRING, nullable: Boolean = true)
-
-/**
-  * Column Companion
-  */
-object Column {
-
-  /**
-    * Constructs a new column from the given descriptor
-    * @param descriptor the column descriptor (e.g. "symbol:string:true")
-    * @return a new [[Column]]
-    */
-  def apply(descriptor: String): Column = descriptor.split("[ ]").toList match {
-    case name :: _type :: _nullable :: Nil => Column(name = name, `type` = ColumnTypes.withName(_type.toUpperCase), nullable = _nullable == "true")
-    case name :: _type :: Nil => Column(name = name, `type` = ColumnTypes.withName(_type.toUpperCase))
-    case unknown => die(s"Invalid column descriptor '$unknown'")
-  }
-}
-
-/**
-  * Enumeration of Column Types
-  * @author lawrence.daniels@gmail.com
-  */
-object ColumnTypes extends Enumeration {
-  type ColumnType = Value
-  val BINARY, BOOLEAN, DATE, DOUBLE, INTEGER, LONG, STRING, UUID: ColumnType = Value
 }
 
 /**
@@ -55,17 +20,17 @@ object StorageFormats extends Enumeration {
 }
 
 /**
-  * Represents a view-like logical table definition
+  * Represents an inline table definition
   * @param name    the name of the table
   * @param columns the table columns
   * @param source  the physical location of the data files
   * @example
   * {{{
-  *     CREATE LOGICAL TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
+  *     CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
   *     FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
   * }}}
   */
-case class LogicalTable(name: String, columns: List[Column], source: Invokable) extends TableLike
+case class InlineTable(name: String, columns: List[Column], source: Invokable) extends TableLike
 
 /**
   * Represents a Hive-compatible external table definition

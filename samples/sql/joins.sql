@@ -20,7 +20,7 @@ main program 'Joins' with batch processing {
         location './samples/companylist/csv/';
 
     /* define the SelectSecurities table */
-    create logical table SelectSecurities (Ticker STRING)
+    create inline table SelectSecurities (Ticker STRING)
         from values ('AAPL'), ('ATO'), ('JE'), ('NFG'), ('LNG');
 
     ----------------------------------------------------------------

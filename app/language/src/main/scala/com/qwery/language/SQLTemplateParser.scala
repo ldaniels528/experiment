@@ -180,7 +180,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     values.toList match {
       case name :: items =>
         val item = stream.peek.map(_.text).getOrElse(error(items))
-        if (!items.exists(_.equalsIgnoreCase(item))) error(items)
+        if (!items.exists(_ equalsIgnoreCase item)) error(items)
         stream.next() // must skip the token
         SQLTemplateParams(atoms = Map(name -> item))
       case _ =>
@@ -318,8 +318,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfExpressions(name: String) = Try {
 
     def fetchNext(ts: TokenStream): Expression = {
+      import Aliasable._
       val expression = parseExpression(ts)
-      val result = if (ts nextIf "AS") expression.map(parseNamedAlias(ts, _)) else expression
+      val result = if (ts nextIf "AS") expression.map(_.as(stream.next().text)) else expression
       result.getOrElse(ts.die("Unexpected end of statement"))
     }
 
@@ -348,7 +349,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   }
 
   private def extractLocationOrTable(name: String) = Try {
-    val fileRef: Location = stream match {
+    val location: Location = stream match {
       case ts if ts nextIf "LOCATION" =>
         if (!ts.isQuoted) ts.die("expected a string literal representing a location path")
         LocationRef(ts.next().text)
@@ -360,8 +361,10 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     }
 
     // is there an alias?
-    val fileRefWithAlias = if (stream nextIf "AS") fileRef.as(alias = stream.next().text) else fileRef
-    SQLTemplateParams(locations = Map(name -> fileRefWithAlias))
+    val aliasedLocation = if (stream nextIf "AS") location.as(alias = stream.next().text) else location
+
+    // return the results
+    SQLTemplateParams(locations = Map(name -> aliasedLocation))
   }
 
   /**
@@ -415,12 +418,12 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
           val ascending = ts.next().text == "."
           val name = ts.next().text
           OrderColumn(name, ascending).as(alias)
-        case ts if ts.isText => OrderColumn(name = ts.next().text)
+        case ts if ts.isText => OrderColumn(name = ts.next().text, isAscending = true)
         case ts => ts.die("Order column definition expected")
       }
 
       // determine whether the column is ascending or descending
-      column = column.copy(ascending = stream match {
+      column = column.copy(isAscending = stream match {
         case ts if ts nextIf "ASC" => true
         case ts if ts nextIf "DESC" => false
         case _ => true

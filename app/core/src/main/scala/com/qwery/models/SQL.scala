@@ -7,7 +7,7 @@ package com.qwery.models
 case class SQL(statements: List[Invokable]) extends Invokable
 
 /**
-  * Block Companion
+  * SQL Companion
   * @author lawrence.daniels@gmail.com
   */
 object SQL {

@@ -31,37 +31,6 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses the contents of the given file into an [[Invokable invokable]]
-    * @param file the given [[File file]]
-    * @return the resultant [[Invokable]]
-    */
-  def parse(file: File): Invokable = parse(Source.fromFile(file).mkString)
-
-  /**
-    * Parses the contents of the given input stream into an [[Invokable invokable]]
-    * @param stream the given [[InputStream input stream]]
-    * @return the resultant [[Invokable]]
-    */
-  def parse(stream: InputStream): Invokable = parse(Source.fromInputStream(stream).mkString)
-
-  /**
-    * Parses the contents of the given URL into an [[Invokable invokable]]
-    * @param url the given [[URL]]
-    * @return the resultant [[Invokable]]
-    */
-  def parse(url: URL): Invokable = parse(Source.fromURL(url).mkString)
-
-  /**
-    * Parses the contents of the given string into an [[Invokable invokable]]
-    * @param sourceCode the given SQL code string (e.g. "SELECT * FROM Customers")
-    * @return the resultant [[Invokable]]
-    */
-  def parse(sourceCode: String): Invokable = iterate(TokenStream(sourceCode)).toList match {
-    case op :: Nil => op
-    case ops => SQL(ops: _*)
-  }
-
-  /**
     * Parses the next query or statement from the stream
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable]]
@@ -130,11 +99,11 @@ trait SQLLanguageParser {
     *   SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 )
     * }}}
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[Assign]]
+    * @return a [[SetVariable]]
     */
-  protected def parseAssignment(ts: TokenStream): Assign = {
+  protected def parseAssignment(ts: TokenStream): SetVariable = {
     val params = SQLTemplateParams(ts, "SET %v:variable = %Q:expr")
-    Assign(variable = params.variables("variable"), params.sources("expr"))
+    SetVariable(variable = params.variables("variable"), params.sources("expr"))
   }
 
   /**
@@ -224,7 +193,7 @@ trait SQLLanguageParser {
   protected def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
     "CREATE EXTERNAL TABLE" -> parseCreateTable,
     "CREATE FUNCTION" -> parseCreateFunction,
-    "CREATE LOGICAL TABLE" -> parseCreateLogicTable,
+    "CREATE INLINE TABLE" -> parseCreateInlineTable,
     "CREATE PROCEDURE" -> parseCreateProcedure,
     "CREATE TABLE" -> parseCreateTable,
     "CREATE TEMPORARY FUNCTION" -> parseCreateFunction,
@@ -241,6 +210,20 @@ trait SQLLanguageParser {
   protected def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY FUNCTION %a:name AS %a:class ?USING +?JAR +?%a:jar")
     Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jar = params.atoms.get("jar")))
+  }
+
+  /**
+    * Parses a CREATE INLINE TABLE statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Create executable]]
+    */
+  protected def parseCreateInlineTable(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE INLINE TABLE %t:name ( %P:columns ) FROM %V:source")
+    Create(InlineTable(
+      name = params.atoms("name"),
+      columns = params.columns.getOrElse("columns", Nil),
+      source = params.sources.getOrElse("source", ts.die("No source specified"))
+    ))
   }
 
   /**
@@ -274,23 +257,9 @@ trait SQLLanguageParser {
       fieldDelimiter = params.atoms.get("delimiter"),
       inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
       outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
-      headersIncluded = params.atoms.get("props.headers").map(_.equalsIgnoreCase("ON")),
+      headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
       nullValue = params.atoms.get("props.nullValue"),
       location = params.atoms.getOrElse("path", ts.die("No location specified"))
-    ))
-  }
-
-  /**
-    * Parses a CREATE LOGICAL TABLE statement
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Create executable]]
-    */
-  protected def parseCreateLogicTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE LOGICAL TABLE %t:name ( %P:columns ) FROM %V:source")
-    Create(LogicalTable(
-      name = params.atoms("name"),
-      columns = params.columns.getOrElse("columns", Nil),
-      source = params.sources.getOrElse("source", ts.die("No source specified"))
     ))
   }
 
@@ -380,7 +349,7 @@ trait SQLLanguageParser {
       arguments = params.variables.get("props.arguments"),
       environment = params.variables.get("props.environment"),
       hiveSupport = params.atoms.get("props.hiveSupport").nonEmpty,
-      streaming = params.atoms.get("props.processing").exists(_.equalsIgnoreCase("STREAM"))
+      streaming = params.atoms.get("props.processing").exists(_ equalsIgnoreCase "STREAM")
     )
   }
 
@@ -416,7 +385,8 @@ trait SQLLanguageParser {
          |?WHERE +?%c:condition
          |?GROUP +?BY +?%F:groupBy
          |?ORDER +?BY +?%o:orderBy
-         |?LIMIT +?%n:limit""".stripMargin)
+         |?LIMIT +?%n:limit
+         |""".stripMargin)
 
     // create the SELECT statement
     var select: Invokable = Select(
@@ -424,13 +394,17 @@ trait SQLLanguageParser {
       from = params.sources.get("source"),
       joins = params.joins.getOrElse("joins", Nil),
       where = params.conditions.get("condition"),
-      groupBy = params.fields.getOrElse("groupBy", Nil).map(_.name),
+      groupBy = params.fields.getOrElse("groupBy", Nil),
       orderBy = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
     // is it a UNION statement?
     while (ts nextIf "UNION") {
-      select = Union(select, SQLTemplateParams(ts, "%Q:union").sources("union"))
+      val params = SQLTemplateParams(ts, "?%C(mode|ALL|DISTINCT) %Q:union")
+      select = Union(
+        query0 = select,
+        query1 = params.sources("union"),
+        isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
     }
     select
   }
@@ -499,6 +473,48 @@ trait SQLLanguageParser {
     case s if s.contains("PARQUET") => StorageFormats.PARQUET
     case s if s.contains("ORC") => StorageFormats.ORC
     case _ => throw new IllegalArgumentException(s"Could not determine storage format from '$formatString'")
+  }
+
+}
+
+/**
+  * SQL Language Parser
+  * @author lawrence.daniels@gmail.com
+  */
+object SQLLanguageParser {
+
+  /**
+    * Parses the contents of the given file into an [[Invokable invokable]]
+    * @param file the given [[File file]]
+    * @return the resultant [[Invokable]]
+    */
+  def parse(file: File): Invokable = parse(Source.fromFile(file).mkString)
+
+  /**
+    * Parses the contents of the given input stream into an [[Invokable invokable]]
+    * @param stream the given [[InputStream input stream]]
+    * @return the resultant [[Invokable]]
+    */
+  def parse(stream: InputStream): Invokable = parse(Source.fromInputStream(stream).mkString)
+
+  /**
+    * Parses the contents of the given URL into an [[Invokable invokable]]
+    * @param url the given [[URL]]
+    * @return the resultant [[Invokable]]
+    */
+  def parse(url: URL): Invokable = parse(Source.fromURL(url).mkString)
+
+  /**
+    * Parses the contents of the given string into an [[Invokable invokable]]
+    * @param sourceCode the given SQL code string (e.g. "SELECT * FROM Customers")
+    * @return the resultant [[Invokable]]
+    */
+  def parse(sourceCode: String): Invokable = {
+    val parser = new SQLLanguageParser {}
+    parser.iterate(TokenStream(sourceCode)).toList match {
+      case op :: Nil => op
+      case ops => SQL(ops)
+    }
   }
 
 }

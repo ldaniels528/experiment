@@ -6,7 +6,7 @@ package com.qwery.language
   */
 case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
-  def apply(text: String): Boolean = peek.exists(_.text.equalsIgnoreCase(text))
+  def apply(text: String): Boolean = peek.exists(_.text equalsIgnoreCase text)
 
   def expect(text: => String): this.type = {
     if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected keyword or symbol '$text'")
@@ -17,9 +17,9 @@ case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](toke
     if (text contains " ") {
       val words = text.trim.split("[ ]").map(_.trim).toSeq
       val mappings = words.zipWithIndex map { case (word, offset) => word -> peekAhead(offset) }
-      mappings.forall { case (word, token) => token.exists(_.is(word)) }
+      mappings.forall { case (word, token) => token.exists(_ is word) }
     }
-    else peek.exists(_.text.equalsIgnoreCase(text))
+    else peek.exists(_.text equalsIgnoreCase text)
   }
 
   def isnt(text: => String): Boolean = !is(text)

@@ -45,6 +45,10 @@ class ExpressionParserTest extends FunSpec {
       verify("y + (x / 2)", Add(Field("y"), Field("x") / 2))
     }
 
+    it("""should parse "(y - (x / 2)) AS 'calc'" (expression)""") {
+      verify("(y - (x / 2))  AS 'calc'", Subtract(Field("y"), Field("x") / 2).as("calc"))
+    }
+
     it("""should parse "LastSale = 100" (equal)""") {
       verify("LastSale = 100", Field("LastSale") === 100)
     }
@@ -148,8 +152,8 @@ class ExpressionParserTest extends FunSpec {
       verify("Count(*)", Count(AllFields))
     }
 
-    it("should parse user-defined function (UDF) calls: toDecimal(MarketCap)") {
-      verify("toDecimal(MarketCap)", FunctionCall(name = "toDecimal")(Field("MarketCap")))
+    it("should parse functions (If)") {
+      verify("If(LastSale < 1, 'Penny Stock', 'Stock')", If(Field("LastSale") < 1, "Penny Stock", "Stock"))
     }
 
     it("should parse functions (Min)") {
@@ -178,6 +182,10 @@ class ExpressionParserTest extends FunSpec {
 
     it("should parse functions (Sum)") {
       verify("Sum(LastSale)", Sum(Field("LastSale")))
+    }
+
+    it("should parse user-defined function (UDF) calls: toDecimal(MarketCap)") {
+      verify("toDecimal(MarketCap)", FunctionCall(name = "toDecimal")(Field("MarketCap")))
     }
 
     it("should parse local variables: \"$total\"") {

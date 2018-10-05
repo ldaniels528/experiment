@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 case class SparkSelect(fields: Seq[Expression],
                        from: Option[SparkInvokable],
                        joins: Seq[SparkJoin],
-                       groupBy: Seq[String],
+                       groupBy: Seq[Field],
                        orderBy: Seq[OrderColumn],
                        where: Option[Condition],
                        limit: Option[Int],
@@ -102,7 +102,7 @@ case class SparkSelect(fields: Seq[Expression],
     */
   def processGroupBy(df0: DataFrame): DataFrame = if (groupBy.isEmpty) df0 else {
     val fxTuples = fields.collect { case f: SQLFunction1 if f.isAggregate => decode(f) }
-    df0.groupBy(groupBy.map(f => col(f)): _*).agg(fxTuples.head, fxTuples.tail: _*)
+    df0.groupBy(groupBy.map(f => col(f.alias || f.name)): _*).agg(fxTuples.head, fxTuples.tail: _*)
   }
 
   /**
@@ -112,7 +112,6 @@ case class SparkSelect(fields: Seq[Expression],
     */
   def processJoins(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame = {
     joins.foldLeft(df0) { case (dfA, SparkJoin(source, condition, kind)) =>
-      logger.info(s"condition: $condition, kind: $kind")
       source.execute(input = None) map { dfB => dfA.join(dfB, condition, kind.toString.toLowerCase) } getOrElse dfA
     }
   }
@@ -156,5 +155,26 @@ object SparkSelect {
     * @param `type`    the given [[JoinType]]
     */
   case class SparkJoin(source: SparkInvokable, condition: SparkColumn, `type`: JoinType)
+
+  /**
+    * Represents a Union operation
+    * @param query0     the first query
+    * @param query1     the second query
+    * @param isDistinct indicates whether the resulting records should be a distinct set.
+    * @param alias      the optional query alias
+    */
+  case class SparkUnion(query0: SparkInvokable,
+                        query1: SparkInvokable,
+                        isDistinct: Boolean,
+                        alias: Option[String]) extends SparkInvokable {
+    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
+      val df = for {
+        df0 <- query0.execute(input)
+        df1 <- query1.execute(input)
+      } yield df0 union df1
+
+      if (isDistinct) df.map(_.distinct()) else df
+    }
+  }
 
 }

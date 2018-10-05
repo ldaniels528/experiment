@@ -6,19 +6,19 @@ package com.qwery.language
   */
 sealed trait Token {
 
-  /***
+  /**
     * Indicates whether the given text matches the current token
     * @param value the given text value
     * @return true, if the value matches the current token
     */
-  def is(value: String): Boolean = text.equalsIgnoreCase(value)
+  def is(value: String): Boolean = text equalsIgnoreCase value
 
   /**
     * Indicates whether the underlying text matches the given pattern
     * @param pattern the given pattern
     * @return true, if the underlying text matches the given pattern
     */
-  def matches(pattern: String): Boolean = text.matches(pattern)
+  def matches(pattern: String): Boolean = text matches pattern
 
   /**
     * @return the starting position of this token
@@ -34,13 +34,14 @@ sealed trait Token {
     * @return the typed value contained by this token
     */
   def value: Any
+
 }
 
 /**
   * Represents a text token
   * @author lawrence.daniels@gmail.com
   */
-trait TextToken extends Token {
+sealed trait TextToken extends Token {
   override def value: String
 }
 

@@ -20,7 +20,7 @@ class FlinkQweryContext() extends QweryContext {
   private val variables = TrieMap[String, Option[DataFrame]]()
 
   // the optional main program configuration
-  var mainProgram: Option[FlinkMain] = None
+  var mainProgram: Option[FlinkMainProgram] = None
 
   // setup the streaming environment
   lazy val env: StreamExecutionEnvironment = {

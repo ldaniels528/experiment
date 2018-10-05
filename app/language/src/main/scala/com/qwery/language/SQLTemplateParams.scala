@@ -1,7 +1,10 @@
 package com.qwery.language
 
+import com.qwery.util.StringHelper._
 import com.qwery.models._
 import com.qwery.models.expressions._
+
+import scala.language.postfixOps
 
 /**
   * Represents the extracted SQL template properties
@@ -14,6 +17,7 @@ import com.qwery.models.expressions._
   * @param joins         the named collection of join references (e.g. "INNER JOIN './stocks.csv' ON A.symbol = B.symbol")
   * @param keyValuePairs the named collection of key-value pairs (e.g. "key = 'Hello', value = 123")
   * @param keywords      the named collection of key words
+  * @param locations     the named collection of [[Location]]s
   * @param numerics      the named collection of numeric values (e.g. "TOP 100")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
@@ -27,9 +31,9 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
                              joins: Map[String, List[Join]] = Map.empty,
-                             locations: Map[String, Location] = Map.empty,
                              keyValuePairs: Map[String, List[(String, Expression)]] = Map.empty,
                              keywords: Set[String] = Set.empty,
+                             locations: Map[String, Location] = Map.empty,
                              numerics: Map[String, Double] = Map.empty,
                              orderedFields: Map[String, List[OrderColumn]] = Map.empty,
                              properties: Map[String, Map[String, String]] = Map.empty,
@@ -67,8 +71,8 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
     * Indicates whether at least one of the template mappings is not empty
     * @return true, if at least one of the template mappings is not empty
     */
-  def nonEmpty: Boolean = Seq(atoms, columns, conditions, assignables, expressions, fields, joins, keyValuePairs,
-    keywords, numerics, orderedFields, locations, repeatedSets, sources, variables).exists(_.nonEmpty)
+  def nonEmpty: Boolean = Seq(assignables, atoms, columns, conditions, expressions, fields, joins, keyValuePairs,
+    keywords, locations, numerics, orderedFields, properties, repeatedSets, sources, variables).exists(_.nonEmpty)
 
 }
 
@@ -85,16 +89,15 @@ object SQLTemplateParams {
     */
   def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLTemplateParser(ts).process(cleanup(template))
 
-  private def cleanup(text: String): String = {
-    var s = text
-      .replaceAllLiterally("\t", " ")
-      .replaceAllLiterally("\n", " ")
-      .replaceAllLiterally("\r", " ")
-      .trim
-    while (s.contains("  ")) {
-      s = s.replaceAllLiterally("  ", " ")
-    }
-    s
+  /**
+    * Removes non-printable characters and extraneous spaces
+    * @param s the given string
+    * @return the cleaned string
+    */
+  private def cleanup(s: String): String = {
+    val sb = new StringBuilder(s.map { case '\n' | '\r' | '\t' => ' '; case c => c }.trim)
+    while (sb.indexOfOpt("  ").map(index => sb.replace(index, index + 2, " ")).nonEmpty) {}
+    sb.toString()
   }
 
 }

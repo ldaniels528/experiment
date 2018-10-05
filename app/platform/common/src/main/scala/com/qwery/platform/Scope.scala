@@ -28,7 +28,6 @@ trait Scope {
     logger.info(s"Setting variable '$name' to '$value'")
     variables(name) = value
   }
-
 }
 
 /**
@@ -36,5 +35,11 @@ trait Scope {
   * @author lawrence.daniels@gmail.com
   */
 object Scope {
+
+  /**
+    * Creates a new scope
+    * @return the [[Scope]]
+    */
   def apply(): Scope = new Scope {}
+
 }

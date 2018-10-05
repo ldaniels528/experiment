@@ -86,7 +86,7 @@ object FlinkQweryCompiler {
     */
   def read(tableOrView: TableLike)(implicit rc: FlinkQweryContext): Option[DataFrame] = tableOrView match {
     case table: Table =>
-      val df = table.inputFormat match {
+      val df = table.inputFormat.orFail("The input format was not specified") match {
         case CSV =>
           val builder0 = CsvTableSource.builder
             .path(table.location)
@@ -130,7 +130,7 @@ object FlinkQweryCompiler {
     val writeMode = if (append) WriteMode.NO_OVERWRITE else WriteMode.OVERWRITE
     destination match {
       case table: Table =>
-        table.outputFormat match {
+        table.outputFormat.orFail("The output format was not specified") match {
           case CSV =>
             val sink = new CsvTableSink(path = table.location, fieldDelim = table.fieldDelimiter || ",", numFiles = None, writeMode = writeMode)
             source.foreach(_.writeToSink(sink))
@@ -223,7 +223,7 @@ object FlinkQweryCompiler {
         case Insert.Into(target) => FlinkInsert.Sink(target = target, append = true)
         case Insert.Overwrite(target) => FlinkInsert.Sink(target = target, append = false)
         case Insert.Values(values) => FlinkInsert.Spout(values, target = None)
-        case MainProgram(name, code, args, env, hive, streaming) => FlinkMain(name, code.compile, args, env, hive, streaming)
+        case MainProgram(name, code, args, env, hive, streaming) => FlinkMainProgram(name, code.compile, args, env, hive, streaming)
         case ref@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
           FlinkSelect(columns, from.map(_.compile), joins, groupBy, orderBy, where, limit, ref.alias)
         case Show(dataSet, limit) => FlinkShow(dataSet.compile, limit)
@@ -233,10 +233,9 @@ object FlinkQweryCompiler {
       }
 
       private def incorporateSources(path: String)(implicit rc: FlinkQweryContext): FlinkInvokable = {
-        val sqlLanguageParser = new SQLLanguageParser {}
         val ops = Seq(path) map (new File(_).getCanonicalFile) map { file =>
           logger.info(s"Merging source file '${file.getAbsolutePath}'...")
-          sqlLanguageParser.parse(file).compile
+          SQLLanguageParser.parse(file).compile
         }
         FlinkSQL(ops: _*)
       }

@@ -2,11 +2,13 @@ package com.qwery.models.expressions
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.qwery.models.Aliasable
+
 /**
   * Represents an expression; while in its simplest form is a value (boolean, double or string)
   * @author lawrence.daniels@gmail.com
   */
-trait Expression
+trait Expression extends Aliasable
 
 case class Add(a: Expression, b: Expression) extends Expression
 
@@ -69,7 +71,7 @@ object Expression {
   val validTypes = Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
   var ticker = new AtomicInteger()
 
-  def isValidType(typeName: String): Boolean = validTypes.exists(_.equalsIgnoreCase(typeName))
+  def isValidType(typeName: String): Boolean = validTypes.exists(_ equalsIgnoreCase typeName)
 
   /**
     * Expression Implicits

@@ -11,7 +11,7 @@ import com.qwery.util.OptionHelper._
 case class FlinkSelect(fields: Seq[Expression],
                        from: Option[FlinkInvokable],
                        joins: Seq[Join],
-                       groupBy: Seq[String],
+                       groupBy: Seq[Field],
                        orderBy: Seq[OrderColumn],
                        where: Option[Condition],
                        limit: Option[Int],

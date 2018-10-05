@@ -50,7 +50,7 @@ class SparkQweryCompilerTest extends FunSpec {
             Field(descriptor = "Industry")),
           from = Table("Securities"),
           where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
-          orderBy = List(OrderColumn(name = "Symbol"))
+          orderBy = List(OrderColumn(name = "Symbol", isAscending = true))
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
@@ -58,9 +58,9 @@ class SparkQweryCompilerTest extends FunSpec {
       df.foreach(_.show(20))
     }
 
-    it("should support CREATE LOGICAL TABLE statements") {
+    it("should support CREATE INLINE TABLE statements") {
       val sql = SQL(
-        Create(LogicalTable(
+        Create(InlineTable(
           name = "SpecialSecurities",
           columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
           source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01))))),
@@ -140,7 +140,7 @@ class SparkQweryCompilerTest extends FunSpec {
             Field(descriptor = "Industry")),
           from = Table("Securities"),
           where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
-          orderBy = List(OrderColumn(name = "Symbol")),
+          orderBy = List(OrderColumn(name = "Symbol", isAscending = true)),
           limit = 5
         ))
 
@@ -182,8 +182,8 @@ class SparkQweryCompilerTest extends FunSpec {
             Count(AllFields).as("Companies")),
           from = Table("Securities"),
           where = Field("Sector") === "Basic Industries",
-          groupBy = List("Sector", "Industry"),
-          orderBy = List(OrderColumn(name = "Sector"), OrderColumn(name = "Industry"))
+          groupBy = List("Sector", "Industry").map(Field.apply),
+          orderBy = List(OrderColumn(name = "Sector", isAscending = true), OrderColumn(name = "Industry", isAscending = true))
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()

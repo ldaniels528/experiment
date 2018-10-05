@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
-import com.qwery.models.expressions.{Field, VariableRef}
+import com.qwery.models.expressions.{AllFields, Count, Field, VariableRef}
 import org.scalatest.FunSpec
 
 /**
@@ -15,40 +15,40 @@ class SQLLanguageParserTest extends FunSpec {
     import com.qwery.models.expressions.Expression.Implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    // create the SQL language parser
-    val sqlLanguageParser = new SQLLanguageParser {}
-
     it("should support BEGIN ... END statements") {
       // test type 1
-      val results1 = sqlLanguageParser.parse(
+      val results1 = SQLLanguageParser.parse(
         """|BEGIN
            |  PRINT 'Hello World'
-           |END""".stripMargin)
+           |END
+           |""".stripMargin)
       assert(results1 == SQL(Console.Print("Hello World")))
 
       // test type 2
-      val results2 = sqlLanguageParser.parse(
+      val results2 = SQLLanguageParser.parse(
         """|{
            |  PRINT 'Hello World'
-           |}""".stripMargin)
+           |}
+           |""".stripMargin)
       assert(results2 == SQL(Console.Print("Hello World")))
     }
 
     it("should support CALL statements") {
-      val results = sqlLanguageParser.parse("CALL computeArea(length, width)")
+      val results = SQLLanguageParser.parse("CALL computeArea(length, width)")
       assert(results == ProcedureCall(name = "computeArea", args = List("length", "width").map(Field.apply)))
     }
 
     it("should support CREATE FUNCTION statements") {
-      val results = sqlLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
+      val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
       assert(results == Create(UserDefinedFunction(name = "myFunc", `class` = "com.qwery.udf.MyFunc", jar = None)))
     }
 
-    it("should support CREATE LOGICAL TABLE statements") {
-      val results = sqlLanguageParser.parse(
-        """|CREATE LOGICAL TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
-           |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)""".stripMargin)
-      assert(results == Create(LogicalTable(
+    it("should support CREATE INLINE TABLE statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE INLINE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
+           |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
+           |""".stripMargin)
+      assert(results == Create(InlineTable(
         name = "SpecialSecurities",
         columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
         source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
@@ -56,7 +56,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support CREATE PROCEDURE statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|CREATE PROCEDURE testInserts(industry STRING) AS
            |  RETURN (
            |    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
@@ -76,11 +76,10 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support CREATE TABLE statements") {
       // CREATE EXTERNAL TABLE
-      val results1 = sqlLanguageParser.parse(
+      val results1 = SQLLanguageParser.parse(
         """|CREATE EXTERNAL TABLE Customers (customer_id STRING, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
-           |STORED AS INPUTFORMAT 'PARQUET'
-           |OUTPUTFORMAT 'PARQUET'
+           |STORED AS INPUTFORMAT 'PARQUET' OUTPUTFORMAT 'PARQUET'
            |LOCATION './dataSets/customers/parquet/'
            |""".stripMargin)
       assert(results1 == Create(Table(name = "Customers",
@@ -91,11 +90,12 @@ class SQLLanguageParserTest extends FunSpec {
       )))
 
       // CREATE TABLE
-      val results2 = sqlLanguageParser.parse(
+      val results2 = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |STORED AS INPUTFORMAT 'JSON' OUTPUTFORMAT 'JSON'
-           |LOCATION './dataSets/customers/json/'""".stripMargin)
+           |LOCATION './dataSets/customers/json/'
+           |""".stripMargin)
       assert(results2 == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         inputFormat = StorageFormats.JSON,
@@ -105,7 +105,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support CREATE TABLE ... WITH statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |ROW FORMAT DELIMITED
@@ -113,7 +113,8 @@ class SQLLanguageParserTest extends FunSpec {
            |STORED AS INPUTFORMAT 'CSV'
            |WITH HEADERS ON
            |WITH NULL VALUES AS 'n/a'
-           |LOCATION './dataSets/customers/csv/'""".stripMargin)
+           |LOCATION './dataSets/customers/csv/'
+           |""".stripMargin)
       assert(results == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         fieldDelimiter = ",",
@@ -127,9 +128,10 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support CREATE TEMPORARY FUNCTION") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|CREATE TEMPORARY FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
-           |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'""".stripMargin)
+           |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
+           |""".stripMargin)
       assert(results == Create(UserDefinedFunction(
         name = "myFunc",
         `class` = "com.qwery.udf.MyFunc",
@@ -138,11 +140,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support CREATE VIEW statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|CREATE VIEW OilAndGas AS
            |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
            |FROM Customers
-           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
       assert(results == Create(View(name = "OilAndGas",
         query = Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
@@ -152,28 +155,27 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN statements") {
-      import Console._
       case class Expected(command: String, opCode: String => Console, message: String)
       val tests = Seq(
-        Expected("DEBUG", Debug.apply, "This is a debug message"),
-        Expected("ERROR", Error.apply, "This is an error message"),
-        Expected("INFO", Info.apply, "This is an informational message"),
-        Expected("LOG", Log.apply, "This is an informational message"),
-        Expected("PRINT", Print.apply, "This message will be printed to STDOUT"),
-        Expected("WARN", Warn.apply, "This is a warning message"))
+        Expected("DEBUG", Console.Debug.apply, "This is a debug message"),
+        Expected("ERROR", Console.Error.apply, "This is an error message"),
+        Expected("INFO", Console.Info.apply, "This is an informational message"),
+        Expected("LOG", Console.Log.apply, "This is an informational message"),
+        Expected("PRINT", Console.Print.apply, "This message will be printed to STDOUT"),
+        Expected("WARN", Console.Warn.apply, "This is a warning message"))
       tests foreach { case Expected(command, opCode, message) =>
-        val results = sqlLanguageParser.parse(s"$command '$message'")
+        val results = SQLLanguageParser.parse(s"$command '$message'")
         assert(results == opCode(message))
       }
     }
 
     it("should support INCLUDE statements") {
-      val results = sqlLanguageParser.parse("INCLUDE 'models/securities.sql'")
+      val results = SQLLanguageParser.parse("INCLUDE 'models/securities.sql'")
       assert(results == Include("models/securities.sql"))
     }
 
     it("should support INSERT statements without explicitly defined fields") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         "INSERT INTO Students VALUES ('Fred Flintstone', 35, 1.28), ('Barney Rubble', 32, 2.32)")
       assert(results == Insert(Into(Table("Students")), Insert.Values(values = List(
         List("Fred Flintstone", 35.0, 1.28),
@@ -182,11 +184,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-INTO-SELECT statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry).map(s => Field(s.name))
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Select(
@@ -198,11 +201,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-INTO-VALUES statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
-           |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)""".stripMargin)
+           |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Insert.Values(
@@ -215,11 +219,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-INTO-LOCATION-SELECT statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT INTO LOCATION '/dir/subdir' (Symbol, Name, Sector, Industry, LastSale)
            |SELECT Symbol, Name, Sector, Industry, LastSale
            |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
       assert(results == Insert(Into(LocationRef("/dir/subdir")),
         Select(
@@ -231,11 +236,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-OVERWRITE-SELECT statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry).map(s => Field(s.name))
       assert(results == Insert(Overwrite(Table("OilGasSecurities")),
         Select(
@@ -247,11 +253,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-OVERWRITE-VALUES statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
-           |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)""".stripMargin)
+           |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
       assert(results == Insert(Overwrite(Table("OilGasSecurities")),
         Insert.Values(values = List(
@@ -263,11 +270,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support INSERT-OVERWRITE-LOCATION-SELECT statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE LOCATION '/dir/subdir' (Symbol, Name, Sector, Industry, LastSale)
            |SELECT Symbol, Name, Sector, Industry, LastSale
            |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'""".stripMargin)
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
       val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
       assert(results == Insert(Overwrite(LocationRef("/dir/subdir")),
         Select(
@@ -279,7 +287,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support MAIN PROGRAM statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|MAIN PROGRAM 'Oil_Companies'
            |  WITH ARGUMENTS AS @args
            |  WITH ENVIRONMENT AS @env
@@ -294,23 +302,90 @@ class SQLLanguageParserTest extends FunSpec {
         arguments = VariableRef("@args"), environment = VariableRef("@env"), hiveSupport = true, streaming = true))
     }
 
-    it("should support SELECT statements") {
-      val results = sqlLanguageParser.parse(
-        """|SELECT C.Symbol, C.Name, C.Sector, C.Industry, `C.Summary Quote`
-           |FROM Customers AS C
-           |WHERE C.Industry = 'Oil/Gas Transmission'
-           |ORDER BY C.Symbol DESC
+    it("should support SELECT ... GROUP BY statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Sector, Industry, COUNT(*)
+           |FROM Customers
+           |GROUP BY Sector, Industry
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.Symbol", "C.Name", "C.Sector", "C.Industry", "C.Summary Quote").map(Field.apply),
-        from = Table("Customers").as("C"),
-        where = Field("C.Industry") === "Oil/Gas Transmission",
-        orderBy = List(OrderColumn(name = "Symbol", ascending = false).as("C"))
+        fields = List(Field("Sector"), Field("Industry"), Count(AllFields)),
+        from = Table("Customers"),
+        groupBy = List("Sector", "Industry").map(Field.apply)
       ))
     }
 
+    it("should support SELECT ... LIMIT n statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry
+           |FROM Customers
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |LIMIT 100
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List("Symbol", "Name", "Sector", "Industry").map(Field.apply),
+        from = Table("Customers"),
+        where = Field("Industry") === "Oil/Gas Transmission",
+        limit = 100
+      ))
+    }
+
+    it("should support SELECT TOP n ... statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT TOP 20 Symbol, Name, Sector, Industry
+           |FROM Customers
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List("Symbol", "Name", "Sector", "Industry").map(Field.apply),
+        from = Table("Customers"),
+        where = Field("Industry") === "Oil/Gas Transmission",
+        limit = 20
+      ))
+    }
+
+    it("should support SELECT ... ORDER BY statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+           |FROM Customers
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |ORDER BY Symbol DESC, Name ASC
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+        from = Table("Customers"),
+        where = Field("Industry") === "Oil/Gas Transmission",
+        orderBy = List(OrderColumn(name = "Symbol", isAscending = false), OrderColumn(name = "Name", isAscending = true))
+      ))
+    }
+
+    it("should support SELECT ... UNION statements") {
+      Seq("ALL", "DISTINCT", "") foreach { modifier =>
+        val results = SQLLanguageParser.parse(
+          s"""|SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+              |FROM Customers
+              |WHERE Industry = 'Oil/Gas Transmission'
+              |UNION $modifier
+              |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+              |FROM Customers
+              |WHERE Industry = 'Computer Manufacturing'
+              |""".stripMargin)
+        assert(results == Union(
+          query0 = Select(
+            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            from = Table("Customers"),
+            where = Field("Industry") === "Oil/Gas Transmission"),
+          query1 = Select(
+            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            from = Table("Customers"),
+            where = Field("Industry") === "Computer Manufacturing"),
+          isDistinct = modifier == "DISTINCT"
+        ))
+      }
+    }
+
     it("should support SELECT w/CROSS JOIN statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers as C
            |CROSS JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
@@ -329,7 +404,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT w/INNER JOIN statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers as C
            |INNER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
@@ -348,7 +423,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT w/FULL OUTER JOIN statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers as C
            |FULL OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
@@ -367,7 +442,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT w/LEFT OUTER JOIN statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers as C
            |LEFT OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
@@ -386,7 +461,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT w/RIGHT OUTER JOIN statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers as C
            |RIGHT OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
@@ -405,7 +480,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SET statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|{
            |  SET @customers = (
            |    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
@@ -415,45 +490,22 @@ class SQLLanguageParserTest extends FunSpec {
            |  )
            |}
            |""".stripMargin)
-      assert(results == SQL(Assign(variable = VariableRef(name = "@customers"),
+      assert(results == SQL(SetVariable(variable = VariableRef(name = "@customers"),
         Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           from = Table("Customers"),
           where = Field("Industry") === "Oil/Gas Transmission",
-          orderBy = List(OrderColumn(name = "Symbol"))
+          orderBy = List(OrderColumn(name = "Symbol", isAscending = true))
         ))))
     }
 
     it("should support SHOW statements") {
-      val results = sqlLanguageParser.parse("SHOW @theResults LIMIT 5")
+      val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
       assert(results == Show(rows = VariableRef(name = "@theResults"), limit = 5))
     }
 
-    it("should support UNION statements") {
-      val results = sqlLanguageParser.parse(
-        """|SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-           |FROM Customers
-           |WHERE Industry = 'Oil/Gas Transmission'
-           |UNION
-           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-           |FROM Customers
-           |WHERE Industry = 'Computer Manufacturing'
-           |""".stripMargin)
-      assert(results == Union(
-        Select(
-          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          from = Table("Customers"),
-          where = Field("Industry") === "Oil/Gas Transmission"
-        ),
-        Select(
-          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          from = Table("Customers"),
-          where = Field("Industry") === "Computer Manufacturing"
-        )))
-    }
-
     it("should support UPDATE statements") {
-      val results = sqlLanguageParser.parse(
+      val results = SQLLanguageParser.parse(
         """|UPDATE Companies
            |SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
            |WHERE Symbol = 'AAPL'

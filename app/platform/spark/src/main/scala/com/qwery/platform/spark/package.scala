@@ -3,7 +3,6 @@ package com.qwery.platform
 import java.lang.reflect.Type
 
 import org.apache.spark.sql.types.{DataType, DataTypes}
-import org.slf4j.LoggerFactory
 
 /**
   * spark package object
@@ -48,6 +47,5 @@ package object spark {
       case unknown => die(s"Unsupported type conversion '$unknown'")
     }
   }
-
 
 }

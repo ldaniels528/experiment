@@ -75,7 +75,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
 
   private def parseNumeric(): Option[Token] = {
     val start = pos
-    while (hasMore && (ca(pos).isDigit || ca(pos) == '.')) pos += 1
+    while (hasMore && (ca(pos).isDigit || (ca.length > pos + 1 && ca(pos) == '.' && ca(pos + 1).isDigit))) pos += 1
     if (pos > start) Some(NumericToken(String.copyValueOf(ca, start, pos - start), start)) else None
   }
 

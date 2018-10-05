@@ -86,6 +86,29 @@ trait ExpressionParser {
   }
 
   /**
+    * Parses an IF(condition, trueValue, falseValue) expression
+    * @param ts the given [[TokenStream token stream]]
+    * @return the option of an [[If]]
+    */
+  private def parseIf(ts: TokenStream): Option[Expression] = {
+    // parse the command
+    ts.expect("(")
+    val condition_? = parseCondition(ts)
+    ts.expect(",")
+    val trueValue_? = parseExpression(ts)
+    ts.expect(",")
+    val falseValue_? = parseExpression(ts)
+    ts.expect(")")
+
+    // put it all together
+    for {
+      condition <- condition_?
+      trueValue <- trueValue_?
+      falseValue <- falseValue_?
+    } yield If(condition, trueValue, falseValue)
+  }
+
+  /**
     * Extracts a variable number of function arguments
     * @param ts the given [[TokenStream token stream]]
     * @return a collection of [[Expression argument expressions]]
@@ -156,6 +179,8 @@ trait ExpressionParser {
       case ts if ts nextIf "CASE" => parseCase(ts)
       // is it a Cast function?
       case ts if ts nextIf "CAST" => parseCast(ts)
+      // is it an If expression?
+      case ts if ts nextIf "IF" => parseIf(ts)
       // is it a constant value?
       case ts if ts.isConstant => Literal(value = ts.next().value)
       // is it an all fields reference?
@@ -173,40 +198,6 @@ trait ExpressionParser {
       // is it a field?
       case ts if ts.isField => toField(ts.next())
       case _ => None
-    }
-  }
-
-  def parseQuantity(ts: TokenStream): Option[Expression] = {
-    if (ts nextIf "(") {
-      val expr = parseExpression(ts)
-      ts expect ")"
-      expr
-    }
-    else None
-  }
-
-  def parseJoinField(ts: TokenStream): Option[Field] = {
-    val params = SQLTemplateParams(ts, "%a:alias . %a:column")
-    Option(BasicField(name = params.atoms("column")).as(params.atoms.get("alias")))
-  }
-
-  def parseVariableRef(stream: TokenStream): Option[VariableRef] = {
-    stream match {
-      case ts if ts nextIf "@" => Option(RowSetVariableRef(ts.next().text))
-      case ts if ts nextIf "$" => Option(LocalVariableRef(ts.next().text))
-      case ts => ts.die("Variable expected")
-    }
-  }
-
-  /**
-    * Parses an expression alias (e.g. "(1 + 3) * 2 AS qty")
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Expression CAST expression]]
-    */
-  def parseNamedAlias(stream: TokenStream, expression: Expression): NamedExpression = {
-    stream match {
-      case ts if ts.isBackticks | ts.isIdentifier => Field(name = ts.next().text, expression)
-      case ts => ts.die("Identifier expected for alias")
     }
   }
 
@@ -288,12 +279,49 @@ trait ExpressionParser {
   }
 
   /**
+    * Parses a field with an alias
+    * @param ts the given [[TokenStream token stream]]
+    * @return the option of a [[Field]]
+    */
+  def parseJoinField(ts: TokenStream): Option[Field] = {
+    val params = SQLTemplateParams(ts, "%a:alias . %a:column")
+    Option(Field(params.atoms("column")).as(params.atoms.get("alias")))
+  }
+
+  /**
     * Parses a NOT condition (e.g. "NOT X = 1")
     * @param ts the given [[TokenStream token stream]]
     * @return a [[Condition condition]]
     */
   private def parseNOT(ts: TokenStream): Option[NOT] =
     Option(NOT(parseCondition(ts).getOrElse(ts.die("Conditional expression expected"))))
+
+  /**
+    * Parses a variable reference
+    * @param stream the given [[TokenStream token stream]]
+    * @return the option of a [[VariableRef]]
+    */
+  private def parseVariableRef(stream: TokenStream): Option[VariableRef] = {
+    stream match {
+      case ts if ts nextIf "@" => Option(RowSetVariableRef(ts.next().text))
+      case ts if ts nextIf "$" => Option(LocalVariableRef(ts.next().text))
+      case ts => ts.die("Variable expected")
+    }
+  }
+
+  /**
+    * Parses an expression quantity (e.g. "(x * 2)")
+    * @param ts the given [[TokenStream token stream]]
+    * @return the option of a [[Expression]]
+    */
+  def parseQuantity(ts: TokenStream): Option[Expression] = {
+    if (ts nextIf "(") {
+      val expr = parseExpression(ts)
+      ts expect ")"
+      expr
+    }
+    else None
+  }
 
   private def toField(token: Token): Field = token match {
     case AlphaToken(name, _) => Field(name)

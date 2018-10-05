@@ -7,4 +7,4 @@ import com.qwery.models.expressions.VariableRef
   * @param variable the given [[VariableRef]]
   * @param value the given [[Invokable]]
   */
-case class Assign(variable: VariableRef, value: Invokable) extends Invokable
+case class SetVariable(variable: VariableRef, value: Invokable) extends Invokable

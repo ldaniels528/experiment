@@ -1,11 +1,12 @@
 ----------------------------------------------------------------
---      companylist
+--      companylist-legacy
 ----------------------------------------------------------------
-main program 'companylist'
+main program 'companylist-legacy'
     with arguments as @args
     with environment as @env
     with batch processing
-{
+as
+begin
 
     /* First, we define our input and output sources */
 
@@ -28,4 +29,5 @@ main program 'companylist'
         where Industry = 'Oil/Gas Transmission'
     ) limit 5;
 
-}
+end
+;
