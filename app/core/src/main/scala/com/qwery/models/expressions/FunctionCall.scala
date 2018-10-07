@@ -5,7 +5,7 @@ package com.qwery.models.expressions
   * @param name the name of the function
   * @param args the function-call arguments
   */
-case class FunctionCall(name: String, args: List[Expression]) extends Field
+case class FunctionCall(name: String, args: List[Expression]) extends NamedExpression
 
 /**
   * FunctionCall Companion

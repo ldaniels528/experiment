@@ -5,63 +5,63 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.qwery.models.Aliasable
 
 /**
-  * Represents an expression; while in its simplest form is a value (boolean, double or string)
+  * Represents an expression; which in its simplest form is a value (boolean, double or string)
   * @author lawrence.daniels@gmail.com
   */
 trait Expression extends Aliasable
 
+/**
+  * Add expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
 case class Add(a: Expression, b: Expression) extends Expression
 
 /**
-  * Represents a CASE expression
-  * @example
-  * {{{
-  * CASE primary-expr
-  *   WHEN expr1 THEN result1
-  *   WHEN expr2 THEN result2
-  *   ELSE expr3
-  * END
-  * }}}
-  * @example
-  * {{{
-  * CASE
-  *   WHEN value1 = expr1 THEN result1
-  *   WHEN value2 = expr2 THEN result2
-  *   ELSE expr3
-  * END
-  * }}}
-  * @param conditions the list of WHEN conditions
+  * Divide expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
   */
-case class Case(conditions: List[When], otherwise: Option[Expression]) extends Expression
-
-object Case {
-  def apply(conditions: When*)(otherwise: Option[Expression]): Case = new Case(conditions.toList, otherwise)
-}
-
 case class Divide(a: Expression, b: Expression) extends Expression
 
 /**
   * Represents a literal value (e.g. "Hello")
-  * @param value the literal value
+  * @param value the given value
   */
 case class Literal(value: Any) extends Expression
 
+/**
+  * Modulo expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
 case class Modulo(a: Expression, b: Expression) extends Expression
 
+/**
+  * Multiply expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
 case class Multiply(a: Expression, b: Expression) extends Expression
 
+/**
+  * Represents a Null value
+  */
 case object Null extends Expression
 
+/**
+  * Power/exponent expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
 case class Pow(a: Expression, b: Expression) extends Expression
 
-case class Subtract(a: Expression, b: Expression) extends Expression
-
 /**
-  * Represents a WHEN condition
-  * @param condition the given [[Condition condition]]
-  * @param result    the given [[Expression result expression]]
+  * Subtract expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
   */
-case class When(condition: Condition, result: Expression)
+case class Subtract(a: Expression, b: Expression) extends Expression
 
 /**
   * Expression Companion
@@ -111,13 +111,33 @@ object Expression {
 
     }
 
-    final implicit def string2Expr(value: String): Expression = Literal(value)
+    /**
+      * String to Expression conversion
+      * @param value the given String value
+      * @return the equivalent [[Literal]]
+      */
+    final implicit def string2Expr(value: String): Literal = Literal(value)
 
-    final implicit def int2Expr(value: Int): Expression = Literal(value)
+    /**
+      * Integer to Expression conversion
+      * @param value the given Integer value
+      * @return the equivalent [[Literal]]
+      */
+    final implicit def int2Expr(value: Int): Literal = Literal(value)
 
-    final implicit def double2Expr(value: Double): Expression = Literal(value)
+    /**
+      * Double to Expression conversion
+      * @param value the given Double value
+      * @return the equivalent [[Literal]]
+      */
+    final implicit def double2Expr(value: Double): Literal = Literal(value)
 
-    final implicit def long2Expr(value: Long): Expression = Literal(value)
+    /**
+      * Long to Expression conversion
+      * @param value the given Long value
+      * @return the equivalent [[Literal]]
+      */
+    final implicit def long2Expr(value: Long): Literal = Literal(value)
 
     /**
       * Condition Extensions

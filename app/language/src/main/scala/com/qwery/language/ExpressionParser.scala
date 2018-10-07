@@ -9,6 +9,7 @@ import com.qwery.models.expressions._
   * @author lawrence.daniels@gmail.com
   */
 trait ExpressionParser {
+  private val processor = new ExpressionTemplateProcessor {}
 
   def parseCondition(stream: TokenStream): Option[Condition] = {
     var condition: Option[Condition] = None
@@ -56,6 +57,9 @@ trait ExpressionParser {
     */
   private def parseFunction(stream: TokenStream): Option[Expression] = {
     stream match {
+      // is it a no parameter function? (e.g. "Current_Date")
+      case ts if function0s.exists { case (name, _) => ts is name } =>
+        function0s.find { case (name, _) => ts nextIf name } map { case (_, fx) => fx }
       // is it a single-parameter function? (e.g. "Trim('Hello ')")
       case ts if function1s.exists { case (name, _) => ts is name } =>
         function1s.find { case (name, _) => ts nextIf name } map { case (name, fx) =>
@@ -80,6 +84,9 @@ trait ExpressionParser {
             case params => ts.die(s"Invalid parameters: expected 3, found ${params.size}")
           }
         }
+      // is it a N-parameter function? (e.g. "Coalesce(dept, 'N/A')")
+      case ts if functionNs.exists { case (name, _) => ts is name } =>
+        functionNs.find { case (name, _) => ts nextIf name } map { case (_, fx) => fx(parseArguments(ts)) }
       // must be a user-defined function
       case ts => Option(FunctionCall(name = ts.next().text, parseArguments(ts)))
     }
@@ -91,20 +98,11 @@ trait ExpressionParser {
     * @return the option of an [[If]]
     */
   private def parseIf(ts: TokenStream): Option[Expression] = {
-    // parse the command
-    ts.expect("(")
-    val condition_? = parseCondition(ts)
-    ts.expect(",")
-    val trueValue_? = parseExpression(ts)
-    ts.expect(",")
-    val falseValue_? = parseExpression(ts)
-    ts.expect(")")
-
-    // put it all together
+    val results = processor.process("( %c:condition , %e:true , %e:false )", ts)(this)
     for {
-      condition <- condition_?
-      trueValue <- trueValue_?
-      falseValue <- falseValue_?
+      condition <- results.conditions.get("condition")
+      trueValue <- results.expressions.get("true")
+      falseValue <- results.expressions.get("false")
     } yield If(condition, trueValue, falseValue)
   }
 
@@ -114,14 +112,7 @@ trait ExpressionParser {
     * @return a collection of [[Expression argument expressions]]
     */
   private def parseArguments(ts: TokenStream): List[Expression] = {
-    ts.expect("(")
-    var args: List[Expression] = Nil
-    while (ts isnt ")") {
-      args = parseExpression(ts).getOrElse(ts.die("An expression was expected")) :: args
-      if (ts isnt ")") ts.expect(",")
-    }
-    ts.expect(")")
-    args.reverse
+    processor.process("( %E:args )", ts)(this).expressionLists.getOrElse("args", Nil)
   }
 
   /**
@@ -181,22 +172,27 @@ trait ExpressionParser {
       case ts if ts nextIf "CAST" => parseCast(ts)
       // is it an If expression?
       case ts if ts nextIf "IF" => parseIf(ts)
+      // is is a null value?
+      case ts if ts nextIf "NULL" => Null
       // is it a constant value?
       case ts if ts.isConstant => Literal(value = ts.next().value)
       // is it an all fields reference?
       case ts if ts nextIf "*" => AllFields
       // is it a variable? (e.g. @totalCost)
-      case ts if (ts is "@") | (ts is "$") => parseVariableRef(ts)
+      case ts if (ts is "@") | (ts is "$") => parseVariableRef(ts) map {
+        case ref: LocalVariableRef => ref
+        case _: RowSetVariableRef => ts.die("Row set variables cannot be used in expressions")
+        case _ => ts.die("Unsupported expression; a column variable was expected (e.g. $myVar)")
+      }
       // is it a quantity (e.g. "(2 + (x * 2))")?
       case ts if ts is "(" => parseQuantity(ts)
-      // is is a null value?
-      case ts if ts nextIf "NULL" => Null
       // is it a function?
       case ts if ts.isFunction => parseFunction(ts)
       // is it a join column reference (e.g. "A.Symbol")?
       case ts if ts.isJoinColumn => parseJoinField(ts)
       // is it a field?
       case ts if ts.isField => toField(ts.next())
+      // unmatched
       case _ => None
     }
   }
@@ -223,7 +219,7 @@ trait ExpressionParser {
     * @return the option of a Case expression
     */
   private def parseCase(ts: TokenStream): Option[Expression] = {
-    var cases: List[When] = Nil
+    var cases: List[Case.When] = Nil
     var done = false
     var otherwise: Option[Expression] = None
 
@@ -252,7 +248,7 @@ trait ExpressionParser {
       }
 
       // add the case
-      cases = When(condition, result) :: cases
+      cases = Case.When(condition, result) :: cases
 
       // check for the end of the case
       done = done || (ts is "END")
@@ -267,25 +263,21 @@ trait ExpressionParser {
     * @return an [[Expression CAST expression]]
     */
   private def parseCast(ts: TokenStream): Option[Cast] = {
-    ts.expect("(")
-    val expression = parseExpression(ts) map { value =>
-      ts.expect("AS")
-      val toType = ts.nextOption.map(_.text).getOrElse(ts.die("Type expected"))
-      ts.expect(")")
-      Cast(value, Literal(value = toType))
-    }
-    if (expression.isEmpty) ts.die("Syntax error")
-    expression
+    val results = processor.process("( %e:value AS %t:type )", ts)(this)
+    for {
+      value <- results.expressions.get("value")
+      toType <- results.types.get("type")
+    } yield Cast(value, toType)
   }
 
   /**
-    * Parses a field with an alias
+    * Parses a field with an alias (e.g. "A.Symbol")
     * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[Field]]
     */
   def parseJoinField(ts: TokenStream): Option[Field] = {
-    val params = SQLTemplateParams(ts, "%a:alias . %a:column")
-    Option(Field(params.atoms("column")).as(params.atoms.get("alias")))
+    val results = processor.process("%a:alias . %a:name", ts)(this)
+    for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield Field(name).as(alias)
   }
 
   /**
@@ -298,30 +290,19 @@ trait ExpressionParser {
 
   /**
     * Parses a variable reference
-    * @param stream the given [[TokenStream token stream]]
+    * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[VariableRef]]
     */
-  private def parseVariableRef(stream: TokenStream): Option[VariableRef] = {
-    stream match {
-      case ts if ts nextIf "@" => Option(RowSetVariableRef(ts.next().text))
-      case ts if ts nextIf "$" => Option(LocalVariableRef(ts.next().text))
-      case ts => ts.die("Variable expected")
-    }
-  }
+  private def parseVariableRef(ts: TokenStream): Option[VariableRef] =
+    processor.process("%v:variable", ts)(this).variables.get("variable")
 
   /**
     * Parses an expression quantity (e.g. "(x * 2)")
     * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[Expression]]
     */
-  def parseQuantity(ts: TokenStream): Option[Expression] = {
-    if (ts nextIf "(") {
-      val expr = parseExpression(ts)
-      ts expect ")"
-      expr
-    }
-    else None
-  }
+  def parseQuantity(ts: TokenStream): Option[Expression] =
+    processor.process("( %e:expr )", ts)(this).expressions.get("expr")
 
   private def toField(token: Token): Field = token match {
     case AlphaToken(name, _) => Field(name)
@@ -338,22 +319,47 @@ trait ExpressionParser {
   */
 object ExpressionParser {
   private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
+  private val function0s = Map(
+    "Cume_Dist" -> Cume_Dist,
+    "Current_Date" -> Current_Date
+  )
   private val function1s = Map(
-    "AVG" -> Avg.apply _,
-    "COUNT" -> Count.apply _,
-    "MAX" -> Max.apply _,
-    "MIN" -> Min.apply _,
-    "STDDEV" -> StdDev.apply _,
-    "SUM" -> Sum.apply _
+    "Abs" -> Abs.apply _,
+    "Avg" -> Avg.apply _,
+    "Ascii" -> Ascii.apply _,
+    "Base64" -> Base64.apply _,
+    "Bin" -> Bin.apply _,
+    "Cbrt" -> Cbrt.apply _,
+    "Ceil" -> Ceil.apply _,
+    "Count" -> Count.apply _,
+    "Distinct" -> Distinct.apply _,
+    "Factorial" -> Factorial.apply _,
+    "Floor" -> Floor.apply _,
+    "Lower" -> Lower.apply _,
+    "Max" -> Max.apply _,
+    "Min" -> Min.apply _,
+    "StdDev" -> StdDev.apply _,
+    "Sum" -> Sum.apply _,
+    "To_Date" -> To_Date.apply _,
+    "Trim" -> Trim.apply _,
+    "Upper" -> Upper.apply _,
+    "Variance" -> Variance.apply _,
+    "WeekOfYear" -> WeekOfYear.apply _,
+    "Year" -> Year.apply _
   )
   private val function2s = Map(
-    "CAST" -> Cast.apply _,
-    "CONCAT" -> Concat.apply _,
-    "PADLEFT" -> PadLeft.apply _,
-    "PADRIGHT" -> PadRight.apply _
+    "Add_Months" -> Add_Months.apply _,
+    "Array_Contains" -> Array_Contains.apply _,
+    "Concat" -> Concat.apply _,
+    "Date_Add" -> Date_Add.apply _
   )
   private val function3s = Map(
-    "SUBSTRING" -> Substring.apply _
+    "LPad" -> LPad.apply _,
+    "RPad" -> RPad.apply _,
+    "Substring" -> Substring.apply _
+  )
+  private val functionNs = Map(
+    "Coalesce" -> Coalesce.apply _
   )
   private val conditionalOps = Map(
     "=" -> EQ.apply _,
@@ -391,7 +397,6 @@ object ExpressionParser {
 
     @inline def isJoinColumn: Boolean =
       (for (a <- ts(0); b <- ts(1); c <- ts(2)) yield a.isIdentifier && (b is ".") && c.isIdentifier).contains(true)
-
   }
 
   /**

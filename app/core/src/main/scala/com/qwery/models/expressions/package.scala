@@ -17,10 +17,14 @@ package object expressions {
         throw new IllegalArgumentException(s"Unsupported expression '$unknown' primitive value expected.")
     }
 
+    @inline def asInt: Int = expression.asNumber.toInt
+
     @inline def asNumber: Double = expression match {
       case Literal(value: Double) => value
+      case Literal(value: Long) => value
+      case Literal(value: Int) => value
       case unknown =>
-        throw new IllegalArgumentException(s"Unsupported expression '$unknown' primitive value expected.")
+        throw new IllegalArgumentException(s"Unsupported expression '$unknown' numeric value expected.")
     }
 
     @inline def asString: String = expression match {

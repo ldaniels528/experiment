@@ -9,7 +9,18 @@ import com.qwery.models.Aliasable
   * @author lawrence.daniels@gmail.com
   */
 trait NamedExpression extends Expression {
+
+  /**
+    * @return the name of the expression
+    */
   def name: String
+
+  /**
+    * @return indicates whether the field is being used for aggregation
+    * @see [[Aggregation]]
+    */
+  def isAggregate: Boolean = false
+
 }
 
 /**
@@ -43,9 +54,8 @@ object NamedExpression {
     */
   final implicit class NamedExpressionExtensions(val expression: Expression) extends AnyVal {
     @inline def getName: String = expression match {
-      case NamedExpression(theName, alias) => alias || theName
+      case NamedExpression(name, alias) => alias || name
       case _ => randomName
     }
   }
-
 }

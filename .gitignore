@@ -61,7 +61,8 @@ fixed-data.csv
 tmp
 .idea/
 node_modules/
-./samples/awsdhubnp-consumer-ma-exporter-pixall/
-./samples/sales_transaction_data/
+samples/awsdhubnp-consumer-ma-exporter-pixall/
+samples/sales_transaction_data/
+samples/sql/omniture
 metastore_db/
 

@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
-import com.qwery.models.expressions.{AllFields, Count, Field, VariableRef}
+import com.qwery.models.expressions._
 import org.scalatest.FunSpec
 
 /**
@@ -61,7 +61,7 @@ class SQLLanguageParserTest extends FunSpec {
            |  RETURN (
            |    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
            |    FROM Customers
-           |    WHERE Industry = @industry
+           |    WHERE Industry = $industry
            |  )
            |""".stripMargin)
       assert(results == Create(Procedure(name = "testInserts",
@@ -69,7 +69,7 @@ class SQLLanguageParserTest extends FunSpec {
         code = Return(Select(
           fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
           from = Table("Customers"),
-          where = Field("Industry") === VariableRef(name = "@industry")
+          where = Field("Industry") === LocalVariableRef(name = "industry")
         ))
       )))
     }
@@ -304,12 +304,13 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support SELECT ... GROUP BY statements") {
       val results = SQLLanguageParser.parse(
-        """|SELECT Sector, Industry, COUNT(*)
+        """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
            |FROM Customers
            |GROUP BY Sector, Industry
            |""".stripMargin)
       assert(results == Select(
-        fields = List(Field("Sector"), Field("Industry"), Count(AllFields)),
+        fields = List(Field("Sector"), Field("Industry"), Avg(Field("LastSale")).as("LastSale"),
+          Count(AllFields).as("total"), Count(Distinct(AllFields)).as("distinctTotal")),
         from = Table("Customers"),
         groupBy = List("Sector", "Industry").map(Field.apply)
       ))
@@ -501,7 +502,7 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support SHOW statements") {
       val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
-      assert(results == Show(rows = VariableRef(name = "@theResults"), limit = 5))
+      assert(results == Show(rows = RowSetVariableRef(name = "theResults"), limit = 5))
     }
 
     it("should support UPDATE statements") {

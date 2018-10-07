@@ -3,21 +3,22 @@ package com.qwery.models
 import com.qwery.models.StorageFormats.StorageFormat
 
 /**
-  * Represents logic and physical table structures (e.g. tables, inline tables and views)
+  * Base class for all SQL entities (e.g. tables, views, functions and procedures)
   * @author lawrence.daniels@gmail.com
   */
-trait TableLike extends Invokable {
+sealed trait SQLEntity {
+
+  /**
+    * @return the name of the entity
+    */
   def name: String
 }
 
 /**
-  * Enumeration of Storage Formats
+  * Base class for table-like entities (e.g. tables, inline tables and views)
   * @author lawrence.daniels@gmail.com
   */
-object StorageFormats extends Enumeration {
-  type StorageFormat = Value
-  val AVRO, CSV, JDBC, JSON, ORC, PARQUET: StorageFormat = Value
-}
+sealed trait TableLike extends SQLEntity
 
 /**
   * Represents an inline table definition
@@ -33,7 +34,24 @@ object StorageFormats extends Enumeration {
 case class InlineTable(name: String, columns: List[Column], source: Invokable) extends TableLike
 
 /**
-  * Represents a Hive-compatible external table definition
+  * Represents an executable procedure
+  * @param name   the name of the procedure
+  * @param params the procedure's parameters
+  * @param code   the procedure's code
+  */
+case class Procedure(name: String, params: Seq[Column], code: Invokable) extends SQLEntity
+
+/**
+  * Enumeration of Storage Formats
+  * @author lawrence.daniels@gmail.com
+  */
+object StorageFormats extends Enumeration {
+  type StorageFormat = Value
+  val AVRO, CSV, JDBC, JSON, ORC, PARQUET: StorageFormat = Value
+}
+
+/**
+  * Represents a Hive-compatible table definition
   * @param name            the name of the table
   * @param columns         the table columns
   * @param fieldDelimiter  the optional field delimiter (e.g. ",")
@@ -85,6 +103,12 @@ object Table {
     */
   def apply(name: String): TableRef = TableRef(name)
 }
+
+/**
+  * Represents a User-defined Function (UDF)
+  * @param name the name of the function
+  */
+case class UserDefinedFunction(name: String, `class`: String, jar: Option[String]) extends SQLEntity
 
 /**
   * Represents a View definition

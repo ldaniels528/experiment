@@ -1,5 +1,7 @@
 package com.qwery.language
 
+import com.qwery.models.ColumnTypes
+import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
 
@@ -140,8 +142,8 @@ class ExpressionParserTest extends FunSpec {
         )(otherwise = "Unknown": Expression))
     }
 
-    it("""should parse "Cast(LastSale AS 'String')" """) {
-      verify("Cast(LastSale AS 'String')", Cast(Field("LastSale"), "String"))
+    it("""should parse "Cast(LastSale AS String)" """) {
+      verify("Cast(LastSale AS String)", Cast(Field("LastSale"), ColumnTypes.STRING))
     }
 
     it("""should parse "Count(LastSale)" """) {
@@ -164,12 +166,12 @@ class ExpressionParserTest extends FunSpec {
       verify("Max(LastSale)", Max(Field("LastSale")))
     }
 
-    it("should parse functions (PadLeft)") {
-      verify("PadLeft(Symbol, 5)", PadLeft(Field("Symbol"), 5))
+    it("should parse functions (LPad)") {
+      verify("LPad(Symbol, 5, ' ')", LPad(Field("Symbol"), 5, " "))
     }
 
-    it("should parse functions (PadRight)") {
-      verify("PadRight(Symbol, 5)", PadRight(Field("Symbol"), 5))
+    it("should parse functions (RPad)") {
+      verify("RPad(Symbol, 5, ' ')", RPad(Field("Symbol"), 5, " "))
     }
 
     it("should parse functions (StdDev)") {
@@ -190,10 +192,6 @@ class ExpressionParserTest extends FunSpec {
 
     it("should parse local variables: \"$total\"") {
       verify("$total", LocalVariableRef("total"))
-    }
-
-    it("should parse row set variables: \"@results\"") {
-      verify("@results", RowSetVariableRef("results"))
     }
 
   }

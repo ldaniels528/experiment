@@ -5,7 +5,11 @@ package expressions
   * Represents a reference to a variable
   * @author lawrence.daniels@gmail.com
   */
-sealed trait VariableRef extends Field {
+sealed trait VariableRef {
+
+  /**
+    * @return the name of the variable
+    */
   def name: String
 }
 
@@ -36,11 +40,11 @@ object VariableRef {
   * Represents a reference to a local variable
   * @param name the name of the variable
   */
-case class LocalVariableRef(name: String) extends VariableRef
+case class LocalVariableRef(name: String) extends VariableRef with NamedExpression
 
 /**
   * Represents a reference to a row-set variable
   * @param name the name of the variable
   */
-case class RowSetVariableRef(name: String) extends VariableRef
+case class RowSetVariableRef(name: String) extends VariableRef with Invokable with Aliasable
 

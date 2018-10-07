@@ -87,8 +87,11 @@ object SparkQweryCompiler {
     import SparkQweryCompiler.Implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
     tableOrView match {
-      case SparkInlineTable(name, columns, source) =>
-        rc.createDataSet(columns, source).map { df => df.createOrReplaceTempView(name); df }
+      case ref@InlineTable(name, columns, source) =>
+        rc.createDataSet(columns, source.compile match {
+          case spout: SparkInsert.Spout => spout.copy(resolver = Option(SparkTableColumnResolver(ref)))
+          case invokable => invokable
+        }).map { df => df.createOrReplaceTempView(name); df }
       case table: Table =>
         val reader = rc.spark.read.tableOptions(table)
         table.inputFormat.orFail("Table input format was not specified") match {
@@ -174,14 +177,7 @@ object SparkQweryCompiler {
   case class RegisterTableOrView(tableOrView: TableLike) extends SparkInvokable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       logger.info(s"Registering ${tableOrView.getClass.getSimpleName} '${tableOrView.name}'...")
-      val table = tableOrView match {
-        case ref@InlineTable(name, columns, source) => SparkInlineTable(name, columns, source.compile match {
-          case spout: SparkInsert.Spout => spout.copy(resolver = Option(SparkTableColumnResolver(ref)))
-          case invokable => invokable
-        })
-        case other => other
-      }
-      rc += table
+      rc += tableOrView
       input
     }
   }
@@ -198,10 +194,16 @@ object SparkQweryCompiler {
       */
     final implicit class ColumnCompiler(val column: Column) extends AnyVal {
       @inline def compile: StructField =
-        StructField(name = column.name, dataType = toSparkType(column.`type`), nullable = column.isNullable)
+        StructField(name = column.name, dataType = column.`type`.compile, nullable = column.isNullable)
+    }
 
-      @inline def toSparkType(`type`: ColumnType): DataType =
-        sparkTypeMapping.getOrElse(`type`, die(s"Type '${`type`}' could not be mapped to Spark"))
+    /**
+      * Column Type compiler
+      * @param `type` the given [[ColumnType]]
+      */
+    final implicit class ColumnTypeCompiler(val `type`: ColumnType) extends AnyVal {
+      @inline def compile: DataType = sparkTypeMapping
+        .getOrElse(`type`, die(s"Type '${`type`}' could not be mapped to Spark"))
     }
 
     /**
@@ -275,9 +277,28 @@ object SparkQweryCompiler {
         import com.qwery.models.expressions._
         import org.apache.spark.sql.functions._
         expression match {
+          case Abs(a) => abs(a.compile)
           case Add(a, b) => a.compile + b.compile
+          case Add_Months(a, b) => add_months(a.compile, b.asInt)
+          case Array_Contains(a, b) => array_contains(a.compile, b.asAny)
+          case Ascii(a) => ascii(a.compile)
+          case Avg(a) => avg(a.compile)
+          case Base64(a) => base64(a.compile)
           case ref@BasicField(name) => ref.alias.map(alias => col(name).as(alias)) || col(name)
+          case Bin(a) => bin(a.compile)
+          case Cast(value, toType) => value.compile.cast(toType.compile)
+          case Cbrt(a) => cbrt(a.compile)
+          case Ceil(a) => ceil(a.compile)
+          case Coalesce(args) => coalesce(args.map(_.compile): _*)
+          case Concat(a, b) => concat(a.compile, b.compile)
+          case Count(Distinct(a)) => countDistinct(a.compile)
+          case Count(a) => count(a.compile)
+          case Cume_Dist => cume_dist()
+          case Current_Date => current_date()
+          case Date_Add(a, b) => date_add(a.compile, b.asInt)
           case Divide(a, b) => a.compile + b.compile
+          case Factorial(a) => factorial(a.compile)
+          case Floor(a) => floor(a.compile)
           case ref@FunctionCall(name, args) =>
             val op = callUDF(name, args.map(_.compile): _*)
             ref.alias.map(alias => op.as(alias)) getOrElse op
@@ -286,10 +307,24 @@ object SparkQweryCompiler {
             when(cond, yes).when(!cond, no)
           case Literal(value) => lit(value)
           case LocalVariableRef(name) => lit(rc.getVariable(name))
+          case Lower(a) => lower(a.compile)
+          case LPad(a, b, c) => lpad(a.compile, b.asInt, c.asString)
+          case Max(a) => max(a.compile)
+          case Min(a) => min(a.compile)
           case Modulo(a, b) => a.compile % b.compile
           case Multiply(a, b) => a.compile * b.compile
           case Pow(a, b) => pow(a.compile, b.compile)
+          case RPad(a, b, c) => rpad(a.compile, b.asInt, c.asString)
           case Subtract(a, b) => a.compile - b.compile
+          case Substring(a, b, c) => substring(a.compile, b.asInt, c.asInt)
+          case Sum(Distinct(a)) => sumDistinct(a.compile)
+          case Sum(a) => sum(a.compile)
+          case To_Date(a) => to_date(a.compile)
+          case Trim(a) => trim(a.compile)
+          case Upper(a) => upper(a.compile)
+          case Variance(a) => variance(a.compile)
+          case WeekOfYear(a) => weekofyear(a.compile)
+          case Year(a) => year(a.compile)
           case unknown => die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
         }
       }

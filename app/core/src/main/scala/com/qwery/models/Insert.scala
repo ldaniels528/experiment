@@ -7,7 +7,7 @@ import com.qwery.models.expressions.{Expression, Field}
   * Represents a SQL-like Insert statement
   * @param destination the given [[Destination destination]]
   * @param source      the given [[Invokable source]]
-  *                    @param fields the given collection of [[Field]]s
+  * @param fields      the given collection of [[Field]]s
   */
 case class Insert(destination: Destination, source: Invokable, fields: List[Field] = Nil) extends Invokable
 
@@ -17,6 +17,9 @@ case class Insert(destination: Destination, source: Invokable, fields: List[Fiel
   */
 object Insert {
 
+  /**
+    * Represents a row of data
+    */
   type DataRow = List[Expression]
 
   /**
@@ -29,19 +32,19 @@ object Insert {
 
   /**
     * Represents an Append Write Mode
-    * @author lawrence.daniels@gmail.com
+    * @param target the given [[Location]]
     */
   case class Into(target: Location) extends Destination
 
   /**
     * Represents a Overwrite Write Mode
-    * @author lawrence.daniels@gmail.com
+    * @param target the given [[Location]]
     */
   case class Overwrite(target: Location) extends Destination
 
   /**
     * Represents a static insert values collection
-    * @param values the given insert values
+    * @param values the given collection of [[DataRow row]]s
     */
   case class Values(values: List[DataRow]) extends Invokable
 

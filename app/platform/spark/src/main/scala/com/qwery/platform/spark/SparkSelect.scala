@@ -51,10 +51,10 @@ case class SparkSelect(fields: Seq[Expression],
 
   /**
     * Decodes the given aggregate field (likely a function) into its Spark counterpart.
-    * @param aggField the given [[Field field]]
+    * @param aggField the given [[NamedExpression field]]
     * @return a tuple containing the field name and Spark function identifier (e.g. "avg")
     */
-  def decode(aggField: Field): (String, String) = aggField match {
+  def decode(aggField: NamedExpression): (String, String) = aggField match {
     case fx: SQLFunction1 => fx.field.getName -> fx.name
     case unknown => die(s"Unhandled aggregate expression $unknown")
   }
