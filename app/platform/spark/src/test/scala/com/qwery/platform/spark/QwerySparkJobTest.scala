@@ -14,6 +14,11 @@ class QwerySparkJobTest extends FunSpec {
       QwerySparkJob.main(Array("./samples/sql/companylist.sql"))
     }
 
+    it("should compile and execute: files.sql") {
+      QwerySparkJob.main(Array("./samples/sql/files.sql"))
+    }
+
+
     it("should compile and execute: joins.sql") {
       QwerySparkJob.main(Array("./samples/sql/joins.sql"))
     }

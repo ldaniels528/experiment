@@ -211,23 +211,18 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       // VALUES clause?
       case ts if ts nextIf "VALUES" =>
         ts match {
-          case ts1 if ts1 nextIf "@" => RowSetVariableRef(ts1.next().text)
+          case ts1 if ts1 nextIf "@" => @@(ts1.next().text)
           case ts1 if ts1 nextIf "$" => ts1.die("Local variable references are not compatible with row sets")
           case ts1 =>
             var values: List[DataRow] = Nil
             do values = SQLTemplateParams(ts1, "( %E:values )").expressions("values") :: values while (ts1 nextIf ",")
             Insert.Values(values.reverse)
         }
-      // sub-query?
-      case ts if ts nextIf "(" =>
-        val result = parseNext(ts)
-        ts expect ")"
-        result
       // variable?
-      case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
+      case ts if ts nextIf "@" => @@(ts.next().text)
       case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
-      // anything else ...
-      case ts => parseNext(ts)
+      // any supported query ...
+      case ts => parseNextQueryOrVariable(ts)
     }
     SQLTemplateParams(sources = Map(name -> source))
   }
@@ -318,15 +313,14 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfExpressions(name: String) = Try {
 
     def fetchNext(ts: TokenStream): Expression = {
-      import Aliasable._
       val expression = parseExpression(ts)
       val result = if (ts nextIf "AS") expression.map(_.as(stream.next().text)) else expression
       result.getOrElse(ts.die("Unexpected end of statement"))
     }
 
     var expressions: List[Expression] = Nil
-    do expressions = expressions ::: fetchNext(stream) :: Nil while (stream nextIf ",")
-    SQLTemplateParams(expressions = Map(name -> expressions))
+    do expressions = fetchNext(stream) :: expressions while (stream nextIf ",")
+    SQLTemplateParams(expressions = Map(name -> expressions.reverse))
   }
 
   /**
@@ -441,7 +435,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractQueryOrVariable(name: String) = Try {
-    val result = parseNextQueryTableOrVariable(stream)
+    val result = parseNextQueryOrVariable(stream)
     if (!result.isQuery && !result.isVariable) stream.die("Query or variable expected")
     SQLTemplateParams(sources = Map(name -> result))
   }
@@ -520,8 +514,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractVariableReference(name: String) = Try {
     val reference = stream match {
-      case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
-      case ts if ts nextIf "$" => LocalVariableRef(ts.next().text)
+      case ts if ts nextIf "@" => @@(ts.next().text)
+      case ts if ts nextIf "$" => $(ts.next().text)
       case ts => ts.die("Variable expected")
     }
     SQLTemplateParams(variables = Map(name -> reference))

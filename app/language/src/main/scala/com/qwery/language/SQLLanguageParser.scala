@@ -4,7 +4,7 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 import com.qwery.models.StorageFormats.StorageFormat
-import com.qwery.models.expressions.{RowSetVariableRef, VariableRef}
+import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
 
@@ -35,90 +35,30 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  def parseNext(stream: TokenStream): Invokable = {
-    stream match {
-      case ts if ts nextIf "(" =>
-        val result = parseNext(stream)
-        ts.expect(")")
-        result
-      case ts =>
-        ts.decode(tuples =
-          "{" -> parseBeginToEndBraces,
-          "BEGIN" -> parseBeginToEnd,
-          "CALL" -> parseCall,
-          "CREATE" -> parseCreate,
-          "DEBUG" -> parseConsoleDebug,
-          "ERROR" -> parseConsoleError,
-          "INCLUDE" -> parseInclude,
-          "INFO" -> parseConsoleInfo,
-          "INSERT" -> parseInsert,
-          "LOG" -> parseConsoleLog,
-          "MAIN" -> parseMainProgram,
-          "PRINT" -> parseConsolePrint,
-          "RETURN" -> parseReturn,
-          "SELECT" -> parseSelect,
-          "SET" -> parseAssignment,
-          "SHOW" -> parseShow,
-          "UPDATE" -> parseUpdate,
-          "WARN" -> parseConsoleWarn)
-    }
-  }
-
-  /**
-    * Parses the next query (selection), table or variable
-    * @param stream the given [[TokenStream]]
-    * @return the resultant [[Select]], [[TableRef]] or [[VariableRef]]
-    */
-  def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = {
-    import Aliasable._
-    val query = stream match {
-      // direct query (e.g. "SELECT * FROM Months")?
-      case ts if ts is "SELECT" => parseSelect(ts)
-      // indirect query/variable?
-      case ts if ts nextIf "(" =>
-        val result = parseNext(ts)
-        ts expect ")"
-        result
-      // variable (e.g. "@name")?
-      case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
-      case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
-      // table (e.g. "Months")?
-      case ts if ts.isBackticks | ts.isText => Table(ts.next().text)
-      // unknown
-      case ts => ts.die("Query, table or variable expected")
-    }
-
-    // is there an alias?
-    if (stream nextIf "AS") query.as(alias = stream.next().text) else query
-  }
-
-  /**
-    * Parses a SET statement
-    * @example
-    * {{{
-    *   SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 )
-    * }}}
-    * @param ts the given [[TokenStream token stream]]
-    * @return a [[SetVariable]]
-    */
-  protected def parseAssignment(ts: TokenStream): SetVariable = {
-    val params = SQLTemplateParams(ts, "SET %v:variable = %Q:expr")
-    SetVariable(variable = params.variables("variable"), params.sources("expr"))
-  }
-
-  /**
-    * Parses a BEGIN ... END statement
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[SQL code block]]
-    */
-  protected def parseBeginToEnd(ts: TokenStream): SQL = parseSequence(ts, startElem = "BEGIN", endElem = "END")
-
-  /**
-    * Parses a { ... } block
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[SQL code block]]
-    */
-  protected def parseBeginToEndBraces(ts: TokenStream): SQL = parseSequence(ts, startElem = "{", endElem = "}")
+  def parseNext(stream: TokenStream): Invokable = stream.decode(tuples =
+    "(" -> (ts => parseIndirectQuery(ts)(parseNextSubQuery)),
+    "{" -> (ts => parseSequence(ts, startElem = "{", endElem = "}")),
+    "BEGIN" -> (ts => parseSequence(ts, startElem = "BEGIN", endElem = "END")),
+    "CALL" -> parseCall,
+    "CREATE" -> parseCreate,
+    "DEBUG" -> parseConsoleDebug,
+    "ERROR" -> parseConsoleError,
+    "FILESYSTEM" -> parseFileSystem,
+    "FOR" -> parseForLoop,
+    "INCLUDE" -> parseInclude,
+    "INFO" -> parseConsoleInfo,
+    "INSERT" -> parseInsert,
+    "LOG" -> parseConsoleLog,
+    "MAIN" -> parseMainProgram,
+    "PRINT" -> parseConsolePrint,
+    "RETURN" -> parseReturn,
+    "SELECT" -> parseSelect,
+    "SET" -> parseSet,
+    "SHOW" -> parseShow,
+    "UPDATE" -> parseUpdate,
+    "WARN" -> parseConsoleWarn,
+    "WHILE" -> parseWhile
+  )
 
   /**
     * Parses a CALL statement
@@ -281,17 +221,67 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses an INCLUDE statement
+    * Parses a FILESYSTEM statement (row-level function)
+    * @example {{{ FileSystem('./customers') }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return a [[FileSystem]]
+    */
+  protected def parseFileSystem(ts: TokenStream): FileSystem =
+    FileSystem(path = SQLTemplateParams(ts, "FILESYSTEM ( %a:path )").atoms("path"))
+
+  /**
+    * Parses a FOR statement
     * @example
     * {{{
-    *   INCLUDE './models.sql'
+    * FOR @item IN (
+    *   SELECT symbol, lastSale FROM Securities WHERE naics = '12345'
+    * )
+    * LOOP
+    *   PRINT '${item.symbol}' is ${item.lastSale)/share';
+    * END LOOP;
     * }}}
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[While]]
+    */
+  protected def parseForLoop(stream: TokenStream): ForEach = {
+    val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
+    val variable = params.variables("variable") match {
+      case v: RowSetVariableRef => v
+      case _ => stream.die("Local variables are not compatible with row sets")
+    }
+    ForEach(variable,
+      rows = params.sources("rows"),
+      invokable = stream match {
+        case ts if ts is "LOOP" => parseSequence(ts, startElem = "LOOP", endElem = "END LOOP")
+        case ts => parseNext(ts)
+      },
+      isReverse = params.keywords.exists(_ equalsIgnoreCase "REVERSE"))
+  }
+
+  /**
+    * Parses an INCLUDE statement
+    * @example {{{ INCLUDE './models.sql' }}}
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Include]]
     */
   protected def parseInclude(ts: TokenStream): Include = {
     val params = SQLTemplateParams(ts, "INCLUDE %a:path")
     Include(path = params.atoms("path"))
+  }
+
+  /**
+    * Parses an indirect query from the stream
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Invokable]]
+    */
+  protected def parseIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
+    // parse the indirect query (e.g. "( SELECT * FROM Customers ) AS C")
+    ts.expect("(")
+    val query = f(ts)
+    ts.expect(")")
+
+    // is there an alias?
+    parseNextAlias(query, ts)
   }
 
   /**
@@ -333,7 +323,7 @@ trait SQLLanguageParser {
     *   WITH HIVE SUPPORT
     * AS
     * BEGIN
-    *   INSERT OVERWRITE LOCATION './data/companies/service' (Symbol, Name, Sector, Industry, LastSale, MarketCap)
+    *   INSERT OVERWRITE LOCATION service_companies (Symbol, Name, Sector, Industry, LastSale, MarketCap)
     *   SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
     *   FROM Companies WHERE Industry = 'EDP Services'
     * END
@@ -354,6 +344,56 @@ trait SQLLanguageParser {
   }
 
   /**
+    * Optionally parses an alias (e.g. "( ... ) AS O")
+    * @param entity the given [[Invokable]]
+    * @param ts     the given [[TokenStream]]
+    * @return the resultant [[Invokable]]
+    */
+  protected def parseNextAlias(entity: Invokable, ts: TokenStream): Invokable = {
+    import Aliasable._
+    if (ts nextIf "AS") entity.as(alias = ts.next().text) else entity
+  }
+
+  /**
+    * Parses the next query from the stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Invokable]]
+    */
+  protected def parseNextQueryOrVariable(stream: TokenStream): Invokable = stream match {
+    // indirect query?
+    case ts if ts is "(" => parseIndirectQuery(ts)(parseNextQueryOrVariable)
+    // row variable (e.g. "@results")?
+    case ts if ts nextIf "@" => parseNextAlias(@@(ts.next().text), ts)
+    // field variable (e.g. "$name")?
+    case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
+    // sub-query?
+    case ts => parseNextSubQuery(ts)
+  }
+
+  /**
+    * Parses the next query (selection), table or variable
+    * @param stream the given [[TokenStream]]
+    * @return the resultant [[Select]], [[TableRef]] or [[VariableRef]]
+    */
+  protected def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
+    // table (e.g. "Months" or "`Months of the Year`")?
+    case ts if ts.isBackticks | ts.isText => parseNextAlias(Table(ts.next().text), ts)
+    // must be a sub-query or variable
+    case ts => parseNextQueryOrVariable(ts)
+  }
+
+  /**
+    * Parses the next query from the stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return an [[Invokable]]
+    */
+  protected def parseNextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
+    "CALL" -> parseCall,
+    "FILESYSTEM" -> parseFileSystem,
+    "SELECT" -> parseSelect
+  )
+
+  /**
     * Parses a RETURN statement
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Return]]
@@ -370,8 +410,8 @@ trait SQLLanguageParser {
     * @example
     * {{{
     * SELECT A.symbol, A.exchange, A.lastSale AS lastSaleA, B.lastSale AS lastSaleB
-    * FROM 'companlist.csv' AS A
-    * INNER JOIN 'companlist2.csv' AS B ON B.Symbol = A.Symbol
+    * FROM companlist AS A
+    * INNER JOIN companlist2 AS B ON B.Symbol = A.Symbol
     * WHERE A.exchange = 'NASDAQ'
     * LIMIT 5
     * }}}
@@ -428,6 +468,21 @@ trait SQLLanguageParser {
   }
 
   /**
+    * Parses a SET statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Invokable]]
+    * @example {{{ SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 ) }}}
+    * @example {{{ SET $customers = $customers + 1 }}}
+    */
+  protected def parseSet(ts: TokenStream): Invokable = {
+    val params = SQLTemplateParams(ts, "SET %v:variable =")
+    params.variables("variable") match {
+      case v: LocalVariableRef => SetLocalVariable(v.name, SQLTemplateParams(ts, "%e:expr").assignables("expr"))
+      case v: RowSetVariableRef => SetRowVariable(v.name, SQLTemplateParams(ts, "%Q:expr").sources("expr"))
+    }
+  }
+
+  /**
     * Parses a SHOW statement
     * @example {{{ SHOW @results }}}
     * @example {{{ SHOW @results LIMIT 25 }}}
@@ -458,6 +513,24 @@ trait SQLLanguageParser {
       table = params.locations("target"),
       assignments = params.keyValuePairs("assignments"),
       where = params.conditions.get("condition"))
+  }
+
+  /**
+    * Parses a WHILE statement
+    * @example
+    * {{{
+    * WHILE $cnt < 10
+    * BEGIN
+    *    PRINT 'Hello World';
+    *    SET $cnt = $cnt + 1;
+    * END;
+    * }}}
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[While]]
+    */
+  protected def parseWhile(ts: TokenStream): While = {
+    val params = SQLTemplateParams(ts, "WHILE %c:condition %N:command")
+    While(condition = params.conditions("condition"), invokable = params.sources("command"))
   }
 
   /**
@@ -512,6 +585,7 @@ object SQLLanguageParser {
   def parse(sourceCode: String): Invokable = {
     val parser = new SQLLanguageParser {}
     parser.iterate(TokenStream(sourceCode)).toList match {
+      case List(SQL(ops)) if ops.size == 1 => ops.head
       case op :: Nil => op
       case ops => SQL(ops)
     }

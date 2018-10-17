@@ -1,10 +1,19 @@
 package com.qwery.util
 
+import scala.language.reflectiveCalls
+
 /**
   * String Helper
   * @author lawrence.daniels@gmail.com
   */
 object StringHelper {
+
+  type StringLike = {
+    def indexOf(s: String): Int
+    def indexOf(s: String, fromPos: Int): Int
+    def lastIndexOf(s: String): Int
+    def lastIndexOf(s: String, fromPos: Int): Int
+  }
 
   @inline private def toOption(index: Int): Option[Int] = index match {
     case -1 => None
@@ -12,39 +21,31 @@ object StringHelper {
   }
 
   /**
-    * String Builder Enrichment
-    * @param sb the given [[StringBuilder]]
+    * Indexable Enrichment
+    * @param string the given [[StringLike]]; e.g. a [[String]] or [[StringBuilder]]
     */
-  final implicit class StringBuilderEnrichment(val sb: StringBuilder) extends AnyVal {
+  final implicit class IndexableEnrichment[T <: StringLike](val string: T) extends AnyVal {
 
-    @inline def indexOfOpt(c: Char): Option[Int] = toOption(sb.indexOf(c))
+    @inline def indexOfOpt(s: String): Option[Int] = toOption(string.indexOf(s))
 
-    @inline def indexOfOpt(c: Char, fromPos: Int): Option[Int] = toOption(sb.indexOf(c, fromPos))
+    @inline def indexOfOpt(s: String, fromPos: Int): Option[Int] = toOption(string.indexOf(s, fromPos))
 
-    @inline def indexOfOpt(s: String): Option[Int] = toOption(sb.indexOf(s))
+    @inline def lastIndexOfOpt(s: String): Option[Int] = toOption(string.lastIndexOf(s))
 
-    @inline def indexOfOpt(s: String, fromPos: Int): Option[Int] = toOption(sb.indexOf(s, fromPos))
+    @inline def lastIndexOfOpt(s: String, fromPos: Int): Option[Int] = toOption(string.lastIndexOf(s, fromPos))
 
   }
 
   /**
     * String Enrichment
-    * @param text the given [[String]]
+    * @param string the given [[String]]
     */
-  final implicit class StringEnrichment(val text: String) extends AnyVal {
-
-    @inline def indexOfOpt(c: Char): Option[Int] = toOption(text.indexOf(c))
-
-    @inline def indexOfOpt(c: Char, fromPos: Int): Option[Int] = toOption(text.indexOf(c, fromPos))
-
-    @inline def indexOfOpt(s: String): Option[Int] = toOption(text.indexOf(s))
-
-    @inline def indexOfOpt(s: String, fromPos: Int): Option[Int] = toOption(text.indexOf(s, fromPos))
+  final implicit class StringEnrichment(val string: String) extends AnyVal {
 
     def delimitedSplit(delimiter: Char): List[String] = {
       var inQuotes = false
       val sb = new StringBuilder()
-      val values = text.toCharArray.foldLeft[List[String]](Nil) {
+      val values = string.toCharArray.foldLeft[List[String]](Nil) {
         case (list, ch) if ch == '"' =>
           inQuotes = !inQuotes
           //sb.append(ch)

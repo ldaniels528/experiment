@@ -14,6 +14,13 @@ object Field {
 
   /**
     * Returns a new field implementation
+    * @param field the [[Symbol symbol]] represent a field name
+    * @return the [[Field]]
+    */
+  def apply(field: Symbol): Field = apply(field.name)
+
+  /**
+    * Returns a new field implementation
     * @param descriptor the name (e.g. "customerId") or descriptor ("A.customerId") of the field
     * @return the [[Field]]
     */
@@ -24,12 +31,7 @@ object Field {
     case _ => throw new IllegalArgumentException(s"Invalid field reference '$descriptor'")
   }
 
-  /**
-    * Returns a new constant field
-    * @param name the name of the field
-    * @return the [[ConstantField]]
-    */
-  def apply(name: String, value: Expression): ConstantField = ConstantField(value).as(name)
+  def unapply(field: Field): Option[String] = Some(field.name)
 
 }
 
@@ -46,13 +48,5 @@ case object AllFields extends Field {
   * @param name the name of the field
   */
 case class BasicField(name: String) extends Field
-
-/**
-  * Represents a field populated with a fixed-value
-  * @param value the [[Expression]] resulting the constant value
-  */
-case class ConstantField(value: Expression) extends Field {
-  lazy val name: String = alias.getOrElse(NamedExpression.randomName)
-}
 
 

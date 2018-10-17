@@ -43,7 +43,11 @@ object JoinTypes extends Enumeration {
   * @param name        the name of the column
   * @param isAscending indicates whether the column is ascending (or conversly descending)
   */
-case class OrderColumn(name: String, isAscending: Boolean) extends Aliasable
+case class OrderColumn(name: String, isAscending: Boolean) extends Aliasable {
+  def asc: OrderColumn = this.copy(isAscending = true)
+
+  def desc: OrderColumn = this.copy(isAscending = false)
+}
 
 /**
   * Represents a Union operation; which combines two queries.

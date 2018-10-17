@@ -1,8 +1,9 @@
 package com.qwery.platform.flink
 
 import com.qwery.models._
-import com.qwery.models.expressions.Field
 import org.scalatest.FunSpec
+
+import scala.language.postfixOps
 
 /**
   * Flink Qwery Compiler Test Suite
@@ -12,6 +13,7 @@ class FlinkQweryCompilerTest extends FunSpec {
   private val compiler = new FlinkQweryCompiler {}
 
   describe(classOf[FlinkQweryCompiler].getSimpleName) {
+    import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
     it("should compile a SELECT w/ORDER BY & LIMIT") {
@@ -35,16 +37,9 @@ class FlinkQweryCompilerTest extends FunSpec {
 
         // project/transform the data
         Select(
-          fields = List(
-            Field(descriptor = "Symbol"),
-            Field(descriptor = "Name"),
-            Field(descriptor = "LastSale"),
-            Field(descriptor = "MarketCap"),
-            Field(descriptor = "IPOyear"),
-            Field(descriptor = "Sector"),
-            Field(descriptor = "Industry")),
+          fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry),
           from = Table("Securities"),
-          orderBy = List(OrderColumn(name = "Symbol", isAscending = true))
+          orderBy = List('Symbol asc)
         ))
 
       implicit val rc: FlinkQweryContext = new FlinkQweryContext()

@@ -27,6 +27,10 @@ class SparkQweryContext() extends QweryContext {
   private var sparkSession_? : Option[SparkSession] = None
   private var streamingContext_? : Option[StreamingContext] = None
 
+  Runtime.getRuntime.addShutdownHook(new Thread {
+    override def run(): Unit = sparkSession_?.foreach(_.stop())
+  })
+
   /**
     * @return the [[SparkSession]]
     */
@@ -64,7 +68,7 @@ class SparkQweryContext() extends QweryContext {
       if (app.hiveSupport) builder.enableHiveSupport()
     }
 
-    // attempt to connect to th cluster
+    // attempt to connect to the cluster
     try builder.getOrCreate() catch {
       case _: Exception =>
         builder.master("local[*]")
@@ -157,7 +161,10 @@ class SparkQweryContext() extends QweryContext {
     * @param name the name of the procedure
     * @return the [[SparkProcedure]]
     */
-  def getProcedure(name: String): SparkProcedure = procedures.get(name) orFail s"Procedure '$name' is not registered"
+  def getProcedure(name: String): SparkProcedure = {
+    logger.info(s"Looking up Procedure '$name'...")
+    procedures.get(name) orFail s"Procedure '$name' is not registered"
+  }
 
   ////////////////////////////////////////////////////////////////////////
   //      Scope methods
@@ -169,7 +176,20 @@ class SparkQweryContext() extends QweryContext {
     * @param name the given variable name
     * @return the value
     */
-  def getVariable(name: String): Any = scopes.headOption.flatMap(_.apply(name)) orFail s"Variable '$name' was not found"
+  def getVariable(name: String): Any = {
+    val scope = scopes.reverse.find(_.contains(name)).orFail(s"Local variable '$name' was not found")
+    scope(name).orNull
+  }
+
+  /**
+    * Sets the value of a local variable by name
+    * @param name  the variable name
+    * @param value the given value to set
+    */
+  def setVariable(name: String, value: Any): Unit = {
+    val scope = scopes.reverse.find(_.contains(name)).orFail(s"Local variable '$name' was not found")
+    scope(name) = value
+  }
 
   /**
     * Creates a scope to be passed into the given executable block; then destroys the scope upon completion.
@@ -181,6 +201,7 @@ class SparkQweryContext() extends QweryContext {
     // create a new scope
     val scope = Scope()
     scopes = scope :: scopes
+    logger.info(s"withScope: scopes = ${scopes.mkString(",")}")
 
     // execute the block
     val result = block(scope)

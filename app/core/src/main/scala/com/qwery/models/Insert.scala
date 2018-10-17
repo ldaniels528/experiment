@@ -9,7 +9,7 @@ import com.qwery.models.expressions.{Expression, Field}
   * @param source      the given [[Invokable source]]
   * @param fields      the given collection of [[Field]]s
   */
-case class Insert(destination: Destination, source: Invokable, fields: List[Field] = Nil) extends Invokable
+case class Insert(destination: Destination, source: Invokable, fields: Seq[Field] = Nil) extends Invokable
 
 /**
   * Insert Companion

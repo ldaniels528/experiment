@@ -1,13 +1,12 @@
 package com.qwery.platform.spark
 
+import com.qwery.models.Aliasable
 import com.qwery.models.JoinTypes.JoinType
-import com.qwery.models._
 import com.qwery.models.expressions.NamedExpression._
 import com.qwery.models.expressions._
-import com.qwery.platform.spark.SparkQweryCompiler.Implicits._
 import com.qwery.platform.spark.SparkSelect.SparkJoin
 import com.qwery.util.OptionHelper._
-import org.apache.spark.sql.functions.{col, _}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Column => SparkColumn}
 import org.slf4j.LoggerFactory
 
@@ -15,39 +14,30 @@ import org.slf4j.LoggerFactory
   * Select Operation for Spark
   * @author lawrence.daniels@gmail.com
   */
-case class SparkSelect(fields: Seq[Expression],
+case class SparkSelect(fields: Seq[(SparkColumn, Boolean, Option[String])],
                        from: Option[SparkInvokable],
                        joins: Seq[SparkJoin],
-                       groupBy: Seq[Field],
-                       orderBy: Seq[OrderColumn],
+                       groupBy: Seq[SparkColumn],
+                       orderBy: Seq[SparkColumn],
                        where: Option[Condition],
-                       limit: Option[Int],
-                       alias: Option[String])
-  extends SparkInvokable {
-  private[this] val logger = LoggerFactory.getLogger(getClass)
+                       limit: Option[Int])
+  extends SparkInvokable with Aliasable {
 
   override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
-    import com.qwery.util.OptionHelper.Implicits.Risky._
-
-    // get the data frame to use for selection
-    val inputDf = from.flatMap(_.execute(input)) orFail "No input data"
-
-    // capture the data frame's columns BEFORE aggregation and/or appending constants
-    val dfColumns = inputDf.columns
-
-    // build the Spark equivalent of the query
-    val pipeline = List(
-      processJoins _,
-      processGroupBy _,
-      processConstants _,
-      processOrderBy _,
-      processAliases _,
-      processRowFiltering _,
-      { df: DataFrame => processColumnFiltering(df, dfColumns) },
-      processLimit _
-    )
-    pipeline.foldLeft(inputDf) { (df0, f) => f(df0) }
+    from.flatMap(_.execute(input)) map { df =>
+      pipeline.foldLeft(df) { (df0, f) => f(df0) }
+    }
   }
+
+  // build the Spark equivalent of the query
+  private def pipeline(implicit rc: SparkQweryContext): Seq[DataFrame => DataFrame] = Seq(
+    processJoins,
+    processGroupBy,
+    processOrderBy,
+    processRowFiltering,
+    processColumnFiltering,
+    processLimit
+  )
 
   /**
     * Decodes the given aggregate field (likely a function) into its Spark counterpart.
@@ -60,40 +50,15 @@ case class SparkSelect(fields: Seq[Expression],
   }
 
   /**
-    * Reorder (and rename via aliases) the remaining fields within the data frame
-    * @param df0 the given initial [[DataFrame]]
-    * @return the resultant [[DataFrame]]
-    */
-  def processAliases(df0: DataFrame): DataFrame = fields.foldLeft(df0) {
-    case (df, fx: SQLFunction) => fx.alias.map(alias => df.withColumnRenamed(fx.toString, alias)) || df
-    case (df, _) => df
-  }
-
-  /**
     * Removes all unselected columns from the data frame
-    * @param df0       the given initial [[DataFrame]]
-    * @param dfColumns the "virgin" column names; before the data was modified by aggregation or appending constants
-    * @return the resultant [[DataFrame]]
-    */
-  def processColumnFiltering(df0: DataFrame, dfColumns: Seq[String]): DataFrame = {
-    val selectedColumns = fields.map(_.getName)
-    val columnsToRemove = dfColumns.filterNot(selectedColumns.contains)
-    logger.info(s"selectedColumns = $selectedColumns, columnsToRemove = $columnsToRemove")
-    //columnsToRemove.foldLeft(df0) { (df, col) => df.drop(col) }
-    df0
-  }
-
-  /**
-    * Append any constants (if present) to the data frame
     * @param df0 the given initial [[DataFrame]]
     * @return the resultant [[DataFrame]]
     */
-  def processConstants(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame = {
-    import SparkQweryCompiler.Implicits._
-    fields.collect { case cf: ConstantField => cf }.foldLeft(df0) {
-      case (df, ref@ConstantField(value)) => df.withColumn(ref.name, value.compile)
-    }
-  }
+  def processColumnFiltering(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame =
+    df0.select(fields.collect {
+      case (expr, false, _) => expr
+      case (expr, true, anAlias) if anAlias.nonEmpty => anAlias.map(col) getOrElse expr
+    }: _*)
 
   /**
     * Performs group by/aggregates the data frame
@@ -101,8 +66,9 @@ case class SparkSelect(fields: Seq[Expression],
     * @return the resultant [[DataFrame]]
     */
   def processGroupBy(df0: DataFrame): DataFrame = if (groupBy.isEmpty) df0 else {
-    val fxTuples = fields.collect { case f: SQLFunction1 if f.isAggregate => decode(f) }
-    df0.groupBy(groupBy.map(f => col(f.alias || f.name)): _*).agg(fxTuples.head, fxTuples.tail: _*)
+    val fxTuples = fields.collect { case (fx, true, _) => fx }
+    LoggerFactory.getLogger(getClass).info(s"fxTuples => $fxTuples")
+    if (fxTuples.nonEmpty) df0.groupBy(groupBy: _*).agg(fxTuples.head, fxTuples.tail: _*) else df0
   }
 
   /**
@@ -128,17 +94,17 @@ case class SparkSelect(fields: Seq[Expression],
     * @param df0 the given initial [[DataFrame]]
     * @return the resultant [[DataFrame]]
     */
-  def processOrderBy(df0: DataFrame): DataFrame = if (orderBy.isEmpty) df0 else df0.orderBy(orderBy.map {
-    case ref@OrderColumn(name, ascend) => if (ascend) asc(ref.alias || name) else desc(ref.alias || name)
-  }: _*)
+  def processOrderBy(df0: DataFrame): DataFrame = if (orderBy.isEmpty) df0 else df0.orderBy(orderBy: _*)
 
   /**
     * Performs filtering at the row-level
     * @param df0 the given initial [[DataFrame]]
     * @return the resultant [[DataFrame]]
     */
-  def processRowFiltering(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame =
-    where.map(cond => df0.filter(cond.compile)) || df0
+  def processRowFiltering(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame = {
+    import com.qwery.platform.spark.SparkQweryCompiler.Implicits._
+    where.map(_.compile).map(df0.filter) || df0
+  }
 
 }
 
@@ -161,12 +127,10 @@ object SparkSelect {
     * @param query0     the first query
     * @param query1     the second query
     * @param isDistinct indicates whether the resulting records should be a distinct set.
-    * @param alias      the optional query alias
     */
   case class SparkUnion(query0: SparkInvokable,
                         query1: SparkInvokable,
-                        isDistinct: Boolean,
-                        alias: Option[String]) extends SparkInvokable {
+                        isDistinct: Boolean) extends SparkInvokable with Aliasable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       val df = for {
         df0 <- query0.execute(input)

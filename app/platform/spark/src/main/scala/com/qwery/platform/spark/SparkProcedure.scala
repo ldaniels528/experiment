@@ -2,6 +2,7 @@ package com.qwery.platform.spark
 
 import com.qwery.models.Column
 import org.apache.spark.sql.DataFrame
+import org.slf4j.LoggerFactory
 
 /**
   * Spark Procedure
@@ -9,7 +10,14 @@ import org.apache.spark.sql.DataFrame
   * @param params the procedure's parameters
   * @param code   the procedure's executable code
   */
-case class SparkProcedure(name: String, params: Seq[Column], code: SparkInvokable) {
+case class SparkProcedure(name: String, params: Seq[Column], code: SparkInvokable) extends SparkInvokable {
+  private val logger = LoggerFactory.getLogger(getClass)
+
+  override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
+    logger.info(s"Registering Procedure '$name' with parameters ${params.map(p => s"${p.name}:${p.`type`}").mkString(", ")}...")
+    rc += this
+    None
+  }
 
   /**
     * Invokes the procedure

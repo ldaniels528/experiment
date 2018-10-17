@@ -8,10 +8,8 @@ case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](toke
 
   def apply(text: String): Boolean = peek.exists(_.text equalsIgnoreCase text)
 
-  def expect(text: => String): this.type = {
-    if (!nextOption.exists(_.is(text))) throw new SyntaxException(s"Expected keyword or symbol '$text'")
-    this
-  }
+  def expect(text: => String): this.type =
+    if (!nextOption.exists(_.is(text))) throw SyntaxException(s"Expected keyword or symbol '$text'", this) else this
 
   def is(text: => String): Boolean = {
     if (text contains " ") {
@@ -57,6 +55,8 @@ case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](toke
   }
 
   def skip(count: Int): Unit = position = if (position + count < tokens.length) position + count else tokens.length
+
+  override def toString: String = if(position < tokens.length) tokens.slice(position, tokens.length).mkString("|") else ""
 
 }
 

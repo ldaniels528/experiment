@@ -7,10 +7,12 @@ import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes._
 import com.qwery.models.StorageFormats._
 import com.qwery.models._
-import com.qwery.models.expressions.{Condition, Expression, RowSetVariableRef}
+import com.qwery.models.expressions._
+import com.qwery.models.expressions.implicits._
 import com.qwery.platform.spark.SparkQweryCompiler.Implicits._
 import com.qwery.platform.spark.SparkSelect.{SparkJoin, SparkUnion}
 import com.qwery.util.OptionHelper._
+import org.apache.spark.sql.functions.{asc, desc}
 import org.apache.spark.sql.types.{DataType, StructField}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, DataFrameWriter, SaveMode, Column => SparkColumn}
 import org.slf4j.LoggerFactory
@@ -68,13 +70,18 @@ object SparkQweryCompiler {
   private[this] val sparkTypeMapping = {
     import org.apache.spark.sql.types.DataTypes
     Map(
+      BIGINT -> DataTypes.LongType,
       BINARY -> DataTypes.BinaryType,
       BOOLEAN -> DataTypes.BooleanType,
       DATE -> DataTypes.DateType,
+      DATETIME -> DataTypes.TimestampType,
       DOUBLE -> DataTypes.DoubleType,
+      INT -> DataTypes.BooleanType,
       INTEGER -> DataTypes.BooleanType,
       LONG -> DataTypes.LongType,
-      STRING -> DataTypes.StringType)
+      STRING -> DataTypes.StringType,
+      TIMESTAMP -> DataTypes.TimestampType,
+      UUID -> DataTypes.BinaryType)
   }
 
   /**
@@ -90,7 +97,7 @@ object SparkQweryCompiler {
       case ref@InlineTable(name, columns, source) =>
         rc.createDataSet(columns, source.compile match {
           case spout: SparkInsert.Spout => spout.copy(resolver = Option(SparkTableColumnResolver(ref)))
-          case invokable => invokable
+          case other => other
         }).map { df => df.createOrReplaceTempView(name); df }
       case table: Table =>
         val reader = rc.spark.read.tableOptions(table)
@@ -126,6 +133,7 @@ object SparkQweryCompiler {
     * @param rc          the implicit [[SparkQweryContext]]
     */
   def write(source: DataFrame, destination: TableLike, append: Boolean)(implicit rc: SparkQweryContext): Unit = destination match {
+    case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
     case table: Table =>
       val writer = source.write.tableOptions(table).mode(if (append) SaveMode.Append else SaveMode.Overwrite)
       table.outputFormat.orFail("Table output format was not specified") match {
@@ -142,32 +150,18 @@ object SparkQweryCompiler {
 
   /**
     * Returns a data frame representing a result set
-    * @param name  the name of the variable
-    * @param alias the alias of the row set
+    * @param name the name of the variable
     */
-  case class ReadRowSetByReference(name: String, alias: Option[String]) extends SparkInvokable {
+  case class ReadRowSetByReference(name: String) extends SparkInvokable with Aliasable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getDataSet(name, alias)
   }
 
   /**
     * Query table/view reference for Spark
-    * @param name  the name of the table
-    * @param alias the alias of the table or view
+    * @param name the name of the table
     */
-  case class ReadTableOrViewByReference(name: String, alias: Option[String]) extends SparkInvokable {
+  case class ReadTableOrViewByReference(name: String) extends SparkInvokable with Aliasable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = rc.getDataSet(name, alias)
-  }
-
-  /**
-    * Registers a procedure for use with Spark
-    * @param procedure the given [[SparkProcedure]]
-    */
-  case class RegisterProcedure(procedure: Procedure) extends SparkInvokable {
-    override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
-      logger.info(s"Registering Procedure '${procedure.name}'...")
-      rc += SparkProcedure(procedure.name, procedure.params, code = procedure.code.compile)
-      None
-    }
   }
 
   /**
@@ -187,6 +181,25 @@ object SparkQweryCompiler {
     * @author lawrence.daniels@gmail.com
     */
   object Implicits {
+
+    /**
+      * Alias compiler
+      * @param aliasable the given [[Aliasable]]
+      */
+    final implicit class AliasCompiler(val aliasable: Aliasable) extends AnyVal {
+      @inline def compile: SparkColumn = aliasable match {
+        case ref@OrderColumn(name, isAscending) => if (isAscending) asc(ref.alias || name) else desc(ref.alias || name)
+        case unknown => die(s"Unrecognized entity '$unknown' [${unknown.getClass.getSimpleName}]")
+      }
+    }
+
+    /**
+      * Column Alias compiler
+      * @param column the given [[Column]]
+      */
+    final implicit class ColumnAliasCompiler(val column: SparkColumn) extends AnyVal {
+      @inline def as(aliasable: Aliasable): SparkColumn = aliasable.alias.map(column.as) || column
+    }
 
     /**
       * Column compiler
@@ -224,6 +237,7 @@ object SparkQweryCompiler {
           case LIKE(a, b) => a.compile like b.asString
           case LT(a, b) => a.compile < b.compile
           case NE(a, b) => a.compile =!= b.compile
+          case NOT(IsNull(c)) => c.compile.isNotNull
           case NOT(c) => !c.compile
           case OR(a, b) => a.compile || b.compile
           case RLIKE(a, b) => a.compile rlike b.asString
@@ -275,46 +289,53 @@ object SparkQweryCompiler {
     final implicit class ExpressionCompiler(val expression: Expression) extends AnyVal {
       def compile(implicit rc: SparkQweryContext): SparkColumn = {
         import com.qwery.models.expressions._
+        import SQLFunction._
         import org.apache.spark.sql.functions._
-        expression match {
+        val result = expression match {
           case Abs(a) => abs(a.compile)
           case Add(a, b) => a.compile + b.compile
           case Add_Months(a, b) => add_months(a.compile, b.asInt)
+          case AllFields => col("*")
+          case Array(args) => array(args.map(_.compile): _*)
           case Array_Contains(a, b) => array_contains(a.compile, b.asAny)
+          case _: Array_Index => die("Array index is not supported by Spark")
           case Ascii(a) => ascii(a.compile)
           case Avg(a) => avg(a.compile)
           case Base64(a) => base64(a.compile)
-          case ref@BasicField(name) => ref.alias.map(alias => col(name).as(alias)) || col(name)
+          case BasicField(name) => col(name)
           case Bin(a) => bin(a.compile)
           case Cast(value, toType) => value.compile.cast(toType.compile)
           case Cbrt(a) => cbrt(a.compile)
           case Ceil(a) => ceil(a.compile)
           case Coalesce(args) => coalesce(args.map(_.compile): _*)
-          case Concat(a, b) => concat(a.compile, b.compile)
+          case Concat(args) => concat(args.map(_.compile): _*)
           case Count(Distinct(a)) => countDistinct(a.compile)
           case Count(a) => count(a.compile)
           case Cume_Dist => cume_dist()
           case Current_Date => current_date()
           case Date_Add(a, b) => date_add(a.compile, b.asInt)
-          case Divide(a, b) => a.compile + b.compile
+          case Divide(a, b) => a.compile / b.compile
           case Factorial(a) => factorial(a.compile)
           case Floor(a) => floor(a.compile)
-          case ref@FunctionCall(name, args) =>
-            val op = callUDF(name, args.map(_.compile): _*)
-            ref.alias.map(alias => op.as(alias)) getOrElse op
+          case From_UnixTime(a, b) => b.map(f => from_unixtime(a.compile, f.asString)) || from_unixtime(a.compile)
+          case FunctionCall(name, args) => callUDF(name, args.map(_.compile): _*)
           case If(condition, trueValue, falseValue) =>
             val (cond, yes, no) = (condition.compile, trueValue.compile, falseValue.compile)
             when(cond, yes).when(!cond, no)
+          case Length(a) => length(a.compile)
           case Literal(value) => lit(value)
           case LocalVariableRef(name) => lit(rc.getVariable(name))
           case Lower(a) => lower(a.compile)
           case LPad(a, b, c) => lpad(a.compile, b.asInt, c.asString)
+          case LTrim(a) => ltrim(a.compile)
           case Max(a) => max(a.compile)
           case Min(a) => min(a.compile)
           case Modulo(a, b) => a.compile % b.compile
           case Multiply(a, b) => a.compile * b.compile
           case Pow(a, b) => pow(a.compile, b.compile)
           case RPad(a, b, c) => rpad(a.compile, b.asInt, c.asString)
+          case RTrim(a) => rtrim(a.compile)
+          case Split(a, b) => split(a.compile, b.asString)
           case Subtract(a, b) => a.compile - b.compile
           case Substring(a, b, c) => substring(a.compile, b.asInt, c.asInt)
           case Sum(Distinct(a)) => sumDistinct(a.compile)
@@ -327,6 +348,7 @@ object SparkQweryCompiler {
           case Year(a) => year(a.compile)
           case unknown => die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
         }
+        result.as(expression)
       }
     }
 
@@ -335,24 +357,25 @@ object SparkQweryCompiler {
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompiler(val invokable: Invokable) extends AnyVal {
+
+      import com.qwery.util.OptionHelper.Implicits.Risky._
+
       def compile(implicit rc: SparkQweryContext): SparkInvokable = invokable match {
-        case SetVariable(variableRef, value) => SparkSetVariable(variableRef, value = value.compile)
         case Console.Debug(text) => SparkConsole.debug(text)
         case Console.Error(text) => SparkConsole.error(text)
         case Console.Info(text) => SparkConsole.info(text)
         case Console.Log(text) => SparkConsole.log(text)
         case Console.Print(text) => SparkConsole.print(text)
         case Console.Warn(text) => SparkConsole.warn(text)
-        case Create(procedure: Procedure) => RegisterProcedure(procedure)
+        case Create(Procedure(name, params, code)) => SparkProcedure(name, params, code = code.compile)
         case Create(tableOrView: TableLike) => RegisterTableOrView(tableOrView)
         case Create(udf: UserDefinedFunction) => SparkRegisterUDF(udf)
+        case FileSystem(path) => SparkFilesystem(path)
         case Include(path) => incorporateSources(path)
-        case Insert(destination, source, fields) =>
-          SparkInsert(destination = destination.compile, fields = fields, source = source match {
+        case Insert(destination, source, _) =>
+          SparkInsert(destination = destination.compile, source = source match {
             case Insert.Values(values) =>
-              SparkInsert.Spout(
-                rows = values.map(_.map(_.asAny)),
-                resolver = Option(SparkLocationColumnResolver(destination.target)))
+              SparkInsert.Spout(rows = values.map(_.map(_.asAny)), resolver = SparkLocationColumnResolver(destination.target))
             case op => op.compile
           })
         case Insert.Into(target) => SparkInsert.Sink(target = target, append = true)
@@ -360,19 +383,32 @@ object SparkQweryCompiler {
         case Insert.Values(values) => SparkInsert.Spout(rows = values.map(_.map(_.asAny)), resolver = None)
         case MainProgram(name, code, args, env, hive, streaming) =>
           SparkMainProgram(name, code.compile, args, env, hive, streaming)
-        case ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.compile))
+        case ref@ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.asAny)).as(ref.alias)
         case Return(value) => SparkReturn(value = value.map(_.compile))
-        case ref@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
-          SparkSelect(columns, from.map(_.compile), joins.map(_.compile), groupBy, orderBy, where, limit, ref.alias)
+        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit) =>
+          SparkSelect(fields = fields.map {
+            case a: Aggregation => (a.compile, a.isAggregate, a.alias)
+            case e => (e.compile, false, e.alias)
+          }, from = from.map(_.compile), joins = joins.map(_.compile), groupBy = groupBy.map(_.compile),
+            orderBy = orderBy.map(_.compile), where = where, limit).as(ref.alias)
+        case SetLocalVariable(name, expression) => SparkSetLocalVariable(name, value = (_: SparkQweryContext) => expression.asAny)
+        case SetRowVariable(name, dataset) => SparkSetRowVariable(name, value = dataset.compile)
         case SQL(ops) => SparkSQL(ops.map(_.compile))
-        case ref@TableRef(name) => ReadTableOrViewByReference(name, ref.alias)
         case Show(dataSet, limit) => SparkShow(dataSet.compile, limit)
+        case ref@TableRef(name) => ReadTableOrViewByReference(name).as(ref.alias)
         case Update(table, assignments, where) =>
           SparkUpdate(source = table.compile, assignments, where = where.map(_.compile))
         case ref@Union(query0, query1, distinct) =>
-          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct, alias = ref.alias)
-        case ref@RowSetVariableRef(name) => ReadRowSetByReference(name, ref.alias)
+          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct).as(ref.alias)
+        case ref@RowSetVariableRef(name) => ReadRowSetByReference(name).as(ref.alias)
         case unknown => die(s"Unhandled operation '$unknown'")
+      }
+
+      def resolveColumns(implicit rc: SparkQweryContext): List[Column] = invokable match {
+        case s: Select => s.from.map(_.resolveColumns).orFail("Could not resolve columns")
+        case t: TableRef => rc.getTableOrView(t).resolveColumns
+        case u: Union => u.query0.resolveColumns
+        case x => die(s"Could not resolve columns for type '${Option(x).getClass.getName}'")
       }
 
       /**

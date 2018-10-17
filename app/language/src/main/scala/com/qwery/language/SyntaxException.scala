@@ -22,11 +22,12 @@ object SyntaxException {
     * @author lawrence.daniels@gmail.com
     */
   def apply(message: String, ts: TokenStream, cause: Throwable = null): SyntaxException = {
-    val xts = ts.copy()
-    val position = xts.peek.map(_.start).getOrElse(-1)
     cause match {
       case e: SyntaxException => new SyntaxException(message, e)
-      case e => new SyntaxException(s"$message near '${xts.take(3).map(_.text).mkString(" ")}' at $position", e)
+      case e =>
+        val location = ts.peek.map(t => s"on line ${t.lineNo} at ${t.columnNo}").getOrElse("")
+        val snippet = (0 to 3).flatMap(n => ts(n)).map(_.text).mkString(" ")
+        new SyntaxException(s"$message near '$snippet' $location", e)
     }
   }
 

@@ -3,6 +3,7 @@ package com.qwery.platform.flink
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.Location
 import com.qwery.models.expressions.Expression
+import com.qwery.models.expressions.implicits._
 
 /**
   * Represents an Insert operation

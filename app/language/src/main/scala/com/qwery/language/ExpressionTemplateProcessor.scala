@@ -1,7 +1,7 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypes
-import com.qwery.models.expressions.{Expression, Field, LocalVariableRef, RowSetVariableRef}
+import com.qwery.models._
+import com.qwery.models.expressions.{Expression, Field}
 
 /**
   * Expression Template Processor
@@ -34,7 +34,7 @@ trait ExpressionTemplateProcessor {
   /**
     * Parses an atom (e.g. keyword, etc.)
     * @param name the name of the atom reference
-    * @param ts the given [[TokenStream token stream]]
+    * @param ts   the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractAtom(name: String, ts: TokenStream): ExpressionTemplate = {
@@ -45,7 +45,7 @@ trait ExpressionTemplateProcessor {
   /**
     * Parses a condition
     * @param name the name of the condition
-    * @param ts the given [[TokenStream token stream]]
+    * @param ts   the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractCondition(name: String, ts: TokenStream)(implicit parser: ExpressionParser): ExpressionTemplate = {
@@ -56,7 +56,7 @@ trait ExpressionTemplateProcessor {
   /**
     * Parses an expression
     * @param name the name of the expression
-    * @param ts the given [[TokenStream token stream]]
+    * @param ts   the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractExpression(name: String, ts: TokenStream)(implicit parser: ExpressionParser): ExpressionTemplate = {
@@ -67,7 +67,7 @@ trait ExpressionTemplateProcessor {
   /**
     * Parses an expression list
     * @param name the name of the expression list
-    * @param ts the given [[TokenStream token stream]]
+    * @param ts   the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractExpressionList(name: String, ts: TokenStream)(implicit parser: ExpressionParser): ExpressionTemplate = {
@@ -80,14 +80,14 @@ trait ExpressionTemplateProcessor {
 
   /**
     * Parses a field reference
-    * @param name the name of the field reference
+    * @param name   the name of the field reference
     * @param stream the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractField(name: String, stream: TokenStream): ExpressionTemplate = {
     val field = stream.next() match {
-      case AlphaToken(fieldName, _) => Field(fieldName)
-      case t@QuotedToken(fieldName, _, _) if t.isBackTicks => Field(fieldName)
+      case t: AlphaToken => Field(t.text)
+      case t: QuotedToken if t.isBackTicks => Field(t.text)
       case t =>
         throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
     }
@@ -97,7 +97,7 @@ trait ExpressionTemplateProcessor {
   /**
     * Parses a type reference
     * @param name the name of the type reference
-    * @param ts the given [[TokenStream token stream]]
+    * @param ts   the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractType(name: String, ts: TokenStream): ExpressionTemplate = {
@@ -107,14 +107,14 @@ trait ExpressionTemplateProcessor {
 
   /**
     * Parses a variable reference
-    * @param name the name of the variable reference
+    * @param name   the name of the variable reference
     * @param stream the given [[TokenStream token stream]]
     * @return the [[ExpressionTemplate]]
     */
   private def extractVariable(name: String, stream: TokenStream): ExpressionTemplate = {
     val variable = stream match {
-      case ts if ts nextIf "@" => RowSetVariableRef(ts.next().text)
-      case ts if ts nextIf "$" => LocalVariableRef(ts.next().text)
+      case ts if ts nextIf "@" => @@(ts.next().text)
+      case ts if ts nextIf "$" => $(ts.next().text)
       case ts => ts.die("Variable expected")
     }
     ExpressionTemplate(variables = Map(name -> variable))

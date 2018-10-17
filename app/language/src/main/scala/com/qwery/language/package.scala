@@ -14,24 +14,27 @@ package object language {
     * @param ts the given [[TokenStream]]
     */
   final implicit class TokenStreamEnrichment(val ts: TokenStream) extends AnyVal {
+
     @inline def die[A](message: => String, cause: Throwable = null): A = throw SyntaxException(message, ts, cause)
 
     @inline def dieKeyword[A](symbols: Symbol*): A = {
       throw SyntaxException(s"Expected keyword ${symbols.or()} near '${
         ts.peek.map(_.text).orNull
-      }' on line ${ts.peek.map(_.start).getOrElse("???")}", ts)
+      }'", ts)
     }
 
     @inline def dieKeyword[A](symbols: List[String]): A = {
       throw SyntaxException(s"Expected keyword ${symbols.or()} near '${
         ts.peek.map(_.text).orNull
-      }' on line ${ts.peek.map(_.start).getOrElse("???")}", ts)
+      }'", ts)
     }
 
-    @inline def decode(tuples: (String, TokenStream => Invokable)*): Invokable = {
-      (for (fx <- tuples.find { case (name, _) => ts is name } map (_._2)) yield fx(ts))
-        .getOrElse(ts.dieKeyword(tuples.map(_._1).toList.sortBy(x => x)))
-    }
+    @inline def decode(tuples: (String, TokenStream => Invokable)*): Invokable =
+      decodeOpt(tuples: _*).getOrElse(ts.dieKeyword(tuples.map(_._1).toList.sortBy(x => x)))
+
+    @inline def decodeOpt(tuples: (String, TokenStream => Invokable)*): Option[Invokable] =
+      for (fx <- tuples.find { case (name, _) => ts is name } map (_._2)) yield fx(ts)
+
   }
 
 }

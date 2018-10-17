@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 class SQLTemplateParserTest extends FunSpec {
 
   describe(classOf[SQLTemplateParser].getSimpleName) {
-    import com.qwery.models.expressions.Expression.Implicits._
+    import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
     it("should parse argument tags (%A)") {
@@ -30,19 +30,19 @@ class SQLTemplateParserTest extends FunSpec {
     }
 
     it("should parse condition tags (%c)") {
-      verify(text = "custId = 123", template = "%c:condition")(SQLTemplateParams(conditions = Map("condition" -> (Field("custId") === 123d))))
+      verify(text = "custId = 123", template = "%c:condition")(SQLTemplateParams(conditions = Map("condition" -> (Field('custId) === 123d))))
     }
 
     it("should parse expression tags (%E)") {
-      verify(text = "field1, 'hello', 5", template = "%E:fields")(SQLTemplateParams(expressions = Map("fields" -> List(Field("field1"), "hello", 5.0))))
+      verify(text = "field1, 'hello', 5", template = "%E:fields")(SQLTemplateParams(expressions = Map("fields" -> List('field1, "hello", 5.0))))
     }
 
     it("should parse assignable expression tags (%e)") {
-      verify(text = "(x + 1) * 2", template = "%e:expression")(SQLTemplateParams(assignables = Map("expression" -> ((Field("x") + 1) * 2))))
+      verify(text = "(x + 1) * 2", template = "%e:expression")(SQLTemplateParams(assignables = Map("expression" -> ((Field('x) + 1) * 2))))
     }
 
     it("should parse field tags (%F)") {
-      verify(text = "field1, field2, field3", template = "%F:fields")(SQLTemplateParams(fields = Map("fields" -> List("field1", "field2", "field3").map(Field.apply))))
+      verify(text = "field1, field2, field3", template = "%F:fields")(SQLTemplateParams(fields = Map("fields" -> List('field1, 'field2, 'field3))))
     }
 
     it("should parse storage format tags (%f)") {
@@ -75,7 +75,7 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse ordered field tags (%o)") {
       verify(text = "field1 DESC, field2 ASC", template = "%o:orderedFields")(SQLTemplateParams(orderedFields = Map(
-        "orderedFields" -> List("field1" -> false, "field2" -> true).map { case (name, asc) => OrderColumn(name, asc) }
+        "orderedFields" -> List('field1, 'field2)
       )))
     }
 
@@ -87,23 +87,23 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse direct query tags (%Q)") {
       verify(text = "SELECT firstName, lastName FROM AddressBook", template = "%Q:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = Table("AddressBook"))
+        "query" -> Select(fields = List('firstName, 'lastName), from = Table("AddressBook"))
       )))
-      verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Query or variable expected")
+      verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Expected keyword CALL, FILESYSTEM or SELECT near 'AddressBook'")
       verify(text = "@addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> RowSetVariableRef(name = "addressBook")
+        "variable" -> @@("addressBook")
       )))
     }
 
     it("should parse query source (queries, tables and variables) tags (%q)") {
       verify(text = "( SELECT firstName, lastName FROM AddressBook )", template = "%q:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List("firstName", "lastName").map(Field.apply), from = Table("AddressBook"))
+        "query" -> Select(fields = List('firstName, 'lastName), from = Table("AddressBook"))
       )))
       verify(text = "AddressBook", template = "%q:table")(SQLTemplateParams(sources = Map(
         "table" -> Table("AddressBook")
       )))
       verify(text = "@addressBook", template = "%q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> RowSetVariableRef(name = "addressBook")
+        "variable" -> @@("addressBook")
       )))
     }
 
@@ -132,19 +132,19 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse insert values (queries, VALUES and variables) tags (%V)") {
       verify(text = "( SELECT * FROM AddressBook )", template = "%V:query")(SQLTemplateParams(sources = Map(
-        "query" -> Select(fields = List(AllFields), from = Table("AddressBook"))
+        "query" -> Select(fields = List('*), from = Table("AddressBook"))
       )))
       verify(text = "VALUES (1, 2, 3)", template = "%V:values")(SQLTemplateParams(sources = Map(
         "values" -> Insert.Values(List(List(1d, 2d, 3d)))
       )))
       verify(text = "@addressBook", template = "%V:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> RowSetVariableRef(name = "addressBook")
+        "variable" -> @@("addressBook")
       )))
     }
 
     it("should parse variable reference tags (%v)") {
       verify(text = "@variable", template = "%v:variable")(SQLTemplateParams(variables = Map(
-        "variable" -> RowSetVariableRef("variable")
+        "variable" -> @@("variable")
       )))
     }
 
@@ -156,8 +156,8 @@ class SQLTemplateParserTest extends FunSpec {
            |""".stripMargin, template = "%W:settings")(SQLTemplateParams(
         atoms = Map("settings.processing" -> "batch"),
         variables = Map(
-          "settings.arguments" -> RowSetVariableRef("app_args"),
-          "settings.environment" -> RowSetVariableRef("os_env")
+          "settings.arguments" -> @@("app_args"),
+          "settings.environment" -> @@("os_env")
         )))
     }
 

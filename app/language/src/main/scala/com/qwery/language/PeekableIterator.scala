@@ -4,9 +4,8 @@ package com.qwery.language
   * Peekable Iterator
   * @author lawrence.daniels@gmail.com
   */
-class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
+class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) extends Iterator[T] {
   private var marks: List[Int] = Nil
-  protected var position = 0
 
   def apply(offset: Int): Option[T] = peekAhead(offset)
 
@@ -46,17 +45,8 @@ class PeekableIterator[T](values: Seq[T]) extends Iterator[T] {
 
   def peek: Option[T] = if (hasNext) Option(values(position)) else None
 
-  def peekAhead(offset: Int): Option[T] = if (position + offset < values.length) Option(values(position + offset)) else None
-
-  def previous: Option[T] = {
-    val result = position match {
-      case p if p >= values.length => Option(values.last)
-      case p if p > 0 => Option(values(position))
-      case _ => None
-    }
-    position -= 1
-    result
-  }
+  def peekAhead(offset: Int): Option[T] =
+    if (position + offset >= 0 && position + offset < values.length) Option(values(position + offset)) else None
 
   def reset(): Boolean = marks.headOption exists { markedPos =>
     position = markedPos

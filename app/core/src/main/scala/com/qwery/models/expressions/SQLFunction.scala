@@ -65,74 +65,96 @@ sealed trait Aggregation extends NamedExpression {
   override val isAggregate = true
 }
 
-/////////////////////////////////////////////////////////////////////
-//    SQL Function Library
-/////////////////////////////////////////////////////////////////////
+/**
+  * SQLFunction Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object SQLFunction {
 
-case class Abs(field: Expression) extends SQLFunction1
+  /////////////////////////////////////////////////////////////////////
+  //    SQL Function Library
+  /////////////////////////////////////////////////////////////////////
 
-case class Add_Months(field1: Expression, field2: Expression) extends SQLFunction2
+  case class Abs(field: Expression) extends SQLFunction1
 
-case class Array_Contains(field1: Expression, field2: Expression) extends SQLFunction2
+  case class Add_Months(field1: Expression, field2: Expression) extends SQLFunction2
 
-case class Ascii(field: Expression) extends SQLFunction1
+  case class Array(args: List[Expression]) extends SQLFunctionN
 
-case class Avg(field: Expression) extends SQLFunction1 with Aggregation
+  case class Array_Contains(field1: Expression, field2: Expression) extends SQLFunction2
 
-case class Base64(field: Expression) extends SQLFunction1
+  case class Array_Index(field1: Expression, field2: Expression) extends SQLFunction2
 
-case class Bin(field: Expression) extends SQLFunction1
+  case class Ascii(field: Expression) extends SQLFunction1
 
-case class Cast(value: Expression, toType: ColumnType) extends SQLFunction
+  case class Avg(field: Expression) extends SQLFunction1 with Aggregation
 
-case class Cbrt(field: Expression) extends SQLFunction1
+  case class Base64(field: Expression) extends SQLFunction1
 
-case class Ceil(field: Expression) extends SQLFunction1
+  case class Bin(field: Expression) extends SQLFunction1
 
-case class Coalesce(args: List[Expression]) extends SQLFunctionN
+  case class Cast(value: Expression, toType: ColumnType) extends SQLFunction
 
-case class Concat(field1: Expression, field2: Expression) extends SQLFunction2
+  case class Cbrt(field: Expression) extends SQLFunction1
 
-case class Count(field: Expression) extends SQLFunction1 with Aggregation
+  case class Ceil(field: Expression) extends SQLFunction1
 
-case object Cume_Dist extends SQLFunction
+  case class Coalesce(args: List[Expression]) extends SQLFunctionN
 
-case object Current_Date extends SQLFunction
+  case class Concat(args: List[Expression]) extends SQLFunctionN
 
-case class Date_Add(field1: Expression, field2: Expression) extends SQLFunction2
+  case class Count(field: Expression) extends SQLFunction1 with Aggregation
 
-case class Distinct(field: Expression) extends SQLFunction1 with Aggregation
+  case object Cume_Dist extends SQLFunction
 
-case class Factorial(field: Expression) extends SQLFunction1
+  case object Current_Date extends SQLFunction
 
-case class Floor(field: Expression) extends SQLFunction1
+  case class Date_Add(field1: Expression, field2: Expression) extends SQLFunction2
 
-case class If(condition: Condition, trueValue: Expression, falseValue: Expression) extends SQLFunction
+  case class Distinct(field: Expression) extends SQLFunction1 with Aggregation
 
-case class Lower(field: Expression) extends SQLFunction1
+  case class Factorial(field: Expression) extends SQLFunction1
 
-case class LPad(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
+  case class Floor(field: Expression) extends SQLFunction1
 
-case class Max(field: Expression) extends SQLFunction1 with Aggregation
+  case class From_UnixTime(timestamp: Expression, format: Option[Expression] = None) extends SQLFunction
 
-case class Min(field: Expression) extends SQLFunction1 with Aggregation
+  case class If(condition: Condition, trueValue: Expression, falseValue: Expression) extends SQLFunction
 
-case class RPad(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
+  case class Length(field: Expression) extends SQLFunction1
 
-case class Substring(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
+  case class Lower(field: Expression) extends SQLFunction1
 
-case class Sum(field: Expression) extends SQLFunction1 with Aggregation
+  case class LPad(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
 
-case class StdDev(field: Expression) extends SQLFunction1 with Aggregation
+  case class LTrim(field: Expression) extends SQLFunction1
 
-case class To_Date(field: Expression) extends SQLFunction1
+  case class Max(field: Expression) extends SQLFunction1 with Aggregation
 
-case class Trim(field: Expression) extends SQLFunction1
+  case class Min(field: Expression) extends SQLFunction1 with Aggregation
 
-case class Upper(field: Expression) extends SQLFunction1
+  case class RPad(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
 
-case class Variance(field: Expression) extends SQLFunction1 with Aggregation
+  case class RTrim(field: Expression) extends SQLFunction1
 
-case class WeekOfYear(field: Expression) extends SQLFunction1
+  case class Split(field1: Expression, field2: Expression) extends SQLFunction2
 
-case class Year(field: Expression) extends SQLFunction1
+  case class Substring(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3
+
+  case class Sum(field: Expression) extends SQLFunction1 with Aggregation
+
+  case class StdDev(field: Expression) extends SQLFunction1 with Aggregation
+
+  case class To_Date(field: Expression) extends SQLFunction1
+
+  case class Trim(field: Expression) extends SQLFunction1
+
+  case class Upper(field: Expression) extends SQLFunction1
+
+  case class Variance(field: Expression) extends SQLFunction1 with Aggregation
+
+  case class WeekOfYear(field: Expression) extends SQLFunction1
+
+  case class Year(field: Expression) extends SQLFunction1
+
+}

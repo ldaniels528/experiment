@@ -2,6 +2,7 @@ package com.qwery.platform.flink
 
 import com.qwery.models.Column
 import com.qwery.models.expressions.Expression
+import com.qwery.models.expressions.implicits._
 import org.slf4j.LoggerFactory
 
 /**
@@ -14,7 +15,6 @@ case class FlinkProcedure(name: String, params: Seq[Column], code: FlinkInvokabl
   private val logger = LoggerFactory.getLogger(getClass)
 
   def invoke(args: List[Expression])(implicit rc: FlinkQweryContext): Option[DataFrame] = {
-    import com.qwery.util.OptionHelper.Implicits.Risky._
 
     val inputArgs = params zip args map { case (param, arg) => param.name -> arg.asString } // TODO fix type issue
     logger.info(s"inputArgs => ${inputArgs map { case (k, v) => s"('$k', '$v')" } mkString ", "}")

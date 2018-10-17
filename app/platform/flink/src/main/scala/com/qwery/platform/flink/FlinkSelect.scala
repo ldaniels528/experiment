@@ -28,7 +28,6 @@ case class FlinkSelect(fields: Seq[Expression],
     // build the field selection
     val selection = fields map {
       case field@BasicField(name) => field.alias.map(a => s"$name AS $a") getOrElse name
-      case ref@ConstantField(value) => s"${value.compile} AS ${ref.name}"
       case expression: Expression => expression.compile
     } mkString ","
 

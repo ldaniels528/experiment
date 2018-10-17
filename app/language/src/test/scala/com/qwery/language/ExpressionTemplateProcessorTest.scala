@@ -1,8 +1,8 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypes
-import com.qwery.models.expressions.Expression.Implicits._
-import com.qwery.models.expressions.{Field, Literal, VariableRef}
+import com.qwery.models._
+import com.qwery.models.expressions.implicits._
+import com.qwery.models.expressions.{Field, Literal}
 import org.scalatest.FunSpec
 
 /**
@@ -25,7 +25,7 @@ class ExpressionTemplateProcessorTest extends FunSpec {
     it("should process IF(LastSale < 1, 'Penny Stock', 'Stock')") {
       val ts = TokenStream("IF(LastSale < 1, 'Penny Stock', 'Stock')")
       val results = processor.process("IF ( %c:condition , %e:trueValue , %e:falseValue )", ts)
-      assert(results.conditions.get("condition").contains(Field("LastSale") < 1))
+      assert(results.conditions.get("condition").contains(Field('LastSale) < 1))
       assert(results.expressions.get("trueValue").contains(Literal("Penny Stock")))
       assert(results.expressions.get("falseValue").contains(Literal("Stock")))
     }
@@ -33,7 +33,7 @@ class ExpressionTemplateProcessorTest extends FunSpec {
     it("should process PRINT($deptCode)") {
       val ts = TokenStream("PRINT($deptCode)")
       val results = processor.process("PRINT ( %v:variable )", ts)
-      assert(results.variables.get("variable").contains(VariableRef("$deptCode")))
+      assert(results.variables.get("variable").contains($("deptCode")))
     }
 
     it("should process SUBSTRING('Hello World', 5, 1)") {

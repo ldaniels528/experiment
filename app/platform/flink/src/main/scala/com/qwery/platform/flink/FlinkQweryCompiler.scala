@@ -139,6 +139,8 @@ object FlinkQweryCompiler {
         }
       case view: View =>
         die(s"View '${view.name}' cannot be modified")
+      case other =>
+        die(s"Table '${other.name}' cannot be modified")
     }
   }
 
@@ -167,6 +169,7 @@ object FlinkQweryCompiler {
     * @author lawrence.daniels@gmail.com
     */
   object Implicits {
+    import expressions.implicits._
 
     final implicit class FlinkConditionCompiler(val condition: Condition) extends AnyVal {
       @inline def compile(implicit rc: FlinkQweryContext): String = condition match {

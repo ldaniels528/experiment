@@ -14,16 +14,21 @@ sealed trait Token {
   def is(value: String): Boolean = text equalsIgnoreCase value
 
   /**
+    * @return the line number of this token
+    */
+  def lineNo: Int
+
+  /**
+    * @return the column number of this token
+    */
+  def columnNo: Int
+
+  /**
     * Indicates whether the underlying text matches the given pattern
     * @param pattern the given pattern
     * @return true, if the underlying text matches the given pattern
     */
   def matches(pattern: String): Boolean = text matches pattern
-
-  /**
-    * @return the starting position of this token
-    */
-  def start: Int
 
   /**
     * @return the text contained by this token
@@ -49,7 +54,7 @@ sealed trait TextToken extends Token {
   * Represents an alphanumeric token
   * @author lawrence.daniels@gmail.com
   */
-case class AlphaToken(text: String, start: Int) extends TextToken {
+case class AlphaToken(text: String, lineNo: Int, columnNo: Int) extends TextToken {
   override def value: String = text
 }
 
@@ -57,7 +62,7 @@ case class AlphaToken(text: String, start: Int) extends TextToken {
   * Represents a quoted token
   * @author lawrence.daniels@gmail.com
   */
-case class QuotedToken(text: String, start: Int, quoteChar: Char) extends TextToken {
+case class QuotedToken(text: String, lineNo: Int, columnNo: Int, quoteChar: Char) extends TextToken {
   override def value: String = text
 
   def isBackTicks: Boolean = quoteChar == '`'
@@ -71,7 +76,7 @@ case class QuotedToken(text: String, start: Int, quoteChar: Char) extends TextTo
   * Represents a numeric token
   * @author lawrence.daniels@gmail.com
   */
-case class NumericToken(text: String, start: Int) extends Token {
+case class NumericToken(text: String, lineNo: Int, columnNo: Int) extends Token {
   override def value: Double = text.toDouble
 }
 
@@ -79,7 +84,7 @@ case class NumericToken(text: String, start: Int) extends Token {
   * Represents an operator token
   * @author lawrence.daniels@gmail.com
   */
-case class OperatorToken(text: String, start: Int) extends Token {
+case class OperatorToken(text: String, lineNo: Int, columnNo: Int) extends Token {
   override def value: String = text
 }
 
@@ -87,7 +92,7 @@ case class OperatorToken(text: String, start: Int) extends Token {
   * Represents a symbolic token
   * @author lawrence.daniels@gmail.com
   */
-case class SymbolToken(text: String, start: Int) extends Token {
+case class SymbolToken(text: String, lineNo: Int, columnNo: Int) extends Token {
   override def value: String = text
 }
 

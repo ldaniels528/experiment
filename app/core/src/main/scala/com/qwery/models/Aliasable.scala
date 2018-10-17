@@ -13,6 +13,8 @@ trait Aliasable {
 
   def as(alias: String): this.type = as(alias = Option(alias))
 
+  def as(alias: Symbol): this.type = as(alias = Option(alias.name))
+
   def as(alias: Option[String]): this.type = {
     this._alias = alias
     this

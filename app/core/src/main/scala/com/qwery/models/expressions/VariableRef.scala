@@ -11,28 +11,6 @@ sealed trait VariableRef {
     * @return the name of the variable
     */
   def name: String
-}
-
-/**
-  * Variable Reference Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object VariableRef {
-
-  /**
-    * Creates a new variable reference.
-    * Variables starting with '$' will result in a [[LocalVariableRef local variable reference]].
-    * Variables starting with '@' will result in a [[RowSetVariableRef row-set variable reference]].
-    * @param name the given variable name
-    * @return the [[VariableRef]]
-    */
-  def apply(name: String): VariableRef = {
-    name match {
-      case s if s.startsWith("$") => LocalVariableRef(s.drop(1))
-      case s if s.startsWith("@") => RowSetVariableRef(s.drop(1))
-      case _ => die(s"Invalid variable reference '$name'")
-    }
-  }
 
 }
 
@@ -48,3 +26,16 @@ case class LocalVariableRef(name: String) extends VariableRef with NamedExpressi
   */
 case class RowSetVariableRef(name: String) extends VariableRef with Invokable with Aliasable
 
+/**
+  * Local Variable assignment
+  * @param name       the given variable name
+  * @param expression the given [[Expression expression]]
+  */
+case class SetLocalVariable(name: String, expression: Expression) extends Invokable
+
+/**
+  * Row Variable assignment
+  * @param name    the given variable name
+  * @param dataset the given [[Invokable dataset]]
+  */
+case class SetRowVariable(name: String, dataset: Invokable) extends Invokable

@@ -20,6 +20,13 @@ trait Scope {
   def apply(name: String): Option[Any] = variables.get(name)
 
   /**
+    * Indicated whether a variable exists by name
+    * @param name the given variable name
+    * @return true, if the variable was found in this scope
+    */
+  def contains(name: String): Boolean = variables.exists { case (key, _) => key equalsIgnoreCase name }
+
+  /**
     * Updates the state of a variable by name
     * @param name  the name of the variable to update
     * @param value the updated value
@@ -28,6 +35,9 @@ trait Scope {
     logger.info(s"Setting variable '$name' to '$value'")
     variables(name) = value
   }
+
+  override def toString = s"Scope(${variables.mkString(",")})"
+
 }
 
 /**

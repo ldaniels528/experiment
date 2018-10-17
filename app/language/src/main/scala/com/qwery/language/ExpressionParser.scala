@@ -1,8 +1,9 @@
 package com.qwery.language
 
 import com.qwery.language.ExpressionParser._
-import com.qwery.models.expressions.Expression.Implicits._
+import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
+import com.qwery.models.expressions.implicits._
 
 /**
   * Expression Parser
@@ -32,15 +33,15 @@ trait ExpressionParser {
     var expression: Option[Expression] = None
     var done: Boolean = false
     do {
-      if (expression.isEmpty) expression = parseNextExpression(stream)
-      else {
+      if (expression.isEmpty) expression = parseNextExpression(stream) else {
         val result = stream match {
+          case ts if ts is "[" => expression.flatMap(array => parseArrayIndex(array, ts))
           case ts if ts nextIf "+" => for (a <- expression; b <- parseNextExpression(ts)) yield a + b
           case ts if ts nextIf "-" => for (a <- expression; b <- parseNextExpression(ts)) yield a - b
           case ts if ts nextIf "*" => for (a <- expression; b <- parseNextExpression(ts)) yield a * b
           case ts if ts nextIf "**" => for (a <- expression; b <- parseNextExpression(ts)) yield a ** b
           case ts if ts nextIf "/" => for (a <- expression; b <- parseNextExpression(ts)) yield a / b
-          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(a, b)
+          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(List(a, b))
           case _ => None
         }
         // if the expression was resolved ...
@@ -48,6 +49,20 @@ trait ExpressionParser {
       }
     } while (!done && expression.nonEmpty && stream.hasNext)
     expression
+  }
+
+  /**
+    * Parses a FromUnixTime(timestamp,[format]) function
+    * @param ts the given [[TokenStream token stream]]
+    * @return a [[From_UnixTime]]
+    */
+  private def parseFromUnixTime(ts: TokenStream): Option[From_UnixTime] = {
+    val results = processor.process("( %E:args )", ts)(this)
+    results.expressionLists.get("args") map {
+      case timestamp :: Nil => From_UnixTime(timestamp)
+      case timestamp :: format :: Nil => From_UnixTime(timestamp, format = Option(format))
+      case _ => ts.die("Syntax: FromUnixTime(timestamp,[format])")
+    }
   }
 
   /**
@@ -134,6 +149,11 @@ trait ExpressionParser {
     args
   }
 
+  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Array_Index] = {
+    val results = processor.process("[ %e:index ]", ts)(this)
+    results.expressions.get("index") map { index => Array_Index(array, index) }
+  }
+
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
     stream match {
       case ts if ts nextIf "NOT" => parseNOT(ts)
@@ -167,20 +187,22 @@ trait ExpressionParser {
     import com.qwery.util.OptionHelper.Implicits.Risky._
     stream match {
       // is it a Case expression?
-      case ts if ts nextIf "CASE" => parseCase(ts)
+      case ts if ts nextIf "case" => parseCase(ts)
       // is it a Cast function?
-      case ts if ts nextIf "CAST" => parseCast(ts)
+      case ts if ts nextIf "cast" => parseCast(ts)
+      // is it a From_UnixTime function?
+      case ts if ts nextIf "from_unixtime" => parseFromUnixTime(ts)
       // is it an If expression?
-      case ts if ts nextIf "IF" => parseIf(ts)
+      case ts if ts nextIf "if" => parseIf(ts)
       // is is a null value?
-      case ts if ts nextIf "NULL" => Null
+      case ts if ts nextIf "null" => Null
       // is it a constant value?
       case ts if ts.isConstant => Literal(value = ts.next().value)
       // is it an all fields reference?
       case ts if ts nextIf "*" => AllFields
       // is it a variable? (e.g. @totalCost)
       case ts if (ts is "@") | (ts is "$") => parseVariableRef(ts) map {
-        case ref: LocalVariableRef => ref
+        case v: LocalVariableRef => v
         case _: RowSetVariableRef => ts.die("Row set variables cannot be used in expressions")
         case _ => ts.die("Unsupported expression; a column variable was expected (e.g. $myVar)")
       }
@@ -301,12 +323,12 @@ trait ExpressionParser {
     * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[Expression]]
     */
-  def parseQuantity(ts: TokenStream): Option[Expression] =
+  private def parseQuantity(ts: TokenStream): Option[Expression] =
     processor.process("( %e:expr )", ts)(this).expressions.get("expr")
 
   private def toField(token: Token): Field = token match {
-    case AlphaToken(name, _) => Field(name)
-    case t@QuotedToken(name, _, _) if t.isBackTicks => Field(name)
+    case t: AlphaToken => Field(t.text)
+    case t: QuotedToken if t.isBackTicks => Field(t.text)
     case t =>
       throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
   }
@@ -335,9 +357,12 @@ object ExpressionParser {
     "Distinct" -> Distinct.apply _,
     "Factorial" -> Factorial.apply _,
     "Floor" -> Floor.apply _,
+    "Length" -> Length.apply _,
     "Lower" -> Lower.apply _,
+    "LTrim" -> LTrim.apply _,
     "Max" -> Max.apply _,
     "Min" -> Min.apply _,
+    "RTrim" -> RTrim.apply _,
     "StdDev" -> StdDev.apply _,
     "Sum" -> Sum.apply _,
     "To_Date" -> To_Date.apply _,
@@ -350,8 +375,8 @@ object ExpressionParser {
   private val function2s = Map(
     "Add_Months" -> Add_Months.apply _,
     "Array_Contains" -> Array_Contains.apply _,
-    "Concat" -> Concat.apply _,
-    "Date_Add" -> Date_Add.apply _
+    "Date_Add" -> Date_Add.apply _,
+    "Split" -> Split.apply _
   )
   private val function3s = Map(
     "LPad" -> LPad.apply _,
@@ -359,7 +384,8 @@ object ExpressionParser {
     "Substring" -> Substring.apply _
   )
   private val functionNs = Map(
-    "Coalesce" -> Coalesce.apply _
+    "Coalesce" -> Coalesce.apply _,
+    "Concat" -> Concat.apply _
   )
   private val conditionalOps = Map(
     "=" -> EQ.apply _,
@@ -386,6 +412,7 @@ object ExpressionParser {
     * @param ts the given [[TokenStream]]
     */
   final implicit class TokenStreamExpressionHelpers(val ts: TokenStream) extends AnyVal {
+
     @inline def isConstant: Boolean = ts.isNumeric || ts.isQuoted
 
     @inline def isField: Boolean = ts.isBackticks || (ts.isIdentifier && !ts.isFunction)

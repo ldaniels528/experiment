@@ -27,8 +27,8 @@ sealed trait TableLike extends SQLEntity
   * @param source  the physical location of the data files
   * @example
   * {{{
-  *     CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
-  *     FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
+  *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
+  *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
   * }}}
   */
 case class InlineTable(name: String, columns: List[Column], source: Invokable) extends TableLike
@@ -75,7 +75,7 @@ object StorageFormats extends Enumeration {
   *     ROW FORMAT DELIMITED
   *     FIELDS TERMINATED BY ','
   *     STORED AS TEXTFILE
-  *     LOCATION '/user/<username>/visdata';
+  *     LOCATION '/user/ldaniels/visdata';
   * }}}
   * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
   */
@@ -106,7 +106,9 @@ object Table {
 
 /**
   * Represents a User-defined Function (UDF)
-  * @param name the name of the function
+  * @param name    the name of the function
+  * @param `class` the fully-qualified function class name
+  * @param jar     the optional Jar file path
   */
 case class UserDefinedFunction(name: String, `class`: String, jar: Option[String]) extends SQLEntity
 

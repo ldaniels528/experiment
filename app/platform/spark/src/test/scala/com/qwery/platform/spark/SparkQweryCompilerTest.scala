@@ -1,9 +1,12 @@
-package com.qwery.platform.spark
+package com.qwery.platform
+package spark
 
 import com.qwery.models.Insert.{Overwrite, Values}
 import com.qwery.models._
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
+
+import scala.language.postfixOps
 
 /**
   * Spark Qwery Compiler Test Suite
@@ -13,7 +16,7 @@ class SparkQweryCompilerTest extends FunSpec {
   private val compiler = new SparkQweryCompiler {}
 
   describe(classOf[SparkQweryCompiler].getSimpleName) {
-    import com.qwery.models.expressions.Expression.Implicits._
+    import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
     it("should support CREATE FUNCTION statements") {
@@ -40,17 +43,10 @@ class SparkQweryCompilerTest extends FunSpec {
 
         // project/transform the data
         Select(
-          fields = List(
-            Field(descriptor = "Symbol"),
-            Field(descriptor = "Name"),
-            Field(descriptor = "LastSale"),
-            FunctionCall(name = "currency", List(Field(descriptor = "MarketCap"))),
-            Field(descriptor = "IPOyear"),
-            Field(descriptor = "Sector"),
-            Field(descriptor = "Industry")),
+          fields = List('Symbol, 'Name, 'LastSale, FunctionCall("currency")('MarketCap).as("MarketCap"), 'IPOyear, 'Sector, 'Industry),
           from = Table("Securities"),
-          where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
-          orderBy = List(OrderColumn(name = "Symbol", isAscending = true))
+          where = IsNotNull('Symbol) && IsNotNull('Sector),
+          orderBy = List('Symbol asc)
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
@@ -63,8 +59,8 @@ class SparkQweryCompilerTest extends FunSpec {
         Create(InlineTable(
           name = "SpecialSecurities",
           columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
-          source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01))))),
-        Select(fields = List(AllFields), from = Table("SpecialSecurities"))
+          source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 1699.01))))),
+        Select(fields = List('*), from = Table("SpecialSecurities"))
       )
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
@@ -93,15 +89,22 @@ class SparkQweryCompilerTest extends FunSpec {
         // create a view on the table
         Create(View(name = "OilGasTransmissions",
           Select(
-            fields = Seq('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote).map(s => Field(s.name)),
+            fields = Seq('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote),
             from = Table("Securities"),
-            where = Field("Industry") === "Oil/Gas Transmission" && IsNotNull(Field("IPOyear"))
+            where = Field('Industry) === "Oil/Gas Transmission" && IsNotNull('IPOyear)
           ))),
 
         // select the records via the view
-        Select(fields = Seq(AllFields), from = Table("OilGasTransmissions"))
+        Select(fields = Seq('*), from = Table("OilGasTransmissions"))
       )
 
+      implicit val rc: SparkQweryContext = new SparkQweryContext()
+      val df = compiler.compile(sql).execute(input = None)
+      df.foreach(_.show(5))
+    }
+
+    it("should support SELECT w/FILESYSTEM statements") {
+      val sql = Select(fields = Seq('*), from = FileSystem(path = "./samples"), where = LIKE('name, "%.sql"))
       implicit val rc: SparkQweryContext = new SparkQweryContext()
       val df = compiler.compile(sql).execute(input = None)
       df.foreach(_.show(5))
@@ -130,17 +133,10 @@ class SparkQweryCompilerTest extends FunSpec {
 
         // project/transform the data
         Select(
-          fields = List(
-            Field(descriptor = "Symbol"),
-            Field(descriptor = "Name"),
-            Field(descriptor = "LastSale"),
-            Field(descriptor = "MarketCap"),
-            Field(descriptor = "IPOyear"),
-            Field(descriptor = "Sector"),
-            Field(descriptor = "Industry")),
+          fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry),
           from = Table("Securities"),
-          where = IsNotNull(Field("Symbol")) && IsNotNull(Field("Sector")),
-          orderBy = List(OrderColumn(name = "Symbol", isAscending = true)),
+          where = IsNotNull('Symbol) && IsNotNull('Sector),
+          orderBy = List('Symbol asc),
           limit = 5
         ))
 
@@ -150,6 +146,8 @@ class SparkQweryCompilerTest extends FunSpec {
     }
 
     it("should support SELECT w/GROUP BY & ORDER BY statements") {
+      import SQLFunction._
+
       val sql = SQL(
         // create the input table
         Create(Table(name = "Securities",
@@ -172,18 +170,15 @@ class SparkQweryCompilerTest extends FunSpec {
 
         // project/transform the data
         Select(
-          fields = List(
-            Field(descriptor = "Sector"),
-            Field(descriptor = "Industry"),
-            Field(name = "DeptCode", value = "1337"),
-            Avg(Field(descriptor = "LastSale")).as("AvgLastSale"),
-            Max(Field(descriptor = "LastSale")).as("MaxLastSale"),
-            Min(Field(descriptor = "LastSale")).as("MinLastSale"),
-            Count(AllFields).as("Companies")),
+          fields = List('Sector, 'Industry, "1337".as("DeptCode"),
+            Avg('LastSale).as('AvgLastSale),
+            Max('LastSale).as('MaxLastSale),
+            Min('LastSale).as('MinLastSale),
+            Count('*).as('Companies)),
           from = Table("Securities"),
-          where = Field("Sector") === "Basic Industries",
-          groupBy = List("Sector", "Industry").map(Field.apply),
-          orderBy = List(OrderColumn(name = "Sector", isAscending = true), OrderColumn(name = "Industry", isAscending = true))
+          where = Field('Sector) === "Basic Industries",
+          groupBy = List('Sector, 'Industry),
+          orderBy = List('Sector asc, 'Industry asc)
         ))
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
@@ -232,14 +227,11 @@ class SparkQweryCompilerTest extends FunSpec {
         )),
 
         // select the records via the view
-        {
-          val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved).map(s => Field(s.name))
-          Insert(Overwrite(Table("OilGasSecurities")),
-            Values(values = List(
-              List("AAPL", "Apple Inc.", 215.49, "$1040.8B", "1980", "Technology", "Computer Manufacturing", "https://www.nasdaq.com/symbol/aapl", "n/a")
-            )),
-            fields = fields)
-        }
+        Insert(Overwrite(Table("OilGasSecurities")),
+          Values(values = List(
+            List("AAPL", "Apple Inc.", 215.49, "$1040.8B", "1980", "Technology", "Computer Manufacturing", "https://www.nasdaq.com/symbol/aapl", "n/a")
+          )),
+          fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved))
       )
 
       implicit val rc: SparkQweryContext = new SparkQweryContext()
@@ -287,12 +279,12 @@ class SparkQweryCompilerTest extends FunSpec {
 
         // select the records via the view
         {
-          val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote, 'Reserved).map(s => Field(s.name))
+          val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry, 'SummaryQuote)
           Insert(Overwrite(Table("OilGasSecurities")),
             Select(
               fields = fields,
               from = Table("Securities"),
-              where = Field("Industry") === "Oil/Gas Transmission"),
+              where = Field('Industry) === "Oil/Gas Transmission"),
             fields = fields)
         })
 

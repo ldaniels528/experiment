@@ -14,6 +14,13 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     parseNumeric _, parseAlphaNumeric _, parseQuotesBackticks _, parseQuotesDouble _,
     parseQuotesSingle _, parseCompoundOperators _, parseOperators _, parseSymbols _)
 
+  def getLineNumber(position: Int): Int = 1 + input.take(position).count(_ == '\n')
+
+  def getColumn(position: Int): Int = 1 + input.take(position).lastIndexOf('\n') match {
+    case -1 => position
+    case index => position - index
+  }
+
   override def hasNext: Boolean = {
     var last: Int = 0
     do {
@@ -60,13 +67,13 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private def parseAlphaNumeric(): Option[Token] = {
     val start = pos
     while (hasMore && (ca(pos).isLetterOrDigit || ca(pos) == '_')) pos += 1
-    if (pos > start) Some(AlphaToken(String.copyValueOf(ca, start, pos - start), start)) else None
+    if (pos > start) Some(AlphaToken(String.copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
   }
 
   private def parseCompoundOperators(): Option[Token] = {
     if (hasMore && span(2).exists(compoundOperators.contains)) {
       val start = pos
-      val result = span(2).map(OperatorToken(_, start))
+      val result = span(2).map(OperatorToken(_, getLineNumber(start), getColumn(start)))
       pos += 2
       result
     }
@@ -76,23 +83,23 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private def parseNumeric(): Option[Token] = {
     val start = pos
     while (hasMore && (ca(pos).isDigit || (ca.length > pos + 1 && ca(pos) == '.' && ca(pos + 1).isDigit))) pos += 1
-    if (pos > start) Some(NumericToken(String.copyValueOf(ca, start, pos - start), start)) else None
+    if (pos > start) Some(NumericToken(String.copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
   }
 
   private def parseOperators(): Option[Token] = {
     if (hasMore && operators.contains(ca(pos))) {
       val start = pos
       pos += 1
-      Some(OperatorToken(ca(start).toString, start))
+      Some(OperatorToken(ca(start).toString, getLineNumber(start), getColumn(start)))
     }
     else None
   }
 
-  private def parseQuotesBackticks() = parseQuotes('`')
+  private def parseQuotesBackticks(): Option[Token] = parseQuotes('`')
 
-  private def parseQuotesDouble() = parseQuotes('"')
+  private def parseQuotesDouble(): Option[Token] = parseQuotes('"')
 
-  private def parseQuotesSingle() = parseQuotes('\'')
+  private def parseQuotesSingle(): Option[Token] = parseQuotes('\'')
 
   private def parseQuotes(ch: Char): Option[Token] = {
     if (hasMore && ca(pos) == ch) {
@@ -101,7 +108,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
       while (hasMore && ca(pos) != ch) pos += 1
       val length = pos - start
       pos += 1
-      Some(QuotedToken(String.copyValueOf(ca, start, length), start, ch))
+      Some(QuotedToken(String.copyValueOf(ca, start, length), getLineNumber(start), getColumn(start), ch))
     }
     else None
   }
@@ -110,7 +117,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     if (hasMore) {
       val start = pos
       pos += 1
-      Some(SymbolToken(ca(start).toString, start))
+      Some(SymbolToken(ca(start).toString, getLineNumber(start), getColumn(start)))
     }
     else None
   }

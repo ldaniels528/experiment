@@ -1,9 +1,12 @@
 package com.qwery.language
 
+import com.qwery.models.Console.Print
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
+
+import scala.language.postfixOps
 
 /**
   * SQL Language Parser Test
@@ -12,7 +15,7 @@ import org.scalatest.FunSpec
 class SQLLanguageParserTest extends FunSpec {
 
   describe(classOf[SQLLanguageParser].getSimpleName) {
-    import com.qwery.models.expressions.Expression.Implicits._
+    import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
     it("should support BEGIN ... END statements") {
@@ -22,7 +25,7 @@ class SQLLanguageParserTest extends FunSpec {
            |  PRINT 'Hello World'
            |END
            |""".stripMargin)
-      assert(results1 == SQL(Console.Print("Hello World")))
+      assert(results1 == Console.Print("Hello World"))
 
       // test type 2
       val results2 = SQLLanguageParser.parse(
@@ -30,12 +33,12 @@ class SQLLanguageParserTest extends FunSpec {
            |  PRINT 'Hello World'
            |}
            |""".stripMargin)
-      assert(results2 == SQL(Console.Print("Hello World")))
+      assert(results2 == Console.Print("Hello World"))
     }
 
     it("should support CALL statements") {
       val results = SQLLanguageParser.parse("CALL computeArea(length, width)")
-      assert(results == ProcedureCall(name = "computeArea", args = List("length", "width").map(Field.apply)))
+      assert(results == ProcedureCall(name = "computeArea", args = List('length, 'width)))
     }
 
     it("should support CREATE FUNCTION statements") {
@@ -59,7 +62,7 @@ class SQLLanguageParserTest extends FunSpec {
       val results = SQLLanguageParser.parse(
         """|CREATE PROCEDURE testInserts(industry STRING) AS
            |  RETURN (
-           |    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+           |    SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |    FROM Customers
            |    WHERE Industry = $industry
            |  )
@@ -67,9 +70,9 @@ class SQLLanguageParserTest extends FunSpec {
       assert(results == Create(Procedure(name = "testInserts",
         params = List("industry STRING").map(Column.apply),
         code = Return(Select(
-          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field("Industry") === LocalVariableRef(name = "industry")
+          where = Field('Industry) === $(name = "industry")
         ))
       )))
     }
@@ -142,15 +145,15 @@ class SQLLanguageParserTest extends FunSpec {
     it("should support CREATE VIEW statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE VIEW OilAndGas AS
-           |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+           |SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
       assert(results == Create(View(name = "OilAndGas",
         query = Select(
-          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field("Industry") === "Oil/Gas Transmission"
+          where = Field('Industry) === "Oil/Gas Transmission"
         ))))
     }
 
@@ -167,6 +170,50 @@ class SQLLanguageParserTest extends FunSpec {
         val results = SQLLanguageParser.parse(s"$command '$message'")
         assert(results == opCode(message))
       }
+    }
+
+    it("should support function call statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
+        from = Table("Securities"),
+        where = Field('naics) === "12345"
+      ))
+    }
+
+    it("should support FOR statements") {
+      val results = SQLLanguageParser.parse(
+        """|FOR @item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
+           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |}
+           |""".stripMargin)
+      assert(results == ForEach(
+        variable = @@("item"),
+        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
+        invokable = SQL(
+          Print("${item.symbol} is ${item.lastSale)/share")
+        ),
+        isReverse = false
+      ))
+    }
+
+    it("should support FOR ... LOOP statements") {
+      val results = SQLLanguageParser.parse(
+        """|FOR @item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
+           |LOOP
+           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |END LOOP;
+           |""".stripMargin)
+      assert(results == ForEach(
+        variable = @@("item"),
+        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
+        invokable = SQL(
+          Print("${item.symbol} is ${item.lastSale)/share")
+        ),
+        isReverse = true
+      ))
     }
 
     it("should support INCLUDE statements") {
@@ -190,12 +237,12 @@ class SQLLanguageParserTest extends FunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry).map(s => Field(s.name))
+      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field("Industry") === "Oil/Gas Transmission"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -207,7 +254,7 @@ class SQLLanguageParserTest extends FunSpec {
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
            |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
+      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Insert.Values(
           values = List(
@@ -225,12 +272,12 @@ class SQLLanguageParserTest extends FunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
+      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
       assert(results == Insert(Into(LocationRef("/dir/subdir")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field("Industry") === "Oil/Gas Transmission"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -242,12 +289,12 @@ class SQLLanguageParserTest extends FunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry).map(s => Field(s.name))
+      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
       assert(results == Insert(Overwrite(Table("OilGasSecurities")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field("Industry") === "Oil/Gas Transmission"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -259,13 +306,12 @@ class SQLLanguageParserTest extends FunSpec {
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
            |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
       assert(results == Insert(Overwrite(Table("OilGasSecurities")),
         Insert.Values(values = List(
           List("AAPL", "Apple, Inc.", "Technology", "Computers", 203.45),
           List("AMD", "American Micro Devices, Inc.", "Technology", "Computers", 22.33)
         )),
-        fields = fields
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
       ))
     }
 
@@ -276,12 +322,12 @@ class SQLLanguageParserTest extends FunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale).map(s => Field(s.name))
+      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
       assert(results == Insert(Overwrite(LocationRef("/dir/subdir")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field("Industry") === "Oil/Gas Transmission"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -299,20 +345,31 @@ class SQLLanguageParserTest extends FunSpec {
            |END
            |""".stripMargin)
       assert(results == MainProgram(name = "Oil_Companies", code = SQL(),
-        arguments = VariableRef("@args"), environment = VariableRef("@env"), hiveSupport = true, streaming = true))
+        arguments = @@("args"), environment = @@("env"), hiveSupport = true, streaming = true))
+    }
+
+    it("should support SELECT ... FILESYSTEM(...) statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT * FROM (FILESYSTEM('models/'))
+           |WHERE name like '%.csv'
+           |ORDER BY name DESC
+           |""".stripMargin)
+      assert(results == Select(List('*), from = FileSystem("models/"), where = LIKE('name, "%.csv"), orderBy = Seq('name desc)))
     }
 
     it("should support SELECT ... GROUP BY statements") {
+      import SQLFunction._
+
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
            |FROM Customers
            |GROUP BY Sector, Industry
            |""".stripMargin)
       assert(results == Select(
-        fields = List(Field("Sector"), Field("Industry"), Avg(Field("LastSale")).as("LastSale"),
-          Count(AllFields).as("total"), Count(Distinct(AllFields)).as("distinctTotal")),
+        fields = List('Sector, 'Industry, Avg('LastSale).as('LastSale),
+          Count('*).as('total), Count(Distinct('*)).as('distinctTotal)),
         from = Table("Customers"),
-        groupBy = List("Sector", "Industry").map(Field.apply)
+        groupBy = List('Sector, 'Industry)
       ))
     }
 
@@ -324,9 +381,9 @@ class SQLLanguageParserTest extends FunSpec {
            |LIMIT 100
            |""".stripMargin)
       assert(results == Select(
-        fields = List("Symbol", "Name", "Sector", "Industry").map(Field.apply),
+        fields = List('Symbol, 'Name, 'Sector, 'Industry),
         from = Table("Customers"),
-        where = Field("Industry") === "Oil/Gas Transmission",
+        where = Field('Industry) === "Oil/Gas Transmission",
         limit = 100
       ))
     }
@@ -338,48 +395,48 @@ class SQLLanguageParserTest extends FunSpec {
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("Symbol", "Name", "Sector", "Industry").map(Field.apply),
+        fields = List('Symbol, 'Name, 'Sector, 'Industry),
         from = Table("Customers"),
-        where = Field("Industry") === "Oil/Gas Transmission",
+        where = Field('Industry) === "Oil/Gas Transmission",
         limit = 20
       ))
     }
 
     it("should support SELECT ... ORDER BY statements") {
       val results = SQLLanguageParser.parse(
-        """|SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |ORDER BY Symbol DESC, Name ASC
            |""".stripMargin)
       assert(results == Select(
-        fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
         from = Table("Customers"),
-        where = Field("Industry") === "Oil/Gas Transmission",
-        orderBy = List(OrderColumn(name = "Symbol", isAscending = false), OrderColumn(name = "Name", isAscending = true))
+        where = Field('Industry) === "Oil/Gas Transmission",
+        orderBy = List('Symbol desc, 'Name asc)
       ))
     }
 
     it("should support SELECT ... UNION statements") {
       Seq("ALL", "DISTINCT", "") foreach { modifier =>
         val results = SQLLanguageParser.parse(
-          s"""|SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+          s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
               |FROM Customers
               |WHERE Industry = 'Oil/Gas Transmission'
               |UNION $modifier
-              |SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+              |SELECT Symbol, Name, Sector, Industry, SummaryQuote
               |FROM Customers
               |WHERE Industry = 'Computer Manufacturing'
               |""".stripMargin)
         assert(results == Union(
           query0 = Select(
-            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
             from = Table("Customers"),
-            where = Field("Industry") === "Oil/Gas Transmission"),
+            where = Field('Industry) === "Oil/Gas Transmission"),
           query1 = Select(
-            fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
+            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
             from = Table("Customers"),
-            where = Field("Industry") === "Computer Manufacturing"),
+            where = Field('Industry) === "Computer Manufacturing"),
           isDistinct = modifier == "DISTINCT"
         ))
       }
@@ -480,29 +537,32 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
-    it("should support SET statements") {
+    it("should support SET local variable statements") {
+      val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
+      assert(results == SetLocalVariable(name = "customers", $("customers") + 1))
+    }
+
+    it("should support SET row variable statements") {
       val results = SQLLanguageParser.parse(
-        """|{
-           |  SET @customers = (
-           |    SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-           |    FROM Customers
-           |    WHERE Industry = 'Oil/Gas Transmission'
-           |    ORDER BY Symbol ASC
-           |  )
-           |}
+        """|SET @securities = (
+           |  SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+           |  FROM Securities
+           |  WHERE Industry = 'Oil/Gas Transmission'
+           |  ORDER BY Symbol ASC
+           |)
            |""".stripMargin)
-      assert(results == SQL(SetVariable(variable = VariableRef(name = "@customers"),
+      assert(results == SetRowVariable(name = "securities",
         Select(
-          fields = List("Symbol", "Name", "Sector", "Industry", "Summary Quote").map(Field.apply),
-          from = Table("Customers"),
-          where = Field("Industry") === "Oil/Gas Transmission",
-          orderBy = List(OrderColumn(name = "Symbol", isAscending = true))
-        ))))
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, Field("Summary Quote")),
+          from = Table("Securities"),
+          where = Field('Industry) === "Oil/Gas Transmission",
+          orderBy = List('Symbol asc)
+        )))
     }
 
     it("should support SHOW statements") {
       val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
-      assert(results == Show(rows = RowSetVariableRef(name = "theResults"), limit = 5))
+      assert(results == Show(rows = @@("theResults"), limit = 5))
     }
 
     it("should support UPDATE statements") {
@@ -517,7 +577,25 @@ class SQLLanguageParserTest extends FunSpec {
           "Symbol" -> "AAPL", "Name" -> "Apple, Inc.",
           "Sector" -> "Technology", "Industry" -> "Computers", "LastSale" -> 203.45
         ),
-        where = Field("Symbol") === "AAPL"
+        where = Field('Symbol) === "AAPL"
+      ))
+    }
+
+    it("should support WHILE statements") {
+      val results = SQLLanguageParser.parse(
+        """|WHILE $cnt < 10
+           |BEGIN
+           |   PRINT 'Hello World';
+           |   SET $cnt = $cnt + 1;
+           |END;
+           |""".stripMargin)
+      val cnt = $("cnt")
+      assert(results == While(
+        condition = cnt < 10,
+        invokable = SQL(
+          Print("Hello World"),
+          SetLocalVariable(cnt.name, cnt + 1)
+        )
       ))
     }
 

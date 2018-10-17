@@ -28,13 +28,5 @@ object Column {
     case name :: _type :: Nil => Column(name = name, `type` = ColumnTypes.withName(_type.toUpperCase))
     case unknown => die(s"Invalid column descriptor '$unknown'")
   }
-}
 
-/**
-  * Enumeration of Column Types
-  * @author lawrence.daniels@gmail.com
-  */
-object ColumnTypes extends Enumeration {
-  type ColumnType = Value
-  val BINARY, BOOLEAN, DATE, DOUBLE, INTEGER, LONG, STRING, UUID: ColumnType = Value
 }
