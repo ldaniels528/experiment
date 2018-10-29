@@ -1,4 +1,4 @@
-package com.qwery.platform.spark
+package com.qwery.platform.codegen.spark
 
 import java.io.{File, PrintWriter}
 
@@ -6,7 +6,10 @@ import com.databricks.spark.avro._
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.StorageFormats._
 import com.qwery.models._
-import com.qwery.platform.spark.SparkCodeGenerator.implicits._
+import com.qwery.models.expressions._
+import com.qwery.platform.codegen.spark.SparkCodeGenerator.MainClass
+import com.qwery.platform.codegen.spark.SparkCodeGenerator.implicits._
+import com.qwery.platform.spark.{SparkQweryCompiler, die}
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import com.qwery.util.StringHelper._
@@ -25,55 +28,17 @@ class SparkCodeGenerator(className: String, packageName: String) {
   private val tables = TrieMap[String, TableLike]()
 
   def generate(invokable: Invokable): File = {
-    var imports: List[String] = List(
-      "import org.apache.spark.sql.types.StructType",
-      "import org.apache.spark.sql.{DataFrame, Row, SparkSession}",
-      "import org.slf4j.LoggerFactory"
-    )
-
-    // generate the class definition
     val classDefinition =
-      s"""|package $packageName
-          |
-          |${imports.mkString("\n")}
-          |
-          |class $className() extends Serializable {
-          |  @transient private val logger = LoggerFactory.getLogger(getClass)
-          |
-          |  def start()(implicit spark: SparkSession): Unit = {
-          |     ${invokable.decode}
-          |  }
-          |}
-          |
-          |object $className {
-          |   private[this] val logger = LoggerFactory.getLogger(getClass)
-          |
-          |   def main(args: Array[String]): Unit = {
-          |     implicit val spark: SparkSession = createSparkSession("$className")
-          |     new $className().start()
-          |     spark.stop()
-          |   }
-          |
-          |   def createSparkSession(appName: String): SparkSession = {
-          |     val sparkConf = new SparkConf()
-          |     val builder = SparkSession.builder()
-          |       .appName(appName)
-          |       .config(sparkConf)
-          |       .enableHiveSupport()
-          |
-          |     // first attempt to create a clustered session
-          |     try builder.getOrCreate() catch {
-          |       // on failure, create a local one...
-          |       case _: Throwable =>
-          |         logger.warn(s"$$appName failed to connect to EMR cluster; starting local session...")
-          |         builder.master("local[*]").getOrCreate()
-          |     }
-          |   }
-          |}
-          |""".stripMargin
+      MainClass(className, packageName, invokable, imports = List(
+        "import org.apache.spark.sql.types.StructType",
+        "import org.apache.spark.sql.DataFrame",
+        "import org.apache.spark.sql.Row",
+        "import org.apache.spark.sql.SparkSession",
+        "import org.slf4j.LoggerFactory"
+      )).generate
 
     // write the class to disk
-    val outputFile = new File("temp", s"$className.scala")
+    val outputFile = new File("./temp", s"$className.scala")
     new PrintWriter(outputFile).use(_.println(classDefinition))
     outputFile
   }
@@ -119,7 +84,7 @@ object SparkCodeGenerator {
     * Creates a new Spark Code Generator
     * @param classNameWithPackage the given class and package names (e.g. "com.acme.spark.MyFirstSparkJob")
     * @return a [[SparkCodeGenerator]]
-    * @example {{{ java com.qwery.platform.spark.SparkCodeGenerator ./samples/sql/companylist.sql com.acme.spark.MyFirstSparkJob }}}
+    * @example {{{ java com.qwery.platform.codegen.spark.SparkCodeGenerator ./samples/sql/companylist.sql com.acme.spark.MyFirstSparkJob }}}
     */
   def apply(classNameWithPackage: String): SparkCodeGenerator = {
     classNameWithPackage.lastIndexOfOpt(".").map(classNameWithPackage.splitAt) match {
@@ -143,6 +108,55 @@ object SparkCodeGenerator {
     }
   }
 
+  case class MainClass(className: String,
+                       packageName: String,
+                       invokable: Invokable,
+                       imports: Seq[String]) extends InjectedCode {
+    override def generate: String = {
+      s"""|package $packageName
+          |
+          |${imports.sortBy(s => s).mkString("\n")}
+          |
+          |class $className() extends Serializable {
+          |  @transient private val logger = LoggerFactory.getLogger(getClass)
+          |
+          |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
+          |     ${invokable.decode}
+          |  }
+          |}
+          |
+          |object $className {
+          |   private[this] val logger = LoggerFactory.getLogger(getClass)
+          |
+          |   def main(args: Array[String]): Unit = {
+          |     implicit val spark: SparkSession = createSparkSession("$className")
+          |     new $className().start(args)
+          |     spark.stop()
+          |   }
+          |
+          |   def createSparkSession(appName: String): SparkSession = {
+          |     val sparkConf = new SparkConf()
+          |     val builder = SparkSession.builder()
+          |       .appName(appName)
+          |       .config(sparkConf)
+          |       .enableHiveSupport()
+          |
+          |     // first attempt to create a clustered session
+          |     try builder.getOrCreate() catch {
+          |       // on failure, create a local one...
+          |       case _: Throwable =>
+          |         logger.warn(s"$$appName failed to connect to EMR cluster; starting local session...")
+          |         builder.master("local[*]").getOrCreate()
+          |     }
+          |   }
+          |}
+          |""".stripMargin
+    }
+  }
+
+  /**
+    * implicits classes & conversions
+    */
   object implicits {
 
     final implicit class Decoder(val invokable: Invokable) extends AnyVal {
@@ -166,9 +180,11 @@ object SparkCodeGenerator {
       }
 
       private def decodeSelect(select: Select): String = {
-        """|
-           |
-           |""".stripMargin
+        import select._
+        s"""|SELECT ${fields.mkString(",")}
+            | ${from.map(table => s"FROM $table") || ""}
+            | ${where.map(condition => s"WHERE $condition") || ""}
+            |""".stripMargin
       }
 
       private def decodeSQL(sql: SQL): String = {
@@ -176,6 +192,10 @@ object SparkCodeGenerator {
             |  ${sql.statements.map(stmt => stmt.decode).mkString("\n")}
             |}
             |""".stripMargin
+      }
+
+      private def decodeSetLocalVar(op: SetLocalVariable) = {
+
       }
 
     }
