@@ -1,6 +1,6 @@
 package com.qwery.language
 
-import com.qwery.language.ExpressionParser._
+import com.qwery.language.TokenStreamHelpers._
 import org.scalatest.FunSpec
 
 /**
@@ -16,7 +16,7 @@ class TokenStreamTest extends FunSpec {
     }
 
     it("""should identify "'Hello World'" as a constant""") {
-      assert(TokenStream("'Hello World' = 1").isConstant)
+      assert(TokenStream("'Hello World' = -1").isConstant)
     }
 
     it("""should identify "`Symbol`" as a field""") {

@@ -9,6 +9,7 @@ import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
 
 import scala.io.Source
+import scala.language.postfixOps
 
 /**
   * SQL Language Parser
@@ -461,7 +462,7 @@ trait SQLLanguageParser {
     if (ts nextIf startElem) {
       while (ts.hasNext && !(ts nextIf endElem)) {
         operations = parseNext(ts) :: operations
-        if (ts isnt endElem) ts.expect(";")
+        if (ts isnt endElem) ts expect ";"
       }
     }
     SQL(operations.reverse)
@@ -583,8 +584,7 @@ object SQLLanguageParser {
     * @return the resultant [[Invokable]]
     */
   def parse(sourceCode: String): Invokable = {
-    val parser = new SQLLanguageParser {}
-    parser.iterate(TokenStream(sourceCode)).toList match {
+    new SQLLanguageParser {} iterate TokenStream(sourceCode) toList match {
       case List(SQL(ops)) if ops.size == 1 => ops.head
       case op :: Nil => op
       case ops => SQL(ops)

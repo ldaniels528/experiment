@@ -1,6 +1,7 @@
 package com.qwery.language
 
 import com.qwery.language.ExpressionParser._
+import com.qwery.language.TokenStreamHelpers._
 import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
@@ -12,6 +13,11 @@ import com.qwery.models.expressions.implicits._
 trait ExpressionParser {
   private val processor = new ExpressionTemplateProcessor {}
 
+  /**
+    * Parses a condition from the given stream
+    * @param stream the given [[TokenStream stream]]
+    * @return the option of a [[Condition]]
+    */
   def parseCondition(stream: TokenStream): Option[Condition] = {
     var condition: Option[Condition] = None
     var done: Boolean = false
@@ -29,6 +35,11 @@ trait ExpressionParser {
     condition
   }
 
+  /**
+    * Parses an expression from the given stream
+    * @param stream the given [[TokenStream stream]]
+    * @return the option of a [[Expression]]
+    */
   def parseExpression(stream: TokenStream): Option[Expression] = {
     var expression: Option[Expression] = None
     var done: Boolean = false
@@ -210,10 +221,10 @@ trait ExpressionParser {
       case ts if ts is "(" => parseQuantity(ts)
       // is it a function?
       case ts if ts.isFunction => parseFunction(ts)
-      // is it a join column reference (e.g. "A.Symbol")?
+      // is it a join (aliased) column reference (e.g. "A.Symbol")?
       case ts if ts.isJoinColumn => parseJoinField(ts)
       // is it a field?
-      case ts if ts.isField => toField(ts.next())
+      case ts if ts.isField => toField(ts)
       // unmatched
       case _ => None
     }
@@ -326,7 +337,23 @@ trait ExpressionParser {
   private def parseQuantity(ts: TokenStream): Option[Expression] =
     processor.process("( %e:expr )", ts)(this).expressions.get("expr")
 
-  private def toField(token: Token): Field = token match {
+  /**
+    * Creates a new field from a token stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return a new [[Field field]] instance
+    */
+  protected def toField(stream: TokenStream): Field = stream match {
+    case ts if ts nextIf "*" => AllFields
+    case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse (throw SyntaxException("Invalid field alias", ts))
+    case ts => toField(ts.next())
+  }
+
+  /**
+    * Creates a new field from a token
+    * @param token the given [[Token token]]
+    * @return a new [[Field field]] instance
+    */
+  protected def toField(token: Token): Field = token match {
     case t: AlphaToken => Field(t.text)
     case t: QuotedToken if t.isBackTicks => Field(t.text)
     case t =>
@@ -340,7 +367,6 @@ trait ExpressionParser {
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
-  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
   private val function0s = Map(
     "Cume_Dist" -> Cume_Dist,
     "Current_Date" -> Current_Date
@@ -398,39 +424,5 @@ object ExpressionParser {
     "LIKE" -> LIKE.apply _,
     "RLIKE" -> RLIKE.apply _
   )
-
-  /**
-    * Token Expression Helpers
-    * @param token the given [[Token]]
-    */
-  final implicit class TokenExpressionHelpers(val token: Token) extends AnyVal {
-    @inline def isIdentifier: Boolean = token.matches(identifierRegEx)
-  }
-
-  /**
-    * TokenStream Expression Helpers
-    * @param ts the given [[TokenStream]]
-    */
-  final implicit class TokenStreamExpressionHelpers(val ts: TokenStream) extends AnyVal {
-
-    @inline def isConstant: Boolean = ts.isNumeric || ts.isQuoted
-
-    @inline def isField: Boolean = ts.isBackticks || (ts.isIdentifier && !ts.isFunction)
-
-    @inline def isFunction: Boolean =
-      (for (a <- ts(0); b <- ts(1); _ <- ts(2)) yield a.isIdentifier && (b is "(")).contains(true)
-
-    @inline def isIdentifier: Boolean = ts.peek.exists(_.isIdentifier)
-
-    @inline def isJoinColumn: Boolean =
-      (for (a <- ts(0); b <- ts(1); c <- ts(2)) yield a.isIdentifier && (b is ".") && c.isIdentifier).contains(true)
-  }
-
-  /**
-    * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
-    * @param name the given identifier name
-    * @return true, if the given name qualifies as an identifier
-    */
-  def isIdentifier(name: String): Boolean = name.matches(identifierRegEx)
 
 }

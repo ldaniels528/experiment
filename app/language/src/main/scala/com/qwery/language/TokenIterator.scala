@@ -1,5 +1,7 @@
 package com.qwery.language
 
+import java.lang.String.copyValueOf
+
 /**
   * Token Iterator
   * @author lawrence.daniels@gmail.com
@@ -21,6 +23,10 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     case index => position - index
   }
 
+  /**
+    * Returns true, if at least one more non-whitespace character in the iterator
+    * @return true, if at least one more non-whitespace character in the iterator
+    */
   override def hasNext: Boolean = {
     var last: Int = 0
     do {
@@ -39,7 +45,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
       val outcome = parsers.foldLeft[Option[Token]](None) { (token_?, parser) =>
         if (token_?.isEmpty) parser() else token_?
       }
-      outcome.getOrElse(throw new IllegalArgumentException(String.copyValueOf(ca, pos, ca.length)))
+      outcome.getOrElse(throw new IllegalArgumentException(copyValueOf(ca, pos, ca.length)))
     }
   }
 
@@ -58,7 +64,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   }
 
   def span(length: Int): Option[String] = {
-    if (pos + length < ca.length) Some(String.copyValueOf(ca, pos, length)) else None
+    if (pos + length < ca.length) Some(copyValueOf(ca, pos, length)) else None
   }
 
   @inline
@@ -67,7 +73,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private def parseAlphaNumeric(): Option[Token] = {
     val start = pos
     while (hasMore && (ca(pos).isLetterOrDigit || ca(pos) == '_')) pos += 1
-    if (pos > start) Some(AlphaToken(String.copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
+    if (pos > start) Some(AlphaToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
   }
 
   private def parseCompoundOperators(): Option[Token] = {
@@ -81,16 +87,18 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   }
 
   private def parseNumeric(): Option[Token] = {
+    def accept(ch: Char): Boolean = ca.length > pos + 1 && ca(pos) == ch && ca(pos + 1).isDigit
+
     val start = pos
-    while (hasMore && (ca(pos).isDigit || (ca.length > pos + 1 && ca(pos) == '.' && ca(pos + 1).isDigit))) pos += 1
-    if (pos > start) Some(NumericToken(String.copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
+    while (hasMore && (ca(pos).isDigit || accept('.') || accept('-') || accept('+'))) pos += 1
+    if (pos > start) Option(NumericToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
   }
 
   private def parseOperators(): Option[Token] = {
     if (hasMore && operators.contains(ca(pos))) {
       val start = pos
       pos += 1
-      Some(OperatorToken(ca(start).toString, getLineNumber(start), getColumn(start)))
+      Option(OperatorToken(ca(start).toString, getLineNumber(start), getColumn(start)))
     }
     else None
   }
@@ -108,7 +116,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
       while (hasMore && ca(pos) != ch) pos += 1
       val length = pos - start
       pos += 1
-      Some(QuotedToken(String.copyValueOf(ca, start, length), getLineNumber(start), getColumn(start), ch))
+      Option(QuotedToken(copyValueOf(ca, start, length), getLineNumber(start), getColumn(start), ch))
     }
     else None
   }

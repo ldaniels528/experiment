@@ -87,7 +87,10 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     case tag if tag.startsWith("%k:") => extractKeyword(tag drop 3)
 
     // location or table? (e.g. "TABLE accounts" | "LOCATION './temp/customers/csv')
-    case tag if tag.startsWith("%L") => extractLocationOrTable(tag drop 3)
+    case tag if tag.startsWith("%L:") => extractLocationOrTable(tag drop 3)
+
+    // location or table or sub-query? (e.g. "TABLE accounts" | "LOCATION './temp/customers/csv' | (SELECT ...))
+    case tag if tag.startsWith("%LQ:") => extractLocationOrTableOrSubQuery(tag drop 4)
 
     // numeric? (e.g. "%n:limit" => "100")
     case tag if tag.startsWith("%n:") => extractNumericValue(tag drop 3)
@@ -239,8 +242,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     var joins: List[Join] = Nil
 
     def join(ts: TokenStream, `type`: JoinType): Join = {
-      val params = SQLTemplateParams(ts, "%L:path ON %c:condition")
-      Join(source = params.locations("path"), condition = params.conditions("condition"), `type` = `type`)
+      val params = SQLTemplateParams(ts, "%LQ:source ON %c:condition")
+      Join(
+        source = if (params.locations.contains("source")) params.locations("source") else params.sources("source"),
+        condition = params.conditions("condition"),
+        `type` = `type`)
     }
 
     while (predicates.exists(stream is _)) {
@@ -342,6 +348,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     SQLTemplateParams(columns = Map(name -> columns.reverse))
   }
 
+  /**
+    * Extracts the next LOCATION or TABLE from the stream
+    * @param name the given identifier name (e.g. "query")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
   private def extractLocationOrTable(name: String) = Try {
     val location: Location = stream match {
       case ts if ts nextIf "LOCATION" =>
@@ -359,6 +370,16 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
 
     // return the results
     SQLTemplateParams(locations = Map(name -> aliasedLocation))
+  }
+
+  /**
+    * Extracts the next LOCATION, TABLE or sub-query from the stream
+    * @param name the given identifier name (e.g. "query")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
+  private def extractLocationOrTableOrSubQuery(name: String): Try[SQLTemplateParams] = stream match {
+    case ts if ts is "(" => extractQueryOrVariable(name)
+    case _ => extractLocationOrTable(name)
   }
 
   /**
@@ -555,16 +576,6 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       }
     }
     template
-  }
-
-  /**
-    * Creates a new field from a token
-    * @param tokenStream the given [[TokenStream token stream]]
-    * @return a new [[Field field]] instance
-    */
-  private def toField(tokenStream: TokenStream): Field = tokenStream match {
-    case ts if ts nextIf "*" => AllFields
-    case ts => Field(ts.next().text)
   }
 
 }

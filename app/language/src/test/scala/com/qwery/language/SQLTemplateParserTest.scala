@@ -75,7 +75,7 @@ class SQLTemplateParserTest extends FunSpec {
 
     it("should parse ordered field tags (%o)") {
       verify(text = "field1 DESC, field2 ASC", template = "%o:orderedFields")(SQLTemplateParams(orderedFields = Map(
-        "orderedFields" -> List('field1, 'field2)
+        "orderedFields" -> List(OrderColumn("field1", isAscending = false), OrderColumn("field2", isAscending = true))
       )))
     }
 
