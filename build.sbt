@@ -147,6 +147,30 @@ lazy val platform_spark = (project in file("./app/platform/spark")).
       "org.apache.spark" %% "spark-streaming" % sparkVersion
     ))
 
+lazy val platform_sparkcode = (project in file("./app/platform/sparkcode")).
+  dependsOn(platform_common, platform_spark).
+  settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "qwery-platform-spark-code-gen",
+    organization := "com.qwery",
+    description := "A SQL-like query language for generating Spark code",
+    version := appVersion,
+    scalaVersion := scalaJvmVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    coverageEnabled := true,
+    libraryDependencies ++= Seq(
+      // Spark
+      "com.databricks" %% "spark-avro" % "4.0.0",
+      "com.databricks" %% "spark-csv" % "1.5.0",
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.apache.spark" %% "spark-hive" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-streaming" % sparkVersion
+    ))
+
 /////////////////////////////////////////////////////////////////////////////////
 //      Publishing
 /////////////////////////////////////////////////////////////////////////////////

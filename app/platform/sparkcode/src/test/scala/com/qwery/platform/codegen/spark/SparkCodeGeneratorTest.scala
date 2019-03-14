@@ -10,7 +10,7 @@ import org.scalatest.FunSpec
   */
 class SparkCodeGeneratorTest extends FunSpec {
 
-  describe(getClass.getSimpleName) {
+  describe(classOf[SparkCodeGenerator].getSimpleName) {
 
     it("should generate a class file") {
       import com.qwery.util.OptionHelper.Implicits.Risky._
