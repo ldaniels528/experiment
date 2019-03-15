@@ -85,6 +85,12 @@ class SQLTemplateParserTest extends FunSpec {
       )))
     }
 
+    it("should parse properties tags (%p)") {
+      verify(text = "('skip.header.line.count'='1', 'transient_lastDdlTime'='1548444883')", template = "%p:props")(SQLTemplateParams(properties = Map(
+        "props" -> Map("skip.header.line.count" -> "1", "transient_lastDdlTime"-> "1548444883")
+      )))
+    }
+
     it("should parse direct query tags (%Q)") {
       verify(text = "SELECT firstName, lastName FROM AddressBook", template = "%Q:query")(SQLTemplateParams(sources = Map(
         "query" -> Select(fields = List('firstName, 'lastName), from = Table("AddressBook"))

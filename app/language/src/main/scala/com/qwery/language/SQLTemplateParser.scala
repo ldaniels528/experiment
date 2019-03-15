@@ -104,6 +104,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     // parameters? (e.g. "%P:params" => "name STRING, age INTEGER, dob DATE")
     case tag if tag.startsWith("%P:") => extractListOfParameters(tag drop 3)
 
+    // properties?
+    case tag if tag.startsWith("%p:") => extractProperties(tag drop 3)
+
     // indirect query source (queries, tables and variables)? (e.g. "%q:source" => "AddressBook" | "( SELECT * FROM AddressBook )" | "@addressBook")
     case tag if tag.startsWith("%q:") => extractQueryTableOrVariable(tag drop 3)
 
@@ -450,6 +453,35 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     SQLTemplateParams(orderedFields = Map(name -> sortFields.reverse))
   }
 
+  private def extractProperties(name: String) = Try {
+
+    def extractKeyOrValue(): String = {
+      if (!stream.hasNext || !stream.isQuoted) throw SyntaxException("Properties: quoted value expected", stream)
+      else stream.next().text
+    }
+
+    def extractKVP(): (String, String) = {
+      val key = extractKeyOrValue()
+      stream expect "="
+      val value = extractKeyOrValue()
+      key -> value
+    }
+
+    // gather the properties
+    var props = Map[String, String]()
+    var done = false
+    stream expect "("
+    do {
+      done = stream is ")"
+      if (!done) {
+        props = props + extractKVP()
+        if (stream isnt ")") stream expect ","
+      }
+    } while (!done)
+    stream expect ")"
+    SQLTemplateParams(properties = Map(name -> props))
+  }
+
   /**
     * Parses a source expression; either a direct or via query
     * @param name the named identifier
@@ -572,6 +604,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       stream match {
         case ts if ts nextIf "HEADERS" => template += SQLTemplateParams(ts, s"%C($name.headers|ON|OFF)")
         case ts if ts nextIf "NULL" => template += SQLTemplateParams(ts, s"VALUES AS %a:$name.nullValue")
+        case ts if ts nextIf "SERDEPROPERTIES" => template += SQLTemplateParams(ts, s"%p:$name.serde")
+        case ts if ts nextIf "TBLPROPERTIES" => template += SQLTemplateParams(ts, s"%p:$name.table")
         case ts => ts.die("Invalid WITH expression")
       }
     }

@@ -360,7 +360,6 @@ object SparkQweryCompiler {
         // aggregate the cases into a single operation
         val caseAgg = model.conditions match {
           case first :: remaining =>
-            // aggregate the cases into a single operation
             val initialWhen = when(first.condition.compile, first.result.compile)
             remaining.foldLeft[SparkColumn](initialWhen) { case (agg, Case.When(condition, result)) =>
               agg.when(condition.compile, result.compile)

@@ -68,7 +68,7 @@ case class Subtract(a: Expression, b: Expression) extends Expression
   * @author lawrence.daniels@gmail.com
   */
 object Expression {
-  val validTypes = Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "UUID")
+  val validTypes = Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "Timestamp", "UUID")
   var ticker = new AtomicInteger()
 
   def isValidType(typeName: String): Boolean = validTypes.exists(_ equalsIgnoreCase typeName)
