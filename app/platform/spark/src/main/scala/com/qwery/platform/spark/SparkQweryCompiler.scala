@@ -287,10 +287,12 @@ object SparkQweryCompiler {
       * @param expression the given [[Expression]]
       */
     final implicit class ExpressionCompiler(val expression: Expression) extends AnyVal {
+
       def compile(implicit rc: SparkQweryContext): SparkColumn = {
         import com.qwery.models.expressions._
         import SQLFunction._
         import org.apache.spark.sql.functions._
+
         val result = expression match {
           case Abs(a) => abs(a.compile)
           case Add(a, b) => a.compile + b.compile
@@ -304,6 +306,7 @@ object SparkQweryCompiler {
           case Base64(a) => base64(a.compile)
           case BasicField(name) => col(name)
           case Bin(a) => bin(a.compile)
+          case op: Case => compileCase(op)
           case Cast(value, toType) => value.compile.cast(toType.compile)
           case Cbrt(a) => cbrt(a.compile)
           case Ceil(a) => ceil(a.compile)
@@ -349,6 +352,24 @@ object SparkQweryCompiler {
           case unknown => die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
         }
         result.as(expression)
+      }
+
+      private def compileCase(model: Case)(implicit rc: SparkQweryContext): SparkColumn = {
+        import org.apache.spark.sql.functions._
+
+        // aggregate the cases into a single operation
+        val caseAgg = model.conditions match {
+          case first :: remaining =>
+            // aggregate the cases into a single operation
+            val initialWhen = when(first.condition.compile, first.result.compile)
+            remaining.foldLeft[SparkColumn](initialWhen) { case (agg, Case.When(condition, result)) =>
+              agg.when(condition.compile, result.compile)
+            }
+          case _ => die("At least one condition must be specified in CASE statements")
+        }
+
+        // optionally, return the case-when with an otherwise clause
+        model.otherwise.map(op => caseAgg.otherwise(op.compile)) getOrElse caseAgg
       }
     }
 

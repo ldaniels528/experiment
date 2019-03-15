@@ -1,18 +1,19 @@
 package com.qwery.platform.codegen.spark
 
 import com.qwery.language.SQLLanguageParser
+import com.qwery.platform.spark.{SparkQweryCompiler, SparkQweryContext}
 import org.scalatest.FunSpec
 
 /**
-  * AdBook Grammar Test
+  * AdBook Ingestion Test
   * @author lawrence.daniels@gmail.com
   */
-class AdBookGrammarTest extends FunSpec {
+class AdBookIngestTest extends FunSpec {
 
   describe(classOf[SQLLanguageParser].getSimpleName) {
 
     it("should parse the AdBook SQL script") {
-      SQLLanguageParser.parse(
+      val code = SQLLanguageParser.parse(
         """|{
            |select max(coalesce(ab.source, dfp.source)) as source
            |        ,coalesce(ab.client_id, dfp.client_id) as client_id
@@ -21,7 +22,7 @@ class AdBookGrammarTest extends FunSpec {
            |        ,max(coalesce(ab.revenue_category, dfp.revenue_category)) as revenue_category
            |        ,max(ab.brand) as brand
            |from (
-           |        select 'DFP' as source
+           |     select 'DFP' as source
            |        , advertiser_id as client_id
            |        , -1 as agency_id
            |        , advertiser_name as client_name
@@ -42,9 +43,9 @@ class AdBookGrammarTest extends FunSpec {
            |         ) as revenue_category
            |        ,'' as brand
            |        ,'' as src_created_ts_est
-           |        from kbb_lkp_dfp_o1_advertiser as src
-           |        where src.advertiser_id is not null
-           |        ) as dfp
+           |     from kbb_lkp_dfp_o1_advertiser as src
+           |     where src.advertiser_id is not null
+           |) as dfp
            |full join (
            |    select 'AB' as source
            |        ,client_id as client_id
@@ -53,13 +54,19 @@ class AdBookGrammarTest extends FunSpec {
            |        ,max(case when lower(client_attribute_group) = 'revenue category' then client_attribute_name end) as revenue_category
            |        ,max(case when lower(client_attribute_group) = 'brand' then client_attribute_name end) as brand
            |    from kbb_ab_client
-           |    WHERE lower(client_type) = 'client'
+           |    where lower(client_type) = 'client'
            |    group by client_id,client_name,client_since
            |) as ab
            |on dfp.client_id = ab.client_id
            |group by dfp.client_id, ab.cli
            |}
            |""".stripMargin)
+
+      info(s"parsed code: $code")
+      implicit val rc: SparkQweryContext = new SparkQweryContext()
+      val compiler = new SparkQweryCompiler {}
+      val df = compiler.compile(code).execute(input = None)
+      df.foreach(_.show(5))
     }
 
   }
