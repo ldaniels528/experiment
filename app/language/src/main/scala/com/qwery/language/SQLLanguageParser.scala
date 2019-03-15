@@ -196,11 +196,14 @@ trait SQLLanguageParser {
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
       fieldDelimiter = params.atoms.get("delimiter"),
-      inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
-      outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
+      inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
+      location = params.atoms.getOrElse("path", ts.die("No location specified")),
       nullValue = params.atoms.get("props.nullValue"),
-      location = params.atoms.getOrElse("path", ts.die("No location specified"))
+      outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
+      partitionColumns = params.columns.getOrElse("partitions", Nil),
+      properties = params.properties.getOrElse("props.table", Map.empty),
+      serdeProperties = params.properties.getOrElse("props.serde", Map.empty)
     ))
   }
 

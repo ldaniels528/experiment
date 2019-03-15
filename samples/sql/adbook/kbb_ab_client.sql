@@ -52,8 +52,10 @@ begin
     )
     row format delimited
     stored as inputformat 'CSV'
+    with headers on
     with tblproperties ('skip.header.line.count'='1', 'transient_lastDdlTime'='1548444883')
     with serdeproperties ('quoteChar'='\"', 'separatorChar'=',')
-    location 's3://reference-kbb-raw-dev/adbook/client';
+    --location 's3://reference-kbb-raw-dev/adbook/client';
+    location './temp/AdBook/Client/';
 
 end;

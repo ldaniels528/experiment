@@ -10,6 +10,7 @@ import com.qwery.models.expressions._
 import com.qwery.platform.codegen.spark.SparkCodeGenerator.MainClass
 import com.qwery.platform.codegen.spark.SparkCodeGenerator.implicits._
 import com.qwery.platform.spark.{SparkQweryCompiler, die}
+import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import com.qwery.util.StringHelper._
@@ -56,7 +57,7 @@ class SparkCodeGenerator(className: String, packageName: String) {
         table.inputFormat.orFail("Table input format was not specified") match {
           case AVRO => reader.avro(table.location)
           case CSV => reader.schema(createSchema(table.columns)).csv(table.location)
-          case JDBC => reader.jdbc(table.location, table.name, table.properties || new java.util.Properties())
+          case JDBC => reader.jdbc(table.location, table.name, table.properties.toProperties)
           case JSON => reader.json(table.location)
           case PARQUET => reader.parquet(table.location)
           case ORC => reader.orc(table.location)

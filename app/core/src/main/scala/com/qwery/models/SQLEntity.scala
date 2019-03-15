@@ -81,14 +81,16 @@ object StorageFormats extends Enumeration {
   */
 case class Table(name: String,
                  columns: List[Column],
+                 location: String,
                  fieldDelimiter: Option[String] = None,
                  fieldTerminator: Option[String] = None,
                  headersIncluded: Option[Boolean] = None,
                  nullValue: Option[String] = None,
-                 properties: Option[java.util.Properties] = None,
                  inputFormat: Option[StorageFormat] = None,
                  outputFormat: Option[StorageFormat] = None,
-                 location: String) extends TableLike
+                 partitionColumns: List[Column] = Nil,
+                 properties: Map[String, String] = Map.empty,
+                 serdeProperties: Map[String, String] = Map.empty) extends TableLike
 
 /**
   * Table Companion

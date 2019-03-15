@@ -104,7 +104,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     // parameters? (e.g. "%P:params" => "name STRING, age INTEGER, dob DATE")
     case tag if tag.startsWith("%P:") => extractListOfParameters(tag drop 3)
 
-    // properties?
+    // properties? (e.g. "('quoteChar'='~', 'separatorChar'=',')")
     case tag if tag.startsWith("%p:") => extractProperties(tag drop 3)
 
     // indirect query source (queries, tables and variables)? (e.g. "%q:source" => "AddressBook" | "( SELECT * FROM AddressBook )" | "@addressBook")
@@ -453,6 +453,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     SQLTemplateParams(orderedFields = Map(name -> sortFields.reverse))
   }
 
+  /**
+    * Extracts properties from the token stream
+    * @param name the given identifier name (e.g. "serdeProperties")
+    * @return a [[SQLTemplateParams template]] representing the parsed outcome
+    */
   private def extractProperties(name: String) = Try {
 
     def extractKeyOrValue(): String = {

@@ -11,6 +11,7 @@ import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
 import com.qwery.platform.spark.SparkQweryCompiler.Implicits._
 import com.qwery.platform.spark.SparkSelect.{SparkJoin, SparkUnion}
+import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.functions.{asc, desc}
 import org.apache.spark.sql.types.{DataType, StructField}
@@ -104,7 +105,7 @@ object SparkQweryCompiler {
         table.inputFormat.orFail("Table input format was not specified") match {
           case AVRO => reader.avro(table.location)
           case CSV => reader.schema(rc.createSchema(table.columns)).csv(table.location)
-          case JDBC => reader.jdbc(table.location, table.name, table.properties || new java.util.Properties())
+          case JDBC => reader.jdbc(table.location, table.name, table.properties.toProperties)
           case JSON => reader.json(table.location)
           case PARQUET => reader.parquet(table.location)
           case ORC => reader.orc(table.location)
@@ -139,13 +140,13 @@ object SparkQweryCompiler {
       table.outputFormat.orFail("Table output format was not specified") match {
         case AVRO => writer.avro(table.location)
         case CSV => writer.csv(table.location)
-        case JDBC => writer.jdbc(table.location, table.name, table.properties || new java.util.Properties())
+        case JDBC => writer.jdbc(table.location, table.name, table.properties.toProperties)
         case JSON => writer.json(table.location)
         case PARQUET => writer.parquet(table.location)
         case ORC => writer.orc(table.location)
         case format => die(s"Storage format '$format' is not supported for writing")
       }
-    case view: View => die(s"View '${view.name}' cannot be modified")
+    case view: View => die(s"View '${view.name}' is read-only")
   }
 
   /**
@@ -258,6 +259,8 @@ object SparkQweryCompiler {
             table.fieldDelimiter.foreach(delimiter => dfr = dfr.option("delimiter", delimiter))
             table.headersIncluded.foreach(enabled => dfr = dfr.option("header", enabled.toString))
             table.nullValue.foreach(value => dfr = dfr.option("nullValue", value))
+            for ((key, value) <- table.properties ++ table.serdeProperties) dfr.option(key, value)
+            logger.info(s"Table ${table.name} read options: ${table.properties}")
           case _ =>
         }
         dfr
@@ -276,6 +279,8 @@ object SparkQweryCompiler {
             table.fieldDelimiter.foreach(delimiter => dfw = dfw.option("delimiter", delimiter))
             table.headersIncluded.foreach(enabled => dfw = dfw.option("header", enabled.toString))
             table.nullValue.foreach(value => dfw = dfw.option("nullValue", value))
+            for ((key, value) <- table.properties ++ table.serdeProperties) dfw.option(key, value)
+            logger.info(s"Table ${table.name} write options: ${table.properties}")
           case _ =>
         }
         dfw

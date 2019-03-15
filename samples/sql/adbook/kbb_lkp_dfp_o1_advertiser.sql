@@ -12,6 +12,7 @@ begin
         last_processed_ts_est Timestamp
     )
     stored as inputformat parquet
-    location 's3://kbb-etl-edp/data/parquet/kbb_lkp_dfp_o1_advertiser/';
+    --location 's3://kbb-etl-edp/data/parquet/kbb_lkp_dfp_o1_advertiser/';
+    location './temp/kbb_lkp_dfp_o1_advertiser/';
 
 end;
