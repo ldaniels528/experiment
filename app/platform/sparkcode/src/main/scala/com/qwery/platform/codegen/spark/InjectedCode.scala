@@ -1,7 +1,5 @@
 package com.qwery.platform.codegen.spark
 
-import com.qwery.models.Invokable
-
 trait InjectedCode {
   def generate: String
 }
