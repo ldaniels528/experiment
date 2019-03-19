@@ -83,8 +83,9 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
 object SQLTemplateParams {
 
   /**
-    * Creates a new SQL Language Parser instance
-    * @param ts the given [[TokenStream token stream]]
+    * Creates a new SQL template parameters instance prepopulated with the tokens parsed via the given template
+    * @param ts       the given [[TokenStream token stream]]
+    * @param template the given template (e.g. "MAIN PROGRAM %a:name %W:props ?AS %N:code")
     * @return the [[SQLTemplateParser template parser]]
     */
   def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLTemplateParser(ts).process(cleanup(template))

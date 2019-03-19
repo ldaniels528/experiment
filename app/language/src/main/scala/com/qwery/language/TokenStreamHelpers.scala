@@ -1,5 +1,7 @@
 package com.qwery.language
 
+import com.qwery.models.CodeLocation
+
 /**
   * Token Stream Helpers
   * @author lawrence.daniels@gmail.com
@@ -8,25 +10,20 @@ object TokenStreamHelpers {
   private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
 
   /**
-    * Indicates whether the given name qualifies as an identifier (e.g. "customerName")
-    * @param name the given identifier name
-    * @return true, if the given name qualifies as an identifier
-    */
-  def isIdentifier(name: String): Boolean = name.matches(identifierRegEx)
-
-  /**
-    * Token Expression Helpers
+    * Token Extensions
     * @param token the given [[Token]]
     */
-  final implicit class TokenExpressionHelpers(val token: Token) extends AnyVal {
+  final implicit class TokenExtensions[A <: Token](val token: A) extends AnyVal {
+
     @inline def isIdentifier: Boolean = token.matches(identifierRegEx)
+
   }
 
   /**
-    * TokenStream Expression Helpers
+    * TokenStream Extensions
     * @param ts the given [[TokenStream]]
     */
-  final implicit class TokenStreamExpressionHelpers(val ts: TokenStream) extends AnyVal {
+  final implicit class TokenStreamExtensions(val ts: TokenStream) extends AnyVal {
 
     @inline def isConstant: Boolean = ts.isNumeric || ts.isQuoted
 
@@ -39,6 +36,9 @@ object TokenStreamHelpers {
 
     @inline def isJoinColumn: Boolean =
       (for (a <- ts(0); b <- ts(1); c <- ts(2)) yield a.isIdentifier && (b is ".") && c.isIdentifier).contains(true)
+
+    @inline def toCodeLocation: Option[CodeLocation] = ts.peek.map(t => CodeLocation(lineNo = t.lineNo, columnNo = t.columnNo))
+
   }
 
 }

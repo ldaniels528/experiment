@@ -6,11 +6,26 @@ package com.qwery.language
   */
 case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](tokens) {
 
+  /**
+    * Returns true, if the given text (case insensitive) matches the next token in the stream
+    * @param text the given text (e.g. "SELECT")
+    * @return true, if the given text (case insensitive) matches the next token in the stream
+    */
   def apply(text: String): Boolean = peek.exists(_.text equalsIgnoreCase text)
 
+  /**
+    * Throws an exception if the next token(s) in the stream does not match the given text
+    * @param text the given text (e.g. "SELECT * FROM")
+    * @return a [[TokenStream self reference]]
+    */
   def expect(text: => String): this.type =
     if (!nextOption.exists(_.is(text))) throw SyntaxException(s"Expected keyword or symbol '$text'", this) else this
 
+  /**
+    * Returns true, if the given text (case insensitive) matches the next token(s) in the stream
+    * @param text the given text (e.g. "SELECT * FROM")
+    * @return true, if the given text (case insensitive) matches the next token(s) in the stream
+    */
   def is(text: => String): Boolean = {
     if (text contains " ") {
       val words = text.trim.split("[ ]").map(_.trim).toSeq
@@ -20,6 +35,11 @@ case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](toke
     else peek.exists(_.text equalsIgnoreCase text)
   }
 
+  /**
+    * The inverse of [[is()]]
+    * @param text the given text (e.g. "SELECT * FROM")
+    * @return true, if the given text (case insensitive) does not match the next token(s) in the stream
+    */
   def isnt(text: => String): Boolean = !is(text)
 
   def isBackticks: Boolean = peek.exists {

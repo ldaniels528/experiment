@@ -1,9 +1,9 @@
 package com.qwery.platform.spark
 
-import com.qwery.models.Aliasable
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models.expressions.NamedExpression._
 import com.qwery.models.expressions._
+import com.qwery.models.{Aliasable, CodeLocation}
 import com.qwery.platform.spark.SparkSelect.SparkJoin
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.functions.col
@@ -20,12 +20,17 @@ case class SparkSelect(fields: Seq[(SparkColumn, Boolean, Option[String])],
                        groupBy: Seq[SparkColumn],
                        orderBy: Seq[SparkColumn],
                        where: Option[Condition],
-                       limit: Option[Int])
+                       limit: Option[Int],
+                       codeLocation: Option[CodeLocation] = None)
   extends SparkInvokable with Aliasable {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
-    from.flatMap(_.execute(input)) map { df =>
-      pipeline.foldLeft(df) { (df0, f) => f(df0) }
+    try
+      from.flatMap(_.execute(input)) map { df => pipeline.foldLeft[DataFrame](df) { (df0, f) => f(df0) } }
+    catch {
+      case e: Exception =>
+        throw new RuntimeException(s"${e.getMessage} ${codeLocation.map(_.toString) getOrElse ""}", e)
     }
   }
 
@@ -77,8 +82,22 @@ case class SparkSelect(fields: Seq[(SparkColumn, Boolean, Option[String])],
     * @return the resultant [[DataFrame]]
     */
   def processJoins(df0: DataFrame)(implicit rc: SparkQweryContext): DataFrame = {
-    joins.foldLeft(df0) { case (dfA, SparkJoin(source, condition, kind)) =>
-      source.execute(input = None) map { dfB => dfA.join(dfB, condition, kind.toString.toLowerCase) } getOrElse dfA
+    import SparkAliasable._
+
+    joins.foldLeft(df0) { case (dfA, SparkJoin(source, condition, joinType)) =>
+      source.execute(input = None) map { dfB =>
+        logger.info("*" * 80)
+        logger.info(s"dfA: ${alias.orNull}")
+        logger.info(s"dfB: ${source.getAlias.orNull}")
+
+        dfA.show(5)
+        dfB.show(5)
+
+        val dfA0 = alias.map(dfA.as) getOrElse dfA
+        val dfB0 = source.getAlias.map(alias => dfB.as(alias)) getOrElse dfB
+
+        dfA0.join(dfB0, condition, joinType.toString.toLowerCase)
+      } getOrElse dfA
     }
   }
 
@@ -123,14 +142,15 @@ object SparkSelect {
   case class SparkJoin(source: SparkInvokable, condition: SparkColumn, `type`: JoinType)
 
   /**
-    * Represents a Union operation
+    * Represents a UNION operation
     * @param query0     the first query
     * @param query1     the second query
     * @param isDistinct indicates whether the resulting records should be a distinct set.
     */
   case class SparkUnion(query0: SparkInvokable,
                         query1: SparkInvokable,
-                        isDistinct: Boolean) extends SparkInvokable with Aliasable {
+                        isDistinct: Boolean,
+                        codeLocation: Option[CodeLocation] = None) extends SparkInvokable with Aliasable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       val df = for {
         df0 <- query0.execute(input)

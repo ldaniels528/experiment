@@ -308,9 +308,9 @@ trait ExpressionParser {
     * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[Field]]
     */
-  def parseJoinField(ts: TokenStream): Option[Field] = {
+  def parseJoinField(ts: TokenStream): Option[JoinField] = {
     val results = processor.process("%a:alias . %a:name", ts)(this)
-    for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield Field(name).as(alias)
+    for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield JoinField(name, tableAlias = Option(alias))
   }
 
   /**

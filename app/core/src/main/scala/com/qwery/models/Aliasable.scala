@@ -48,6 +48,11 @@ object Aliasable {
       case aliasable: Aliasable => aliasable.as(alias).asInstanceOf[T]
       case _ => die(s"Instance type '${invokable.getClass.getSimpleName}' does not support aliases")
     }
+
+    @inline def getAlias: Option[String] = invokable match {
+      case aliasable: Aliasable => aliasable.alias
+      case _ => None
+    }
   }
 
 }

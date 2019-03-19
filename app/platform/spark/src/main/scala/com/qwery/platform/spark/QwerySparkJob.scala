@@ -10,6 +10,7 @@ import com.qwery.util.ResourceHelper._
   * @author lawrence.daniels@gmail.com
   */
 object QwerySparkJob {
+  private val defaultFileName = "/boot.sql"
 
   /**
     * For stand alone operation
@@ -23,12 +24,12 @@ object QwerySparkJob {
     args.toList match {
       case path :: jobArgs =>
         val sql = SQLLanguageParser.parse(new File(path))
-        new SparkQweryCompiler {}.compileAndRun(sql, args = jobArgs)
+        new SparkQweryCompiler {}.compileAndRun(fileName = path, sql, args = jobArgs)
       case _ =>
-        "/boot.sql".asURL match {
+        defaultFileName.asURL match {
           case Some(url) =>
             val sql = SQLLanguageParser.parse(url)
-            new SparkQweryCompiler {}.compileAndRun(sql, args = Nil)
+            new SparkQweryCompiler {}.compileAndRun(fileName = defaultFileName, sql, args = Nil)
           case None =>
             die(s"java ${getClass.getName.replaceAllLiterally("$", "")} <scriptFile> [<arg1> .. <argN>]")
         }

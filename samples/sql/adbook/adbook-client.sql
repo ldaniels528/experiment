@@ -62,7 +62,7 @@ as begin
             ,max(case when lower(client_attribute_group) = 'brand' then client_attribute_name end) as brand
         from kbb_ab_client
         where lower(client_type) = 'client'
-        group by client_id,client_name,client_since
+        group by client_id,client_type,client_name,client_since
     ) as ab
     on dfp.client_id = ab.client_id
     group by dfp.client_id, ab.cli;

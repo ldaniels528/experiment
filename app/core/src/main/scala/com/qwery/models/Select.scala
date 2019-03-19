@@ -1,7 +1,7 @@
 package com.qwery.models
 
 import com.qwery.models.JoinTypes.JoinType
-import com.qwery.models.expressions.{Condition, Expression, Field}
+import com.qwery.models.expressions.{AllFields, Condition, Expression, Field}
 
 /**
   * Represents a SQL-like SELECT statement
@@ -13,13 +13,14 @@ import com.qwery.models.expressions.{Condition, Expression, Field}
   * @param where   the optional [[Condition where clause]]
   * @param limit   the optional maximum number of results
   */
-case class Select(fields: Seq[Expression],
+case class Select(fields: Seq[Expression] = Seq(AllFields),
                   from: Option[Invokable] = None,
                   joins: Seq[Join] = Nil,
                   groupBy: Seq[Field] = Nil,
                   orderBy: Seq[OrderColumn] = Nil,
                   where: Option[Condition] = None,
-                  limit: Option[Int] = None) extends Invokable with Aliasable
+                  limit: Option[Int] = None,
+                  codeLocation: Option[CodeLocation] = None) extends Invokable with Aliasable
 
 /**
   * Represents a JOIN clause
@@ -55,4 +56,7 @@ case class OrderColumn(name: String, isAscending: Boolean) extends Aliasable {
   * @param query1     the second query
   * @param isDistinct indicates wthether the results should be distinct
   */
-case class Union(query0: Invokable, query1: Invokable, isDistinct: Boolean = false) extends Invokable with Aliasable
+case class Union(query0: Invokable,
+                 query1: Invokable,
+                 isDistinct: Boolean = false,
+                 codeLocation: Option[CodeLocation] = None) extends Invokable with Aliasable

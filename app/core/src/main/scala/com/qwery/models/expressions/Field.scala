@@ -27,7 +27,7 @@ object Field {
   def apply(descriptor: String): Field = descriptor.split('.').toList match {
     case "*" :: Nil => AllFields
     case name :: Nil => BasicField(name)
-    case alias :: name :: Nil => BasicField(name).as(alias)
+    case alias :: name :: Nil => JoinField(name, tableAlias = Some(alias))
     case _ => throw new IllegalArgumentException(s"Invalid field reference '$descriptor'")
   }
 
@@ -49,4 +49,9 @@ case object AllFields extends Field {
   */
 case class BasicField(name: String) extends Field
 
+/**
+  * Represents a joining field
+  * @param name the name of the field
+  */
+case class JoinField(name: String, tableAlias: Option[String] = None) extends Field
 

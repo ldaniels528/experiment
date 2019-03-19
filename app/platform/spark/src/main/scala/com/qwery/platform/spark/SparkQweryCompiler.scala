@@ -15,7 +15,7 @@ import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.functions.{asc, desc}
 import org.apache.spark.sql.types.{DataType, StructField}
-import org.apache.spark.sql.{DataFrame, DataFrameReader, DataFrameWriter, SaveMode, Column => SparkColumn}
+import org.apache.spark.sql.{ColumnName, DataFrame, DataFrameReader, DataFrameWriter, SaveMode, Column => SparkColumn}
 import org.slf4j.LoggerFactory
 
 /**
@@ -55,7 +55,7 @@ trait SparkQweryCompiler {
     * @return the resulting [[SparkInvokable operation]]
     */
   @throws[IllegalArgumentException]
-  def compileAndRun(statement: Invokable, args: Seq[String])(implicit rc: SparkQweryContext): Unit = {
+  def compileAndRun(fileName: String, statement: Invokable, args: Seq[String])(implicit rc: SparkQweryContext): Unit = {
     statement.compile.execute(input = None)
     ()
   }
@@ -330,6 +330,7 @@ object SparkQweryCompiler {
           case If(condition, trueValue, falseValue) =>
             val (cond, yes, no) = (condition.compile, trueValue.compile, falseValue.compile)
             when(cond, yes).when(!cond, no)
+          case JoinField(name, tableAlias) => new ColumnName(tableAlias.map(alias => s"$alias.$name") getOrElse name)
           case Length(a) => length(a.compile)
           case Literal(value) => lit(value)
           case LocalVariableRef(name) => lit(rc.getVariable(name))
@@ -410,12 +411,14 @@ object SparkQweryCompiler {
           SparkMainProgram(name, code.compile, args, env, hive, streaming)
         case ref@ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.asAny)).as(ref.alias)
         case Return(value) => SparkReturn(value = value.map(_.compile))
-        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit) =>
-          SparkSelect(fields = fields.map {
-            case a: Aggregation => (a.compile, a.isAggregate, a.alias)
-            case e => (e.compile, false, e.alias)
-          }, from = from.map(_.compile), joins = joins.map(_.compile), groupBy = groupBy.map(_.compile),
-            orderBy = orderBy.map(_.compile), where = where, limit).as(ref.alias)
+        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit, codeLocation) =>
+          SparkSelect(
+            from = from.map(_.compile), groupBy = groupBy.map(_.compile), joins = joins.map(_.compile), limit = limit,
+            orderBy = orderBy.map(_.compile), where = where, codeLocation = codeLocation,
+            fields = fields.map {
+              case a: Aggregation => (a.compile, a.isAggregate, a.alias)
+              case e => (e.compile, false, e.alias)
+            }).as(ref.alias)
         case SetLocalVariable(name, expression) => SparkSetLocalVariable(name, value = (_: SparkQweryContext) => expression.asAny)
         case SetRowVariable(name, dataset) => SparkSetRowVariable(name, value = dataset.compile)
         case SQL(ops) => SparkSQL(ops.map(_.compile))
@@ -423,8 +426,8 @@ object SparkQweryCompiler {
         case ref@TableRef(name) => ReadTableOrViewByReference(name).as(ref.alias)
         case Update(table, assignments, where) =>
           SparkUpdate(source = table.compile, assignments, where = where.map(_.compile))
-        case ref@Union(query0, query1, distinct) =>
-          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct).as(ref.alias)
+        case ref@Union(query0, query1, distinct, codeLocation) =>
+          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct, codeLocation = codeLocation).as(ref.alias)
         case ref@RowSetVariableRef(name) => ReadRowSetByReference(name).as(ref.alias)
         case unknown => die(s"Unhandled operation '$unknown'")
       }
@@ -475,7 +478,7 @@ object SparkQweryCompiler {
         * @return the [[Table table]]
         */
       @inline def getQuery(implicit rc: SparkQweryContext): Option[DataFrame] = location match {
-        case LocationRef(path) => die("Reading from locations is not yet supported")
+        case LocationRef(path) => die(s"Reading from locations ($path) is not yet supported")
         case ref@TableRef(name) =>
           val df = read(rc.getTableOrView(name))
           val result = (for {alias <- ref.alias; ndf <- df} yield ndf.as(alias)) ?? df

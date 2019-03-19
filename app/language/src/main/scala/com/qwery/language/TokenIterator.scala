@@ -18,7 +18,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
 
   def getLineNumber(position: Int): Int = 1 + input.take(position).count(_ == '\n')
 
-  def getColumn(position: Int): Int = 1 + input.take(position).lastIndexOf('\n') match {
+  def getColumnNumber(position: Int): Int = 1 + input.take(position).lastIndexOf('\n') match {
     case -1 => position
     case index => position - index
   }
@@ -73,13 +73,13 @@ case class TokenIterator(input: String) extends Iterator[Token] {
   private def parseAlphaNumeric(): Option[Token] = {
     val start = pos
     while (hasMore && (ca(pos).isLetterOrDigit || ca(pos) == '_')) pos += 1
-    if (pos > start) Some(AlphaToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
+    if (pos > start) Some(AlphaToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumnNumber(start))) else None
   }
 
   private def parseCompoundOperators(): Option[Token] = {
     if (hasMore && span(2).exists(compoundOperators.contains)) {
       val start = pos
-      val result = span(2).map(OperatorToken(_, getLineNumber(start), getColumn(start)))
+      val result = span(2).map(OperatorToken(_, getLineNumber(start), getColumnNumber(start)))
       pos += 2
       result
     }
@@ -91,14 +91,14 @@ case class TokenIterator(input: String) extends Iterator[Token] {
 
     val start = pos
     while (hasMore && (ca(pos).isDigit || accept('.') || accept('-') || accept('+'))) pos += 1
-    if (pos > start) Option(NumericToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumn(start))) else None
+    if (pos > start) Option(NumericToken(copyValueOf(ca, start, pos - start), getLineNumber(start), getColumnNumber(start))) else None
   }
 
   private def parseOperators(): Option[Token] = {
     if (hasMore && operators.contains(ca(pos))) {
       val start = pos
       pos += 1
-      Option(OperatorToken(ca(start).toString, getLineNumber(start), getColumn(start)))
+      Option(OperatorToken(ca(start).toString, getLineNumber(start), getColumnNumber(start)))
     }
     else None
   }
@@ -116,7 +116,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
       while (hasMore && ca(pos) != ch) pos += 1
       val length = pos - start
       pos += 1
-      Option(QuotedToken(copyValueOf(ca, start, length), getLineNumber(start), getColumn(start), ch))
+      Option(QuotedToken(copyValueOf(ca, start, length), getLineNumber(start), getColumnNumber(start), ch))
     }
     else None
   }
@@ -125,7 +125,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
     if (hasMore) {
       val start = pos
       pos += 1
-      Some(SymbolToken(ca(start).toString, getLineNumber(start), getColumn(start)))
+      Some(SymbolToken(ca(start).toString, getLineNumber(start), getColumnNumber(start)))
     }
     else None
   }
