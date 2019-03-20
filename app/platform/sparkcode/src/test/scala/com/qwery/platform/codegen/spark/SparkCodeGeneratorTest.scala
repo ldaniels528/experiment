@@ -11,7 +11,7 @@ class SparkCodeGeneratorTest extends FunSpec {
 
   describe(classOf[SparkCodeGenerator].getSimpleName) {
 
-    it("should generate a Spark job") {
+    it("should generate the OilGasSecurities Spark job") {
       val model = SQLLanguageParser.parse(
         """|-- define the input source
            |CREATE EXTERNAL TABLE Securities (

@@ -1,5 +1,8 @@
 package com.qwery.platform.codegen.spark
 
+import java.io.File
+
+import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models._
@@ -21,14 +24,26 @@ object CodeGenerationHelper {
       logger.info(s"Decoding '$invokable'...")
       invokable match {
         case Create(t: Table) => s"""TableManager.add(${t.codify})"""
+        case Include(path) => incorporateSources(path)
         case i: Insert => i.decode
         case m: MainProgram => m.code.decode
         case s: Select => s.decode
-        case s: SQL => s.statements.map(stmt => stmt.decode).mkString("\n")
+        case s: SQL => s.statements.map(_.decode).mkString("\n")
         case t: TableRef => t.name
         case x =>
           throw new IllegalArgumentException(s"Unsupported operation ${Option(x).map(_.getClass.getName).orNull}")
       }
+    }
+
+    /**
+      * incorporates the source code of the given path
+      * @param path the given .sql source file
+      * @return the resultant source code
+      */
+    private def incorporateSources(path: String): String = {
+      val file = new File(path).getCanonicalFile
+      logger.info(s"Merging source file '${file.getAbsolutePath}'...")
+      SQLLanguageParser.parse(file).decode
     }
   }
 
@@ -51,10 +66,21 @@ object CodeGenerationHelper {
     */
   final implicit class SelectDecoderExtensions(val select: Select) extends AnyVal {
     def decode: String = {
-      select.from.map(_.decode) match {
-        case Some(inputPath) => s"""TableManager.read("$inputPath")"""
-        case None => die(s"The data source for '$select'")
-      }
+      val source = select.from map {
+        case TableRef(name) => s"TableManager.read(${name.codify})"
+        case x =>
+          logger.info(s"select => $x")
+          x.decode
+      } getOrElse die(s"The data source found for '$select'")
+
+      select.fields
+      select.groupBy
+      select.joins
+      select.where
+      select.orderBy
+      select.limit
+
+      source
     }
   }
 
@@ -79,7 +105,9 @@ object CodeGenerationHelper {
     * @param column the given [[Column]]
     */
   final implicit class TableColumnExtensions(val column: Column) extends AnyVal {
+
     import column._
+
     @inline def codify: String = s"""Column(name = "$name", `type` = ${`type`.codify}, isNullable = $isNullable)"""
   }
 
@@ -110,8 +138,8 @@ object CodeGenerationHelper {
             |  inputFormat = ${inputFormat.map(_.codify)},
             |  outputFormat = ${outputFormat.map(_.codify)},
             |  partitionColumns = List(${partitionColumns.map(_.codify).mkString(",")}),
-            |  properties = Map(${properties map { case (k, v) => s""""$k" -> "$v""" } mkString ","}),
-            |  serdeProperties = Map(${serdeProperties map { case (k, v) => s""""$k" -> "$v""" } mkString ","})
+            |  properties = Map(${properties map { case (k, v) => k.codify -> v.codify } mkString ","}),
+            |  serdeProperties = Map(${serdeProperties map { case (k, v) => k.codify -> v.codify } mkString ","})
             |)""".stripMargin
       case table => die(s"Table type '${table.getClass.getSimpleName}' is not yet supported")
     }

@@ -12,14 +12,14 @@ import com.qwery.util.StringHelper._
   * Spark Code Generator
   * @author lawrence.daniels@gmail.com
   */
-class SparkCodeGenerator(className: String, packageName: String, outputPath: String = "./temp") {
+class SparkCodeGenerator(className: String, packageName: String, outputPath: String = "./gen-src") {
 
   def generate(invokable: Invokable): File = {
     val classDefinition =
       MainClass(className, packageName, invokable, imports = List(
         "com.qwery.models._",
         "com.qwery.models.StorageFormats._",
-        "com.qwery.platform.codegen.spark.TableManager",
+        TableManager.getClass.getName.replaceAllLiterally("$", ""),
         "org.apache.spark.SparkConf",
         "org.apache.spark.sql.types.StructType",
         "org.apache.spark.sql.DataFrame",
