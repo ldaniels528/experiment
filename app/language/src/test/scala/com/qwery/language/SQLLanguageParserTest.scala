@@ -87,6 +87,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results1 == Create(Table(name = "Customers",
         columns = List("customer_id STRING", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
+        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.PARQUET,
         outputFormat = StorageFormats.PARQUET,
         location = "./dataSets/customers/parquet/"
@@ -101,6 +102,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results2 == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
+        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.JSON,
         outputFormat = StorageFormats.JSON,
         location = "./dataSets/customers/json/"
@@ -120,6 +122,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
+        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldDelimiter = ",",
         fieldTerminator = None,
         headersIncluded = true,

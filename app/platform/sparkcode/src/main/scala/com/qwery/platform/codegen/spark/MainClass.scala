@@ -1,7 +1,7 @@
 package com.qwery.platform.codegen.spark
 
 import com.qwery.models.Invokable
-import com.qwery.platform.codegen.spark.CodeGenerationHelper._
+import com.qwery.platform.codegen.spark.SparkCodeCompiler._
 
 /**
   * Spark Job Main Class

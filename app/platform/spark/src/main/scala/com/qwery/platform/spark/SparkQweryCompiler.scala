@@ -411,10 +411,10 @@ object SparkQweryCompiler {
           SparkMainProgram(name, code.compile, args, env, hive, streaming)
         case ref@ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.asAny)).as(ref.alias)
         case Return(value) => SparkReturn(value = value.map(_.compile))
-        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit, codeLocation) =>
+        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit) =>
           SparkSelect(
             from = from.map(_.compile), groupBy = groupBy.map(_.compile), joins = joins.map(_.compile), limit = limit,
-            orderBy = orderBy.map(_.compile), where = where, codeLocation = codeLocation,
+            orderBy = orderBy.map(_.compile), where = where,
             fields = fields.map {
               case a: Aggregation => (a.compile, a.isAggregate, a.alias)
               case e => (e.compile, false, e.alias)
@@ -426,8 +426,8 @@ object SparkQweryCompiler {
         case ref@TableRef(name) => ReadTableOrViewByReference(name).as(ref.alias)
         case Update(table, assignments, where) =>
           SparkUpdate(source = table.compile, assignments, where = where.map(_.compile))
-        case ref@Union(query0, query1, distinct, codeLocation) =>
-          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct, codeLocation = codeLocation).as(ref.alias)
+        case ref@Union(query0, query1, distinct) =>
+          SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct).as(ref.alias)
         case ref@RowSetVariableRef(name) => ReadRowSetByReference(name).as(ref.alias)
         case unknown => die(s"Unhandled operation '$unknown'")
       }

@@ -13,10 +13,10 @@ import com.qwery.util.OptionHelper._
 import org.slf4j.LoggerFactory
 
 /**
-  * Code Generation Helper
+  * Spark Code Compiler
   * @author lawrence.daniels@gmail.com
   */
-object CodeGenerationHelper {
+object SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
@@ -174,7 +174,7 @@ object CodeGenerationHelper {
   }
 
   /**
-    * Map Codify Extensions
+    * Map Compiler Extensions
     * @param mapping the given [[Map mapping]]
     */
   final implicit class MapCodifyExtension(val mapping: Map[String, String]) extends AnyVal {

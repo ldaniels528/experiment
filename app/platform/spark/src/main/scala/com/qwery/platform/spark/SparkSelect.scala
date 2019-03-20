@@ -1,9 +1,9 @@
 package com.qwery.platform.spark
 
+import com.qwery.models.Aliasable
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models.expressions.NamedExpression._
 import com.qwery.models.expressions._
-import com.qwery.models.{Aliasable, CodeLocation}
 import com.qwery.platform.spark.SparkSelect.SparkJoin
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.functions.col
@@ -20,18 +20,12 @@ case class SparkSelect(fields: Seq[(SparkColumn, Boolean, Option[String])],
                        groupBy: Seq[SparkColumn],
                        orderBy: Seq[SparkColumn],
                        where: Option[Condition],
-                       limit: Option[Int],
-                       codeLocation: Option[CodeLocation] = None)
+                       limit: Option[Int])
   extends SparkInvokable with Aliasable {
   private val logger = LoggerFactory.getLogger(getClass)
 
   override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
-    try
-      from.flatMap(_.execute(input)) map { df => pipeline.foldLeft[DataFrame](df) { (df0, f) => f(df0) } }
-    catch {
-      case e: Exception =>
-        throw new RuntimeException(s"${e.getMessage} ${codeLocation.map(_.toString) getOrElse ""}", e)
-    }
+    from.flatMap(_.execute(input)) map { df => pipeline.foldLeft[DataFrame](df) { (df0, f) => f(df0) } }
   }
 
   // build the Spark equivalent of the query
@@ -149,8 +143,7 @@ object SparkSelect {
     */
   case class SparkUnion(query0: SparkInvokable,
                         query1: SparkInvokable,
-                        isDistinct: Boolean,
-                        codeLocation: Option[CodeLocation] = None) extends SparkInvokable with Aliasable {
+                        isDistinct: Boolean) extends SparkInvokable with Aliasable {
     override def execute(input: Option[DataFrame])(implicit rc: SparkQweryContext): Option[DataFrame] = {
       val df = for {
         df0 <- query0.execute(input)

@@ -3,7 +3,6 @@ package com.qwery.language
 import java.io.{File, InputStream}
 import java.net.URL
 
-import TokenStreamHelpers._
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
@@ -424,7 +423,6 @@ trait SQLLanguageParser {
     * @return an [[Invokable executable]]
     */
   protected def parseSelect(ts: TokenStream): Invokable = {
-    val codeLocation = ts.toCodeLocation
     val params = SQLTemplateParams(ts,
       """|SELECT ?TOP +?%n:top %E:fields
          |?FROM +?%q:source %J:joins
@@ -442,8 +440,7 @@ trait SQLLanguageParser {
       where = params.conditions.get("condition"),
       groupBy = params.fields.getOrElse("groupBy", Nil),
       orderBy = params.orderedFields.getOrElse("orderBy", Nil),
-      limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt),
-      codeLocation = codeLocation)
+      limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
     // is it a UNION statement?
     while (ts nextIf "UNION") {
@@ -451,8 +448,7 @@ trait SQLLanguageParser {
       select = Union(
         query0 = select,
         query1 = params.sources("union"),
-        isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"),
-        codeLocation = ts.toCodeLocation)
+        isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
     }
     select
   }

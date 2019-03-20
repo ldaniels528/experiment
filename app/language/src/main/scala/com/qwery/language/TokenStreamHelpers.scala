@@ -1,7 +1,5 @@
 package com.qwery.language
 
-import com.qwery.models.CodeLocation
-
 /**
   * Token Stream Helpers
   * @author lawrence.daniels@gmail.com
@@ -36,8 +34,6 @@ object TokenStreamHelpers {
 
     @inline def isJoinColumn: Boolean =
       (for (a <- ts(0); b <- ts(1); c <- ts(2)) yield a.isIdentifier && (b is ".") && c.isIdentifier).contains(true)
-
-    @inline def toCodeLocation: Option[CodeLocation] = ts.peek.map(t => CodeLocation(lineNo = t.lineNo, columnNo = t.columnNo))
 
   }
 
