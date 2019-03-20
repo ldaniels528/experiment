@@ -407,6 +407,7 @@ object ExpressionParser {
   private val function3s = Map(
     "LPad" -> LPad.apply _,
     "RPad" -> RPad.apply _,
+    "Substr" -> Substring.apply _,
     "Substring" -> Substring.apply _
   )
   private val functionNs = Map(

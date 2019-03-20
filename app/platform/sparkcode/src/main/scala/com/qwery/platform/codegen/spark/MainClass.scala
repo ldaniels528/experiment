@@ -22,7 +22,7 @@ case class MainClass(className: String,
         |
         |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
         |     import spark.implicits._
-        |     ${invokable.decode}
+        |     ${invokable.compile}
         |  }
         |
         |}

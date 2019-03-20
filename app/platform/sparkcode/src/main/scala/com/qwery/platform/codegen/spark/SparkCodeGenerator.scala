@@ -21,6 +21,7 @@ class SparkCodeGenerator(className: String, packageName: String, outputPath: Str
         "com.qwery.models.StorageFormats._",
         TableManager.getClass.getName.replaceAllLiterally("$", ""),
         "org.apache.spark.SparkConf",
+        "org.apache.spark.sql.functions._",
         "org.apache.spark.sql.types.StructType",
         "org.apache.spark.sql.DataFrame",
         "org.apache.spark.sql.Row",
