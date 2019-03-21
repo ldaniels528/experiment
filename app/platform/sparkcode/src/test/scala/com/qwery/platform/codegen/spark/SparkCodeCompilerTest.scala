@@ -13,7 +13,7 @@ class SparkCodeCompilerTest extends FunSpec {
 
   import com.qwery.models.expressions.implicits._
 
-  describe(SparkCodeCompiler.getClass.getName.replaceAllLiterally("$", "")) {
+  describe(SparkCodeCompiler.getClass.getSimpleName.replaceAllLiterally("$", "")) {
 
     it("should compile conditions: age === 50") {
       assert((Field('age) === 50).compile == """$"age" === lit(50)""")

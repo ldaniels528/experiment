@@ -12,10 +12,54 @@ import com.qwery.util.StringHelper._
   * Spark Code Generator
   * @author lawrence.daniels@gmail.com
   */
-class SparkCodeGenerator(className: String, packageName: String, outputPath: String = "./gen-src") {
+class SparkCodeGenerator(className: String,
+                         packageName: String,
+                         version: String = "1.0",
+                         scalaVersion: String = "2.11.12",
+                         sparkVersion: String = "2.3.2",
+                         outputPath: String = "./gen-src") {
 
-  def generate(invokable: Invokable): File = {
-    val classDefinition =
+  /**
+    * Generates the SBT build script
+    * @return the [[File]] representing the generated build.sbt
+    */
+  def createBuildScript(): File = {
+    writeToDisk(outputFile = new File(outputPath, s"built.sbt")) {
+      s"""|name := "$className"
+          |
+          |version := "$version"
+          |
+          |scalaVersion := "$scalaVersion"
+          |
+          |libraryDependencies ++= Seq(
+          |   "com.databricks" %% "spark-avro" % "4.0.0",
+          |   "com.databricks" %% "spark-csv" % "1.5.0",
+          |   "org.apache.spark" %% "spark-core" % "$sparkVersion",
+          |   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
+          |   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
+          |   //
+          |   // placeholder dependencies
+          |   "com.qwery" %% "core" % "0.4.0" from "file://./lib/qwery-core_2.11-0.4.0.jar",
+          |   "com.qwery" %% "platform-spark" % "0.4.0" from "file://./lib/qwery-platform-spark-code-gen_2.11-0.4.0.jar",
+          |   "com.qwery" %% "language" % "0.4.0" from "file://./lib/qwery-language_2.11-0.4.0.jar"
+          |)
+          |""".stripMargin
+    }
+  }
+
+  /**
+    * Generates an executable class file
+    * @param invokable the [[Invokable]] for which to generate code
+    * @return the [[File]] representing the generated Main class
+    */
+  def createMainClass(invokable: Invokable): File = {
+    // create the package directory
+    val srcDir = new File(outputPath, "src/main/scala")
+    val pkgDir = new File(srcDir, packageName.replaceAllLiterally(".", File.separator))
+    if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
+
+    // write the class to disk
+    writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       MainClass(className, packageName, invokable, imports = List(
         "com.qwery.models._",
         "com.qwery.models.StorageFormats._",
@@ -28,14 +72,45 @@ class SparkCodeGenerator(className: String, packageName: String, outputPath: Str
         "org.apache.spark.sql.SparkSession",
         "org.slf4j.LoggerFactory"
       )).generate
+    }
+  }
 
-    // create the package directory
-    val pkgDir = new File(outputPath, packageName.replaceAllLiterally(".", File.separator))
-    if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
+  /**
+    * Creates the SBT project structure
+    * @return the [[File]] representing the `project` directory
+    */
+  def createProjectStructure(): File = {
+    val projectDir = new File(outputPath, "project")
+    if (!projectDir.mkdirs() && !projectDir.exists())
+      die(s"Failed to create the SBT project directory ('${projectDir.getCanonicalPath}')")
 
-    // write the class to disk
-    val outputFile = new File(pkgDir, s"$className.scala")
-    new PrintWriter(outputFile).use(_.println(classDefinition))
+    // generate the configuration files
+    val configFiles = Seq(
+      """addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")""" -> "assembly.sbt",
+      """sbt.version=0.13.16""" -> "build.properties",
+      """|addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.5")
+         |addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")
+         |""".stripMargin -> "plugins.sbt"
+    )
+    configFiles foreach { case (contents, path) =>
+      writeToDisk(outputFile = new File(projectDir, path))(contents)
+    }
+    projectDir
+  }
+
+  /**
+    * Generates a new SBT project
+    * @param invokable the [[Invokable]] for which to generate code
+    * @return the [[File]] representing the generated Main class
+    */
+  def generateProject(invokable: Invokable): File = {
+    createProjectStructure()
+    createBuildScript()
+    createMainClass(invokable)
+  }
+
+  private def writeToDisk(outputFile: File)(contents: => String): File = {
+    new PrintWriter(outputFile).use(_.println(contents))
     outputFile
   }
 
@@ -68,7 +143,7 @@ object SparkCodeGenerator {
     args.toList match {
       case sqlFile :: className :: genArgs =>
         val sql = SQLLanguageParser.parse(new File(sqlFile))
-        SparkCodeGenerator(className).generate(sql)
+        SparkCodeGenerator(className).generateProject(sql)
       case _ =>
         die(s"java ${getClass.getName.replaceAllLiterally("$", "")} <scriptFile> <outputClass> [<arg1> .. <argN>]")
     }

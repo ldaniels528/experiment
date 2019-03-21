@@ -59,8 +59,9 @@ class SparkCodeGeneratorTest extends FunSpec {
       val generator = new SparkCodeGenerator(
         className = "OilGasSecurities",
         packageName = "com.qwery.platform.codegen.spark",
-        outputPath = "./app/platform/sparkcode/src/test/scala")
-      generator.generate(model)
+        outputPath = "./temp/gen-src"
+      )
+      generator.generateProject(model)
     }
 
     it("should generate the AdBookIngest Spark job") {
@@ -117,8 +118,9 @@ class SparkCodeGeneratorTest extends FunSpec {
       val generator = new SparkCodeGenerator(
         className = "AdBookIngestSparkJob",
         packageName = "com.qwery.platform.codegen.spark",
-        outputPath = "./app/platform/sparkcode/src/test/scala")
-      generator.generate(model)
+        outputPath = "./temp/gen-src"
+      )
+      generator.generateProject(model)
     }
 
   }
