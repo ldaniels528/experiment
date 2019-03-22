@@ -1,4 +1,7 @@
-package com.qwery.platform.codegen.spark
+package com.qwery
+package platform.codegen.sparksql
+
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.databricks.spark.avro._
 import com.qwery.models.StorageFormats._
@@ -13,16 +16,26 @@ import org.slf4j.LoggerFactory
 import scala.collection.concurrent.TrieMap
 
 /**
-  * Spark Table Manager
+  * Resource Manager
   * @author lawrence.daniels@gmail.com
   */
-object TableManager {
+object ResourceManager {
   private[this] val logger = LoggerFactory.getLogger(getClass)
   private val tables = TrieMap[String, TableLike]()
+  private val dataFrames = TrieMap[String, DataFrame]()
 
-  def add(tableLike: TableLike): Option[TableLike] = {
-    logger.info(s"Registering ${tableLike.getClass.getSimpleName} '${tableLike.name}'...")
-    tables.put(tableLike.name, tableLike)
+  /**
+    * Adds a table or view to resource management
+    * @param tableOrView the given [[TableLike table or view]]
+    */
+  def add(tableOrView: TableLike)(implicit spark: SparkSession): Unit = {
+    logger.info(s"Registering ${tableOrView.getClass.getSimpleName} '${tableOrView.name}'...")
+    tables.put(tableOrView.name, tableOrView)
+    dataFrames.put(tableOrView.name, {
+      val df = read(tableOrView)
+      df.createOrReplaceGlobalTempView(tableOrView.name)
+      df
+    })
   }
 
   def apply(name: String): TableLike = tables.getOrElse(name, die(s"Table or view '$name' was not found"))
@@ -50,7 +63,7 @@ object TableManager {
     * @param spark     the implicit [[SparkSession]]
     * @return the [[DataFrame]]
     */
-  def read(tableName: String)(implicit spark: SparkSession): DataFrame = read( apply(tableName))
+  def read(tableName: String)(implicit spark: SparkSession): DataFrame = read(apply(tableName))
 
   /**
     * Returns the equivalent query operation to represent the given table or view
@@ -60,27 +73,30 @@ object TableManager {
     */
   def read(tableOrView: TableLike)(implicit spark: SparkSession): DataFrame = {
     import SparkQweryCompiler.Implicits._
-    tableOrView match {
-      /*
-      case ref@InlineTable(name, columns, source) =>
-        createDataSet(columns, source.compile match {
-          case spout: SparkInsert.Spout => spout.copy(resolver = Option(SparkTableColumnResolver(ref)))
-          case other => other
-        }).map { df => df.createOrReplaceTempView(name); df }*/
-      case table: Table =>
-        val reader = spark.read.tableOptions(table)
-        table.inputFormat.orFail("Table input format was not specified") match {
-          case AVRO => reader.avro(table.location)
-          case CSV => reader.schema(createSchema(table.columns)).csv(table.location)
-          case JDBC => reader.jdbc(table.location, table.name, table.properties.toProperties)
-          case JSON => reader.json(table.location)
-          case PARQUET => reader.parquet(table.location)
-          case ORC => reader.orc(table.location)
-          case format => die(s"Storage format $format is not supported for reading")
-        }
-      //case view: View => view.query.compile.execute(input = None)
-      case unknown => die(s"Unrecognized table type '$unknown' (${unknown.getClass.getName})")
-    }
+    dataFrames.getOrElseUpdate(tableOrView.name, {
+      logger.info(s"Loading data frame for '${tableOrView.name}'...")
+      tableOrView match {
+        /*
+        case ref@InlineTable(name, columns, source) =>
+          createDataSet(columns, source.compile match {
+            case spout: SparkInsert.Spout => spout.copy(resolver = Option(SparkTableColumnResolver(ref)))
+            case other => other
+          }).map { df => df.createOrReplaceTempView(name); df }*/
+        case table: Table =>
+          val reader = spark.read.tableOptions(table)
+          table.inputFormat.orFail("Table input format was not specified") match {
+            case AVRO => reader.avro(table.location)
+            case CSV => reader.schema(createSchema(table.columns)).csv(table.location)
+            case JDBC => reader.jdbc(table.location, table.name, table.properties.toProperties)
+            case JSON => reader.json(table.location)
+            case PARQUET => reader.parquet(table.location)
+            case ORC => reader.orc(table.location)
+            case format => die(s"Storage format $format is not supported for reading")
+          }
+        //case view: View => view.query.compile.execute(input = None)
+        case unknown => die(s"Unrecognized table type '$unknown' (${unknown.getClass.getName})")
+      }
+    })
   }
 
   /**

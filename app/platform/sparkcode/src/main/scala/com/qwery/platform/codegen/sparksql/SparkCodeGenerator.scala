@@ -1,4 +1,5 @@
-package com.qwery.platform.codegen.spark
+package com.qwery
+package platform.codegen.sparksql
 
 import java.io.{File, PrintWriter}
 
@@ -9,7 +10,7 @@ import com.qwery.util.ResourceHelper._
 import com.qwery.util.StringHelper._
 
 /**
-  * Spark Code Generator
+  * Spark/Scala Code Generator
   * @author lawrence.daniels@gmail.com
   */
 class SparkCodeGenerator(className: String,
@@ -17,7 +18,7 @@ class SparkCodeGenerator(className: String,
                          version: String = "1.0",
                          scalaVersion: String = "2.11.12",
                          sparkVersion: String = "2.3.2",
-                         outputPath: String = "./gen-src") {
+                         outputPath: String = "./qwery-generated") {
 
   /**
     * Generates the SBT build script
@@ -39,9 +40,9 @@ class SparkCodeGenerator(className: String,
           |   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
           |   //
           |   // placeholder dependencies
-          |   "com.qwery" %% "core" % "0.4.0" from "file://./lib/qwery-core_2.11-0.4.0.jar",
-          |   "com.qwery" %% "platform-spark" % "0.4.0" from "file://./lib/qwery-platform-spark-code-gen_2.11-0.4.0.jar",
-          |   "com.qwery" %% "language" % "0.4.0" from "file://./lib/qwery-language_2.11-0.4.0.jar"
+          |   "com.qwery" %% "core" % "0.4.0",
+          |   "com.qwery" %% "platform-spark-codegen" % "0.4.0",
+          |   "com.qwery" %% "language" % "0.4.0"
           |)
           |""".stripMargin
     }
@@ -60,10 +61,10 @@ class SparkCodeGenerator(className: String,
 
     // write the class to disk
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
-      MainClass(className, packageName, invokable, imports = List(
+      SparkJobMainClass(className, packageName, invokable, imports = List(
         "com.qwery.models._",
-        "com.qwery.models.StorageFormats._",
-        TableManager.getClass.getName.replaceAllLiterally("$", ""),
+        StorageFormats.getClass.getName.replaceAllLiterally("$", ""),
+        ResourceManager.getClass.getName.replaceAllLiterally("$", ""),
         "org.apache.spark.SparkConf",
         "org.apache.spark.sql.functions._",
         "org.apache.spark.sql.types.StructType",
@@ -89,8 +90,7 @@ class SparkCodeGenerator(className: String,
       """addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")""" -> "assembly.sbt",
       """sbt.version=0.13.16""" -> "build.properties",
       """|addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.5")
-         |addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")
-         |""".stripMargin -> "plugins.sbt"
+         |addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")""".stripMargin -> "plugins.sbt"
     )
     configFiles foreach { case (contents, path) =>
       writeToDisk(outputFile = new File(projectDir, path))(contents)
@@ -109,6 +109,12 @@ class SparkCodeGenerator(className: String,
     createMainClass(invokable)
   }
 
+  /**
+    * Writes the given contents to disk
+    * @param outputFile the given [[File output file]]
+    * @param contents   the given contents to write to disk
+    * @return a reference to the [[File output file]]
+    */
   private def writeToDisk(outputFile: File)(contents: => String): File = {
     new PrintWriter(outputFile).use(_.println(contents))
     outputFile

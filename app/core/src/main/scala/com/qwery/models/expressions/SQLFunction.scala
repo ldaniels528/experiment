@@ -131,6 +131,8 @@ object SQLFunction {
 
   case class Max(field: Expression) extends SQLFunction1 with Aggregation
 
+  case class Mean(field: Expression) extends SQLFunction1 with Aggregation
+
   case class Min(field: Expression) extends SQLFunction1 with Aggregation
 
   case class RPad(field1: Expression, field2: Expression, field3: Expression) extends SQLFunction3

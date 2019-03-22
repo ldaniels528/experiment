@@ -1,17 +1,18 @@
-package com.qwery.platform.codegen.spark
+package com.qwery
+package platform.codegen.sparksql
 
 import com.qwery.models.Invokable
-import com.qwery.platform.codegen.spark.SparkCodeCompiler._
+import com.qwery.platform.codegen.sparksql.SparkCodeCompiler._
 
 /**
   * Spark Job Main Class
   * @author lawrence.daniels@gmail.com
   */
-case class MainClass(className: String,
-                     packageName: String,
-                     invokable: Invokable,
-                     imports: Seq[String]) extends InjectedCode {
-  override def generate: String = {
+case class SparkJobMainClass(className: String,
+                             packageName: String,
+                             invokable: Invokable,
+                             imports: Seq[String]) {
+  def generate: String = {
     s"""|package $packageName
         |
         |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}

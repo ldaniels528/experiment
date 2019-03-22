@@ -387,6 +387,7 @@ object ExpressionParser {
     "Lower" -> Lower.apply _,
     "LTrim" -> LTrim.apply _,
     "Max" -> Max.apply _,
+    "Mean" -> Mean.apply _,
     "Min" -> Min.apply _,
     "RTrim" -> RTrim.apply _,
     "StdDev" -> StdDev.apply _,

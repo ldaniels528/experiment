@@ -1,4 +1,5 @@
-package com.qwery.platform.codegen.spark
+package com.qwery
+package platform.codegen.sparksql
 
 import java.io.File
 
@@ -6,7 +7,7 @@ import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models._
-import com.qwery.models.expressions.SQLFunction._
+import com.qwery.models.expressions.SQLFunction.{Mean, _}
 import com.qwery.models.expressions._
 import com.qwery.platform.spark.die
 import com.qwery.util.OptionHelper._
@@ -18,6 +19,54 @@ import org.slf4j.LoggerFactory
   */
 object SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
+  private[this] val resourceMgrClassName = ResourceManager.getClass.getSimpleName.replaceAllLiterally("$", "")
+
+  def compileCase(model: Case): String = {
+    // aggregate the cases into a single operation
+    val caseAgg = model.conditions match {
+      case first :: remaining =>
+        val initialWhen = s"when(${first.condition.compile}, ${first.result.compile})"
+        remaining.foldLeft(new StringBuilder(initialWhen)) { case (agg, Case.When(condition, result)) =>
+          agg.append(s"\n.when(${condition.compile}, ${result.compile})")
+        } toString()
+      case _ => die("At least one condition must be specified in CASE statements")
+    }
+
+    // optionally, return the case-when with an otherwise clause
+    model.otherwise.map(op => caseAgg + s"\n.otherwise(${op.compile})") getOrElse caseAgg
+  }
+
+  def discoverTablesAndViews(invokable: Invokable): List[String] = {
+
+    def recurse(invokable: Invokable): List[String] = {
+      invokable match {
+        case i: Include => recurse(incorporateSources(i.path))
+        case j: Join => recurse(j.source)
+        case m: MainProgram => recurse(m.code)
+        case s: Select => (s.from.toList ::: s.joins.map(_.source).toList).flatMap(recurse)
+        case s: SQL => s.statements.flatMap(recurse)
+        case u: Union => List(u.query0, u.query1).flatMap(recurse)
+        case t: TableLike => t.name :: Nil
+        case t: TableRef => t.name :: Nil
+        case _ =>
+          logger.info(s"invokable: $invokable")
+          Nil
+      }
+    }
+
+    recurse(invokable).distinct
+  }
+
+  /**
+    * incorporates the source code of the given path
+    * @param path the given .sql source file
+    * @return the resultant source code
+    */
+  def incorporateSources(path: String): Invokable = {
+    val file = new File(path).getCanonicalFile
+    logger.info(s"Merging source file '${file.getAbsolutePath}'...")
+    SQLLanguageParser.parse(file)
+  }
 
   /**
     * Condition Compiler Extensions
@@ -48,7 +97,6 @@ object SparkCodeCompiler {
     * @param expression the given [[Expression expression]]
     */
   final implicit class ExpressionCompilerExtensions(val expression: Expression) extends AnyVal {
-
     def compile: String = {
       val result = expression match {
         case Abs(a) => s"abs(${a.compile})"
@@ -78,9 +126,9 @@ object SparkCodeCompiler {
         case Factorial(a) => s"factorial(${a.compile})"
         case Floor(a) => s"floor(${a.compile})"
         case From_UnixTime(a, b) => b.map(f => s"from_unixtime(${a.compile}, ${f.compile})") || s"from_unixtime(${a.compile})"
-        case FunctionCall(name, args) => die(s"Function calls are not yet supported by Spark ($name)")
+        case FunctionCall(name, args) => s"callUDF(${name.codify}, ${args.map(_.compile).mkString(",")})"
         case If(condition, trueValue, falseValue) =>
-          s"when(${condition.compile}, ${trueValue.compile}).when(!${condition.compile}, ${falseValue.compile})"
+          s"when(${condition.compile}, ${trueValue.compile}).otherwise(${falseValue.compile})"
         case JoinField(name, tableAlias) => s"""$$"${tableAlias.map(alias => s"$alias.$name") getOrElse name.codify}""""
         case Length(a) => s"length(${a.compile})"
         case Literal(value) => s"lit(${value.lit})"
@@ -89,6 +137,7 @@ object SparkCodeCompiler {
         case LPad(a, b, c) => s"lpad(${a.compile}, ${b.compile}, ${c.compile})"
         case LTrim(a) => s"ltrim(${a.compile})"
         case Max(a) => s"max(${a.compile})"
+        case Mean(a) => s"mean(${a.compile})"
         case Min(a) => s"min(${a.compile})"
         case Modulo(a, b) => s"${a.compile} % ${b.compile}"
         case Multiply(a, b) => s"${a.compile} * ${b.compile}"
@@ -110,21 +159,6 @@ object SparkCodeCompiler {
       }
       result.withAlias(expression)
     }
-
-    private def compileCase(model: Case): String = {
-      // aggregate the cases into a single operation
-      val caseAgg = model.conditions match {
-        case first :: remaining =>
-          val initialWhen = s"when(${first.condition.compile}, ${first.result.compile})"
-          remaining.foldLeft(new StringBuilder(initialWhen)) { case (agg, Case.When(condition, result)) =>
-            agg.append(s"\n.when(${condition.compile}, ${result.compile})")
-          } toString()
-        case _ => die("At least one condition must be specified in CASE statements")
-      }
-
-      // optionally, return the case-when with an otherwise clause
-      model.otherwise.map(op => caseAgg + s"\n.otherwise(${op.compile})") getOrElse caseAgg
-    }
   }
 
   /**
@@ -135,8 +169,8 @@ object SparkCodeCompiler {
     def compile: String = {
       logger.info(s"Decoding '$invokable'...")
       val result = invokable match {
-        case Create(t: Table) => s"""TableManager.add(${t.codify})"""
-        case Include(path) => incorporateSources(path)
+        case Create(t: Table) => s"""$resourceMgrClassName.add(${t.codify})"""
+        case Include(path) => incorporateSources(path).compile
         case i: Insert => i.compile
         case m: MainProgram => m.code.compile
         case s: Select => s.compile
@@ -147,17 +181,6 @@ object SparkCodeCompiler {
       }
       result.withAlias(invokable)
     }
-
-    /**
-      * incorporates the source code of the given path
-      * @param path the given .sql source file
-      * @return the resultant source code
-      */
-    private def incorporateSources(path: String): String = {
-      val file = new File(path).getCanonicalFile
-      logger.info(s"Merging source file '${file.getAbsolutePath}'...")
-      SQLLanguageParser.parse(file).compile
-    }
   }
 
   /**
@@ -166,7 +189,7 @@ object SparkCodeCompiler {
     */
   final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
     @inline def compile: String =
-      s"""|TableManager.write(
+      s"""|${ResourceManager.getClass.getSimpleName.replaceAllLiterally("$", "")}.write(
           |   source = ${insert.source.compile},
           |   destination = TableManager("${insert.destination.target.compile}"),
           |   append = ${insert.destination.isInstanceOf[Insert.Into]}
@@ -189,7 +212,7 @@ object SparkCodeCompiler {
 
     def compile: String = {
       val source = select.from map {
-        case TableRef(name) => s"TableManager.read(${name.codify})"
+        case TableRef(name) => s"$resourceMgrClassName.read(${name.codify})"
         case x =>
           logger.info(s"select => $x")
           x.compile
@@ -265,6 +288,14 @@ object SparkCodeCompiler {
   }
 
   /**
+    * String Compiler Extensions
+    * @param values the given [[String value]]
+    */
+  final implicit class StringSeqCompilerExtensions(val values: Seq[String]) extends AnyVal {
+    @inline def compile: String = values.map(s => s""""$s"""").mkString(",")
+  }
+
+  /**
     * Storage Format Compiler Extensions
     * @param storageFormat the given [[StorageFormat]]
     */
@@ -325,7 +356,7 @@ object SparkCodeCompiler {
 
     @inline def asInt: Int = value.lit.toDouble.toInt
 
-    def lit: String = value match {
+    @inline def lit: String = value match {
       case null => "null"
       case Literal(_value) => _value.lit
       case s: String => s""""$s""""

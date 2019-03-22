@@ -5,7 +5,7 @@ import sbt._
 import scala.language.postfixOps
 
 val appVersion = "0.4.0"
-val scalaJvmVersion = "2.11.11"
+val scalaJvmVersion = "2.11.12"
 
 val akkaVersion = "2.5.2"
 val awsVersion = "1.11.394"
@@ -28,8 +28,8 @@ lazy val testDependencies = Seq(
   ))
 
 lazy val root = (project in file("./app")).
-  aggregate(core, language, platform_flink, platform_spark).
-  dependsOn(core, language, platform_flink, platform_spark).
+  aggregate(core, language, platform_common, platform_spark, platform_sparkcode).
+  dependsOn(core, language, platform_common, platform_spark, platform_sparkcode).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -47,7 +47,7 @@ lazy val core = (project in file("./app/core")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-core",
+    name := "core",
     organization := "com.qwery",
     description := "A SQL-like query language for performing ETL",
     version := appVersion,
@@ -65,7 +65,7 @@ lazy val language = (project in file("./app/language")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-language",
+    name := "language",
     organization := "com.qwery",
     description := "A SQL-like query language for performing ETL",
     version := appVersion,
@@ -83,7 +83,7 @@ lazy val platform_common = (project in file("./app/platform/common")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-platform-common",
+    name := "platform-common",
     organization := "com.qwery",
     description := "A SQL-like query language for Flink",
     version := appVersion,
@@ -106,7 +106,7 @@ lazy val platform_flink = (project in file("./app/platform/flink")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-platform-flink",
+    name := "platform-flink",
     organization := "com.qwery",
     description := "A SQL-like query language for Flink",
     version := appVersion,
@@ -128,7 +128,7 @@ lazy val platform_spark = (project in file("./app/platform/spark")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-platform-spark",
+    name := "platform-spark",
     organization := "com.qwery",
     description := "A SQL-like query language for Spark",
     version := appVersion,
@@ -152,9 +152,9 @@ lazy val platform_sparkcode = (project in file("./app/platform/sparkcode")).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery-platform-spark-code-gen",
+    name := "platform-spark-codegen",
     organization := "com.qwery",
-    description := "A SQL-like query language for generating Spark code",
+    description := "A SQL-like query language for generating Spark/Scala code",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),

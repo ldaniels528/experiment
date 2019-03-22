@@ -1,7 +1,9 @@
-package com.qwery.platform.codegen.spark
+package com.qwery.platform.codegen.sparksql
 
 import com.qwery.language.SQLLanguageParser
 import org.scalatest.FunSpec
+
+import scala.util.Properties
 
 /**
   * Spark Code Generator Test Suite
@@ -75,8 +77,8 @@ class SparkCodeGeneratorTest extends FunSpec {
            |            ,max(coalesce(ab.client_name, dfp.client_name)) as client_name
            |            ,max(coalesce(ab.revenue_category, dfp.revenue_category)) as revenue_category
            |            ,max(ab.brand) as brand
-           |    from (
-           |         select 'DFP' as source
+           |from (
+           |   select 'DFP' as source
            |            , advertiser_id as client_id
            |            , -1 as agency_id
            |            , advertiser_name as client_name
@@ -110,15 +112,15 @@ class SparkCodeGeneratorTest extends FunSpec {
            |        from kbb_ab_client
            |        where lower(client_type) = 'client'
            |        group by client_id,client_type,client_name,client_since
-           |    ) as ab
-           |    on dfp.client_id = ab.client_id
-           |    group by dfp.client_id, ab.client_id;
+           |) as ab
+           |on dfp.client_id = ab.client_id
+           |group by dfp.client_id, ab.client_id;
            |""".stripMargin
       )
       val generator = new SparkCodeGenerator(
         className = "AdBookIngestSparkJob",
-        packageName = "com.qwery.platform.codegen.spark",
-        outputPath = "./temp/gen-src"
+        packageName = "com.github.ldaniels528.qwery",
+        outputPath = s"${Properties.userHome}/GitHub/adbook_poc"
       )
       generator.generateProject(model)
     }

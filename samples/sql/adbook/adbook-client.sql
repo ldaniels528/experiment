@@ -65,6 +65,6 @@ as begin
         group by client_id,client_type,client_name,client_since
     ) as ab
     on dfp.client_id = ab.client_id
-    group by dfp.client_id, ab.cli;
+    group by dfp.client_id, ab.client_id;
 
 end;

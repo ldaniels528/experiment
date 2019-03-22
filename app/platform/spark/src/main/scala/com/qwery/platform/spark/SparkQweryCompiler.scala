@@ -338,6 +338,7 @@ object SparkQweryCompiler {
           case LPad(a, b, c) => lpad(a.compile, b.asInt, c.asString)
           case LTrim(a) => ltrim(a.compile)
           case Max(a) => max(a.compile)
+          case Mean(a) => mean(a.compile)
           case Min(a) => min(a.compile)
           case Modulo(a, b) => a.compile % b.compile
           case Multiply(a, b) => a.compile * b.compile
