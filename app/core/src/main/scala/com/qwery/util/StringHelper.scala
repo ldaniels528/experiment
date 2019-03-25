@@ -21,10 +21,10 @@ object StringHelper {
   }
 
   /**
-    * Indexable Enrichment
+    * Index Enrichment
     * @param string the given [[StringLike]]; e.g. a [[String]] or [[StringBuilder]]
     */
-  final implicit class IndexableEnrichment[T <: StringLike](val string: T) extends AnyVal {
+  final implicit class IndexEnrichment[T <: StringLike](val string: T) extends AnyVal {
 
     @inline def indexOfOpt(s: String): Option[Int] = toOption(string.indexOf(s))
 
@@ -61,6 +61,14 @@ object StringHelper {
       }
       if (sb.toString().trim.nonEmpty) values ::: sb.toString().trim :: Nil else values
     }
+
+  }
+
+  final implicit class ObjectNameExtension(val obj: AnyRef) extends AnyVal {
+
+    @inline def getObjectFullName: String = obj.getClass.getName.replaceAllLiterally("$", "")
+
+    @inline def getObjectSimpleName: String = obj.getClass.getSimpleName.replaceAllLiterally("$", "")
 
   }
 

@@ -1,5 +1,6 @@
 package com.qwery.platform.spark
 
+import com.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
 /**
@@ -8,7 +9,7 @@ import org.scalatest.FunSpec
   */
 class QwerySparkJobTest extends FunSpec {
 
-  describe(QwerySparkJob.getClass.getSimpleName.replaceAllLiterally("$", "")) {
+  describe(QwerySparkJob.getObjectSimpleName) {
 
     it("should compile and execute: companylist.sql") {
       QwerySparkJob.main(Array("./samples/sql/companylist.sql"))

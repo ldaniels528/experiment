@@ -227,7 +227,7 @@ object FlinkQweryCompiler {
         case Insert.Overwrite(target) => FlinkInsert.Sink(target = target, append = false)
         case Insert.Values(values) => FlinkInsert.Spout(values, target = None)
         case MainProgram(name, code, args, env, hive, streaming) => FlinkMainProgram(name, code.compile, args, env, hive, streaming)
-        case ref@Select(columns, from, joins, groupBy, orderBy, where, limit) =>
+        case ref@Select(columns, from, joins, groupBy, having, orderBy, where, limit) =>
           FlinkSelect(columns, from.map(_.compile), joins, groupBy, orderBy, where, limit, ref.alias)
         case Show(dataSet, limit) => FlinkShow(dataSet.compile, limit)
         case SQL(ops) => FlinkSQL(ops.map(_.compile))

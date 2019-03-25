@@ -4,6 +4,8 @@ package platform.codegen.sparksql
 import com.qwery.models.Invokable
 import com.qwery.platform.codegen.sparksql.SparkCodeCompiler._
 
+import scala.language.postfixOps
+
 /**
   * Spark Job Main Class
   * @author lawrence.daniels@gmail.com
@@ -12,7 +14,8 @@ case class SparkJobMainClass(className: String,
                              packageName: String,
                              invokable: Invokable,
                              imports: Seq[String]) {
-  def generate: String = {
+
+  def generate(implicit settings: CompilerSettings): String = {
     s"""|package $packageName
         |
         |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
@@ -55,4 +58,5 @@ case class SparkJobMainClass(className: String,
         |}
         |""".stripMargin
   }
+
 }

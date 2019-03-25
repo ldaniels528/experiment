@@ -13,8 +13,9 @@ import org.scalatest.FunSpec
 class SparkCodeCompilerTest extends FunSpec {
 
   import com.qwery.models.expressions.implicits._
+  import com.qwery.util.StringHelper._
 
-  describe(SparkCodeCompiler.getClass.getSimpleName.replaceAllLiterally("$", "")) {
+  describe(SparkCodeCompiler.getObjectSimpleName) {
 
     ////////////////////////////////////////////////////////////////////
     //        Equalities

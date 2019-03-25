@@ -19,7 +19,7 @@ import scala.collection.concurrent.TrieMap
   * Resource Manager
   * @author lawrence.daniels@gmail.com
   */
-object ResourceManager {
+class ResourceManager {
   private[this] val logger = LoggerFactory.getLogger(getClass)
   private val tables = TrieMap[String, TableLike]()
   private val dataFrames = TrieMap[String, DataFrame]()
@@ -126,3 +126,9 @@ object ResourceManager {
   }
 
 }
+
+/**
+  * Resource Manager
+  * @author lawrence.daniels@gmail.com
+  */
+object ResourceManager extends ResourceManager

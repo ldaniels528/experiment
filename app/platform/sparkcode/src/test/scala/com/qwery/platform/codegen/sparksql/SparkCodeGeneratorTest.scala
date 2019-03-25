@@ -12,6 +12,7 @@ import scala.util.Properties
 class SparkCodeGeneratorTest extends FunSpec {
 
   describe(classOf[SparkCodeGenerator].getSimpleName) {
+    implicit val settings: CompilerSettings = CompilerSettings()
 
     it("should generate the OilGasSecurities Spark job") {
       val model = SQLLanguageParser.parse(

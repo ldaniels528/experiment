@@ -412,7 +412,7 @@ object SparkQweryCompiler {
           SparkMainProgram(name, code.compile, args, env, hive, streaming)
         case ref@ProcedureCall(name, args) => SparkProcedureCall(name, args = args.map(_.asAny)).as(ref.alias)
         case Return(value) => SparkReturn(value = value.map(_.compile))
-        case ref@Select(fields, from, joins, groupBy, orderBy, where, limit) =>
+        case ref@Select(fields, from, joins, groupBy, having, orderBy, where, limit) =>
           SparkSelect(
             from = from.map(_.compile), groupBy = groupBy.map(_.compile), joins = joins.map(_.compile), limit = limit,
             orderBy = orderBy.map(_.compile), where = where,

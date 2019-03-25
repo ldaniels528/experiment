@@ -53,7 +53,7 @@ class SparkCodeGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createMainClass(invokable: Invokable): File = {
+  def createMainClass(invokable: Invokable)(implicit settings: CompilerSettings): File = {
     // create the package directory
     val srcDir = new File(outputPath, "src/main/scala")
     val pkgDir = new File(srcDir, packageName.replaceAllLiterally(".", File.separator))
@@ -103,7 +103,7 @@ class SparkCodeGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def generateProject(invokable: Invokable): File = {
+  def generateProject(invokable: Invokable)(implicit settings: CompilerSettings): File = {
     createProjectStructure()
     createBuildScript()
     createMainClass(invokable)
@@ -134,7 +134,7 @@ object SparkCodeGenerator {
     * @return a [[SparkCodeGenerator]]
     * @example {{{ java com.qwery.platform.codegen.spark.SparkCodeGenerator ./samples/sql/companylist.sql com.acme.spark.MyFirstSparkJob }}}
     */
-  def apply(classNameWithPackage: String): SparkCodeGenerator = {
+  def apply(classNameWithPackage: String)(implicit settings: CompilerSettings): SparkCodeGenerator = {
     classNameWithPackage.lastIndexOfOpt(".").map(classNameWithPackage.splitAt) match {
       case Some((className, packageName)) => new SparkCodeGenerator(className, packageName)
       case None => new SparkCodeGenerator(classNameWithPackage, packageName = "com.qwery.examples")
@@ -148,6 +148,7 @@ object SparkCodeGenerator {
   def main(args: Array[String]): Unit = {
     args.toList match {
       case sqlFile :: className :: genArgs =>
+        implicit val settings: CompilerSettings = CompilerSettings()
         val sql = SQLLanguageParser.parse(new File(sqlFile))
         SparkCodeGenerator(className).generateProject(sql)
       case _ =>

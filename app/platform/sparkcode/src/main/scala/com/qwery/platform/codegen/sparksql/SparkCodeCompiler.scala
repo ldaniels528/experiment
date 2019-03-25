@@ -11,7 +11,10 @@ import com.qwery.models.expressions.SQLFunction.{Mean, _}
 import com.qwery.models.expressions._
 import com.qwery.platform.spark.die
 import com.qwery.util.OptionHelper._
+import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
+
+import scala.io.Source
 
 /**
   * Spark Code Compiler
@@ -19,7 +22,7 @@ import org.slf4j.LoggerFactory
   */
 object SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
-  private[this] val resourceMgrClassName = ResourceManager.getClass.getSimpleName.replaceAllLiterally("$", "")
+  private[this] val resourceMgrClassName = ResourceManager.getObjectSimpleName
 
   def compileCase(model: Case): String = {
     // aggregate the cases into a single operation
@@ -127,8 +130,7 @@ object SparkCodeCompiler {
         case Floor(a) => s"floor(${a.compile})"
         case From_UnixTime(a, b) => b.map(f => s"from_unixtime(${a.compile}, ${f.compile})") || s"from_unixtime(${a.compile})"
         case FunctionCall(name, args) => s"callUDF(${name.codify}, ${args.map(_.compile).mkString(",")})"
-        case If(condition, trueValue, falseValue) =>
-          s"when(${condition.compile}, ${trueValue.compile}).otherwise(${falseValue.compile})"
+        case If(condition, trueValue, falseValue) => s"when(${condition.compile}, ${trueValue.compile}).otherwise(${falseValue.compile})"
         case JoinField(name, tableAlias) => s"""$$"${tableAlias.map(alias => s"$alias.$name") getOrElse name.codify}""""
         case Length(a) => s"length(${a.compile})"
         case Literal(value) => s"lit(${value.lit})"
@@ -166,7 +168,7 @@ object SparkCodeCompiler {
     * @param invokable the given [[Invokable]]
     */
   final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
-    def compile: String = {
+    def compile(implicit settings: CompilerSettings): String = {
       logger.info(s"Decoding '$invokable'...")
       val result = invokable match {
         case Create(t: Table) => s"""$resourceMgrClassName.add(${t.codify})"""
@@ -188,8 +190,11 @@ object SparkCodeCompiler {
     * @param insert the given [[Insert]]
     */
   final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-    @inline def compile: String =
-      s"""|${ResourceManager.getClass.getSimpleName.replaceAllLiterally("$", "")}.write(
+
+    import com.qwery.util.StringHelper._
+
+    @inline def compile(implicit settings: CompilerSettings): String =
+      s"""|${ResourceManager.getObjectSimpleName}.write(
           |   source = ${insert.source.compile},
           |   destination = TableManager("${insert.destination.target.compile}"),
           |   append = ${insert.destination.isInstanceOf[Insert.Into]}
@@ -210,7 +215,9 @@ object SparkCodeCompiler {
     */
   final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
 
-    def compile: String = {
+    def compile(implicit settings: CompilerSettings): String = if (settings.inlineSQL) compileAsSQL else compileAsCode
+
+    private def compileAsCode(implicit settings: CompilerSettings): String = {
       val source = select.from map {
         case TableRef(name) => s"$resourceMgrClassName.read(${name.codify})"
         case x =>
@@ -225,7 +232,18 @@ object SparkCodeCompiler {
       } toString()
     }
 
-    private def pipeline: Seq[Select => Option[String]] = Seq(
+    private def compileAsSQL(implicit settings: CompilerSettings): String = {
+      import SparkInlineSQLCompiler._
+
+      val quote = "\"\"\""
+      val first = s"$quote|"
+      val last = s"\t||$quote.stripMargin('|')"
+      val list = Source.fromString(select.toSQL).getLines().toList
+      val lines = first :: list.map(line => s"\t||$line") ::: last :: Nil
+      s"spark.sql(\n${lines mkString "\n"})"
+    }
+
+    private def pipeline(implicit settings: CompilerSettings): Seq[Select => Option[String]] = Seq(
       processWhere, processJoin, processGroupBy, processFields, processOrderBy, processLimit
     )
 
@@ -252,7 +270,7 @@ object SparkCodeCompiler {
         })""".stripMargin)
     }
 
-    private def processJoin(select: Select): Option[String] = {
+    private def processJoin(select: Select)(implicit settings: CompilerSettings): Option[String] = {
       if (select.joins.isEmpty) None else Option {
         select.joins.map { join =>
           import join._
@@ -272,6 +290,22 @@ object SparkCodeCompiler {
 
   /**
     * String Compiler Extensions
+    * @param values the given [[String value]]
+    */
+  final implicit class StringSeqCompilerExtensions(val values: Seq[String]) extends AnyVal {
+    @inline def compile: String = values.map(s => s""""$s"""").mkString(",")
+  }
+
+  /**
+    * Storage Format Compiler Extensions
+    * @param storageFormat the given [[StorageFormat]]
+    */
+  final implicit class StorageFormatExtensions(val storageFormat: StorageFormat) extends AnyVal {
+    @inline def compile: String = s"StorageFormats.$storageFormat"
+  }
+
+  /**
+    * String Compiler Extensions
     * @param string the given [[String value]]
     */
   final implicit class StringCompilerExtensions(val string: String) extends AnyVal {
@@ -285,22 +319,6 @@ object SparkCodeCompiler {
       case a: Aliasable => a.alias.map(alias => s"""$string.as(${alias.lit})""") getOrElse string
       case _ => string
     }
-  }
-
-  /**
-    * String Compiler Extensions
-    * @param values the given [[String value]]
-    */
-  final implicit class StringSeqCompilerExtensions(val values: Seq[String]) extends AnyVal {
-    @inline def compile: String = values.map(s => s""""$s"""").mkString(",")
-  }
-
-  /**
-    * Storage Format Compiler Extensions
-    * @param storageFormat the given [[StorageFormat]]
-    */
-  final implicit class StorageFormatExtensions(val storageFormat: StorageFormat) extends AnyVal {
-    @inline def compile: String = s"StorageFormats.$storageFormat"
   }
 
   /**
@@ -352,12 +370,13 @@ object SparkCodeCompiler {
     * Value Compiler Extensions
     * @param value the given value
     */
-  final implicit class ValueCompilerExtensionA(val value: Any) extends AnyVal {
+  final implicit class ValueCompilerExtensions(val value: Any) extends AnyVal {
 
     @inline def asInt: Int = value.lit.toDouble.toInt
 
     @inline def lit: String = value match {
-      case null => "null"
+      case null => "NULL"
+      case d: Double => if (d == d.toLong) d.toLong.toString else d.toString
       case Literal(_value) => _value.lit
       case s: String => s""""$s""""
       case x => x.toString
