@@ -1,4 +1,5 @@
-package com.qwery.platform.codegen.sparksql
+package com.qwery.platform
+package codegen.sparksql
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.platform.codegen.sparksql.SparkInlineSQLCompilerTest._
@@ -100,7 +101,7 @@ class SparkInlineSQLCompilerTest extends FunSpec {
            |    END AS revenue_category,
            |    '' AS brand,
            |    '' AS src_created_ts_est
-           |  FROM kbb_lkp_dfp_o1_advertiser
+           |  FROM global_temp.kbb_lkp_dfp_o1_advertiser
            |  WHERE advertiser_id IS NOT NULL
            |) AS dfp
            |FULL OUTER JOIN (
@@ -111,7 +112,7 @@ class SparkInlineSQLCompilerTest extends FunSpec {
            |    client_name,
            |    MAX(CASE WHEN LOWER(client_attribute_group) = 'revenue category' THEN client_attribute_name END) AS revenue_category,
            |    MAX(CASE WHEN LOWER(client_attribute_group) = 'brand' THEN client_attribute_name END) AS brand
-           |  FROM kbb_ab_client
+           |  FROM  global_temp.kbb_ab_client
            |  WHERE LOWER(client_type) = 'client'
            |  GROUP BY client_id,client_type,client_name,client_since
            |) AS ab
