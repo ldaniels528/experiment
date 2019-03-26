@@ -47,8 +47,8 @@ begin
                  end) as revenue_category
                 ,'' as brand
                 ,'' as src_created_ts_est
-             from kbb_lkp_dfp_o1_advertiser as src
-             where src.advertiser_id is not null
+             from kbb_lkp_dfp_o1_advertiser
+             where advertiser_id is not null
         ) as dfp
         full join (
             select 'AB' as source

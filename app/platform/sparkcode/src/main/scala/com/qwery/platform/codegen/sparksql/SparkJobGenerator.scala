@@ -8,6 +8,7 @@ import com.qwery.models._
 import com.qwery.platform.spark.die
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
+import com.qwery.util.StringHelper._
 
 /**
   * Spark/Scala Job Generator
@@ -74,8 +75,8 @@ class SparkJobGenerator(className: String,
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       SparkJobMainClass(className, packageName, invokable, imports = List(
         "com.qwery.models._",
-        StorageFormats.getClass.getName.replaceAllLiterally("$", ""),
-        ResourceManager.getClass.getName.replaceAllLiterally("$", ""),
+        StorageFormats.getObjectFullName,
+        ResourceManager.getObjectFullName,
         "org.apache.spark.SparkConf",
         "org.apache.spark.sql.functions._",
         "org.apache.spark.sql.types.StructType",
@@ -168,8 +169,13 @@ object SparkJobGenerator {
         die(s"java ${SparkJobGenerator.getObjectFullName} <inputPath> <outputPath> <outputClass> [<flags>]")
     }
 
-    // generate the sbt project
-    implicit val settings: CompilerSettings = CompilerSettings()
+    // create the compiler context
+    implicit val settings: CompilerSettings = new CompilerSettings(
+      inlineSQL = Some(!appArgs.sparkNative),
+      defaultDB = Some(appArgs.defaultDB)
+    )
+
+      // generate the sbt project
     val model = SQLLanguageParser.parse(new File(inputPath))
     new SparkJobGenerator(className = className, packageName = packageName, outputPath = outputPath, appArgs = appArgs)
       .createProject(model)
@@ -177,7 +183,7 @@ object SparkJobGenerator {
 
   /**
     * Extracts the class and package names from the given fully qualified class name
-    * @param classNameWithPackage the given fully qualified class name
+    * @param classNameWithPackage the given fully qualified class name (e.g. "com.acme.CoyoteFuture")
     * @return the class and package names (e.g. "com.acme.CoyoteFuture" => ["com.acme", "CoyoteFuture"])
     */
   private def getClassAndPackageNames(classNameWithPackage: String): (String, String) = {
