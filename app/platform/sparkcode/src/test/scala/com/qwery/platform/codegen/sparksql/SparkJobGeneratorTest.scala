@@ -6,12 +6,12 @@ import org.scalatest.FunSpec
 import scala.util.Properties
 
 /**
-  * Spark Code Generator Test Suite
+  * Spark Job Generator Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class SparkCodeGeneratorTest extends FunSpec {
+class SparkJobGeneratorTest extends FunSpec {
 
-  describe(classOf[SparkCodeGenerator].getSimpleName) {
+  describe(classOf[SparkJobGenerator].getSimpleName) {
     implicit val settings: CompilerSettings = CompilerSettings()
 
     it("should generate the OilGasSecurities Spark job") {
@@ -59,12 +59,12 @@ class SparkCodeGeneratorTest extends FunSpec {
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin
       )
-      val generator = new SparkCodeGenerator(
+      val generator = new SparkJobGenerator(
         className = "OilGasSecurities",
         packageName = "com.qwery.platform.codegen.spark",
         outputPath = "./temp/gen-src"
       )
-      generator.generateProject(model)
+      generator.createProject(model)
     }
 
     it("should generate the AdBookIngest Spark job") {
@@ -118,12 +118,12 @@ class SparkCodeGeneratorTest extends FunSpec {
            |group by dfp.client_id, ab.client_id;
            |""".stripMargin
       )
-      val generator = new SparkCodeGenerator(
+      val generator = new SparkJobGenerator(
         className = "AdBookIngestSparkJob",
-        packageName = "com.github.ldaniels528.qwery",
+        packageName = "com.coxautoinc.wtm.adbook",
         outputPath = s"${Properties.userHome}/GitHub/adbook_poc"
       )
-      generator.generateProject(model)
+      generator.createProject(model)
     }
 
   }

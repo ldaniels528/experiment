@@ -51,9 +51,7 @@ object SparkCodeCompiler {
         case u: Union => List(u.query0, u.query1).flatMap(recurse)
         case t: TableLike => t.name :: Nil
         case t: TableRef => t.name :: Nil
-        case _ =>
-          logger.info(s"invokable: $invokable")
-          Nil
+        case _ => Nil
       }
     }
 
@@ -67,7 +65,7 @@ object SparkCodeCompiler {
     */
   def incorporateSources(path: String): Invokable = {
     val file = new File(path).getCanonicalFile
-    logger.info(s"Merging source file '${file.getAbsolutePath}'...")
+    logger.info(s"[*] Merging source file '${file.getAbsolutePath}'...")
     SQLLanguageParser.parse(file)
   }
 
@@ -169,13 +167,18 @@ object SparkCodeCompiler {
     */
   final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
     def compile(implicit settings: CompilerSettings): String = {
-      logger.info(s"Decoding '$invokable'...")
       val result = invokable match {
+        case Console.Debug(text) => s"""logger.debug("$text")"""
+        case Console.Error(text) => s"""logger.error("$text")"""
+        case Console.Info(text) => s"""logger.info("$text")"""
+        case Console.Print(text) => s"""println("$text")"""
+        case Console.Warn(text) => s"""logger.warn("$text")"""
         case Create(t: Table) => s"""$resourceMgrClassName.add(${t.codify})"""
         case Include(path) => incorporateSources(path).compile
         case i: Insert => i.compile
         case m: MainProgram => m.code.compile
         case s: Select => s.compile
+        case Show(rows, limit) => s"""${rows.compile}.show(${limit.getOrElse(20)})"""
         case s: SQL => s.statements.map(_.compile).mkString("\n")
         case t: TableRef => t.name
         case x =>
@@ -215,14 +218,12 @@ object SparkCodeCompiler {
     */
   final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
 
-    def compile(implicit settings: CompilerSettings): String = if (settings.inlineSQL) compileAsSQL else compileAsCode
+    def compile(implicit settings: CompilerSettings): String = if (settings.isInlineSQL) compileAsSQL else compileAsCode
 
     private def compileAsCode(implicit settings: CompilerSettings): String = {
       val source = select.from map {
         case TableRef(name) => s"$resourceMgrClassName.read(${name.codify})"
-        case x =>
-          logger.info(s"select => $x")
-          x.compile
+        case op => op.compile
       } getOrElse die(s"The data source found for '$select'")
 
       // process the SELECT statement

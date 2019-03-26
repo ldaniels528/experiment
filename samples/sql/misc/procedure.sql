@@ -5,8 +5,8 @@ main program 'companylist' with batch processing {
 
     -- First, we define our input and output sources
     log 'Loading the input and output sources...';
-    include './samples/sql/companylist-input.sql';
-    include './samples/sql/companylist-output-json.sql';
+    include './samples/sql/companylist/companylist-input.sql';
+    include './samples/sql/companylist/companylist-output-json.sql';
 
     ----------------------------------------------------------------
     --      functions and procedures

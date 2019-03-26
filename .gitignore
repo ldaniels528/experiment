@@ -66,3 +66,4 @@ samples/sales_transaction_data/
 samples/sql/omniture
 metastore_db/
 
+scripts/stacys_secret_weapon.sh

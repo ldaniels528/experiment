@@ -15,14 +15,14 @@ case class SparkJobMainClass(className: String,
                              invokable: Invokable,
                              imports: Seq[String]) {
 
-  def generate(implicit settings: CompilerSettings): String = {
+  def generate(appArgs: ApplicationArgs)(implicit settings: CompilerSettings): String = {
     s"""|package $packageName
         |
         |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
         |
         |class $className() extends Serializable {
         |  @transient
-        |  private val logger = LoggerFactory.getLogger(getClass)
+        |  private lazy val logger = LoggerFactory.getLogger(getClass)
         |
         |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
         |     import spark.implicits._
@@ -35,7 +35,7 @@ case class SparkJobMainClass(className: String,
         |   private[this] val logger = LoggerFactory.getLogger(getClass)
         |
         |   def main(args: Array[String]): Unit = {
-        |     implicit val spark: SparkSession = createSparkSession("$className")
+        |     implicit val spark: SparkSession = createSparkSession("${appArgs.appName}")
         |     new $className().start(args)
         |     spark.stop()
         |   }
@@ -51,6 +51,7 @@ case class SparkJobMainClass(className: String,
         |     try builder.getOrCreate() catch {
         |       // on failure, create a local one...
         |       case _: Throwable =>
+        |         System.setSecurityManager(null)
         |         logger.warn(s"$$appName failed to connect to EMR cluster; starting local session...")
         |         builder.master("local[*]").getOrCreate()
         |     }

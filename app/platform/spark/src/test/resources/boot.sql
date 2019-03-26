@@ -10,8 +10,8 @@ main program 'companylist'
     /* First, we define our input and output sources */
 
     info 'Loading the input and output sources... ';
-    include './samples/sql/companylist-input.sql';
-    include './samples/sql/companylist-output-json.sql';
+    include './samples/sql/companylist/companylist-input.sql';
+    include './samples/sql/companylist/companylist-output-json.sql';
 
     /* And finally, we perform our filtering/transformation */
 

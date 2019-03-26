@@ -1,18 +1,17 @@
 ----------------------------------------------------------------
---      companylist-legacy
+--      companylist
 ----------------------------------------------------------------
-main program 'companylist-legacy'
+main program 'companylist'
     with arguments as @args
     with environment as @env
     with batch processing
-as
-begin
+{
 
     /* First, we define our input and output sources */
 
     info 'Loading the input and output sources... ';
-    include './samples/sql/companylist-input.sql';
-    include './samples/sql/companylist-output-json.sql';
+    include './samples/sql/companylist/companylist-input.sql';
+    include './samples/sql/companylist/companylist-output-json.sql';
 
     /* And finally, we perform our filtering/transformation */
 
@@ -29,5 +28,4 @@ begin
         where Industry = 'Oil/Gas Transmission'
     ) limit 5;
 
-end
-;
+}

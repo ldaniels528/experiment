@@ -131,7 +131,7 @@ object SparkInlineSQLCompiler {
         case s: Select => makeSQL(s)
         case s: SQL => s.statements.map(_.toSQL).mkString("\n")
         case t: TableRef =>
-          val tableName = s"${settings.defaultDB}.${t.name}"
+          val tableName = s"${settings.getDefaultDB}.${t.name}"
           t.alias.map(alias => s"$tableName AS $alias") getOrElse tableName
         case u: Union => s"${u.query0.toSQL} UNION ${if (u.isDistinct) "DISTINCT" else ""} ${u.query1.toSQL}"
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")

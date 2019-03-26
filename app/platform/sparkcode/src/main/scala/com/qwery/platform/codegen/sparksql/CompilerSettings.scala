@@ -9,7 +9,14 @@ import java.net.URL
   * @param defaultDB the default database name
   * @param inlineSQL indicates whether to generate inline SQL
   */
-case class CompilerSettings(defaultDB: String, inlineSQL: Boolean) extends JSONCapability
+case class CompilerSettings(defaultDB: Option[String] = Some("global_temp"),
+                            inlineSQL: Option[Boolean] = Some(true)) extends JSONCapability {
+
+  def getDefaultDB: String = defaultDB.getOrElse("global_temp")
+
+  def isInlineSQL: Boolean = inlineSQL.contains(true)
+
+}
 
 /**
   * Compiler Settings Companion
@@ -21,7 +28,20 @@ object CompilerSettings {
     * Creates a new [[CompilerSettings]] instance with default values
     * @return a new [[CompilerSettings]] instance
     */
-  def apply(): CompilerSettings = CompilerSettings(defaultDB = "global_temp", inlineSQL = true)
+  def apply(): CompilerSettings = CompilerSettings(Nil)
+
+  /**
+    * Creates a new [[CompilerSettings]] instance with values extracted from the given arguments
+    * @param args the given command line arguments
+    * @return a new [[CompilerSettings]] instance
+    */
+  def apply(args: Seq[String]): CompilerSettings = {
+    import com.qwery.util.OptionHelper.Implicits.Risky._
+    CompilerSettings(
+      defaultDB = "global_temp",
+      inlineSQL = !args.contains("--native-scala")
+    )
+  }
 
   /**
     * Creates a new [[CompilerSettings]] instance from the given file

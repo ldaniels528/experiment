@@ -13,7 +13,7 @@ val flinkVersion = "1.6.1"
 val kafkaVersion = "0.10.2.1"
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
-val sparkVersion = "2.3.2"
+val sparkVersion = "2.3.3"
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Scala (JVM)
