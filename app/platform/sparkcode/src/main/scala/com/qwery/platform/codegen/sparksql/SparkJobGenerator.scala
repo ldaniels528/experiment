@@ -97,7 +97,7 @@ class SparkJobGenerator(className: String,
     val startTime = System.currentTimeMillis()
     lazy val elapsedTime = System.currentTimeMillis() - startTime
 
-    logger.info(s"[*] Generating Spark-Scala project '${appArgs.appName}'...")
+    logger.info(s"[*] Generating Spark-Scala project '${appArgs.appName}' [${new File(outputPath).getCanonicalPath}]...")
     logger.info("[*] Building project structure...")
     createProjectStructure()
 
