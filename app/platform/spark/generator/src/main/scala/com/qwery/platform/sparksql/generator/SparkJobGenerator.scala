@@ -36,6 +36,7 @@ class SparkJobGenerator(className: String,
           |scalaVersion := "$scalaVersion"
           |
           |//test in assembly := {}
+          |mainClass in assembly := Some("$packageName.$className")
           |assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
           |assemblyMergeStrategy in assembly := {
           |  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
@@ -55,7 +56,7 @@ class SparkJobGenerator(className: String,
           |   //
           |   // placeholder dependencies
           |   "com.qwery" %% "core" % "${AppConstants.version}",
-          |   "com.qwery" %% "platform-spark-codegen" % "${AppConstants.version}",
+          |   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
           |   "com.qwery" %% "language" % "${AppConstants.version}"
           |)
           |""".stripMargin

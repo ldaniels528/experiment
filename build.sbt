@@ -28,8 +28,8 @@ lazy val testDependencies = Seq(
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, language, platform_spark_generator).
-  dependsOn(core, language, platform_spark_generator).
+  aggregate(core, language, platform_common, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
+  dependsOn(core, language, platform_common, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
