@@ -109,32 +109,6 @@ lazy val platform_common = (project in file("./app/platform/common")).
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
-//      Platform Projects: Flink
-/////////////////////////////////////////////////////////////////////////////////
-
-lazy val platform_flink = (project in file("./app/platform/flink")).
-  dependsOn(platform_common).
-  settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "platform-flink",
-    organization := "com.qwery",
-    description := "A SQL-like query language for Flink",
-    version := appVersion,
-    scalaVersion := scalaJvmVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    coverageEnabled := true,
-    libraryDependencies ++= Seq(
-      // Flink
-      "org.apache.flink" %% "flink-scala" % flinkVersion,
-      "org.apache.flink" %% "flink-streaming-scala" % flinkVersion,
-      "org.apache.flink" %% "flink-clients" % flinkVersion,
-      "org.apache.flink" %% "flink-table" % flinkVersion
-    ))
-
-/////////////////////////////////////////////////////////////////////////////////
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////
 
