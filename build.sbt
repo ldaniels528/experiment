@@ -9,8 +9,6 @@ val scalaJvmVersion = "2.11.12"
 
 val akkaVersion = "2.5.2"
 val awsVersion = "1.11.394"
-val flinkVersion = "1.6.1"
-val kafkaVersion = "0.10.2.1"
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
 val sparkVersion = "2.3.3"
@@ -110,8 +108,7 @@ lazy val platform_spark_shared = (project in file("./app/platform/spark/shared")
       "com.databricks" %% "spark-csv" % "1.5.0",
       "org.apache.spark" %% "spark-core" % sparkVersion,
       "org.apache.spark" %% "spark-hive" % sparkVersion,
-      "org.apache.spark" %% "spark-sql" % sparkVersion,
-      "org.apache.spark" %% "spark-streaming" % sparkVersion
+      "org.apache.spark" %% "spark-sql" % sparkVersion
     ))
 
 lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedded")).
@@ -156,8 +153,7 @@ lazy val platform_spark_generator = (project in file("./app/platform/spark/gener
       // Spark
       "org.apache.spark" %% "spark-core" % sparkVersion,
       "org.apache.spark" %% "spark-hive" % sparkVersion,
-      "org.apache.spark" %% "spark-sql" % sparkVersion,
-      "org.apache.spark" %% "spark-streaming" % sparkVersion
+      "org.apache.spark" %% "spark-sql" % sparkVersion
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

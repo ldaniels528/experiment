@@ -207,7 +207,6 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param insert the given [[Insert]]
       */
     final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-
       import com.qwery.util.StringHelper._
 
       @inline def compile(implicit appArgs: ApplicationArgs): String =
@@ -341,7 +340,6 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param column the given [[Column]]
       */
     final implicit class TableColumnExtensions(val column: Column) extends AnyVal {
-
       import column._
 
       @inline def codify: String = s"""Column(name = "$name", `type` = ${`type`.compile}, isNullable = $isNullable)"""
