@@ -10,7 +10,7 @@ import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
 import com.qwery.platform.sparksql.SparkHelper._
-import com.qwery.platform.sparksql.embedded.SparkEmbeddedCompiler.Implicits._
+import com.qwery.platform.sparksql.embedded.EmbeddedSparkCompiler.Implicits._
 import com.qwery.platform.sparksql.embedded.SparkSelect.{SparkJoin, SparkUnion}
 import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory
   * Embedded Compiler for Apache Spark
   * @author lawrence.daniels@gmail.com
   */
-trait SparkEmbeddedCompiler {
+trait EmbeddedSparkCompiler {
 
   /**
     * Compiles the given condition
@@ -67,7 +67,7 @@ trait SparkEmbeddedCompiler {
   * Spark Qwery Compiler Companion
   * @author lawrence.daniels@gmail.com
   */
-object SparkEmbeddedCompiler {
+object EmbeddedSparkCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
   private[this] val sparkTypeMapping = {
     import org.apache.spark.sql.types.DataTypes
@@ -93,7 +93,7 @@ object SparkEmbeddedCompiler {
     * @return the [[DataFrame]]
     */
   def read(tableOrView: TableLike)(implicit rc: EmbeddedSparkContext): Option[DataFrame] = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
     tableOrView match {
       case ref@InlineTable(name, columns, source) =>
@@ -386,8 +386,6 @@ object SparkEmbeddedCompiler {
         case SQL(ops) => SparkSQL(ops.map(_.compile))
         case Show(dataSet, limit) => SparkShow(dataSet.compile, limit)
         case ref@TableRef(name) => ReadTableOrViewByReference(name).as(ref.alias)
-        case Update(table, assignments, where) =>
-          SparkUpdate(source = table.compile, assignments, where = where.map(_.compile))
         case ref@Union(query0, query1, distinct) =>
           SparkUnion(query0 = query0.compile, query1 = query1.compile, isDistinct = distinct).as(ref.alias)
         case ref@RowSetVariableRef(name) => ReadRowSetByReference(name).as(ref.alias)

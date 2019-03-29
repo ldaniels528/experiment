@@ -5,7 +5,7 @@ package sparksql.generator
 import com.databricks.spark.avro._
 import com.qwery.models.StorageFormats._
 import com.qwery.models._
-import com.qwery.platform.sparksql.embedded.SparkEmbeddedCompiler
+import com.qwery.platform.sparksql.embedded.EmbeddedSparkCompiler
 import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.types.StructType
@@ -62,7 +62,7 @@ class ResourceManager {
     * @return the [[StructType schema]]
     */
   def createSchema(columns: Seq[Column]): StructType = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     StructType(fields = columns.map(_.compile))
   }
 

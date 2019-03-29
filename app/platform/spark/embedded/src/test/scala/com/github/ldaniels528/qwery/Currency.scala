@@ -21,6 +21,7 @@ class Currency() extends UDF1[String, String] {
         case 'M' => 1e+6
         case 'B' => 1e+9
         case 'T' => 1e+12
+        case 'P' => 1e+15
         case _ => 1d
       }
       factor * number.toDouble

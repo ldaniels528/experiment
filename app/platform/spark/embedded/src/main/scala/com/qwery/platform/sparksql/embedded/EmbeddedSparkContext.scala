@@ -3,7 +3,7 @@ package com.qwery.platform.sparksql.embedded
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.qwery.models._
-import com.qwery.platform.sparksql.embedded.SparkEmbeddedCompiler.read
+import com.qwery.platform.sparksql.embedded.EmbeddedSparkCompiler.read
 import com.qwery.util.OptionHelper._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
@@ -119,7 +119,7 @@ class EmbeddedSparkContext() {
     * @return the [[StructType]]
     */
   def createSchema(columns: Seq[Column]): StructType = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     StructType(fields = columns.map(_.compile))
   }
 

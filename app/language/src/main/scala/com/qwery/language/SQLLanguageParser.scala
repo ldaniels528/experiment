@@ -559,13 +559,14 @@ trait SQLLanguageParser {
   * @author lawrence.daniels@gmail.com
   */
 object SQLLanguageParser {
+  import com.qwery.util.ResourceHelper._
 
   /**
     * Parses the contents of the given file into an [[Invokable invokable]]
     * @param file the given [[File file]]
     * @return the resultant [[Invokable]]
     */
-  def parse(file: File): Invokable = parse(Source.fromFile(file).mkString)
+  def parse(file: File): Invokable = parse(Source.fromFile(file).use(_.mkString))
 
   /**
     * Parses the contents of the given input stream into an [[Invokable invokable]]
@@ -579,7 +580,7 @@ object SQLLanguageParser {
     * @param url the given [[URL]]
     * @return the resultant [[Invokable]]
     */
-  def parse(url: URL): Invokable = parse(Source.fromURL(url).mkString)
+  def parse(url: URL): Invokable = parse(Source.fromURL(url).use(_.mkString))
 
   /**
     * Parses the contents of the given string into an [[Invokable invokable]]

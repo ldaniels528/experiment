@@ -12,14 +12,14 @@ sealed trait SparkColumnResolver {
 
 case class SparkLocationColumnResolver(location: Location) extends SparkColumnResolver {
   override def resolve(implicit rc: EmbeddedSparkContext): Seq[Column] = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     location.resolveColumns
   }
 }
 
 case class SparkTableColumnResolver(tableLike: TableLike) extends SparkColumnResolver {
   override def resolve(implicit rc: EmbeddedSparkContext): Seq[Column] = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     tableLike.resolveColumns
   }
 }

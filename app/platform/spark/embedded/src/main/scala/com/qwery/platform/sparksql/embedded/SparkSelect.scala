@@ -115,7 +115,7 @@ case class SparkSelect(fields: Seq[(SparkColumn, Boolean, Option[String])],
     * @return the resultant [[DataFrame]]
     */
   def processRowFiltering(df0: DataFrame)(implicit rc: EmbeddedSparkContext): DataFrame = {
-    import SparkEmbeddedCompiler.Implicits._
+    import EmbeddedSparkCompiler.Implicits._
     where.map(_.compile).map(df0.filter) || df0
   }
 

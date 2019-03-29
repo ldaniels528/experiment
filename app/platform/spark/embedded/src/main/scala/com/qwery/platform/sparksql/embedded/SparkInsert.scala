@@ -26,7 +26,7 @@ object SparkInsert {
     */
   case class Sink(target: Location, append: Boolean) extends SparkInvokable {
     override def execute(input: Option[DataFrame])(implicit rc: EmbeddedSparkContext): Option[DataFrame] = input map { df =>
-      SparkEmbeddedCompiler.write(df, target, append)
+      EmbeddedSparkCompiler.write(df, target, append)
       df
     }
   }

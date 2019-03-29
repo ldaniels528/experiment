@@ -11,10 +11,10 @@ import scala.language.postfixOps
   * Spark Qwery Compiler Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class SparkEmbeddedCompilerTest extends FunSpec {
-  private val compiler = new SparkEmbeddedCompiler {}
+class EmbeddedSparkCompilerTest extends FunSpec {
+  private val compiler = new EmbeddedSparkCompiler {}
 
-  describe(classOf[SparkEmbeddedCompiler].getSimpleName) {
+  describe(classOf[EmbeddedSparkCompiler].getSimpleName) {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
