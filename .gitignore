@@ -67,3 +67,4 @@ samples/sql/omniture
 metastore_db/
 
 scripts/stacys_secret_weapon.sh
+scripts/adbook_poc.sh

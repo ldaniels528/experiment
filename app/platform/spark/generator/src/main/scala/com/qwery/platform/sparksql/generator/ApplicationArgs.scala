@@ -1,7 +1,19 @@
 package com.qwery.platform.sparksql.generator
 
+import java.io.File
+
 /**
   * Application Arguments
+  * @param appName          the Spark application name (default: `"Untitled"`)
+  * @param appVersion       the version identifier of your application (default: `"1.0"`)
+  * @param isClassOnly      indicates whether only a Scala class should be generated (default: `false`)
+  * @param defaultDB        the default database (default: `"global_temp"`)
+  * @param scalaVersion     the Scala version the generated project will use (default: "2.11.12")
+  * @param sparkAvroVersion the DataStax Spark-Avro library version (default: "4.0.0")
+  * @param sparkCsvVersion  the DataStax Spark-CSV library version (default: "1.5.0")
+  * @param isSparkNative    indicates whether to generate Spark native code; as opposed to Spark SQL (default: `false`)
+  * @param sparkVersion     the Apache Spark library version (default: "2.3.3")
+  * @param templateClass    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
 case class ApplicationArgs(appName: String,
@@ -13,7 +25,7 @@ case class ApplicationArgs(appName: String,
                            sparkCsvVersion: String,
                            isSparkNative: Boolean,
                            sparkVersion: String,
-                           templateClass: Option[String]) {
+                           templateClass: Option[File]) {
 
   val isInlineSQL: Boolean = !isSparkNative
 
@@ -35,14 +47,14 @@ object ApplicationArgs {
     ApplicationArgs(
       appName = mappings.getOrElse("--app-name", "Untitled"),
       appVersion = mappings.getOrElse("--app-version", "1.0"),
-      isClassOnly =  mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
+      isClassOnly = mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       defaultDB = mappings.getOrElse("--default-db", "global_temp"),
       isSparkNative = mappings.get("--spark-native").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       scalaVersion = mappings.getOrElse("--scala-version", "2.11.12"),
       sparkAvroVersion = mappings.getOrElse("--spark-avro", "4.0.0"),
       sparkCsvVersion = mappings.getOrElse("--spark-csv", "1.5.0"),
       sparkVersion = mappings.getOrElse("--spark-version", "2.3.3"),
-      templateClass = mappings.get("--template-class")
+      templateClass = mappings.get("--template-class").map(new File(_))
     )
   }
 

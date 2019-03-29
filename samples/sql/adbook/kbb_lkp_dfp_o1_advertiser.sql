@@ -13,6 +13,6 @@ begin
     )
     stored as inputformat parquet
     --location 's3://kbb-etl-edp/data/parquet/kbb_lkp_dfp_o1_advertiser/';
-    location './temp/kbb_lkp_dfp_o1_advertiser/';
+    location './temp/kbb-etl-edp-dev/data/parquet/kbb_lkp_dfp_o1_advertiser/';
 
 end;

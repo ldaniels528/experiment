@@ -35,7 +35,7 @@ class SparkJobGenerator(className: String,
           |
           |scalaVersion := "$scalaVersion"
           |
-          |//test in assembly := {}
+          |test in assembly := {}
           |mainClass in assembly := Some("$packageName.$className")
           |assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
           |assemblyMergeStrategy in assembly := {
@@ -74,6 +74,7 @@ class SparkJobGenerator(className: String,
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
 
     // write the class to disk
+    logger.info(s"[*] Generating class '$packageName.$className'...")
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       generateClassWithMain(invokable, imports = List(
         "com.qwery.models._",
@@ -102,19 +103,15 @@ class SparkJobGenerator(className: String,
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
 
     // write the class to disk
+    logger.info(s"[*] Generating class '$packageName.$className' from template '${templateFile.getCanonicalPath}'...")
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       generateClassFromTemplate(templateFile, invokable, imports = List(
         "com.qwery.models._",
         StorageFormats.getObjectFullName,
         ResourceManager.getObjectFullName,
-        "org.apache.spark.SparkConf",
         "org.apache.spark.sql.functions._",
-        "org.apache.spark.sql.types.StructType",
-        "org.apache.spark.sql.DataFrame",
-        "org.apache.spark.sql.Row",
-        "org.apache.spark.sql.SparkSession",
         "org.slf4j.LoggerFactory"
-      ))
+      )) getOrElse die(s"No replaceable code block found in ${templateFile.getCanonicalPath}")
     }
   }
 
@@ -134,8 +131,8 @@ class SparkJobGenerator(className: String,
     logger.info("[*] Generating build script (build.sbt)...")
     createBuildScript()
 
-    logger.info(s"[*] Generating class '$packageName.$className'...")
-    val file = createMainClass(invokable)
+    // generate the class file
+    val file = appArgs.templateClass.map(createMainClassFromTemplate(_, invokable)).getOrElse(createMainClass(invokable))
 
     logger.info(s"[*] Process completed in $elapsedTime msec(s)")
     file
@@ -163,31 +160,45 @@ class SparkJobGenerator(className: String,
     projectDir
   }
 
+  def generate(invokable: Invokable)(implicit appArgs: ApplicationArgs): File = {
+    if (!appArgs.isClassOnly) createProject(invokable) else {
+      appArgs.templateClass match {
+        case Some(templateFile) => createMainClassFromTemplate(templateFile, invokable)
+        case None => createMainClass(invokable)
+      }
+    }
+  }
+
   /**
     * Generates a class from a template file
     * @param templateFile the given template [[File file]]
     * @param invokable    the [[Invokable]] for which to generate code
     * @param imports      the collection of imports
     * @param appArgs      the implicit [[ApplicationArgs]]
-    * @return the contents f the generated file
+    * @return an option of the contents f the generated file
     */
   private def generateClassFromTemplate(templateFile: File, invokable: Invokable, imports: Seq[String])
-                                       (implicit appArgs: ApplicationArgs): String = {
+                                       (implicit appArgs: ApplicationArgs): Option[String] = {
     import SparkCodeCompiler.Implicits._
     import com.qwery.util.StringHelper._
 
-    val codeTag = "// @@QWERY_CODE"
-    val importsTag = "// @@QWERY_IMPORTS"
+    val codeBegin = "// @@SPARK_QL_START"
+    val codeEnd = "// @@SPARK_QL_END"
 
     // read the contents of the template file
-    val code = Source.fromFile(templateFile).use(_.getLines()).mkString
+    val code = Source.fromFile(templateFile).use(_.getLines().mkString("\n"))
 
     // replace the QWERY block if it exists
-    code.indexOfOpt(codeTag) match {
-      case Some(index) => new StringBuilder(code).replace(index, index + codeTag.length, invokable.compile).toString()
-      case None =>
-        logger.warn(s"No replaceable code block found in ${templateFile.getCanonicalPath}")
-        code
+    for {
+      start <- code.indexOfOpt(codeBegin)
+      end <- code.indexOfOpt(codeEnd).map(_ + codeEnd.length)
+    } yield {
+      new StringBuilder(code).replace(start, end,
+        s"""|${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
+            |import spark.implicits._
+            |${invokable.compile}
+            |""".stripMargin
+      ).toString()
     }
   }
 
@@ -287,7 +298,7 @@ object SparkJobGenerator {
     // generate the sbt project
     val model = SQLLanguageParser.parse(new File(inputPath))
     new SparkJobGenerator(className = className, packageName = packageName, outputPath = outputPath, appArgs = appArgs)
-      .createProject(model)(appArgs)
+      .generate(model)(appArgs)
   }
 
   /**
@@ -299,7 +310,7 @@ object SparkJobGenerator {
     import com.qwery.util.StringHelper._
     classNameWithPackage.lastIndexOfOpt(".").map(classNameWithPackage.splitAt) match {
       case Some((packageName, className)) => (className.drop(1), packageName)
-      case None => (classNameWithPackage, "com.examples")
+      case None => (classNameWithPackage, "com.examples.spark")
     }
   }
 
