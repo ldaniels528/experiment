@@ -1,5 +1,7 @@
 package com.qwery.platform.sparksql.generator
 
+import java.io.File
+
 import org.scalatest.FunSpec
 
 /**
@@ -33,7 +35,7 @@ class ApplicationArgsTest extends FunSpec {
       assert(appArgs.sparkCsvVersion == "1.5.1")
       assert(appArgs.sparkVersion == "2.3.2")
       assert(appArgs.isSparkNative)
-      assert(appArgs.templateClass.contains("./src/main/scala/Test.scala"))
+      assert(appArgs.templateClass.contains(new File("./src/main/scala/Test.scala")))
     }
 
     it("should failed to parse improperly formatted arguments") {

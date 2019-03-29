@@ -1,4 +1,4 @@
-package com.qwery.platform
+package com.qwery.platform.sparksql.embedded
 
 import org.slf4j.LoggerFactory
 

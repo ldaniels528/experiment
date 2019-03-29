@@ -28,10 +28,6 @@ class EmbeddedSparkJobTest extends FunSpec {
       EmbeddedSparkJob.main(Array("./samples/sql/misc/procedure.sql"))
     }
 
-    it("should compile and execute: liveramp.sql") {
-      EmbeddedSparkJob.main(Array("./samples/sql/misc/liveramp.sql"))
-    }
-
     it("should compile and execute: boot.sql") {
       EmbeddedSparkJob.main(Array())
     }

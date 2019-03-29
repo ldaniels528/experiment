@@ -28,8 +28,8 @@ lazy val testDependencies = Seq(
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, language, platform_common, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
-  dependsOn(core, language, platform_common, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
+  aggregate(core, language, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
+  dependsOn(core, language, platform_spark_shared, platform_spark_embedded, platform_spark_generator).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -87,33 +87,11 @@ lazy val language = (project in file("./app/language")).
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
-//      Platform Projects
-/////////////////////////////////////////////////////////////////////////////////
-
-lazy val platform_common = (project in file("./app/platform/common")).
-  dependsOn(core, language).
-  settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "platform-common",
-    organization := "com.qwery",
-    description := "A SQL-like query language for Flink",
-    version := appVersion,
-    scalaVersion := scalaJvmVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    coverageEnabled := true,
-    libraryDependencies ++= Seq(
-      "net.liftweb" %% "lift-json" % "3.0.1"
-    ))
-
-/////////////////////////////////////////////////////////////////////////////////
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val platform_spark_shared = (project in file("./app/platform/spark/shared")).
-  dependsOn(platform_common).
+  dependsOn(core, language).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
