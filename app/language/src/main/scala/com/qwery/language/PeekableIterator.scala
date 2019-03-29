@@ -27,6 +27,10 @@ class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) exten
     */
   def index: Int = position
 
+  /**
+    * Marks the current position within the iterator; allowing one to
+    * return to this position via [[reset()]]
+    */
   def mark(): Unit = marks = position :: marks
 
   /**
@@ -65,6 +69,10 @@ class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) exten
     */
   def peek: Option[T] = if (hasNext) Option(values(position)) else None
 
+  /**
+    * Returns an option of the element `offset` places head in the iterator without moving the cursor
+    * @return an option of the [[T element]]
+    */
   def peekAhead(offset: Int): Option[T] =
     if (position + offset >= 0 && position + offset < values.length) Option(values(position + offset)) else None
 

@@ -1,0 +1,56 @@
+package com.qwery.platform.sparksql.generator
+
+/**
+  * Application Arguments
+  * @author lawrence.daniels@gmail.com
+  */
+case class ApplicationArgs(appName: String,
+                           appVersion: String,
+                           isClassOnly: Boolean,
+                           defaultDB: String,
+                           scalaVersion: String,
+                           sparkAvroVersion: String,
+                           sparkCsvVersion: String,
+                           isSparkNative: Boolean,
+                           sparkVersion: String,
+                           templateClass: Option[String]) {
+
+  val isInlineSQL: Boolean = !isSparkNative
+
+}
+
+/**
+  * Application Arguments
+  * @author lawrence.daniels@gmail.com
+  */
+object ApplicationArgs {
+
+  /**
+    * Creates a new application arguments instance using the given command line arguments
+    * @param args the given command line arguments
+    * @return the [[ApplicationArgs]]
+    */
+  def apply(args: Seq[String] = Nil): ApplicationArgs = {
+    val mappings = createArgumentsMap(args)
+    ApplicationArgs(
+      appName = mappings.getOrElse("--app-name", "Untitled"),
+      appVersion = mappings.getOrElse("--app-version", "1.0"),
+      isClassOnly =  mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
+      defaultDB = mappings.getOrElse("--default-db", "global_temp"),
+      isSparkNative = mappings.get("--spark-native").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
+      scalaVersion = mappings.getOrElse("--scala-version", "2.11.12"),
+      sparkAvroVersion = mappings.getOrElse("--spark-avro", "4.0.0"),
+      sparkCsvVersion = mappings.getOrElse("--spark-csv", "1.5.0"),
+      sparkVersion = mappings.getOrElse("--spark-version", "2.3.3"),
+      templateClass = mappings.get("--template-class")
+    )
+  }
+
+  private def createArgumentsMap(args: Seq[String]): Map[String, String] = {
+    Map(args.toList.sliding(2, 2).toList map {
+      case key :: value :: Nil if key.startsWith("--") => key -> value
+      case other => throw new IllegalArgumentException(s"Invalid argument specified near '${other.mkString(" ")}'")
+    }: _*)
+  }
+
+}

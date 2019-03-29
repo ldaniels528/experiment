@@ -1,4 +1,5 @@
-package com.qwery.models
+package com.qwery
+package models
 
 import com.qwery.models.expressions.Expression
 

@@ -8,8 +8,6 @@ import com.qwery.models.expressions.{LocalVariableRef, RowSetVariableRef}
   */
 package object models {
 
-  def die[A](message: String): A = throw new IllegalStateException(message)
-
   /**
     * Shortcut for creating a local variable reference
     * @param name the name of the variable

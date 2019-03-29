@@ -15,10 +15,6 @@ val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
 val sparkVersion = "2.3.3"
 
-/////////////////////////////////////////////////////////////////////////////////
-//      Scala (JVM)
-/////////////////////////////////////////////////////////////////////////////////
-
 lazy val testDependencies = Seq(
   libraryDependencies ++= Seq(
     "log4j" % "log4j" % "1.2.17",
@@ -27,9 +23,13 @@ lazy val testDependencies = Seq(
     "org.scalatest" %% "scalatest" % scalaTestVersion % Test
   ))
 
+/////////////////////////////////////////////////////////////////////////////////
+//      Root Project - builds all artifacts
+/////////////////////////////////////////////////////////////////////////////////
+
 lazy val root = (project in file("./app")).
-  aggregate(core, language, platform_common, platform_spark, platform_sparkcode).
-  dependsOn(core, language, platform_common, platform_spark, platform_sparkcode).
+  aggregate(core, language, platform_spark_generator).
+  dependsOn(core, language, platform_spark_generator).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -42,6 +42,10 @@ lazy val root = (project in file("./app")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true
   )
+
+/////////////////////////////////////////////////////////////////////////////////
+//      Core Project
+/////////////////////////////////////////////////////////////////////////////////
 
 lazy val core = (project in file("./app/core")).
   settings(publishingSettings: _*).
@@ -59,6 +63,10 @@ lazy val core = (project in file("./app/core")).
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-java-sdk" % awsVersion
     ))
+
+/////////////////////////////////////////////////////////////////////////////////
+//      Language/Parsing Project
+/////////////////////////////////////////////////////////////////////////////////
 
 lazy val language = (project in file("./app/language")).
   dependsOn(core).
@@ -78,6 +86,10 @@ lazy val language = (project in file("./app/language")).
 
     ))
 
+/////////////////////////////////////////////////////////////////////////////////
+//      Platform Projects
+/////////////////////////////////////////////////////////////////////////////////
+
 lazy val platform_common = (project in file("./app/platform/common")).
   dependsOn(core, language).
   settings(publishingSettings: _*).
@@ -93,13 +105,12 @@ lazy val platform_common = (project in file("./app/platform/common")).
     autoCompilerPlugins := true,
     coverageEnabled := true,
     libraryDependencies ++= Seq(
-      //
-      // Kafka
-      //"org.apache.kafka" %% "kafka" % kafkaVersion,
-      //"org.apache.kafka" % "kafka-clients" % kafkaVersion excludeAll ExclusionRule(organization = "net.jpountz.lz4", name = "lz4"),
-      //
       "net.liftweb" %% "lift-json" % "3.0.1"
     ))
+
+/////////////////////////////////////////////////////////////////////////////////
+//      Platform Projects: Flink
+/////////////////////////////////////////////////////////////////////////////////
 
 lazy val platform_flink = (project in file("./app/platform/flink")).
   dependsOn(platform_common).
@@ -123,12 +134,16 @@ lazy val platform_flink = (project in file("./app/platform/flink")).
       "org.apache.flink" %% "flink-table" % flinkVersion
     ))
 
-lazy val platform_spark = (project in file("./app/platform/spark")).
+/////////////////////////////////////////////////////////////////////////////////
+//      Platform Projects: Spark
+/////////////////////////////////////////////////////////////////////////////////
+
+lazy val platform_spark_shared = (project in file("./app/platform/spark/shared")).
   dependsOn(platform_common).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "platform-spark",
+    name := "platform-spark-common",
     organization := "com.qwery",
     description := "A SQL-like query language for Spark",
     version := appVersion,
@@ -147,14 +162,14 @@ lazy val platform_spark = (project in file("./app/platform/spark")).
       "org.apache.spark" %% "spark-streaming" % sparkVersion
     ))
 
-lazy val platform_sparkcode = (project in file("./app/platform/sparkcode")).
-  dependsOn(platform_common, platform_spark).
+lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedded")).
+  dependsOn(platform_spark_shared).
   settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "platform-spark-codegen",
+    name := "platform-spark-embedded",
     organization := "com.qwery",
-    description := "A SQL-like query language for generating Spark/Scala code",
+    description := "A SQL-like query language for Spark",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -165,6 +180,28 @@ lazy val platform_sparkcode = (project in file("./app/platform/sparkcode")).
       // Spark
       "com.databricks" %% "spark-avro" % "4.0.0",
       "com.databricks" %% "spark-csv" % "1.5.0",
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.apache.spark" %% "spark-hive" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-streaming" % sparkVersion
+    ))
+
+lazy val platform_spark_generator = (project in file("./app/platform/spark/generator")).
+  dependsOn(core, language, platform_spark_shared, platform_spark_embedded).
+  settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "platform-spark-generator",
+    organization := "com.qwery",
+    description := "A SQL-like query language for generating Spark/Scala code",
+    version := appVersion,
+    scalaVersion := scalaJvmVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    coverageEnabled := true,
+    libraryDependencies ++= Seq(
+      // Spark
       "org.apache.spark" %% "spark-core" % sparkVersion,
       "org.apache.spark" %% "spark-hive" % sparkVersion,
       "org.apache.spark" %% "spark-sql" % sparkVersion,
