@@ -16,6 +16,10 @@ class ExpressionParserTest extends FunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
+    it("""should parse "A.Symbol" (expression)""") {
+      verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
+    }
+
     it("""should parse conditional expression "100 < 1" (conditional expression)""") {
       verify("100 < 1", Literal(100) < 1)
     }

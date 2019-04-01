@@ -73,8 +73,7 @@ trait ExpressionParser {
     stream match {
       case ts if ts nextIf "*" => AllFields
       case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse (throw SyntaxException("Invalid field alias", ts))
-      case ts if ts.isBackticks => Field(ts.next().text)
-      case ts if ts.isText => Field(ts.next().text)
+      case ts if ts.isField => Field(ts.next().text)
       case ts => ts.die(s"Token is not valid (type: ${ts.peek.map(_.getClass.getName).orNull})")
     }
   }

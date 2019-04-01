@@ -28,7 +28,7 @@ object Field {
     case "*" :: Nil => AllFields
     case name :: Nil => BasicField(name)
     case alias :: name :: Nil => JoinField(name, tableAlias = Some(alias))
-    case _ => throw new IllegalArgumentException(s"Invalid field reference '$descriptor'")
+    case _ => throw new IllegalArgumentException(s"Invalid field descriptor '$descriptor'")
   }
 
   def unapply(field: Field): Option[String] = Some(field.name)
