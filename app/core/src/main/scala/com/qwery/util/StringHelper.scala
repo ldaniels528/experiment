@@ -21,10 +21,22 @@ object StringHelper {
   }
 
   /**
-    * Index Enrichment
+    * Object Name Extension
+    * @param obj the given [[AnyRef object]]
+    */
+  final implicit class ObjectNameExtension(val obj: AnyRef) extends AnyVal {
+
+    @inline def getObjectFullName: String = obj.getClass.getName.replaceAllLiterally("$", "")
+
+    @inline def getObjectSimpleName: String = obj.getClass.getSimpleName.replaceAllLiterally("$", "")
+
+  }
+
+  /**
+    * StringLike Index Enrichment
     * @param string the given [[StringLike]]; e.g. a [[String]] or [[StringBuilder]]
     */
-  final implicit class IndexEnrichment[T <: StringLike](val string: T) extends AnyVal {
+  final implicit class StringLikeIndexEnrichment[T <: StringLike](val string: T) extends AnyVal {
 
     @inline def indexOfOpt(s: String): Option[Int] = toOption(string.indexOf(s))
 
@@ -62,13 +74,17 @@ object StringHelper {
       if (sb.toString().trim.nonEmpty) values ::: sb.toString().trim :: Nil else values
     }
 
-  }
+    @inline def noneIfBlank: Option[String] = string.trim match {
+      case s if s.isEmpty => None
+      case s => Option(s)
+    }
 
-  final implicit class ObjectNameExtension(val obj: AnyRef) extends AnyVal {
+    @inline def substringOpt(start: Int): Option[String] =
+      if (start >= 0 && start < string.length) Option(string.substring(start)) else None
 
-    @inline def getObjectFullName: String = obj.getClass.getName.replaceAllLiterally("$", "")
 
-    @inline def getObjectSimpleName: String = obj.getClass.getSimpleName.replaceAllLiterally("$", "")
+    @inline def substringOpt(start: Int, end: Int): Option[String] =
+      if (start >= 0 && start <= end && end < string.length) Option(string.substring(start, end)) else None
 
   }
 

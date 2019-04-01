@@ -5,6 +5,8 @@ import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
 import com.qwery.models.expressions._
+import com.qwery.util.StringHelper._
+import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
 
@@ -136,6 +138,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
 
     // TABLE ... WITH clause
     case tag if tag.startsWith("%w:") => extractWithForTableClause(tag drop 3)
+
+    // quoted text values (e.g. "%z:comment" => "'This is a comment'"
+    case tag if tag.startsWith("%z:") => extractQuotedText(tag drop 3)
 
     // must be literal text (e.g. "FROM")
     case text => expectKeyword(text)
@@ -310,7 +315,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractListOfFields(name: String) = Try {
     var fields: List[Field] = Nil
-    do fields = toField(stream) :: fields while (stream nextIf ",")
+    do fields = parseField(stream) :: fields while (stream nextIf ",")
     SQLTemplateParams(fields = Map(name -> fields.reverse))
   }
 
@@ -340,11 +345,12 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfParameters(name: String) = Try {
     var columns: List[Column] = Nil
     do {
-      val params = SQLTemplateParams(stream, template = "%a:name %a:type")
+      val params = SQLTemplateParams(stream, template = "%a:name %a:type ?COMMENT +?%z:comment")
       val colName = params.atoms.getOrElse("name", stream.die("Column name not provided"))
+      val comment = params.atoms.get("comment").flatMap(_.noneIfBlank)
       val typeName = params.atoms.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
       if (!Expression.isValidType(typeName)) stream.die(s"Invalid data type '$typeName' for column $colName")
-      val column = Column(name = colName, `type` = ColumnTypes.withName(typeName.toUpperCase))
+      val column = Column(name = colName, `type` = ColumnTypes.withName(typeName.toUpperCase), comment = comment)
       columns = column :: columns
     } while (stream nextIf ",")
 
@@ -507,6 +513,20 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     SQLTemplateParams(sources = Map(name -> parseNextQueryTableOrVariable(stream)))
   }
 
+  /**
+    * Parses a quoted text value
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractQuotedText(name: String) = Try {
+    SQLTemplateParams(atoms = Map(name -> (if (stream.isQuoted) stream.next().text else stream.die("Quoted text value expected"))))
+  }
+
+  /**
+    * Parses a value based on a regular expression
+    * @param pattern the regular expression pattern
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
   private def extractRegEx(pattern: String) = Try {
     if (stream.matches(pattern)) SQLTemplateParams() else stream.die(s"Did not match the expected pattern '$pattern'")
   }
@@ -605,15 +625,44 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractWithForTableClause(name: String) = Try {
     var template = SQLTemplateParams()
-    while (stream nextIf "WITH") {
+
+    // collect the Hive/Athena style configuration properties
+    var isHiveOrAthena = true
+    while (isHiveOrAthena) {
       stream match {
-        case ts if ts nextIf "HEADERS" => template += SQLTemplateParams(ts, s"%C($name.headers|ON|OFF)")
-        case ts if ts nextIf "NULL" => template += SQLTemplateParams(ts, s"VALUES AS %a:$name.nullValue")
-        case ts if ts nextIf "SERDEPROPERTIES" => template += SQLTemplateParams(ts, s"%p:$name.serde")
-        case ts if ts nextIf "TBLPROPERTIES" => template += SQLTemplateParams(ts, s"%p:$name.table")
-        case ts => ts.die("Invalid WITH expression")
+        case ts if ts nextIf "FIELDS TERMINATED BY" => template += SQLTemplateParams(ts, "%a:delimiter")
+        case ts if ts nextIf "LOCATION" => template += SQLTemplateParams(ts, "%a:path")
+        case ts if ts nextIf "PARTITIONED BY" => template += SQLTemplateParams(ts, "( %P:partitions )")
+        case ts if ts nextIf "ROW FORMAT DELIMITED" => template
+        case ts if ts nextIf "ROW FORMAT SERDE" => template += SQLTemplateParams(ts, s"%a:serde.row")
+
+        // input/output formats?
+        case ts if ts nextIf "STORED AS" =>
+          var isFormats = true
+          while (isFormats) {
+            ts match {
+              case _ts if _ts nextIf "INPUTFORMAT" => template += SQLTemplateParams(_ts, s"%a:formats.input")
+              case _ts if _ts nextIf "OUTPUTFORMAT" => template += SQLTemplateParams(_ts, s"%a:formats.output")
+              case _ => isFormats = false
+            }
+          }
+
+        // WITH clause?
+        case ts if ts is "WITH" =>
+          while (stream nextIf "WITH") {
+            stream match {
+              case _ts if _ts nextIf "HEADERS" => template += SQLTemplateParams(_ts, s"%C($name.headers|ON|OFF)")
+              case _ts if _ts nextIf "NULL" => template += SQLTemplateParams(_ts, s"VALUES AS %a:$name.nullValue")
+              case _ts if _ts nextIf "SERDEPROPERTIES" => template += SQLTemplateParams(_ts, s"%p:$name.serde")
+              case _ts if _ts nextIf "TBLPROPERTIES" => template += SQLTemplateParams(_ts, s"%p:$name.table")
+              case _ =>
+            }
+          }
+
+        case _ => isHiveOrAthena = false
       }
     }
+
     template
   }
 

@@ -45,13 +45,13 @@ case object AllFields extends Field {
 
 /**
   * Represents a generic field
-  * @param name the name of the field
+  * @param name the name of the [[Field field]]
   */
 case class BasicField(name: String) extends Field
 
 /**
   * Represents a joining field
-  * @param name the name of the field
+  * @param name       the name of the [[Field field]]
+  * @param tableAlias the given table alias
   */
 case class JoinField(name: String, tableAlias: Option[String] = None) extends Field
-

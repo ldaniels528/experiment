@@ -10,8 +10,12 @@ import com.qwery.models.ColumnTypes.ColumnType
   * @param name       the column name
   * @param `type`     the given [[ColumnType column type]]
   * @param isNullable indicates whether the column may contain nulls
+  * @param comment    the optional comment
   */
-case class Column(name: String, `type`: ColumnType = ColumnTypes.STRING, isNullable: Boolean = true)
+case class Column(name: String,
+                  `type`: ColumnType = ColumnTypes.STRING,
+                  isNullable: Boolean = true,
+                  comment: Option[String] = None)
 
 /**
   * Column Companion

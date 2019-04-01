@@ -109,6 +109,38 @@ class SQLLanguageParserTest extends FunSpec {
       )))
     }
 
+    it("should support CREATE TABLE w/COMMENT statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE TABLE Customers (
+           |    customer_uid UUID COMMENT 'Unique Customer ID',
+           |    name STRING COMMENT '',
+           |    address STRING COMMENT '',
+           |    ingestion_date LONG COMMENT ''
+           |)
+           |PARTITIONED BY (year STRING, month STRING, day STRING)
+           |ROW FORMAT DELIMITED
+           |FIELDS TERMINATED BY ','
+           |STORED AS INPUTFORMAT 'CSV'
+           |WITH HEADERS ON
+           |WITH NULL VALUES AS 'n/a'
+           |LOCATION './dataSets/customers/csv/'
+           |""".stripMargin)
+      assert(results == Create(Table(name = "Customers",
+        columns = List(
+          Column("customer_uid UUID").copy(comment = "Unique Customer ID"),
+          Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
+        ),
+        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
+        fieldDelimiter = ",",
+        fieldTerminator = None,
+        headersIncluded = true,
+        nullValue = Some("n/a"),
+        inputFormat = StorageFormats.CSV,
+        outputFormat = None,
+        location = "./dataSets/customers/csv/"
+      )))
+    }
+
     it("should support CREATE TABLE ... WITH statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)

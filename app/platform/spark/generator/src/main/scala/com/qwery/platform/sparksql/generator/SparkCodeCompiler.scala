@@ -342,7 +342,10 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     final implicit class TableColumnExtensions(val column: Column) extends AnyVal {
       import column._
 
-      @inline def codify: String = s"""Column(name = "$name", `type` = ${`type`.compile}, isNullable = $isNullable)"""
+      @inline def codify: String =
+        s"""Column(name = "$name", `type` = ${`type`.compile}, isNullable = $isNullable${
+          comment.map(text => s""", comment = Option("$text")""") getOrElse ""
+        })"""
     }
 
     /**
@@ -363,7 +366,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           import table._
           s"""|Table(
               |  name = "$name",
-              |  columns = List(${columns.map(_.codify).mkString(",")}),
+              |  columns = List(\n${columns.map(_.codify).mkString("\n,")}),
               |  location = "$location",
               |  fieldDelimiter = ${fieldDelimiter.map(_.codify)},
               |  fieldTerminator = ${fieldTerminator.map(_.codify)},

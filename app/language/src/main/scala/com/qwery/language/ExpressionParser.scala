@@ -44,7 +44,8 @@ trait ExpressionParser {
     var expression: Option[Expression] = None
     var done: Boolean = false
     do {
-      if (expression.isEmpty) expression = parseNextExpression(stream) else {
+      if (expression.isEmpty) expression = parseNextExpression(stream)
+      else {
         val result = stream match {
           case ts if ts is "[" => expression.flatMap(array => parseArrayIndex(array, ts))
           case ts if ts nextIf "+" => for (a <- expression; b <- parseNextExpression(ts)) yield a + b
@@ -60,6 +61,22 @@ trait ExpressionParser {
       }
     } while (!done && expression.nonEmpty && stream.hasNext)
     expression
+  }
+
+  /**
+    * Creates a new field from a token stream
+    * @param stream the given [[TokenStream token stream]]
+    * @return a new [[Field field]] instance
+    */
+  protected def parseField(stream: TokenStream): Field = {
+    import TokenStreamHelpers._
+    stream match {
+      case ts if ts nextIf "*" => AllFields
+      case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse (throw SyntaxException("Invalid field alias", ts))
+      case ts if ts.isBackticks => Field(ts.next().text)
+      case ts if ts.isText => Field(ts.next().text)
+      case ts => ts.die(s"Token is not valid (type: ${ts.peek.map(_.getClass.getName).orNull})")
+    }
   }
 
   /**
@@ -224,7 +241,7 @@ trait ExpressionParser {
       // is it a join (aliased) column reference (e.g. "A.Symbol")?
       case ts if ts.isJoinColumn => parseJoinField(ts)
       // is it a field?
-      case ts if ts.isField => toField(ts)
+      case ts if ts.isField => parseField(ts)
       // unmatched
       case _ => None
     }
@@ -308,7 +325,7 @@ trait ExpressionParser {
     * @param ts the given [[TokenStream token stream]]
     * @return the option of a [[Field]]
     */
-  def parseJoinField(ts: TokenStream): Option[JoinField] = {
+  private def parseJoinField(ts: TokenStream): Option[JoinField] = {
     val results = processor.process("%a:alias . %a:name", ts)(this)
     for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield JoinField(name, tableAlias = Option(alias))
   }
@@ -336,29 +353,6 @@ trait ExpressionParser {
     */
   private def parseQuantity(ts: TokenStream): Option[Expression] =
     processor.process("( %e:expr )", ts)(this).expressions.get("expr")
-
-  /**
-    * Creates a new field from a token stream
-    * @param stream the given [[TokenStream token stream]]
-    * @return a new [[Field field]] instance
-    */
-  protected def toField(stream: TokenStream): Field = stream match {
-    case ts if ts nextIf "*" => AllFields
-    case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse (throw SyntaxException("Invalid field alias", ts))
-    case ts => toField(ts.next())
-  }
-
-  /**
-    * Creates a new field from a token
-    * @param token the given [[Token token]]
-    * @return a new [[Field field]] instance
-    */
-  protected def toField(token: Token): Field = token match {
-    case t: AlphaToken => Field(t.text)
-    case t: QuotedToken if t.isBackTicks => Field(t.text)
-    case t =>
-      throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
-  }
 
 }
 

@@ -183,15 +183,7 @@ trait SQLLanguageParser {
     * @return an [[Create executable]]
     */
   protected def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts,
-      """|CREATE ?EXTERNAL TABLE %t:name ( %P:columns )
-         |?PARTITIONED +?BY +?( +?%P:partitions +?)
-         |?ROW +?FORMAT +?DELIMITED
-         |?FIELDS +?TERMINATED +?BY +?%a:delimiter
-         |?STORED +?AS +?%f:formats
-         |?%w:props
-         |?LOCATION +?%a:path
-         |""".stripMargin)
+    val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE %t:name ( %P:columns ) %w:props")
     Create(Table(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
@@ -549,6 +541,7 @@ trait SQLLanguageParser {
     case s if s.contains("JSON") => StorageFormats.JSON
     case s if s.contains("PARQUET") => StorageFormats.PARQUET
     case s if s.contains("ORC") => StorageFormats.ORC
+    case s if s.contains("TEXT") => StorageFormats.CSV
     case _ => throw new IllegalArgumentException(s"Could not determine storage format from '$formatString'")
   }
 
@@ -559,6 +552,7 @@ trait SQLLanguageParser {
   * @author lawrence.daniels@gmail.com
   */
 object SQLLanguageParser {
+
   import com.qwery.util.ResourceHelper._
 
   /**

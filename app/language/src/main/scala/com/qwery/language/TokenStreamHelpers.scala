@@ -5,7 +5,7 @@ package com.qwery.language
   * @author lawrence.daniels@gmail.com
   */
 object TokenStreamHelpers {
-  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,30}"
+  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{1,64}"
 
   /**
     * Token Extensions
