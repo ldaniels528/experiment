@@ -210,11 +210,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       import com.qwery.util.StringHelper._
 
       @inline def compile(implicit appArgs: ApplicationArgs): String =
-        s"""|${ResourceManager.getObjectSimpleName}.write(
-            |   source = ${insert.source.compile},
-            |   destination = TableManager("${insert.destination.target.compile}"),
-            |   append = ${insert.destination.isInstanceOf[Insert.Into]}
-            |)""".stripMargin
+        s"""~${ResourceManager.getObjectSimpleName}.write(
+            ~   source = ${insert.source.compile},
+            ~   destination = ${ResourceManager.getObjectSimpleName}("${insert.destination.target.compile}"),
+            ~   append = ${insert.destination.isInstanceOf[Insert.Into]}
+            ~)""".stripMargin('~')
     }
 
     /**

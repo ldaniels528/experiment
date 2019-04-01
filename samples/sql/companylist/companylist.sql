@@ -9,6 +9,13 @@ begin
     include './samples/sql/companylist/companylist-input.sql';
     include './samples/sql/companylist/companylist-output-json.sql';
 
+    /* And finally, we perform our filtering/transformation */
+
+    insert overwrite table OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry, SummaryQuote, Reserved)
+    select Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry, SummaryQuote, Reserved
+    from Securities
+    where Industry = 'Oil/Gas Transmission';
+
     /* Show some data */
 
     show (
