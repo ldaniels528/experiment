@@ -150,7 +150,7 @@ class SparkJobGenerator(className: String,
     // generate the configuration files
     val configFiles = Seq(
       """addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")""" -> "assembly.sbt",
-      """sbt.version=0.13.16""" -> "build.properties",
+      """sbt.version=0.13.18""" -> "build.properties",
       """|addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.5")
          |addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")""".stripMargin -> "plugins.sbt"
     )
