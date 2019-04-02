@@ -59,6 +59,7 @@ class SparkJobGeneratorTest extends FunSpec {
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin
       )
+      implicit val ctx: CompileContext = CompileContext(model)
       val generator = new SparkJobGenerator(
         className = "OilGasSecurities",
         packageName = "com.github.ldaniels528.securities",
@@ -118,6 +119,7 @@ class SparkJobGeneratorTest extends FunSpec {
            |group by dfp.client_id, ab.client_id;
            |""".stripMargin
       )
+      implicit val ctx: CompileContext = CompileContext(model)
       val generator = new SparkJobGenerator(
         className = "AdBookIngestSparkJob",
         packageName = "com.coxautoinc.wtm.adbook",

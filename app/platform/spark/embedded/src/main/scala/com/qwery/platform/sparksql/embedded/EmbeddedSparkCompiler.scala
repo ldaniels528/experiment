@@ -9,7 +9,7 @@ import com.qwery.models.StorageFormats._
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
-import com.qwery.platform.sparksql.SparkHelper._
+import SparkHelper._
 import com.qwery.platform.sparksql.embedded.EmbeddedSparkCompiler.Implicits._
 import com.qwery.platform.sparksql.embedded.SparkSelect.{SparkJoin, SparkUnion}
 import com.qwery.util.ConversionHelper._

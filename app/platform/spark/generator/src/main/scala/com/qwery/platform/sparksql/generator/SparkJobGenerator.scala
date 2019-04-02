@@ -7,7 +7,6 @@ import java.io.{File, PrintWriter}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models._
 import com.qwery.util.ResourceHelper._
-import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
 
 import scala.io.Source
@@ -18,15 +17,14 @@ import scala.io.Source
   */
 class SparkJobGenerator(className: String,
                         packageName: String,
-                        outputPath: String,
-                        appArgs: ApplicationArgs = ApplicationArgs(Nil)) {
+                        outputPath: String) {
   private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Generates the SBT build script
     * @return the [[File]] representing the generated build.sbt
     */
-  def createBuildScript(): File = {
+  def createBuildScript()(implicit appArgs: ApplicationArgs): File = {
     import appArgs._
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {
       s"""|name := "$appName"
@@ -68,7 +66,7 @@ class SparkJobGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createMainClass(invokable: Invokable)(implicit appArgs: ApplicationArgs): File = {
+  def createMainClass(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
     // create the package directory
     val pkgDir = new File(inferSourceDir(outputPath), packageName.replaceAllLiterally(".", File.separator))
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
@@ -77,14 +75,9 @@ class SparkJobGenerator(className: String,
     logger.info(s"[*] Generating class '$packageName.$className'...")
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       generateClassWithMain(invokable, imports = List(
-        "com.qwery.models._",
-        StorageFormats.getObjectFullName,
-        ResourceManager.getObjectFullName,
         "org.apache.spark.SparkConf",
-        "org.apache.spark.sql.functions._",
-        "org.apache.spark.sql.types.StructType",
         "org.apache.spark.sql.DataFrame",
-        "org.apache.spark.sql.Row",
+        "org.apache.spark.sql.SaveMode",
         "org.apache.spark.sql.SparkSession",
         "org.slf4j.LoggerFactory"
       ))
@@ -97,7 +90,8 @@ class SparkJobGenerator(className: String,
     * @param invokable    the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createMainClassFromTemplate(templateFile: File, invokable: Invokable)(implicit appArgs: ApplicationArgs): File = {
+  def createMainClassFromTemplate(templateFile: File, invokable: Invokable)
+                                 (implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
     // create the package directory
     val pkgDir = new File(inferSourceDir(outputPath), packageName.replaceAllLiterally(".", File.separator))
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
@@ -106,9 +100,6 @@ class SparkJobGenerator(className: String,
     logger.info(s"[*] Generating class '$packageName.$className' from template '${templateFile.getCanonicalPath}'...")
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
       generateClassFromTemplate(templateFile, invokable, imports = List(
-        "com.qwery.models._",
-        StorageFormats.getObjectFullName,
-        ResourceManager.getObjectFullName,
         "org.apache.spark.sql.functions._",
         "org.slf4j.LoggerFactory"
       )) getOrElse die(s"No replaceable code block found in ${templateFile.getCanonicalPath}")
@@ -120,7 +111,7 @@ class SparkJobGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createProject(invokable: Invokable)(implicit appArgs: ApplicationArgs): File = {
+  def createProject(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
     val startTime = System.currentTimeMillis()
     lazy val elapsedTime = System.currentTimeMillis() - startTime
 
@@ -160,7 +151,7 @@ class SparkJobGenerator(className: String,
     projectDir
   }
 
-  def generate(invokable: Invokable)(implicit appArgs: ApplicationArgs): File = {
+  def generate(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
     if (!appArgs.isClassOnly) createProject(invokable) else {
       appArgs.templateClass match {
         case Some(templateFile) => createMainClassFromTemplate(templateFile, invokable)
@@ -178,7 +169,7 @@ class SparkJobGenerator(className: String,
     * @return an option of the contents f the generated file
     */
   private def generateClassFromTemplate(templateFile: File, invokable: Invokable, imports: Seq[String])
-                                       (implicit appArgs: ApplicationArgs): Option[String] = {
+                                       (implicit appArgs: ApplicationArgs, ctx: CompileContext): Option[String] = {
     import SparkCodeCompiler.Implicits._
     import com.qwery.util.StringHelper._
 
@@ -209,11 +200,13 @@ class SparkJobGenerator(className: String,
     * @param appArgs   the implicit [[ApplicationArgs]]
     * @return the contents f the generated file
     */
-  private def generateClassWithMain(invokable: Invokable, imports: Seq[String])(implicit appArgs: ApplicationArgs): String = {
+  private def generateClassWithMain(invokable: Invokable, imports: Seq[String])
+                                   (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
     s"""|package $packageName
         |
         |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
+        |import $className.Implicits._
         |
         |class $className() extends Serializable {
         |  @transient
@@ -251,6 +244,15 @@ class SparkJobGenerator(className: String,
         |         builder.master("local[*]").getOrCreate()
         |     }
         |   }
+        |
+        |   object Implicits {
+        |    final implicit class DataFrameExtensions(val df: DataFrame) extends AnyVal {
+        |      @inline def asView(name: String): DataFrame = {
+        |        df.createOrReplaceGlobalTempView(name)
+        |        df
+        |      }
+        |    }
+        |  }
         |}
         |""".stripMargin
   }
@@ -297,8 +299,9 @@ object SparkJobGenerator {
 
     // generate the sbt project
     val model = SQLLanguageParser.parse(new File(inputPath))
-    new SparkJobGenerator(className = className, packageName = packageName, outputPath = outputPath, appArgs = appArgs)
-      .generate(model)(appArgs)
+    val ctx = CompileContext(model)
+    new SparkJobGenerator(className = className, packageName = packageName, outputPath = outputPath)
+      .generate(model)(appArgs, ctx)
   }
 
   /**

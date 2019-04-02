@@ -11,7 +11,6 @@ import java.io.File
   * @param scalaVersion     the Scala version the generated project will use (default: "2.11.12")
   * @param sparkAvroVersion the DataStax Spark-Avro library version (default: "4.0.0")
   * @param sparkCsvVersion  the DataStax Spark-CSV library version (default: "1.5.0")
-  * @param isSparkNative    indicates whether to generate Spark native code; as opposed to Spark SQL (default: `false`)
   * @param sparkVersion     the Apache Spark library version (default: "2.3.3")
   * @param templateClass    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
@@ -23,13 +22,8 @@ case class ApplicationArgs(appName: String,
                            scalaVersion: String,
                            sparkAvroVersion: String,
                            sparkCsvVersion: String,
-                           isSparkNative: Boolean,
                            sparkVersion: String,
-                           templateClass: Option[File]) {
-
-  val isInlineSQL: Boolean = !isSparkNative
-
-}
+                           templateClass: Option[File])
 
 /**
   * Application Arguments
@@ -49,7 +43,6 @@ object ApplicationArgs {
       appVersion = mappings.getOrElse("--app-version", "1.0"),
       isClassOnly = mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       defaultDB = mappings.getOrElse("--default-db", "global_temp"),
-      isSparkNative = mappings.get("--spark-native").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       scalaVersion = mappings.getOrElse("--scala-version", "2.11.12"),
       sparkAvroVersion = mappings.getOrElse("--spark-avro", "4.0.0"),
       sparkCsvVersion = mappings.getOrElse("--spark-csv", "1.5.0"),

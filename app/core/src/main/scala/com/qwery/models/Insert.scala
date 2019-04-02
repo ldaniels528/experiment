@@ -27,20 +27,30 @@ object Insert {
     * @author lawrence.daniels@gmail.com
     */
   sealed trait Destination extends Invokable {
+
     def target: Location
+
+    def isAppend: Boolean
+
+    final def isOverwrite: Boolean = !isAppend
+
   }
 
   /**
     * Represents an Append Write Mode
     * @param target the given [[Location]]
     */
-  case class Into(target: Location) extends Destination
+  case class Into(target: Location) extends Destination {
+    override def isAppend: Boolean = true
+  }
 
   /**
     * Represents a Overwrite Write Mode
     * @param target the given [[Location]]
     */
-  case class Overwrite(target: Location) extends Destination
+  case class Overwrite(target: Location) extends Destination {
+    override def isAppend: Boolean = false
+  }
 
   /**
     * Represents a static insert values collection

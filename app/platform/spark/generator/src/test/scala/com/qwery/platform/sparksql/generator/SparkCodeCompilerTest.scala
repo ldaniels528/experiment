@@ -1,10 +1,9 @@
 package com.qwery.platform.sparksql.generator
 
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.expressions.SQLFunction._
-import com.qwery.models.expressions.{Field, IsNotNull, IsNull}
-import com.qwery.platform.sparksql.generator.SparkCodeCompiler.Implicits._
 import org.scalatest.FunSpec
+
+import scala.language.postfixOps
 
 /**
   * Spark Code Compiler Test
@@ -12,105 +11,18 @@ import org.scalatest.FunSpec
   */
 class SparkCodeCompilerTest extends FunSpec {
 
-  import com.qwery.models.expressions.implicits._
+  import SparkCodeCompiler.Implicits._
+  import SparkCodeCompilerTest._
   import com.qwery.util.StringHelper._
 
   describe(SparkCodeCompiler.getObjectSimpleName) {
-
-    ////////////////////////////////////////////////////////////////////
-    //        Equalities
-    ////////////////////////////////////////////////////////////////////
-
-    it("should compile conditions: age = 50") {
-      assert((Field('age) === 50).compile == """$"age" === lit(50)""")
-    }
-
-    it("should compile conditions: age != 50") {
-      assert((Field('age) !== 50).compile == """$"age" =!= lit(50)""")
-    }
-
-    it("should compile conditions: age < 50") {
-      assert((Field('age) < 50).compile == """$"age" < lit(50)""")
-    }
-
-    it("should compile conditions: age <= 50") {
-      assert((Field('age) <= 50).compile == """$"age" <= lit(50)""")
-    }
-
-    it("should compile conditions: age > 50") {
-      assert((Field('age) > 50).compile == """$"age" > lit(50)""")
-    }
-
-    it("should compile conditions: age >= 50") {
-      assert((Field('age) >= 50).compile == """$"age" >= lit(50)""")
-    }
-
-    it("should compile conditions: content is not null") {
-      assert(IsNotNull('content).compile == """$"content".isNotNull""")
-    }
-
-    it("should compile conditions: content is null") {
-      assert(IsNull('content).compile == """$"content".isNull""")
-    }
-
-    ////////////////////////////////////////////////////////////////////
-    //        Mathematics
-    ////////////////////////////////////////////////////////////////////
-
-
-    ////////////////////////////////////////////////////////////////////
-    //        SQL Functions
-    ////////////////////////////////////////////////////////////////////
-
-    it("should compile conditions: abs(cost) < 5000") {
-      assert((Abs('cost) < 5000).compile == """abs($"cost") < lit(5000)""")
-    }
-
-    it("should compile conditions: date_add(cost, taxes)") {
-      assert(Date_Add('cost, 'taxes).compile == """date_add($"cost", $"taxes")""")
-    }
-
-    it("should compile conditions: floor(cost)") {
-      assert(Floor('cost).compile == """floor($"cost")""")
-    }
-
-    it("should compile conditions: if(cost > 5000, 'Yes', 'No')") {
-      assert(If(Field('cost) > 5000, "Yes", "No").compile == """when($"cost" > lit(5000), lit("Yes")).otherwise(lit("No"))""")
-    }
-
-    it("should compile conditions: ltrim(description)") {
-      assert(LTrim('description).compile == """ltrim($"description")""")
-    }
-
-    it("should compile conditions: max(age) < 50") {
-      assert((Max('age) < 50).compile == """max($"age") < lit(50)""")
-    }
-
-    it("should compile conditions: min(age) > 10") {
-      assert((Min('age) > 10).compile == """min($"age") > lit(10)""")
-    }
-
-    it("should compile conditions: rtrim(description)") {
-      assert(RTrim('description).compile == """rtrim($"description")""")
-    }
-
-    it("should compile conditions: substring(title, 1, 4) = 'Hello'") {
-      assert((Substring('title, 1, 4) === "Hello").compile == """substring($"title", 1, 4) === lit("Hello")""")
-    }
-
-    it("should compile conditions: sum(cost) < 5000") {
-      assert((Sum('cost) < 5000).compile == """sum($"cost") < lit(5000)""")
-    }
-
-    it("should compile conditions: year(purchaseDate) = 2019") {
-      assert((Year('purchaseDate) === 2019).compile == """year($"purchaseDate") === lit(2019)""")
-    }
+    implicit val appArgs: ApplicationArgs = ApplicationArgs()
 
     ////////////////////////////////////////////////////////////////////
     //        Introspection
     ////////////////////////////////////////////////////////////////////
 
-    it("should identify all input sources from an invokable") {
+    it("should identify all defined data sources from a top-level invokable") {
       val model = SQLLanguageParser.parse(
         """|include './samples/sql/adbook/kbb_ab_client.sql';
            |include './samples/sql/adbook/kbb_lkp_dfp_o1_advertiser.sql';
@@ -163,8 +75,132 @@ class SparkCodeCompilerTest extends FunSpec {
       )
       val tables = SparkCodeCompiler.discoverTablesAndViews(model)
       info(s"tables: $tables")
-      assert(tables == List("kbb_lkp_dfp_o1_advertiser", "kbb_ab_client"))
+      assert(tables.map(_.name).toSet == Set("kbb_lkp_dfp_o1_advertiser", "kbb_ab_client"))
     }
+
+    it("should translate a model into SQL") {
+      val decompiledSQL = SQLLanguageParser.parse(
+        """|select max(coalesce(ab.source, dfp.source)) as source
+           |            ,coalesce(ab.client_id, dfp.client_id) as client_id
+           |            ,max(ab.agency_id) as agency_id
+           |            ,max(coalesce(ab.client_name, dfp.client_name)) as client_name
+           |            ,max(coalesce(ab.revenue_category, dfp.revenue_category)) as revenue_category
+           |            ,max(ab.brand) as brand
+           |    from (
+           |         select 'DFP' as source
+           |            , advertiser_id as client_id
+           |            , -1 as agency_id
+           |            , advertiser_name as client_name
+           |            ,(case
+           |                  when substr(advertiser_name, 1, 6) = 'Dealer' then 'T3 - Individual Dealer'
+           |                  when substr(advertiser_name, 1, 2) = 'T3' then 'T3 - Individual Dealer'
+           |                  when substr(advertiser_name, 1, 6) = 'ATC T3' then 'T3 - Individual Dealer'
+           |                  when substr(advertiser_name, 1, 2) = 'T2' then 'T2 - Dealer Assoc'
+           |                  when substr(advertiser_name, 1, 4) = 'Nend' then 'Nend'
+           |                  when advertiser_name like '%Unsold %' then 'Remnant'
+           |                  when advertiser_name like '%Remnant %' then 'Remnant'
+           |                  when advertiser_name like '%OEM%' then 'T1 - OEM'
+           |                  when substr(advertiser_name, 1, 2) = 'T1' then 'T1 - OEM'
+           |                  when advertiser_name like '%Partner%' then'Partner'
+           |                  when advertiser_name like '%KBB AdX%' then'Ad Exchange'
+           |                  when advertiser_name like '%KBB%' then 'House'
+           |                  else ''
+           |             end) as revenue_category
+           |            ,'' as brand
+           |            ,'' as src_created_ts_est
+           |         from kbb_lkp_dfp_o1_advertiser
+           |         where advertiser_id is not null
+           |    ) as dfp
+           |    full join (
+           |        select 'AB' as source
+           |            ,client_id as client_id
+           |            , -1 as agency_id
+           |            , client_name
+           |            ,max(case when lower(client_attribute_group) = 'revenue category' then client_attribute_name end) as revenue_category
+           |            ,max(case when lower(client_attribute_group) = 'brand' then client_attribute_name end) as brand
+           |        from kbb_ab_client
+           |        where lower(client_type) = 'client'
+           |        group by client_id,client_type,client_name,client_since
+           |    ) as ab
+           |    on dfp.client_id = ab.client_id
+           |    group by dfp.client_id, ab.client_id
+           |""".stripMargin
+      ) toSQL
+
+      info("\nDecompiled SQL:")
+      info(decompiledSQL)
+
+      assert(decompiledSQL isSameAs
+        """|SELECT
+           |  MAX(COALESCE(ab.source,dfp.source)) AS source,
+           |  COALESCE(ab.client_id,dfp.client_id) AS client_id,
+           |  MAX(ab.agency_id) AS agency_id,
+           |  MAX(COALESCE(ab.client_name,dfp.client_name)) AS client_name,
+           |  MAX(COALESCE(ab.revenue_category,dfp.revenue_category)) AS revenue_category,
+           |  MAX(ab.brand) AS brand
+           |FROM (
+           |  SELECT
+           |    'DFP' AS source,
+           |    advertiser_id AS client_id,
+           |    -1.0 AS agency_id,
+           |    advertiser_name AS client_name,
+           |    CASE WHEN SUBSTR(advertiser_name, 1, 6) = 'Dealer' THEN 'T3 - Individual Dealer'
+           |      WHEN SUBSTR(advertiser_name, 1, 2) = 'T3' THEN 'T3 - Individual Dealer'
+           |      WHEN SUBSTR(advertiser_name, 1, 6) = 'ATC T3' THEN 'T3 - Individual Dealer'
+           |      WHEN SUBSTR(advertiser_name, 1, 2) = 'T2' THEN 'T2 - Dealer Assoc'
+           |      WHEN SUBSTR(advertiser_name, 1, 4) = 'Nend' THEN 'Nend'
+           |      WHEN advertiser_name like '%Unsold %' THEN 'Remnant'
+           |      WHEN advertiser_name like '%Remnant %' THEN 'Remnant'
+           |      WHEN advertiser_name like '%OEM%' THEN 'T1 - OEM'
+           |      WHEN SUBSTR(advertiser_name, 1, 2) = 'T1' THEN 'T1 - OEM'
+           |      WHEN advertiser_name like '%Partner%' THEN 'Partner'
+           |      WHEN advertiser_name like '%KBB AdX%' THEN 'Ad Exchange'
+           |      WHEN advertiser_name like '%KBB%' THEN 'House'
+           |      ELSE ''
+           |    END AS revenue_category,
+           |    '' AS brand,
+           |    '' AS src_created_ts_est
+           |  FROM global_temp.kbb_lkp_dfp_o1_advertiser
+           |  WHERE advertiser_id IS NOT NULL
+           |) AS dfp
+           |FULL OUTER JOIN (
+           |  SELECT
+           |    'AB' AS source,
+           |    client_id AS client_id,
+           |    -1.0 AS agency_id,
+           |    client_name,
+           |    MAX(CASE WHEN LOWER(client_attribute_group) = 'revenue category' THEN client_attribute_name END) AS revenue_category,
+           |    MAX(CASE WHEN LOWER(client_attribute_group) = 'brand' THEN client_attribute_name END) AS brand
+           |  FROM  global_temp.kbb_ab_client
+           |  WHERE LOWER(client_type) = 'client'
+           |  GROUP BY client_id,client_type,client_name,client_since
+           |) AS ab
+           |ON dfp.client_id = ab.client_id
+           |GROUP BY dfp.client_id,ab.client_id
+           |""".stripMargin
+      )
+    }
+
+  }
+
+}
+
+/**
+  * SQL Decompiler Test Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object SparkCodeCompilerTest {
+  private val invalids = " \t\n\r".toCharArray
+
+  /**
+    * SQL Clean-up Extensions
+    * @param lines the given concatenation of lines of SQL text
+    */
+  final implicit class SQLCleanupExtensions(val lines: String) extends AnyVal {
+
+    @inline def isSameAs(text: String): Boolean = normalize(lines) equalsIgnoreCase normalize(text)
+
+    @inline def normalize(text: String): String = text.filterNot(invalids.contains(_))
 
   }
 

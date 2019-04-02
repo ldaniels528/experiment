@@ -6,15 +6,14 @@ import java.io.File
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
-import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models._
 import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
 import com.qwery.platform.sparksql.generator.SparkCodeCompiler.Implicits._
 import com.qwery.util.OptionHelper._
-import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 /**
@@ -24,33 +23,20 @@ import scala.io.Source
 trait SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
-  def compileCase(model: Case): String = {
-    // aggregate the cases into a single operation
-    val caseAgg = model.conditions match {
-      case first :: remaining =>
-        val initialWhen = s"when(${first.condition.compile}, ${first.result.compile})"
-        remaining.foldLeft(new StringBuilder(initialWhen)) { case (agg, Case.When(condition, result)) =>
-          agg.append(s"\n.when(${condition.compile}, ${result.compile})")
-        } toString()
-      case _ => die("At least one condition must be specified in CASE statements")
-    }
+  /**
+    * Generates a complete list of defined tables and views
+    * @param invokable the top-level [[Invokable invokable]]
+    * @return a list of defined [[TableLike tables and views]]
+    */
+  def discoverTablesAndViews(invokable: Invokable): List[TableLike] = {
 
-    // optionally, return the case-when with an otherwise clause
-    model.otherwise.map(op => caseAgg + s"\n.otherwise(${op.compile})") getOrElse caseAgg
-  }
-
-  def discoverTablesAndViews(invokable: Invokable): List[String] = {
-
-    def recurse(invokable: Invokable): List[String] = {
+    def recurse(invokable: Invokable): List[TableLike] = {
       invokable match {
+        case Create(table: Table) => table :: Nil
+        case Create(view: View) => view :: Nil
         case i: Include => recurse(incorporateSources(i.path))
-        case j: Join => recurse(j.source)
         case m: MainProgram => recurse(m.code)
-        case s: Select => (s.from.toList ::: s.joins.map(_.source).toList).flatMap(recurse)
         case s: SQL => s.statements.flatMap(recurse)
-        case u: Union => List(u.query0, u.query1).flatMap(recurse)
-        case t: TableLike => t.name :: Nil
-        case t: TableRef => t.name :: Nil
         case _ => Nil
       }
     }
@@ -59,7 +45,7 @@ trait SparkCodeCompiler {
   }
 
   /**
-    * incorporates the source code of the given path
+    * Incorporates the source code of the given path
     * @param path the given .sql source file
     * @return the resultant source code
     */
@@ -69,6 +55,35 @@ trait SparkCodeCompiler {
     SQLLanguageParser.parse(file)
   }
 
+  def makeSQL(op: Case): String = {
+    val sb = new StringBuilder("CASE")
+    op.conditions foreach { case Case.When(condition, result) =>
+      sb.append(s" WHEN ${condition.toSQL} THEN ${result.toSQL}\n")
+    }
+    op.otherwise.foreach(expr => sb.append(s" ELSE ${expr.toSQL}"))
+    sb.append(" END")
+    sb.toString()
+  }
+
+  def makeSQL(op: Select)(implicit appArgs: ApplicationArgs): String = {
+    val sb = new StringBuilder()
+    sb.append("SELECT\n")
+    sb.append(op.fields.map(_.toSQL).mkString(",\n"))
+    op.from foreach { from =>
+      val result = from match {
+        case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
+        case x => x.toSQL
+      }
+      sb.append(s"\nFROM ${result.withAlias(from)}")
+    }
+    if (op.joins.nonEmpty) sb.append(s"\n${op.joins.map(_.toSQL).mkString("\n")}")
+    op.where foreach { condition => sb.append(s"\nWHERE ${condition.toSQL}") }
+    if (op.groupBy.nonEmpty) sb.append(s"\nGROUP BY ${op.groupBy.map(_.toSQL).mkString(",")}")
+    op.having foreach { condition => sb.append(s"\nHAVING ${condition.toSQL}") }
+    if (op.orderBy.nonEmpty) sb.append(s"\nORDER BY ${op.orderBy.map(_.toSQL).mkString(",")}")
+    sb.toString()
+  }
+
 }
 
 /**
@@ -76,100 +91,91 @@ trait SparkCodeCompiler {
   * @author lawrence.daniels@gmail.com
   */
 object SparkCodeCompiler extends SparkCodeCompiler {
-  private[this] val resourceMgrClassName = ResourceManager.getObjectSimpleName
 
   /**
     * Implicit definitions
     */
   object Implicits {
 
-    /**
-      * Condition Compiler Extensions
-      * @param condition the given [[Condition condition]]
-      */
-    final implicit class ConditionCompilerExtensions(val condition: Condition) extends AnyVal {
-      def compile: String = condition match {
-        case AND(a, b) => s"${a.compile} && ${b.compile}"
-        case EQ(a, b) => s"${a.compile} === ${b.compile}"
-        case GE(a, b) => s"${a.compile} >= ${b.compile}"
-        case GT(a, b) => s"${a.compile} > ${b.compile}"
-        case IsNotNull(c) => s"${c.compile}.isNotNull"
-        case IsNull(c) => s"${c.compile}.isNull"
-        case LE(a, b) => s"${a.compile} <= ${b.compile}"
-        case LIKE(a, b) => s"${a.compile} like ${b.lit}"
-        case LT(a, b) => s"${a.compile} < ${b.compile}"
-        case NE(a, b) => s"${a.compile} =!= ${b.compile}"
-        case NOT(IsNull(c)) => s"${c.compile}.isNotNull"
-        case NOT(c) => s"!${c.compile}"
-        case OR(a, b) => s"${a.compile} || ${b.compile}"
-        case RLIKE(a, b) => s"${a.compile} rlike ${b.lit}"
-        case unknown => die(s"Unrecognized condition '$unknown' [${unknown.getClass.getSimpleName}]")
+    final implicit class ConditionSQLCompiler(val condition: Condition) extends AnyVal {
+      def toSQL: String = condition match {
+        case AND(a, b) => s"${a.toSQL} AND ${b.toSQL}"
+        case EQ(a, b) => s"${a.toSQL} = ${b.toSQL}"
+        case GE(a, b) => s"${a.toSQL} >= ${b.toSQL}"
+        case GT(a, b) => s"${a.toSQL} > ${b.toSQL}"
+        case IsNotNull(c) => s"${c.toSQL} IS NOT NULL"
+        case IsNull(c) => s"${c.toSQL} IS NULL"
+        case LE(a, b) => s"${a.toSQL} <= ${b.toSQL}"
+        case LIKE(a, b) => s"${a.toSQL} like ${b.asLit}"
+        case LT(a, b) => s"${a.toSQL} < ${b.toSQL}"
+        case NE(a, b) => s"${a.toSQL} <> ${b.toSQL}"
+        case NOT(IsNull(c)) => s"${c.toSQL}.isNotNull"
+        case NOT(c) => s"NOT ${c.toSQL}"
+        case OR(a, b) => s"${a.toSQL} OR ${b.toSQL}"
+        case RLIKE(a, b) => s"${a.toSQL} RLIKE ${b.asLit}"
+        case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
       }
     }
 
-    /**
-      * Expression Compiler Extensions
-      * @param expression the given [[Expression expression]]
-      */
-    final implicit class ExpressionCompilerExtensions(val expression: Expression) extends AnyVal {
-      def compile: String = {
+    final implicit class ExpressionSQLCompiler(val expression: Expression) extends AnyVal {
+      def toSQL: String = {
         val result = expression match {
-          case Abs(a) => s"abs(${a.compile})"
-          case Add(a, b) => s"${a.compile} + ${b.compile}"
-          case Add_Months(a, b) => s"add_months(${a.compile}, ${b.compile})"
-          case AllFields => """col("*")"""
-          case Array(args) => s"array(${args.map(_.compile).mkString(",")}: _*)"
-          case Array_Contains(a, b) => s"array_contains(${a.compile}, ${b.compile})"
+          case Abs(a) => s"ABS(${a.toSQL})"
+          case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
+          case Add_Months(a, b) => s"ADD_MONTHS(${a.toSQL}, ${b.toSQL})"
+          case AllFields => "*"
+          case Array(args) => s"array(${args.map(_.toSQL).mkString(",")}: _*)"
+          case Array_Contains(a, b) => s"array_contains(${a.toSQL}, ${b.toSQL})"
           case _: Array_Index => die("Array index is not supported by Spark")
-          case Ascii(a) => s"ascii(${a.compile})"
-          case Avg(a) => s"avg(${a.compile})"
-          case Base64(a) => s"base64(${a.compile})"
-          case BasicField(name) => s"""$$"$name""""
-          case Bin(a) => s"bin(${a.compile})"
-          case op: Case => compileCase(op)
-          case Cast(value, toType) => s"${value.compile}.cast(${toType.compile})"
-          case Cbrt(a) => s"cbrt(${a.compile})"
-          case Ceil(a) => s"ceil(${a.compile})"
-          case Coalesce(args) => s"coalesce(${args.map(_.compile).mkString(",")})"
-          case Concat(args) => s"concat(${args.map(_.compile).mkString(",")})"
-          case Count(Distinct(a)) => s"countDistinct(${a.compile})"
-          case Count(a) => s"count(${a.compile})"
-          case Cume_Dist => "cume_dist()"
-          case Current_Date => "current_date()"
-          case Date_Add(a, b) => s"date_add(${a.compile}, ${b.compile})"
-          case Divide(a, b) => s"${a.compile} / ${b.compile}"
-          case Factorial(a) => s"factorial(${a.compile})"
-          case Floor(a) => s"floor(${a.compile})"
-          case From_UnixTime(a, b) => b.map(f => s"from_unixtime(${a.compile}, ${f.compile})") || s"from_unixtime(${a.compile})"
-          case FunctionCall(name, args) => s"callUDF(${name.codify}, ${args.map(_.compile).mkString(",")})"
-          case If(condition, trueValue, falseValue) => s"when(${condition.compile}, ${trueValue.compile}).otherwise(${falseValue.compile})"
-          case JoinField(name, tableAlias) => s"""$$"${tableAlias.map(alias => s"$alias.$name") getOrElse name.codify}""""
-          case Length(a) => s"length(${a.compile})"
-          case Literal(value) => s"lit(${value.lit})"
-          case LocalVariableRef(name) => s"lit(${name.lit})"
-          case Lower(a) => s"lower(${a.compile})"
-          case LPad(a, b, c) => s"lpad(${a.compile}, ${b.compile}, ${c.compile})"
-          case LTrim(a) => s"ltrim(${a.compile})"
-          case Max(a) => s"max(${a.compile})"
-          case Mean(a) => s"mean(${a.compile})"
-          case Min(a) => s"min(${a.compile})"
-          case Modulo(a, b) => s"${a.compile} % ${b.compile}"
-          case Multiply(a, b) => s"${a.compile} * ${b.compile}"
-          case Pow(a, b) => s"pow(${a.compile}, ${b.compile})"
-          case RPad(a, b, c) => s"rpad(${a.compile}, ${b.compile}, ${c.compile})"
-          case RTrim(a) => s"rtrim(${a.compile})"
-          case Split(a, b) => s"split(${a.compile}, ${b.compile})"
-          case Subtract(a, b) => s"${a.compile} - ${b.compile}"
-          case Substring(a, b, c) => s"substring(${a.compile}, ${b.asInt}, ${c.asInt})"
-          case Sum(Distinct(a)) => s"sumDistinct(${a.compile})"
-          case Sum(a) => s"sum(${a.compile})"
-          case To_Date(a) => s"to_date(${a.compile})"
-          case Trim(a) => s"trim(${a.compile})"
-          case Upper(a) => s"upper(${a.compile})"
-          case Variance(a) => s"variance(${a.compile})"
-          case WeekOfYear(a) => s"weekofyear(${a.compile})"
-          case Year(a) => s"year(${a.compile})"
-          case unknown => die(s"Unrecognized expression '$unknown' [${unknown.getClass.getSimpleName}]")
+          case Ascii(a) => s"ASCII(${a.toSQL})"
+          case Avg(a) => s"AVG(${a.toSQL})"
+          case Base64(a) => s"BASE64(${a.toSQL})"
+          case BasicField(name) => name
+          case Bin(a) => s"BIN(${a.toSQL})"
+          case c: Case => makeSQL(c)
+          case Cast(value, toType) => s"CAST(${value.toSQL} AS ${toType.toSQL})"
+          case Cbrt(a) => s"cbrt(${a.toSQL})"
+          case Ceil(a) => s"ceil(${a.toSQL})"
+          case Coalesce(args) => s"COALESCE(${args.map(_.toSQL).mkString(",")})"
+          case Concat(args) => s"CONCAT(${args.map(_.toSQL).mkString(",")})"
+          case Count(Distinct(a)) => s"COUNT(DISTINCT(${a.toSQL}))"
+          case Count(a) => s"COUNT(${a.toSQL})"
+          case Cume_Dist => "CUME_DIST()"
+          case Current_Date => "CURRENT_DATE()"
+          case Date_Add(a, b) => s"date_add(${a.toSQL}, ${b.toSQL})"
+          case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
+          case Factorial(a) => s"FACTORIAL(${a.toSQL})"
+          case Floor(a) => s"FLOOR(${a.toSQL})"
+          case From_UnixTime(a, b) => b.map(f => s"FROM_UNIXTIME(${a.toSQL}, ${f.toSQL})") || s"FROM_UNIXTIME(${a.toSQL})"
+          case FunctionCall(name, args) => s"callUDF(${name.asLit}, ${args.map(_.toSQL).mkString(",")})"
+          case If(condition, trueValue, falseValue) => s"IF(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
+          case JoinField(name, tableAlias) => tableAlias.map(alias => s"$alias.$name") getOrElse name
+          case Length(a) => s"LENGTH(${a.toSQL})"
+          case Literal(value) => value.asLit
+          case LocalVariableRef(name) => name.asLit
+          case Lower(a) => s"LOWER(${a.toSQL})"
+          case LPad(a, b, c) => s"LPAD(${a.toSQL}, ${b.toSQL}, ${c.toSQL})"
+          case LTrim(a) => s"LTRIM(${a.toSQL})"
+          case Max(a) => s"MAX(${a.toSQL})"
+          case Mean(a) => s"MEAN(${a.toSQL})"
+          case Min(a) => s"MIN(${a.toSQL})"
+          case Modulo(a, b) => s"${a.toSQL} % ${b.toSQL}"
+          case Multiply(a, b) => s"${a.toSQL} * ${b.toSQL}"
+          case Pow(a, b) => s"POW(${a.toSQL}, ${b.toSQL})"
+          case RPad(a, b, c) => s"RPAD(${a.toSQL}, ${b.toSQL}, ${c.toSQL})"
+          case RTrim(a) => s"RTRIM(${a.toSQL})"
+          case Split(a, b) => s"SPLIT(${a.toSQL}, ${b.toSQL})"
+          case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
+          case Substring(a, b, c) => s"SUBSTR(${a.toSQL}, ${b.asInt}, ${c.asInt})"
+          case Sum(Distinct(a)) => s"SUM(DISTINCT(${a.toSQL}))"
+          case Sum(a) => s"SUM(${a.toSQL})"
+          case To_Date(a) => s"TO_DATE(${a.toSQL})"
+          case Trim(a) => s"TRIM(${a.toSQL})"
+          case Upper(a) => s"UPPER(${a.toSQL})"
+          case Variance(a) => s"VARIANCE(${a.toSQL})"
+          case WeekOfYear(a) => s"WEEKOFYEAR(${a.toSQL})"
+          case Year(a) => s"YEAR(${a.toSQL})"
+          case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
         }
         result.withAlias(expression)
       }
@@ -180,14 +186,14 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
-      def compile(implicit appArgs: ApplicationArgs): String = {
+      def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
         val result = invokable match {
           case Console.Debug(text) => s"""logger.debug("$text")"""
           case Console.Error(text) => s"""logger.error("$text")"""
           case Console.Info(text) => s"""logger.info("$text")"""
           case Console.Print(text) => s"""println("$text")"""
           case Console.Warn(text) => s"""logger.warn("$text")"""
-          case Create(t: Table) => s"""$resourceMgrClassName.add(${t.codify})"""
+          case Create(tableOrView: TableLike) => sparkRead(tableOrView)
           case Include(path) => incorporateSources(path).compile
           case i: Insert => i.compile
           case m: MainProgram => m.code.compile
@@ -195,11 +201,65 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Show(rows, limit) => s"""${rows.compile}.show(${limit.getOrElse(20)})"""
           case s: SQL => s.statements.map(_.compile).mkString("\n")
           case t: TableRef => t.name
-          case x =>
-            throw new IllegalArgumentException(s"Unsupported operation ${Option(x).map(_.getClass.getName).orNull}")
+          case x => throw new IllegalStateException(s"Unsupported operation ${Option(x).map(_.getClass.getName).orNull}")
         }
-        result.withAlias(invokable)
+        result
       }
+
+      private def sparkRead(tableLike: TableLike): String = {
+        tableLike match {
+          case table: Table =>
+            table.inputFormat.map(_.toString.toLowerCase()) match {
+              case Some(format) => s"""spark.read.$format("${table.location}").\n${defineColumns(table)}\n.asView("${table.name}")\n"""
+              case None => ""
+            }
+          case other => die(s"Table entity '${other.name}' could not be translated")
+        }
+      }
+
+      private def defineColumns(table: Table): String = s"""toDF(${table.columns.map(_.name.codify).mkString(",")})"""
+    }
+
+    final implicit class InvokableSQLCompiler(val invokable: Invokable) extends AnyVal {
+      def toSQL(implicit appArgs: ApplicationArgs): String = {
+        val result = invokable match {
+          case s: Select => makeSQL(s)
+          case s: SQL => s.statements.map(_.toSQL).mkString("\n")
+          case t: TableRef =>
+            val tableName = s"${appArgs.defaultDB}.${t.name}"
+            t.alias.map(alias => s"$tableName AS $alias") getOrElse tableName
+          case u: Union => s"${u.query0.toSQL} UNION ${if (u.isDistinct) "DISTINCT" else ""} ${u.query1.toSQL}"
+          case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
+        }
+        result //.withAlias(invokable)
+      }
+    }
+
+    final implicit class JoinSQLCompiler(val join: Join) extends AnyVal {
+      def toSQL(implicit appArgs: ApplicationArgs): String = {
+        s"${join.`type`.toString.replaceAllLiterally("_", " ")} JOIN ${
+          val result = join.source match {
+            case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
+            case x => x.toSQL
+          }
+          result.withAlias(join.source)
+        } ON ${join.condition.toSQL}"
+      }
+    }
+
+    final implicit class OrderColumnSQLCompiler(val orderColumn: OrderColumn) extends AnyVal {
+      def toSQL: String = orderColumn match {
+        case o: OrderColumn => s"${o.name} ${if (o.isAscending) "ASC" else "DESC"}"
+        case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
+      }
+    }
+
+    /**
+      * Table Column Type Compiler Extensions
+      * @param columnType the given [[ColumnType]]
+      */
+    final implicit class TableColumnTypeExtensions(val columnType: ColumnType) extends AnyVal {
+      @inline def toSQL: String = columnType.toString.replaceAllLiterally("_", "")
     }
 
     /**
@@ -207,14 +267,26 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param insert the given [[Insert]]
       */
     final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-      import com.qwery.util.StringHelper._
+      @inline def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+        ctx.lookupTableOrView(insert.destination.target.compile) match {
+          case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
+          case table: Table =>
+            // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
+            val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
 
-      @inline def compile(implicit appArgs: ApplicationArgs): String =
-        s"""~${ResourceManager.getObjectSimpleName}.write(
-            ~   source = ${insert.source.compile},
-            ~   destination = ${ResourceManager.getObjectSimpleName}("${insert.destination.target.compile}"),
-            ~   append = ${insert.destination.isInstanceOf[Insert.Into]}
-            ~)""".stripMargin('~')
+            // build the expression
+            val buf = ListBuffer[String]()
+            buf += s"${insert.source.compile}.write"
+            buf ++= table.fieldDelimiter.map(delimiter => s""".option("delimiter", "$delimiter")""").toList
+            buf ++= table.headersIncluded.map(enabled => s""".option("header", "$enabled")""").toList
+            buf ++= table.nullValue.map(value => s""".option("nullValue", "$value")""").toList
+            buf ++= (table.properties ++ table.serdeProperties).map { case (key, value) => s""".option("$key", "$value")""" }
+            buf += s""".mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})"""
+            buf += s""".$writer("${table.location}")\n"""
+            buf.mkString("\n")
+          case view: View => die(s"View '${view.name}' is read-only")
+        }
+      }
     }
 
     /**
@@ -231,75 +303,32 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       */
     final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
 
-      def compile(implicit appArgs: ApplicationArgs): String = if (appArgs.isInlineSQL) compileAsSQL else compileAsCode
-
-      private def compileAsCode(implicit appArgs: ApplicationArgs): String = {
-        val source = select.from map {
-          case TableRef(name) => s"$resourceMgrClassName.read(${name.codify})"
-          case op => op.compile
-        } getOrElse die(s"The data source found for '$select'")
-
-        // process the SELECT statement
-        pipeline.foldLeft(new StringBuilder(source)) { (sb, fx) =>
-          fx(select).foreach(s => sb.append("\n").append(s))
-          sb
-        } toString()
-      }
-
-      private def compileAsSQL(implicit appArgs: ApplicationArgs): String = {
-        import SparkInlineSQLCompiler.Implicits._
-
+      def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
         val quote = "\"\"\""
         val first = s"$quote|"
         val last = s"\t||$quote.stripMargin('|')"
         val list = Source.fromString(select.toSQL).getLines().toList
         val lines = first :: list.map(line => s"\t||$line") ::: last :: Nil
-        s"spark.sql(\n${lines mkString "\n"})"
+
+        // build the expression
+        s"spark.sql(\n${lines mkString "\n"})\n"
       }
+    }
 
-      private def pipeline(implicit appArgs: ApplicationArgs): Seq[Select => Option[String]] = Seq(
-        processWhere, processJoin, processGroupBy, processFields, processOrderBy, processLimit
-      )
+    /**
+      * String SQLCompiler Extensions
+      * @param string the given [[String value]]
+      */
+    final implicit class StringCompilerExtensions(val string: String) extends AnyVal {
+      @inline def codify: String = s""""$string""""
 
-      private def processFields(select: Select): Option[String] = {
-        if (select.fields.isEmpty) None else {
-          Option(s".select(${
-            select.fields.map {
-              case field: Field => if (field.isAggregate) s"""$$"${field.getName}"""" else field.compile
-              case fx: SQLFunction => if (fx.isAggregate) s"""$$"${fx.getName}"""" else fx.compile
-              case expr => expr.compile
-            } mkString ","
-          })")
-        }
+      @inline def withAlias(aliasable: Aliasable): String =
+        aliasable.alias.map(alias => s"$string AS $alias") getOrElse string
+
+      @inline def withAlias(invokable: Invokable): String = invokable match {
+        case a: Aliasable => a.alias.map(alias => s"$string AS $alias") getOrElse string
+        case _ => string
       }
-
-      private def processGroupBy(select: Select): Option[String] = {
-        if (select.groupBy.isEmpty) None else Option(
-          s"""|.groupBy(${select.groupBy.map(_.compile).mkString(",")})
-              |.agg(${
-            select.fields.collect {
-              case field: Field if field.isAggregate => field.compile
-              case fx: SQLFunction if fx.isAggregate => fx.compile
-            } mkString ",\n"
-          })""".stripMargin)
-      }
-
-      private def processJoin(select: Select)(implicit appArgs: ApplicationArgs): Option[String] = {
-        if (select.joins.isEmpty) None else Option {
-          select.joins.map { join =>
-            import join._
-            s""".join(${source.compile}, ${condition.compile}, "${`type`.toString.toLowerCase()}")"""
-          } mkString "\n"
-        }
-      }
-
-      private def processLimit(select: Select): Option[String] = select.limit.map(n => s".limit($n)")
-
-      private def processOrderBy(select: Select): Option[String] =
-        if (select.orderBy.nonEmpty) Option(s".orderBy(${select.orderBy.map(col => s"$$$col").mkString(",")})") else None
-
-      private def processWhere(select: Select): Option[String] = select.where.map(cond => s".where(${cond.compile})")
-
     }
 
     /**
@@ -311,90 +340,17 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     /**
-      * Storage Format Compiler Extensions
-      * @param storageFormat the given [[StorageFormat]]
-      */
-    final implicit class StorageFormatExtensions(val storageFormat: StorageFormat) extends AnyVal {
-      @inline def compile: String = s"StorageFormats.$storageFormat"
-    }
-
-    /**
-      * String Compiler Extensions
-      * @param string the given [[String value]]
-      */
-    final implicit class StringCompilerExtensions(val string: String) extends AnyVal {
-
-      @inline def codify: String = s""""$string""""
-
-      @inline def withAlias(aliasable: Aliasable): String =
-        aliasable.alias.map(alias => s"""$string.as(${alias.lit})""") getOrElse string
-
-      @inline def withAlias(invokable: Invokable): String = invokable match {
-        case a: Aliasable => a.alias.map(alias => s"""$string.as(${alias.lit})""") getOrElse string
-        case _ => string
-      }
-    }
-
-    /**
-      * Table Column Compiler Extensions
-      * @param column the given [[Column]]
-      */
-    final implicit class TableColumnExtensions(val column: Column) extends AnyVal {
-      import column._
-
-      @inline def codify: String =
-        s"""Column(name = "$name", `type` = ${`type`.compile}, isNullable = $isNullable${
-          comment.map(text => s""", comment = Option("$text")""") getOrElse ""
-        })"""
-    }
-
-    /**
-      * Table Column Type Compiler Extensions
-      * @param columnType the given [[ColumnType]]
-      */
-    final implicit class TableColumnTypeExtensions(val columnType: ColumnType) extends AnyVal {
-      @inline def compile: String = s"ColumnTypes.$columnType"
-    }
-
-    /**
-      * Table Compiler Extensions
-      * @param tableLike the given [[TableLike]]
-      */
-    final implicit class TableExtensions(val tableLike: TableLike) extends AnyVal {
-      def codify: String = tableLike match {
-        case table: Table =>
-          import table._
-          s"""|Table(
-              |  name = "$name",
-              |  columns = List(\n${columns.map(_.codify).mkString("\n,")}),
-              |  location = "$location",
-              |  fieldDelimiter = ${fieldDelimiter.map(_.codify)},
-              |  fieldTerminator = ${fieldTerminator.map(_.codify)},
-              |  headersIncluded = $headersIncluded,
-              |  nullValue = ${nullValue.map(_.codify)},
-              |  inputFormat = ${inputFormat.map(_.compile)},
-              |  outputFormat = ${outputFormat.map(_.compile)},
-              |  partitionColumns = List(${partitionColumns.map(_.codify).mkString(",")}),
-              |  properties = Map(${properties.codify}),
-              |  serdeProperties = Map(${serdeProperties.codify})
-              |)""".stripMargin
-        case table => die(s"Table type '${table.getClass.getSimpleName}' is not yet supported")
-      }
-    }
-
-    /**
       * Value Compiler Extensions
       * @param value the given value
       */
-    final implicit class ValueCompilerExtensions(val value: Any) extends AnyVal {
+    final implicit class ValueCompilerExtensionA(val value: Any) extends AnyVal {
 
-      @inline def asInt: Int = value.lit.toDouble.toInt
+      @inline def asInt: Int = value.asLit.toDouble.toInt
 
-      @inline def lit: String = value match {
+      @inline def asLit: String = value match {
         case null => "NULL"
-        case d: Double => if (d == d.toLong) d.toLong.toString else d.toString
-        case Literal(_value) => _value.lit
-        case s: String => s""""$s""""
+        case Literal(_value) => _value.asLit
+        case s: String => s"'$s'"
         case x => x.toString
       }
     }

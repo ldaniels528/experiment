@@ -1,6 +1,4 @@
-package com.qwery
-package platform
-package sparksql
+package com.qwery.platform.sparksql.embedded
 
 import com.qwery.models.{Table, TableLike}
 import org.apache.spark.sql.{DataFrameReader, DataFrameWriter}
