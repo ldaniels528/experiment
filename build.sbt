@@ -59,7 +59,7 @@ lazy val core = (project in file("./app/core")).
     autoCompilerPlugins := true,
     coverageEnabled := true,
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk" % awsVersion % Provided
+
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

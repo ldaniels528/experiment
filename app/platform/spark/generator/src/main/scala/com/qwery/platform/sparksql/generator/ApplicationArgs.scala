@@ -6,6 +6,7 @@ import java.io.File
   * Application Arguments
   * @param appName          the Spark application name (default: `"Untitled"`)
   * @param appVersion       the version identifier of your application (default: `"1.0"`)
+  * @param extendsClass     the optional class the generated class should extend (default: `Serializable`)
   * @param isClassOnly      indicates whether only a Scala class should be generated (default: `false`)
   * @param defaultDB        the default database (default: `"global_temp"`)
   * @param scalaVersion     the Scala version the generated project will use (default: "2.11.12")
@@ -17,6 +18,7 @@ import java.io.File
   */
 case class ApplicationArgs(appName: String,
                            appVersion: String,
+                           extendsClass: String,
                            isClassOnly: Boolean,
                            defaultDB: String,
                            scalaVersion: String,
@@ -41,6 +43,7 @@ object ApplicationArgs {
     ApplicationArgs(
       appName = mappings.getOrElse("--app-name", "Untitled"),
       appVersion = mappings.getOrElse("--app-version", "1.0"),
+      extendsClass = mappings.getOrElse("--extends-class", "Serializable"),
       isClassOnly = mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       defaultDB = mappings.getOrElse("--default-db", "global_temp"),
       scalaVersion = mappings.getOrElse("--scala-version", "2.11.12"),

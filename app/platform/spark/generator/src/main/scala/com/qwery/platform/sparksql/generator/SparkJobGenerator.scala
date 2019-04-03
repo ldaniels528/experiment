@@ -52,7 +52,7 @@ class SparkJobGenerator(className: String,
           |   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
           |   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
           |   //
-          |   // placeholder dependencies
+          |   // Qwery dependencies
           |   "com.qwery" %% "core" % "${AppConstants.version}",
           |   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
           |   "com.qwery" %% "language" % "${AppConstants.version}"
@@ -203,12 +203,13 @@ class SparkJobGenerator(className: String,
   private def generateClassWithMain(invokable: Invokable, imports: Seq[String])
                                    (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
+    import appArgs._
     s"""|package $packageName
         |
         |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
         |import $className.Implicits._
         |
-        |class $className() extends Serializable {
+        |class $className() extends $extendsClass {
         |  @transient
         |  private lazy val logger = LoggerFactory.getLogger(getClass)
         |
@@ -223,15 +224,15 @@ class SparkJobGenerator(className: String,
         |   private[this] val logger = LoggerFactory.getLogger(getClass)
         |
         |   def main(args: Array[String]): Unit = {
-        |     implicit val spark: SparkSession = createSparkSession("${appArgs.appName}")
+        |     implicit val spark: SparkSession = createSparkSession()
         |     new $className().start(args)
         |     spark.stop()
         |   }
         |
-        |   def createSparkSession(appName: String): SparkSession = {
+        |   def createSparkSession(): SparkSession = {
         |     val sparkConf = new SparkConf()
         |     val builder = SparkSession.builder()
-        |       .appName(appName)
+        |       .appName("$appName")
         |       .config(sparkConf)
         |       .enableHiveSupport()
         |
@@ -240,7 +241,7 @@ class SparkJobGenerator(className: String,
         |       // on failure, create a local one...
         |       case _: Throwable =>
         |         System.setSecurityManager(null)
-        |         logger.warn(s"$$appName failed to connect to EMR cluster; starting local session...")
+        |         logger.warn("Application '$appName' failed to connect to EMR cluster; starting local session...")
         |         builder.master("local[*]").getOrCreate()
         |     }
         |   }
