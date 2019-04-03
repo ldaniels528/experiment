@@ -27,37 +27,37 @@ class SparkJobGenerator(className: String,
   def createBuildScript()(implicit appArgs: ApplicationArgs): File = {
     import appArgs._
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {
-      s"""|name := "$appName"
-          |
-          |version := "$appVersion"
-          |
-          |scalaVersion := "$scalaVersion"
-          |
-          |test in assembly := {}
-          |mainClass in assembly := Some("$packageName.$className")
-          |assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
-          |assemblyMergeStrategy in assembly := {
-          |  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
-          |  case PathList("META-INF", "MANIFEST.MF", _*) => MergeStrategy.discard
-          |  case PathList("META-INF", _*) => MergeStrategy.filterDistinctLines
-          |  case PathList("org", "datanucleus", _*) => MergeStrategy.rename
-          |  case PathList("com", "scoverage", _*) => MergeStrategy.discard
-          |  case _ => MergeStrategy.first
-          |}
-          |
-          |libraryDependencies ++= Seq(
-          |   "com.databricks" %% "spark-avro" % "$sparkAvroVersion",
-          |   "com.databricks" %% "spark-csv" % "$sparkCsvVersion",
-          |   "org.apache.spark" %% "spark-core" % "$sparkVersion",
-          |   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
-          |   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
-          |   //
-          |   // Qwery dependencies
-          |   "com.qwery" %% "core" % "${AppConstants.version}",
-          |   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
-          |   "com.qwery" %% "language" % "${AppConstants.version}"
-          |)
-          |""".stripMargin
+      s"""~name := "$appName"
+          ~
+          ~version := "$appVersion"
+          ~
+          ~scalaVersion := "$scalaVersion"
+          ~
+          ~test in assembly := {}
+          ~mainClass in assembly := Some("$packageName.$className")
+          ~assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
+          ~assemblyMergeStrategy in assembly := {
+          ~  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+          ~  case PathList("META-INF", "MANIFEST.MF", _*) => MergeStrategy.discard
+          ~  case PathList("META-INF", _*) => MergeStrategy.filterDistinctLines
+          ~  case PathList("org", "datanucleus", _*) => MergeStrategy.rename
+          ~  case PathList("com", "scoverage", _*) => MergeStrategy.discard
+          ~  case _ => MergeStrategy.first
+          ~}
+          ~
+          ~libraryDependencies ++= Seq(
+          ~   "com.databricks" %% "spark-avro" % "$sparkAvroVersion",
+          ~   "com.databricks" %% "spark-csv" % "$sparkCsvVersion",
+          ~   "org.apache.spark" %% "spark-core" % "$sparkVersion",
+          ~   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
+          ~   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
+          ~   //
+          ~   // Qwery dependencies
+          ~   "com.qwery" %% "core" % "${AppConstants.version}",
+          ~   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
+          ~   "com.qwery" %% "language" % "${AppConstants.version}"
+          ~)
+          ~""".stripMargin('~')
     }
   }
 
@@ -102,7 +102,7 @@ class SparkJobGenerator(className: String,
       generateClassFromTemplate(templateFile, invokable, imports = List(
         "org.apache.spark.sql.functions._",
         "org.slf4j.LoggerFactory"
-      )) getOrElse die(s"No replaceable code block found in ${templateFile.getCanonicalPath}")
+      ))
     }
   }
 
@@ -169,28 +169,39 @@ class SparkJobGenerator(className: String,
     * @return an option of the contents f the generated file
     */
   private def generateClassFromTemplate(templateFile: File, invokable: Invokable, imports: Seq[String])
-                                       (implicit appArgs: ApplicationArgs, ctx: CompileContext): Option[String] = {
+                                       (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
     import com.qwery.util.StringHelper._
 
-    val codeBegin = "// @@SPARK_QL_START"
-    val codeEnd = "// @@SPARK_QL_END"
-
     // read the contents of the template file
-    val code = Source.fromFile(templateFile).use(_.getLines().mkString("\n"))
+    val code = new StringBuilder(Source.fromFile(templateFile).use(_.getLines().mkString("\n")))
+    val codeBegin = "{{"
+    val codeEnd = "}}"
+    var lastIndex = 0
+    var done = false
 
-    // replace the QWERY block if it exists
-    for {
-      start <- code.indexOfOpt(codeBegin)
-      end <- code.indexOfOpt(codeEnd).map(_ + codeEnd.length)
-    } yield {
-      new StringBuilder(code).replace(start, end,
-        s"""|${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
-            |import spark.implicits._
-            |${invokable.compile}
-            |""".stripMargin
-      ).toString()
+    // replace the "{{property}}" tags
+    while (!done) {
+      val results = for {
+        start <- code.indexOfOpt(codeBegin, lastIndex)
+        end <- code.indexOfOpt(codeEnd, start).map(_ + codeEnd.length)
+        value = code.substring(start + codeBegin.length, end - codeEnd.length)
+      } yield {
+        // determine the replacement value
+        val replacement = value.toLowerCase match {
+          case "classname" => className
+          case "invoke" => invokable.compile
+          case "package" => packageName
+          case _ => die(s"Qwery property '$value' is invalid")
+        }
+
+        // replace the tag
+        code.replace(start, end, replacement)
+        lastIndex = start + replacement.length
+      }
+      done = results.isEmpty
     }
+    code.toString()
   }
 
   /**
@@ -204,58 +215,48 @@ class SparkJobGenerator(className: String,
                                    (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
     import appArgs._
-    s"""|package $packageName
-        |
-        |${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
-        |import $className.Implicits._
-        |
-        |class $className() extends $extendsClass {
-        |  @transient
-        |  private lazy val logger = LoggerFactory.getLogger(getClass)
-        |
-        |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
-        |     import spark.implicits._
-        |     ${invokable.compile}
-        |  }
-        |
-        |}
-        |
-        |object $className {
-        |   private[this] val logger = LoggerFactory.getLogger(getClass)
-        |
-        |   def main(args: Array[String]): Unit = {
-        |     implicit val spark: SparkSession = createSparkSession()
-        |     new $className().start(args)
-        |     spark.stop()
-        |   }
-        |
-        |   def createSparkSession(): SparkSession = {
-        |     val sparkConf = new SparkConf()
-        |     val builder = SparkSession.builder()
-        |       .appName("$appName")
-        |       .config(sparkConf)
-        |       .enableHiveSupport()
-        |
-        |     // first attempt to create a clustered session
-        |     try builder.getOrCreate() catch {
-        |       // on failure, create a local one...
-        |       case _: Throwable =>
-        |         System.setSecurityManager(null)
-        |         logger.warn("Application '$appName' failed to connect to EMR cluster; starting local session...")
-        |         builder.master("local[*]").getOrCreate()
-        |     }
-        |   }
-        |
-        |   object Implicits {
-        |    final implicit class DataFrameExtensions(val df: DataFrame) extends AnyVal {
-        |      @inline def asView(name: String): DataFrame = {
-        |        df.createOrReplaceGlobalTempView(name)
-        |        df
-        |      }
-        |    }
-        |  }
-        |}
-        |""".stripMargin
+    s"""~package $packageName
+        ~
+        ~${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
+        ~
+        ~class $className() extends $extendsClass {
+        ~  @transient
+        ~  private lazy val logger = LoggerFactory.getLogger(getClass)
+        ~
+        ~  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
+        ~     import spark.implicits._
+        ~     ${invokable.compile}
+        ~  }
+        ~
+        ~}
+        ~
+        ~object $className {
+        ~   private[this] val logger = LoggerFactory.getLogger(getClass)
+        ~
+        ~   def main(args: Array[String]): Unit = {
+        ~     implicit val spark: SparkSession = createSparkSession()
+        ~     new $className().start(args)
+        ~     spark.stop()
+        ~   }
+        ~
+        ~   def createSparkSession(): SparkSession = {
+        ~     val sparkConf = new SparkConf()
+        ~     val builder = SparkSession.builder()
+        ~       .appName("$appName")
+        ~       .config(sparkConf)
+        ~       .enableHiveSupport()
+        ~
+        ~     // first attempt to create a clustered session
+        ~     try builder.getOrCreate() catch {
+        ~       // on failure, create a local one...
+        ~       case _: Throwable =>
+        ~         System.setSecurityManager(null)
+        ~         logger.warn("Application '$appName' failed to connect to EMR cluster; starting local session...")
+        ~         builder.master("local[*]").getOrCreate()
+        ~     }
+        ~   }
+        ~}
+        ~""".stripMargin('~')
   }
 
   private def inferSourceDir(outputPath: String)(implicit appArgs: ApplicationArgs): File = {
@@ -291,12 +292,27 @@ object SparkJobGenerator {
     import com.qwery.util.StringHelper._
 
     // get the input path, output path and fully qualified class name (e.g. "com.acme.CoyoteCrush") and flags
-    val (inputPath, outputPath, (className, packageName), appArgs) = args.toList match {
-      case input :: output :: fullClass :: flags => (input, output, getClassAndPackageNames(fullClass), ApplicationArgs(flags))
+    val (inputPath, outputPath, classNameWithPackage, appArgs) = args.toList match {
+      case input :: output :: fullClass :: flags => (input, output, fullClass, ApplicationArgs(flags))
       case passedArgs =>
         logger.error(s"Invalid number of arguments passed: [${passedArgs.mkString(",")}]")
         die(s"java ${SparkJobGenerator.getObjectFullName} <inputPath> <outputPath> <outputClass> [<flags>]")
     }
+
+    // generate the application
+    generate(inputPath, outputPath, classNameWithPackage)(appArgs)
+  }
+
+  /**
+    * Performs the Spark job generation
+    * @param inputPath            the input path of the SQL file to translate
+    * @param outputPath           the output path where the class file or project will be generated
+    * @param classNameWithPackage the fully qualified class name (e.g. "com.acme.traps.CoyoteTrap")
+    * @param appArgs              the implicit [[ApplicationArgs]]
+    */
+  def generate(inputPath: String, outputPath: String, classNameWithPackage: String)(implicit appArgs: ApplicationArgs): Unit = {
+    // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush") and flags
+    val (className, packageName) = getClassAndPackageNames(classNameWithPackage)
 
     // generate the sbt project
     val model = SQLLanguageParser.parse(new File(inputPath))

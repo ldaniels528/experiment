@@ -7,8 +7,6 @@ import scala.language.postfixOps
 val appVersion = "0.4.0"
 val scalaJvmVersion = "2.11.12"
 
-val akkaVersion = "2.5.2"
-val awsVersion = "1.11.394"
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
 val sparkVersion = "2.3.3"
@@ -57,7 +55,7 @@ lazy val core = (project in file("./app/core")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := true,
+    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))
@@ -79,7 +77,7 @@ lazy val language = (project in file("./app/language")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := true,
+    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))
@@ -101,7 +99,7 @@ lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedd
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := true,
+    coverageEnabled := false,
     libraryDependencies ++= Seq(
       // Spark
       "com.databricks" %% "spark-avro" % "4.0.0",
@@ -125,7 +123,7 @@ lazy val platform_spark_generator = (project in file("./app/platform/spark/gener
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := true,
+    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))

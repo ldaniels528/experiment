@@ -210,7 +210,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         tableLike match {
           case table: Table =>
             table.inputFormat.map(_.toString.toLowerCase()) match {
-              case Some(format) => s"""spark.read.$format("${table.location}").\n${defineColumns(table)}\n.asView("${table.name}")\n"""
+              case Some(format) =>
+                s"""|spark.read.$format("${table.location}").
+                    |   ${defineColumns(table)}
+                    |   .createOrReplaceGlobalTempView("${table.name}")
+                    |""".stripMargin
               case None => ""
             }
           case other => die(s"Table entity '${other.name}' could not be translated")
@@ -306,9 +310,9 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
         val quote = "\"\"\""
         val first = s"$quote|"
-        val last = s"\t||$quote.stripMargin('|')"
+        val last = s"\t|$quote.stripMargin('|')"
         val list = Source.fromString(select.toSQL).getLines().toList
-        val lines = first :: list.map(line => s"\t||$line") ::: last :: Nil
+        val lines = first :: list.map(line => s"\t|$line") ::: last :: Nil
 
         // build the expression
         s"spark.sql(\n${lines mkString "\n"})\n"

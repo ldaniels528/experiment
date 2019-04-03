@@ -1,8 +1,8 @@
 package com.qwery.language
 
-import com.qwery.util.StringHelper._
 import com.qwery.models._
 import com.qwery.models.expressions._
+import com.qwery.util.StringHelper._
 
 import scala.language.postfixOps
 
@@ -71,8 +71,8 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
     * Indicates whether at least one of the template mappings is not empty
     * @return true, if at least one of the template mappings is not empty
     */
-  def nonEmpty: Boolean = Seq(assignables, atoms, columns, conditions, expressions, fields, joins, keyValuePairs,
-    keywords, locations, numerics, orderedFields, properties, repeatedSets, sources, variables).exists(_.nonEmpty)
+  def nonEmpty: Boolean = keywords.nonEmpty || Seq(assignables, atoms, columns, conditions, expressions, fields, joins, keyValuePairs,
+    locations, numerics, orderedFields, properties, repeatedSets, sources, variables).exists(_.nonEmpty)
 
 }
 

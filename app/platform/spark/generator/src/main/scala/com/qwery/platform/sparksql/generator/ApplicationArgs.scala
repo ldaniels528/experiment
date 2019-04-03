@@ -6,9 +6,9 @@ import java.io.File
   * Application Arguments
   * @param appName          the Spark application name (default: `"Untitled"`)
   * @param appVersion       the version identifier of your application (default: `"1.0"`)
-  * @param extendsClass     the optional class the generated class should extend (default: `Serializable`)
   * @param isClassOnly      indicates whether only a Scala class should be generated (default: `false`)
   * @param defaultDB        the default database (default: `"global_temp"`)
+  * @param extendsClass     the optional class the generated class should extend (default: `Serializable`)
   * @param scalaVersion     the Scala version the generated project will use (default: "2.11.12")
   * @param sparkAvroVersion the DataStax Spark-Avro library version (default: "4.0.0")
   * @param sparkCsvVersion  the DataStax Spark-CSV library version (default: "1.5.0")
@@ -18,9 +18,9 @@ import java.io.File
   */
 case class ApplicationArgs(appName: String,
                            appVersion: String,
-                           extendsClass: String,
                            isClassOnly: Boolean,
                            defaultDB: String,
+                           extendsClass: String,
                            scalaVersion: String,
                            sparkAvroVersion: String,
                            sparkCsvVersion: String,

@@ -70,3 +70,4 @@ scripts/stacys_secret_weapon.sh
 scripts/adbook_poc.sh
 samples/sql/adbook/*
 scripts/*
+*.iml
