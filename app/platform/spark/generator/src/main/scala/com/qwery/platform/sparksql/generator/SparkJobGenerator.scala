@@ -3,15 +3,11 @@ package platform
 package sparksql.generator
 
 import java.io.{File, PrintWriter}
-import java.text.SimpleDateFormat
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models._
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
-
-import scala.io.Source
-import scala.util.Properties
 
 /**
   * Spark/Scala Job Generator
@@ -125,7 +121,7 @@ class SparkJobGenerator(className: String,
     createBuildScript()
 
     // generate the class file
-    val file = appArgs.templateClass.map(createMainClassFromTemplate(_, invokable)).getOrElse(createMainClass(invokable))
+    val file = appArgs.templateFile.map(createMainClassFromTemplate(_, invokable)).getOrElse(createMainClass(invokable))
 
     logger.info(s"[*] Process completed in $elapsedTime msec(s)")
     file
@@ -155,7 +151,7 @@ class SparkJobGenerator(className: String,
 
   def generate(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
     if (!appArgs.isClassOnly) createProject(invokable) else {
-      appArgs.templateClass match {
+      appArgs.templateFile match {
         case Some(templateFile) => createMainClassFromTemplate(templateFile, invokable)
         case None => createMainClass(invokable)
       }
@@ -172,47 +168,7 @@ class SparkJobGenerator(className: String,
     */
   private def generateClassFromTemplate(templateFile: File, invokable: Invokable, imports: Seq[String])
                                        (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
-    import SparkCodeCompiler.Implicits._
-    import com.qwery.util.StringHelper._
-
-    // read the contents of the template file
-    val code = new StringBuilder(Source.fromFile(templateFile).use(_.getLines().mkString("\n")))
-    val codeBegin = "{{"
-    val codeEnd = "}}"
-    var lastIndex = 0
-    var done = false
-
-    // replace the "{{property}}" tags
-    while (!done) {
-      val results = for {
-        start <- code.indexOfOpt(codeBegin, lastIndex)
-        end <- code.indexOfOpt(codeEnd, start).map(_ + codeEnd.length)
-        property = code.substring(start + codeBegin.length, end - codeEnd.length).trim
-      } yield {
-        // determine the replacement value
-        val replacement = property.toLowerCase match {
-          case s if s.startsWith("env:") => Properties.envOrElse(s.drop(4), "")
-          case s if s.startsWith("jvm:") => System.getProperty(s.drop(4), "")
-          case s if s.startsWith("prop:") => appArgs.properties.getOrElse(s.drop(5), "")
-          case "appname" => appArgs.appName
-          case "appversion" => appArgs.appVersion
-          case "classname" => className
-          case "date" => new SimpleDateFormat("MM-dd-yyyy").format(new java.util.Date())
-          case "datetime" => new SimpleDateFormat("MM-dd-yyyy HH:mm:ss").format(new java.util.Date())
-          case "invoke" => invokable.compile
-          case "packagename" => packageName
-          case "templatefile" => appArgs.templateClass.map(_.getCanonicalPath).getOrElse("")
-          case "time" => new SimpleDateFormat("HH:mm:ss").format(new java.util.Date())
-          case _ => die(s"Qwery property '$property' is invalid")
-        }
-
-        // replace the tag
-        code.replace(start, end, replacement)
-        lastIndex = start + replacement.length
-      }
-      done = results.isEmpty
-    }
-    code.toString()
+    CodeTemplate.fromFile(templateFile).generate(className, packageName, outputPath, invokable)
   }
 
   /**

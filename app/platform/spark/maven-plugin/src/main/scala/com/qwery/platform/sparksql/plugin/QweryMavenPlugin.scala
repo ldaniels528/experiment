@@ -70,7 +70,7 @@ object QweryMavenPlugin {
           sparkAvroVersion = Option(app.sparkAvroVersion).getOrElse("4.0.0"),
           sparkCsvVersion = Option(app.sparkCsvVersion).getOrElse("1.5.0"),
           sparkVersion = Option(app.sparkVersion).getOrElse("2.3.3"),
-          templateClass = Option(app.templateClass).map(new File(_))
+          templateFile = Option(app.templateFile).map(new File(_))
         )
       }
     }

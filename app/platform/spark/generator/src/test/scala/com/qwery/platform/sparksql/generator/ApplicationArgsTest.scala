@@ -32,7 +32,7 @@ class ApplicationArgsTest extends FunSpec {
       assert(appArgs.sparkAvroVersion == "4.0.1")
       assert(appArgs.sparkCsvVersion == "1.5.1")
       assert(appArgs.sparkVersion == "2.3.2")
-      assert(appArgs.templateClass.contains(new File("./src/main/scala/Test.scala")))
+      assert(appArgs.templateFile.contains(new File("./src/main/scala/Test.scala")))
     }
 
     it("should failed to parse improperly formatted arguments") {

@@ -20,7 +20,7 @@ import scala.beans.BeanProperty
   *       <sparkAvroVersion>4.0.0</sparkAvro>
   *       <sparkCsvVersion>1.5.0</sparkCsv>
   *       <sparkVersion>2.3.3</sparkVersion>
-  *       <templateClass>./temp/WtmSparkJobTemplate.txt</templateClass>
+  *       <templateFile>./temp/WtmSparkJobTemplate.txt</templateFile>
   *       <properties>
   *           <property>
   *               <name>spark.debug.maxToStringFields</name>
@@ -48,6 +48,6 @@ case class Application() {
   @BeanProperty var sparkAvroVersion: String = _
   @BeanProperty var sparkCsvVersion: String = _
   @BeanProperty var sparkVersion: String = _
-  @BeanProperty var templateClass: String = _
+  @BeanProperty var templateFile: String = _
 
 }

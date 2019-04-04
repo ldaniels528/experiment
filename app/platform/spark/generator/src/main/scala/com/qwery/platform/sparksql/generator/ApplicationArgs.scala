@@ -13,7 +13,7 @@ import java.io.File
   * @param sparkAvroVersion the DataStax Spark-Avro library version (default: "4.0.0")
   * @param sparkCsvVersion  the DataStax Spark-CSV library version (default: "1.5.0")
   * @param sparkVersion     the Apache Spark library version (default: "2.3.3")
-  * @param templateClass    the optional template class to use in generating the Spark Job
+  * @param templateFile    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
 case class ApplicationArgs(appName: String,
@@ -26,7 +26,7 @@ case class ApplicationArgs(appName: String,
                            sparkAvroVersion: String,
                            sparkCsvVersion: String,
                            sparkVersion: String,
-                           templateClass: Option[File])
+                           templateFile: Option[File])
 
 /**
   * Application Arguments
@@ -52,7 +52,7 @@ object ApplicationArgs {
       sparkAvroVersion = mappings.getOrElse("--spark-avro", "4.0.0"),
       sparkCsvVersion = mappings.getOrElse("--spark-csv", "1.5.0"),
       sparkVersion = mappings.getOrElse("--spark-version", "2.3.3"),
-      templateClass = mappings.get("--template-class").map(new File(_))
+      templateFile = mappings.get("--template-class").map(new File(_))
     )
   }
 
