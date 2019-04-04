@@ -1,7 +1,5 @@
 package com.qwery.models.expressions
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.qwery.models.Aliasable
 
 /**
@@ -16,6 +14,27 @@ trait Expression extends Aliasable
   * @param b the right-side [[Expression]]
   */
 case class Add(a: Expression, b: Expression) extends Expression
+
+/**
+  * Bitwise AND expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
+case class BitwiseAND(a: Expression, b: Expression) extends Expression
+
+/**
+  * Bitwise OR expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
+case class BitwiseOR(a: Expression, b: Expression) extends Expression
+
+/**
+  * Bitwise Exclusive OR expression
+  * @param a the left-side [[Expression]]
+  * @param b the right-side [[Expression]]
+  */
+case class BitwiseXOR(a: Expression, b: Expression) extends Expression
 
 /**
   * Divide expression
@@ -68,8 +87,8 @@ case class Subtract(a: Expression, b: Expression) extends Expression
   * @author lawrence.daniels@gmail.com
   */
 object Expression {
-  val validTypes = Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "Timestamp", "UUID")
-  var ticker = new AtomicInteger()
+  val validTypes: Seq[String] =
+    Seq("Boolean", "Byte", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "Timestamp", "UUID")
 
   def isValidType(typeName: String): Boolean = validTypes.exists(_ equalsIgnoreCase typeName)
 

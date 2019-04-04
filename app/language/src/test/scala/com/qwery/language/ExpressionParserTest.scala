@@ -1,7 +1,6 @@
 package com.qwery.language
 
 import com.qwery.models._
-import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
@@ -36,14 +35,6 @@ class ExpressionParserTest extends FunSpec {
       verify("A.Symbol = 'AMD'", Field("A.Symbol") === "AMD")
     }
 
-    it("""should parse "Sum(A.LastSale) >= 5000" (conditional expression)""") {
-      verify("Sum(A.LastSale) >= 5000", Sum(Field("A.LastSale")) >= 5000)
-    }
-
-    it("""should parse "Min(A.LastSale) <= 1" (conditional expression)""") {
-      verify("Min(A.LastSale) <= 1", Min(Field("A.LastSale")) <= 1)
-    }
-
     it("""should parse "y + (x * 2)" (expression)""") {
       verify("y + (x * 2)", Add('y, Field('x) * 2))
     }
@@ -54,10 +45,6 @@ class ExpressionParserTest extends FunSpec {
 
     it("""should parse "(y - (x / 2)) AS 'calc'" (expression)""") {
       verify("(y - (x / 2))  AS 'calc'", Subtract('y, Field('x) / 2).as("calc"))
-    }
-
-    it("""should parse complex expressions "from_unixtime(cast(trim(event_time) as bigint) - 10800)" (conditional expression)""") {
-      verify("(from_unixtime(cast(trim(event_time) as bigint) - 10800))", From_UnixTime(Cast(Trim(Field("event_time")), ColumnTypes.BIGINT) - 10800))
     }
 
     it("""should parse "LastSale = 100" (equal)""") {
@@ -119,53 +106,7 @@ class ExpressionParserTest extends FunSpec {
       verify("(x + 3) * 2", Multiply(Add('x, 3), 2))
     }
 
-    it("""should parse "Avg(LastSale)" (Avg)""") {
-      verify("Avg(LastSale)", Avg('LastSale))
-    }
 
-    it("should parse functions (Case - Type 1)") {
-      verify(
-        """|CASE Sector
-           |  WHEN 'Oil & Gas Production' THEN 'Oil-Gas'
-           |  WHEN 'Public Utilities' THEN 'Pub Utils'
-           |  ELSE 'Unknown'
-           |END
-           |""".stripMargin,
-        Case(
-          When(Field('Sector) === "Oil & Gas Production", "Oil-Gas"),
-          When(Field('Sector) === "Public Utilities", "Pub Utils")
-        )(otherwise = "Unknown": Expression))
-    }
-
-    it("should parse functions (Case - Type 2)") {
-      verify(
-        """|CASE
-           |  WHEN Sector = 'Oil & Gas Production' THEN 'Oil-Gas'
-           |  WHEN Sector = 'Public Utilities' THEN 'Pub Utils'
-           |  ELSE 'Unknown'
-           |END
-           |""".stripMargin,
-        Case(
-          When(Field('Sector) === "Oil & Gas Production", "Oil-Gas"),
-          When(Field('Sector) === "Public Utilities", "Pub Utils")
-        )(otherwise = "Unknown": Expression))
-    }
-
-    it("""should parse "Cast(LastSale AS String)" """) {
-      verify("Cast(LastSale AS String)", Cast('LastSale, ColumnTypes.STRING))
-    }
-
-    it("""should parse "Count(LastSale)" """) {
-      verify("Count(LastSale)", Count('LastSale))
-    }
-
-    it("""should parse "Count(*)" """) {
-      verify("Count(*)", Count('*))
-    }
-
-    it("should parse functions (If)") {
-      verify("If(LastSale < 1, 'Penny Stock', 'Stock')", If(Field('LastSale) < 1, "Penny Stock", "Stock"))
-    }
 
     it("should parse functions (Min)") {
       verify("Min(LastSale)", Min('LastSale))
@@ -193,10 +134,6 @@ class ExpressionParserTest extends FunSpec {
 
     it("should parse functions (Sum)") {
       verify("Sum(LastSale)", Sum('LastSale))
-    }
-
-    it("should parse user-defined function (UDF) calls: toDecimal(MarketCap)") {
-      verify("toDecimal(MarketCap)", FunctionCall("toDecimal")('MarketCap))
     }
 
     it("should parse local variables: \"$total\"") {

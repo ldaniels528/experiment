@@ -29,7 +29,6 @@ trait SparkCodeCompiler {
     * @return a list of defined [[TableLike tables and views]]
     */
   def discoverTablesAndViews(invokable: Invokable): List[TableLike] = {
-
     def recurse(invokable: Invokable): List[TableLike] = {
       invokable match {
         case Create(table: Table) => table :: Nil
@@ -124,30 +123,38 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
           case Add_Months(a, b) => s"ADD_MONTHS(${a.toSQL}, ${b.toSQL})"
           case AllFields => "*"
-          case Array(args) => s"array(${args.map(_.toSQL).mkString(",")}: _*)"
-          case Array_Contains(a, b) => s"array_contains(${a.toSQL}, ${b.toSQL})"
-          case _: Array_Index => die("Array index is not supported by Spark")
+          case Array(args) => s"ARRAY(${args.map(_.toSQL).mkString(",")})"
+          case Array_Contains(a, b) => s"ARRAY_CONTAINS(${a.toSQL}, ${b.toSQL})"
+          case Array_Distinct(args) => s"ARRAY_DISTINCT(${args.map(_.toSQL).mkString(",")})"
+          case Array_Except(a, b) => s"ARRAY_EXCEPT(${a.toSQL}, ${b.toSQL})"
+          case Array_Index(_, _) => die("ARRAY_INDEX(...) is not supported by Spark")
+          case Array_Intersect(a, b) => s"ARRAY_INTERSECT(${a.toSQL}, ${b.toSQL})"
+          case Array_Max(a) => s"ARRAY_MAX(${a.toSQL})"
+          case Array_Min(a) => s"ARRAY_MIN(${a.toSQL})"
           case Ascii(a) => s"ASCII(${a.toSQL})"
           case Avg(a) => s"AVG(${a.toSQL})"
           case Base64(a) => s"BASE64(${a.toSQL})"
           case BasicField(name) => name
           case Bin(a) => s"BIN(${a.toSQL})"
+          case BitwiseAND(a, b) => s"${a.toSQL} & ${b.toSQL}"
+          case BitwiseOR(a, b) => s"${a.toSQL} | ${b.toSQL}"
+          case BitwiseXOR(a, b) => s"${a.toSQL} ^ ${b.toSQL}"
           case c: Case => makeSQL(c)
           case Cast(value, toType) => s"CAST(${value.toSQL} AS ${toType.toSQL})"
-          case Cbrt(a) => s"cbrt(${a.toSQL})"
-          case Ceil(a) => s"ceil(${a.toSQL})"
+          case Cbrt(a) => s"CBRT(${a.toSQL})"
+          case Ceil(a) => s"CEIL(${a.toSQL})"
           case Coalesce(args) => s"COALESCE(${args.map(_.toSQL).mkString(",")})"
           case Concat(args) => s"CONCAT(${args.map(_.toSQL).mkString(",")})"
           case Count(Distinct(a)) => s"COUNT(DISTINCT(${a.toSQL}))"
           case Count(a) => s"COUNT(${a.toSQL})"
           case Cume_Dist => "CUME_DIST()"
           case Current_Date => "CURRENT_DATE()"
-          case Date_Add(a, b) => s"date_add(${a.toSQL}, ${b.toSQL})"
+          case Date_Add(a, b) => s"DATE_ADD(${a.toSQL}, ${b.toSQL})"
           case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
           case Factorial(a) => s"FACTORIAL(${a.toSQL})"
           case Floor(a) => s"FLOOR(${a.toSQL})"
           case From_UnixTime(a, b) => b.map(f => s"FROM_UNIXTIME(${a.toSQL}, ${f.toSQL})") || s"FROM_UNIXTIME(${a.toSQL})"
-          case FunctionCall(name, args) => s"callUDF(${name.asLit}, ${args.map(_.toSQL).mkString(",")})"
+          case FunctionCall(name, args) => s"CALLUDF(${name.asLit}, ${args.map(_.toSQL).mkString(",")})"
           case If(condition, trueValue, falseValue) => s"IF(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
           case JoinField(name, tableAlias) => tableAlias.map(alias => s"$alias.$name") getOrElse name
           case Length(a) => s"LENGTH(${a.toSQL})"
@@ -166,7 +173,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case RTrim(a) => s"RTRIM(${a.toSQL})"
           case Split(a, b) => s"SPLIT(${a.toSQL}, ${b.toSQL})"
           case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
-          case Substring(a, b, c) => s"SUBSTR(${a.toSQL}, ${b.asInt}, ${c.asInt})"
+          case Substring(a, b, c) => s"SUBSTRING(${a.toSQL}, ${b.asInt}, ${c.asInt})"
           case Sum(Distinct(a)) => s"SUM(DISTINCT(${a.toSQL}))"
           case Sum(a) => s"SUM(${a.toSQL})"
           case To_Date(a) => s"TO_DATE(${a.toSQL})"
@@ -211,8 +218,8 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case table: Table =>
             table.inputFormat.map(_.toString.toLowerCase()) match {
               case Some(format) =>
-                s"""|spark.read.$format("${table.location}").
-                    |   ${defineColumns(table)}
+                s"""|spark.read.$format("${table.location}")
+                    |   .${defineColumns(table)}
                     |   .createOrReplaceGlobalTempView("${table.name}")
                     |""".stripMargin
               case None => ""
@@ -294,28 +301,17 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     /**
-      * Map Compiler Extensions
-      * @param mapping the given [[Map mapping]]
-      */
-    final implicit class MapCodifyExtension(val mapping: Map[String, String]) extends AnyVal {
-      @inline def codify: String = mapping map { case (k, v) => k.codify -> v.codify } mkString ","
-    }
-
-    /**
       * Select Compiler Extensions
       * @param select the given [[Select]]
       */
     final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
-
       def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
         val quote = "\"\"\""
-        val first = s"$quote|"
-        val last = s"\t|$quote.stripMargin('|')"
-        val list = Source.fromString(select.toSQL).getLines().toList
-        val lines = first :: list.map(line => s"\t|$line") ::: last :: Nil
-
-        // build the expression
-        s"spark.sql(\n${lines mkString "\n"})\n"
+        val buf = ListBuffer[String]()
+        buf += s"$quote|"
+        buf ++= Source.fromString(select.toSQL).getLines().map(line => s"|$line")
+        buf += s"|$quote.stripMargin('|')"
+        s"spark.sql(\n${buf mkString "\n"})\n"
       }
     }
 
@@ -340,7 +336,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param values the given [[String value]]
       */
     final implicit class StringSeqCompilerExtensions(val values: Seq[String]) extends AnyVal {
-      @inline def compile: String = values.map(s => s""""$s"""").mkString(",")
+      @inline def compile: String = values.map(s => '"' + s + '"').mkString(",")
     }
 
     /**

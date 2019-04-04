@@ -134,6 +134,14 @@ package object expressions {
 
       @inline def /(expr1: Expression) = Divide(expr0, expr1)
 
+      @inline def %(expr1: Expression) = Modulo(expr0, expr1)
+
+      @inline def &(expr1: Expression) = BitwiseAND(expr0, expr1)
+
+      @inline def |(expr1: Expression) = BitwiseOR(expr0, expr1)
+
+      @inline def ^(expr1: Expression) = BitwiseXOR(expr0, expr1)
+
       @inline def isNotNull: Condition = IsNotNull(expr0)
 
       @inline def isNull: Condition = IsNull(expr0)

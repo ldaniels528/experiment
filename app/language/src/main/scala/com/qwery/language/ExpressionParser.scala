@@ -53,6 +53,10 @@ trait ExpressionParser {
           case ts if ts nextIf "*" => for (a <- expression; b <- parseNextExpression(ts)) yield a * b
           case ts if ts nextIf "**" => for (a <- expression; b <- parseNextExpression(ts)) yield a ** b
           case ts if ts nextIf "/" => for (a <- expression; b <- parseNextExpression(ts)) yield a / b
+          case ts if ts nextIf "%" => for (a <- expression; b <- parseNextExpression(ts)) yield a % b
+          case ts if ts nextIf "&" => for (a <- expression; b <- parseNextExpression(ts)) yield a & b
+          case ts if ts nextIf "|" => for (a <- expression; b <- parseNextExpression(ts)) yield a | b
+          case ts if ts nextIf "^" => for (a <- expression; b <- parseNextExpression(ts)) yield a ^ b
           case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(List(a, b))
           case _ => None
         }
@@ -366,8 +370,10 @@ object ExpressionParser {
   )
   private val function1s = Map(
     "Abs" -> Abs.apply _,
-    "Avg" -> Avg.apply _,
+    "Array_Max" -> Array_Max.apply _,
+    "Array_Min" -> Array_Min.apply _,
     "Ascii" -> Ascii.apply _,
+    "Avg" -> Avg.apply _,
     "Base64" -> Base64.apply _,
     "Bin" -> Bin.apply _,
     "Cbrt" -> Cbrt.apply _,
@@ -395,6 +401,9 @@ object ExpressionParser {
   private val function2s = Map(
     "Add_Months" -> Add_Months.apply _,
     "Array_Contains" -> Array_Contains.apply _,
+    "Array_Index" -> Array_Index.apply _,
+    "Array_Except" -> Array_Except.apply _,
+    "Array_Intersect" -> Array_Intersect.apply _,
     "Date_Add" -> Date_Add.apply _,
     "Split" -> Split.apply _
   )
@@ -405,6 +414,8 @@ object ExpressionParser {
     "Substring" -> Substring.apply _
   )
   private val functionNs = Map(
+    "Array" -> Array.apply _,
+    "Array_Distinct" -> Array_Distinct.apply _,
     "Coalesce" -> Coalesce.apply _,
     "Concat" -> Concat.apply _
   )

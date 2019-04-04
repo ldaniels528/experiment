@@ -83,7 +83,17 @@ object SQLFunction {
 
   case class Array_Contains(field1: Expression, field2: Expression) extends SQLFunction2
 
+  case class Array_Except(field1: Expression, field2: Expression) extends SQLFunction2
+
+  case class Array_Intersect(field1: Expression, field2: Expression) extends SQLFunction2
+
+  case class Array_Distinct(args: List[Expression]) extends SQLFunctionN
+
   case class Array_Index(field1: Expression, field2: Expression) extends SQLFunction2
+
+  case class Array_Max(field: Expression) extends SQLFunction1
+
+  case class Array_Min(field: Expression) extends SQLFunction1
 
   case class Ascii(field: Expression) extends SQLFunction1
 
