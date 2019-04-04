@@ -58,12 +58,14 @@ object QweryMavenPlugin {
     final implicit class ApplicationConversion(val app: Application) extends AnyVal {
 
       @inline def toApplicationArgs: ApplicationArgs = {
+        import scala.collection.JavaConverters._
         new ApplicationArgs(
           appName = Option(app.appName).getOrElse("Untitled"),
           appVersion = Option(app.appVersion).getOrElse("1.0"),
           isClassOnly = Option(app.classOnly).nonEmpty,
           defaultDB = Option(app.defaultDB).getOrElse("global_temp"),
           extendsClass = Option(app.extendsClass).getOrElse("Serializable"),
+          properties = Option(app.properties.asScala.toMap).getOrElse(Map.empty),
           scalaVersion = Option(app.scalaVersion).getOrElse("2.11.12"),
           sparkAvroVersion = Option(app.sparkAvroVersion).getOrElse("4.0.0"),
           sparkCsvVersion = Option(app.sparkCsvVersion).getOrElse("1.5.0"),

@@ -3,6 +3,7 @@ package platform
 package sparksql.generator
 
 import java.io.{File, PrintWriter}
+import java.text.SimpleDateFormat
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models._
@@ -10,6 +11,7 @@ import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
 import scala.io.Source
+import scala.util.Properties
 
 /**
   * Spark/Scala Job Generator
@@ -28,36 +30,36 @@ class SparkJobGenerator(className: String,
     import appArgs._
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {
       s"""~name := "$appName"
-          ~
+         ~
           ~version := "$appVersion"
-          ~
+         ~
           ~scalaVersion := "$scalaVersion"
-          ~
+         ~
           ~test in assembly := {}
-          ~mainClass in assembly := Some("$packageName.$className")
-          ~assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
-          ~assemblyMergeStrategy in assembly := {
-          ~  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
-          ~  case PathList("META-INF", "MANIFEST.MF", _*) => MergeStrategy.discard
-          ~  case PathList("META-INF", _*) => MergeStrategy.filterDistinctLines
-          ~  case PathList("org", "datanucleus", _*) => MergeStrategy.rename
-          ~  case PathList("com", "scoverage", _*) => MergeStrategy.discard
-          ~  case _ => MergeStrategy.first
-          ~}
-          ~
+         ~mainClass in assembly := Some("$packageName.$className")
+         ~assemblyJarName in assembly := s"$${name.value}-$${version.value}.fat.jar"
+         ~assemblyMergeStrategy in assembly := {
+         ~  case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+         ~  case PathList("META-INF", "MANIFEST.MF", _*) => MergeStrategy.discard
+         ~  case PathList("META-INF", _*) => MergeStrategy.filterDistinctLines
+         ~  case PathList("org", "datanucleus", _*) => MergeStrategy.rename
+         ~  case PathList("com", "scoverage", _*) => MergeStrategy.discard
+         ~  case _ => MergeStrategy.first
+         ~}
+         ~
           ~libraryDependencies ++= Seq(
-          ~   "com.databricks" %% "spark-avro" % "$sparkAvroVersion",
-          ~   "com.databricks" %% "spark-csv" % "$sparkCsvVersion",
-          ~   "org.apache.spark" %% "spark-core" % "$sparkVersion",
-          ~   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
-          ~   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
-          ~   //
-          ~   // Qwery dependencies
-          ~   "com.qwery" %% "core" % "${AppConstants.version}",
-          ~   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
-          ~   "com.qwery" %% "language" % "${AppConstants.version}"
-          ~)
-          ~""".stripMargin('~')
+         ~   "com.databricks" %% "spark-avro" % "$sparkAvroVersion",
+         ~   "com.databricks" %% "spark-csv" % "$sparkCsvVersion",
+         ~   "org.apache.spark" %% "spark-core" % "$sparkVersion",
+         ~   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
+         ~   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
+         ~   //
+         ~   // Qwery dependencies
+         ~   "com.qwery" %% "core" % "${AppConstants.version}",
+         ~   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
+         ~   "com.qwery" %% "language" % "${AppConstants.version}"
+         ~)
+         ~""".stripMargin('~')
     }
   }
 
@@ -185,14 +187,23 @@ class SparkJobGenerator(className: String,
       val results = for {
         start <- code.indexOfOpt(codeBegin, lastIndex)
         end <- code.indexOfOpt(codeEnd, start).map(_ + codeEnd.length)
-        value = code.substring(start + codeBegin.length, end - codeEnd.length)
+        property = code.substring(start + codeBegin.length, end - codeEnd.length).trim
       } yield {
         // determine the replacement value
-        val replacement = value.toLowerCase match {
+        val replacement = property.toLowerCase match {
+          case s if s.startsWith("env:") => Properties.envOrElse(s.drop(4), "")
+          case s if s.startsWith("jvm:") => System.getProperty(s.drop(4), "")
+          case s if s.startsWith("prop:") => appArgs.properties.getOrElse(s.drop(5), "")
+          case "appname" => appArgs.appName
+          case "appversion" => appArgs.appVersion
           case "classname" => className
+          case "date" => new SimpleDateFormat("MM-dd-yyyy").format(new java.util.Date())
+          case "datetime" => new SimpleDateFormat("MM-dd-yyyy HH:mm:ss").format(new java.util.Date())
           case "invoke" => invokable.compile
-          case "package" => packageName
-          case _ => die(s"Qwery property '$value' is invalid")
+          case "packagename" => packageName
+          case "templatefile" => appArgs.templateClass.map(_.getCanonicalPath).getOrElse("")
+          case "time" => new SimpleDateFormat("HH:mm:ss").format(new java.util.Date())
+          case _ => die(s"Qwery property '$property' is invalid")
         }
 
         // replace the tag
@@ -216,47 +227,47 @@ class SparkJobGenerator(className: String,
     import SparkCodeCompiler.Implicits._
     import appArgs._
     s"""~package $packageName
-        ~
+       ~
         ~${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
-        ~
+       ~
         ~class $className() extends $extendsClass {
-        ~  @transient
-        ~  private lazy val logger = LoggerFactory.getLogger(getClass)
-        ~
+       ~  @transient
+       ~  private lazy val logger = LoggerFactory.getLogger(getClass)
+       ~
         ~  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
-        ~     import spark.implicits._
-        ~     ${invokable.compile}
-        ~  }
-        ~
+       ~     import spark.implicits._
+       ~     ${invokable.compile}
+       ~  }
+       ~
         ~}
-        ~
+       ~
         ~object $className {
-        ~   private[this] val logger = LoggerFactory.getLogger(getClass)
-        ~
+       ~   private[this] val logger = LoggerFactory.getLogger(getClass)
+       ~
         ~   def main(args: Array[String]): Unit = {
-        ~     implicit val spark: SparkSession = createSparkSession()
-        ~     new $className().start(args)
-        ~     spark.stop()
-        ~   }
-        ~
+       ~     implicit val spark: SparkSession = createSparkSession()
+       ~     new $className().start(args)
+       ~     spark.stop()
+       ~   }
+       ~
         ~   def createSparkSession(): SparkSession = {
-        ~     val sparkConf = new SparkConf()
-        ~     val builder = SparkSession.builder()
-        ~       .appName("$appName")
-        ~       .config(sparkConf)
-        ~       .enableHiveSupport()
-        ~
+       ~     val sparkConf = new SparkConf()
+       ~     val builder = SparkSession.builder()
+       ~       .appName("$appName")
+       ~       .config(sparkConf)
+       ~       .enableHiveSupport()
+       ~
         ~     // first attempt to create a clustered session
-        ~     try builder.getOrCreate() catch {
-        ~       // on failure, create a local one...
-        ~       case _: Throwable =>
-        ~         System.setSecurityManager(null)
-        ~         logger.warn("Application '$appName' failed to connect to EMR cluster; starting local session...")
-        ~         builder.master("local[*]").getOrCreate()
-        ~     }
-        ~   }
-        ~}
-        ~""".stripMargin('~')
+       ~     try builder.getOrCreate() catch {
+       ~       // on failure, create a local one...
+       ~       case _: Throwable =>
+       ~         System.setSecurityManager(null)
+       ~         logger.warn("Application '$appName' failed to connect to EMR cluster; starting local session...")
+       ~         builder.master("local[*]").getOrCreate()
+       ~     }
+       ~   }
+       ~}
+       ~""".stripMargin('~')
   }
 
   private def inferSourceDir(outputPath: String)(implicit appArgs: ApplicationArgs): File = {
