@@ -6,6 +6,7 @@
     <groupId>com.qwery</groupId>
     <artifactId>qwery-maven-plugin</artifactId>
     <version>1.0.0</version>
+    <description>Maven plugin for generating Spark/Scala code from an SQL query</description>
     <packaging>maven-plugin</packaging>
 
     <properties>

@@ -17,8 +17,6 @@ import scala.beans.BeanProperty
   *       <classOnly>true</classOnly>
   *       <defaultDB>global_temp</defaultDB>
   *       <scalaVersion>2.11.12</scalaVersion>
-  *       <sparkAvroVersion>4.0.0</sparkAvro>
-  *       <sparkCsvVersion>1.5.0</sparkCsv>
   *       <sparkVersion>2.3.3</sparkVersion>
   *       <templateFile>./temp/WtmSparkJobTemplate.txt</templateFile>
   *       <properties>
@@ -45,8 +43,6 @@ case class Application() {
   @BeanProperty var outputPath: String = _
   @BeanProperty var properties: java.util.Properties = _
   @BeanProperty var scalaVersion: String = _
-  @BeanProperty var sparkAvroVersion: String = _
-  @BeanProperty var sparkCsvVersion: String = _
   @BeanProperty var sparkVersion: String = _
   @BeanProperty var templateFile: String = _
 

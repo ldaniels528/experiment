@@ -1,11 +1,10 @@
 import sbt.Keys._
-import sbt.Project.projectToRef
 import sbt._
 
 import scala.language.postfixOps
 
 val appVersion = "0.4.0"
-val scalaJvmVersion = "2.11.11"
+val scalaJvmVersion = "2.12.8"
 
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
@@ -23,9 +22,9 @@ lazy val testDependencies = Seq(
 //      Root Project - builds all artifacts
 /////////////////////////////////////////////////////////////////////////////////
 
-lazy val rootProject = (project in file("./app")).
-  aggregate(core, language, platform_spark_embedded, platform_spark_generator).
-  dependsOn(core, language, platform_spark_embedded, platform_spark_generator).
+lazy val root = (project in file("./app")).
+  aggregate(core, language, spark_embedded, spark_generator).
+  dependsOn(core, language, spark_embedded, spark_generator).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -84,7 +83,7 @@ lazy val language = (project in file("./app/language")).
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////
 
-lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedded")).
+lazy val spark_embedded = (project in file("./app/platform/spark/embedded")).
   dependsOn(core, language).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
@@ -105,7 +104,7 @@ lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedd
       "org.apache.spark" %% "spark-streaming" % sparkVersion
     ))
 
-lazy val platform_spark_generator = (project in file("./app/platform/spark/generator")).
+lazy val spark_generator = (project in file("./app/platform/spark/generator")).
   dependsOn(core, language).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
@@ -121,6 +120,25 @@ lazy val platform_spark_generator = (project in file("./app/platform/spark/gener
     libraryDependencies ++= Seq(
 
     ))
+
+lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).
+  aggregate(spark_generator).
+  dependsOn(spark_generator).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+      name := "sbt-qwery",
+      organization := "com.qwery",
+      description := "SBT plugin for generating Spark/Scala code from an SQL query",
+      version := "1.0.0",
+      scalaVersion := scalaJvmVersion,
+      scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+      scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+      sbtPlugin := true,
+      scriptedBufferLog := false,
+      libraryDependencies ++= Seq(
+          "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
+      ))
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Publishing
@@ -168,4 +186,4 @@ lazy val publishingSettings = Seq(
 */
 
 // loads the Scalajs-io root project at sbt startup
-onLoad in Global := (Command.process("project rootProject", _: State)) compose (onLoad in Global).value
+onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value

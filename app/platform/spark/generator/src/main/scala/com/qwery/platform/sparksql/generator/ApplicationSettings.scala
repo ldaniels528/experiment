@@ -13,8 +13,9 @@ import java.io.File
   * @param inputPath    the path of the input .sql file
   * @param outputPath   the path where the class files or SBT project will be generated
   * @param packageName  the package name of the class to be generated (e.g. "com.acme.coyote.tools")
+  * @param properties   the optional Spark configuration properties
   * @param scalaVersion the Scala version the generated project will use (default: `"2.12.8"`)
-  * @param sparkVersion the Apache Spark library version (default: `"2.4.1"`)
+  * @param sparkVersion the Apache Spark API version (default: `"2.4.1"`)
   * @param templateFile the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
@@ -43,7 +44,7 @@ case class ApplicationSettings(appName: String,
 object ApplicationSettings {
   val defaultAppName = "Untitled"
   val defaultAppVersion = "1.0"
-  val defaultDB = "global_temp"
+  val defaultDatabase = "global_temp"
   val defaultParentClass = "Serializable"
   val defaultScalaVersion = "2.12.8"
   val defaultSparkVersion = "2.4.1"
@@ -68,7 +69,7 @@ object ApplicationSettings {
       className = className,
       extendsClass = mappings.getOrElse("--extends-class", defaultParentClass),
       isClassOnly = mappings.isTrue("--class-only"),
-      defaultDB = mappings.getOrElse("--default-db", defaultDB),
+      defaultDB = mappings.getOrElse("--default-db", defaultDatabase),
       inputPath = new File(mappings.require("--input-path")),
       outputPath = new File(mappings.require("--output-path")),
       packageName = packageName,
@@ -76,6 +77,53 @@ object ApplicationSettings {
       scalaVersion = mappings.getOrElse("--scala-version", defaultScalaVersion),
       sparkVersion = mappings.getOrElse("--spark-version", defaultSparkVersion),
       templateFile = mappings.get("--template-file").map(new File(_))
+    )
+  }
+
+  /**
+    * Creates a new [[ApplicationSettings]] instance
+    * @param appName      the Spark application name (default: `"Untitled"`)
+    * @param appVersion   the version identifier of your application (default: `"1.0"`)
+    * @param className    the name of the class to generate (e.g. "CoyoteTrap")
+    * @param isClassOnly  indicates whether only a Scala class should be generated (default: `false`)
+    * @param defaultDB    the default database (default: `"global_temp"`)
+    * @param extendsClass the optional class the generated class should extend (default: `Serializable`)
+    * @param inputPath    the path of the input .sql file
+    * @param outputPath   the path where the class files or SBT project will be generated
+    * @param packageName  the package name of the class to be generated (e.g. "com.acme.coyote.tools")
+    * @param properties   the optional Spark configuration properties
+    * @param scalaVersion the Scala version the generated project will use (default: `"2.12.8"`)
+    * @param sparkVersion the Apache Spark API version (default: `"2.4.1"`)
+    * @param templateFile the optional template class to use in generating the Spark Job
+    * @return the [[ApplicationSettings]] instance
+    */
+  def apply(appName: Option[String],
+            appVersion: Option[String],
+            className: Option[String],
+            isClassOnly: Option[Boolean],
+            defaultDB: Option[String],
+            extendsClass: Option[String],
+            inputPath: Option[File],
+            outputPath: Option[File],
+            packageName: Option[String],
+            properties: Option[Map[String, String]],
+            scalaVersion: Option[String],
+            sparkVersion: Option[String],
+            templateFile: Option[File]): ApplicationSettings = {
+    new ApplicationSettings(
+      appName = appName.getOrElse(defaultAppName),
+      appVersion = appVersion.getOrElse(defaultAppVersion),
+      className = className.getOrElse(fail("className")),
+      extendsClass = extendsClass.getOrElse(defaultParentClass),
+      isClassOnly = isClassOnly.contains(true),
+      defaultDB = defaultDB.getOrElse(defaultDatabase),
+      inputPath = inputPath.getOrElse(fail("inputPath")),
+      outputPath = outputPath.getOrElse(fail("outputPath")),
+      packageName = packageName.getOrElse(fail("packageName")),
+      properties = properties.getOrElse(Map.empty),
+      scalaVersion = scalaVersion.getOrElse(defaultScalaVersion),
+      sparkVersion = sparkVersion.getOrElse(defaultSparkVersion),
+      templateFile = templateFile
     )
   }
 
@@ -104,6 +152,9 @@ object ApplicationSettings {
     }
   }
 
+  def fail[A](property: String): A =
+    throw new IllegalArgumentException(s"Required property '$property' is missing")
+
   /**
     * Map Extensions
     * @param mappings the given [[Map mappings]]
@@ -113,9 +164,6 @@ object ApplicationSettings {
     @inline def isTrue(name: String): Boolean = mappings.get(name).exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase))
 
     @inline def require(name: String): String = mappings.getOrElse(name, fail(name))
-
-    def fail[A](property: String): A =
-      throw new IllegalArgumentException(s"Required property '$property' is missing")
 
   }
 
