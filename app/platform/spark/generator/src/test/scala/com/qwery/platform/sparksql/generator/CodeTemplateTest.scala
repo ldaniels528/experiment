@@ -18,27 +18,31 @@ class CodeTemplateTest extends FunSpec {
            |END
            |""".stripMargin)
 
-      implicit val args: ApplicationArgs = ApplicationArgs()
+      implicit val args: ApplicationSettings = ApplicationSettings(Array(
+        "--app-name", "Coyote Trap",
+        "--input-path", "./scripts/daily-report.sql",
+        "--output-path", "./temp",
+        "--class-name", "com.acme.tools.CoyoteTrap"
+      ))
       implicit val ctx: CompileContext = CompileContext(invokable)
 
       val template = CodeTemplate.fromString(
-        """|/**
-           |  * Coyote Trap
+        """|package {{ packageName }}
+           |
+           |/**
+           |  * {{ appName }}
            |  * @author willy.coyote@gmail.com
            |  */
-           |class {{className}} {
-           |  {{flow}}
+           |class {{ className }} {
+           |  {{ flow }}
            |}
            |""".stripMargin
       )
-      val actual = template.generate(
-        className = "CoyoteTrap",
-        packageName = "com.acme.tools",
-        outputPath = "./temp",
-        invokable = invokable
-      )
+      val actual = template.generate(invokable)
       val expected =
-        """|/**
+        """|package com.acme.tools
+           |
+           |/**
            |  * Coyote Trap
            |  * @author willy.coyote@gmail.com
            |  */

@@ -3,8 +3,6 @@ package com.qwery.platform.sparksql.generator
 import com.qwery.language.SQLLanguageParser
 import org.scalatest.FunSpec
 
-import scala.language.postfixOps
-
 /**
   * Spark Code Compiler Test
   * @author lawrence.daniels@gmail.com
@@ -14,7 +12,6 @@ class SparkCodeCompilerTest extends FunSpec {
   import com.qwery.util.StringHelper._
 
   describe(SparkCodeCompiler.getObjectSimpleName) {
-    implicit val appArgs: ApplicationArgs = ApplicationArgs()
 
     ////////////////////////////////////////////////////////////////////
     //        Introspection

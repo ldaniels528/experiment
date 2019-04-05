@@ -17,8 +17,7 @@ import scala.util.Properties
 class CodeTemplate(templateCode: String) {
   val code = new StringBuilder(templateCode)
 
-  def generate(className: String, packageName: String, outputPath: String, invokable: Invokable)
-              (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+  def generate(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
     import com.qwery.util.StringHelper._
 
@@ -41,14 +40,15 @@ class CodeTemplate(templateCode: String) {
           case s if s.toLowerCase startsWith "date:" => new SimpleDateFormat(s.drop(5)).format(new java.util.Date())
           case s if s.toLowerCase startsWith "env:" => Properties.envOrElse(s.drop(4), "")
           case s if s.toLowerCase startsWith "jvm:" => System.getProperty(s.drop(4), "")
-          case s if s.toLowerCase startsWith "prop:" => appArgs.properties.getOrElse(s.drop(5), "")
-          case s if s equalsIgnoreCase "appName" => appArgs.appName
-          case s if s equalsIgnoreCase "appVersion" => appArgs.appVersion
-          case s if s equalsIgnoreCase "className" => className
+          case s if s.toLowerCase startsWith "prop:" => settings.properties.getOrElse(s.drop(5), "")
+          case s if s equalsIgnoreCase "appName" => settings.appName
+          case s if s equalsIgnoreCase "appVersion" => settings.appVersion
+          case s if s equalsIgnoreCase "className" => settings.className
           case s if s equalsIgnoreCase "flow" => invokable.compile
-          case s if s equalsIgnoreCase "outputPath" => outputPath
-          case s if s equalsIgnoreCase "packageName" => packageName
-          case s if s equalsIgnoreCase "templateFile" => appArgs.templateFile.map(_.getCanonicalPath).getOrElse("")
+          case s if s equalsIgnoreCase "inputPath" => settings.inputPath.getCanonicalPath
+          case s if s equalsIgnoreCase "outputPath" => settings.outputPath.getCanonicalPath
+          case s if s equalsIgnoreCase "packageName" => settings.packageName
+          case s if s equalsIgnoreCase "templateFile" => settings.templateFile.map(_.getCanonicalPath).getOrElse("")
           case _ => die(s"Property '$property' is not recognized")
         }
 

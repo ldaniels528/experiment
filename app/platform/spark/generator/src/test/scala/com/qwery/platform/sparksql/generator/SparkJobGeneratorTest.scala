@@ -12,9 +12,14 @@ import scala.util.Properties
 class SparkJobGeneratorTest extends FunSpec {
 
   describe(classOf[SparkJobGenerator].getSimpleName) {
-    implicit val appArgs: ApplicationArgs = ApplicationArgs()
 
     it("should generate the OilGasSecurities Spark job main class-only") {
+      implicit val settings: ApplicationSettings = ApplicationSettings(Seq(
+        "--input-path", "./scripts/daily-report.sql",
+        "--output-path", "./temp/gen-src",
+        "--class-name", "com.github.ldaniels528.securities.OilGasSecurities"
+      ))
+
       val model = SQLLanguageParser.parse(
         """|-- define the input source
            |CREATE EXTERNAL TABLE Securities (
@@ -60,15 +65,17 @@ class SparkJobGeneratorTest extends FunSpec {
            |""".stripMargin
       )
       implicit val ctx: CompileContext = CompileContext(model)
-      val generator = new SparkJobGenerator(
-        className = "OilGasSecurities",
-        packageName = "com.github.ldaniels528.securities",
-        outputPath = "./temp/gen-src"
-      )
+      val generator = new SparkJobGenerator()
       generator.createMainClass(model)
     }
 
     it("should generate the AdBookIngest Spark job project") {
+      implicit val settings: ApplicationSettings = ApplicationSettings(Seq(
+        "--input-path", "./scripts/daily-report.sql",
+        "--output-path", s"${Properties.userHome}/GitHub/adbook_poc",
+        "--class-name", "com.coxautoinc.maid.AdBookIngestSparkJob"
+      ))
+
       val model = SQLLanguageParser.parse(
         """|include './samples/sql/adbook/kbb_ab_client.sql';
            |include './samples/sql/adbook/kbb_lkp_dfp_o1_advertiser.sql';
@@ -120,12 +127,7 @@ class SparkJobGeneratorTest extends FunSpec {
            |""".stripMargin
       )
       implicit val ctx: CompileContext = CompileContext(model)
-      val generator = new SparkJobGenerator(
-        className = "AdBookIngestSparkJob",
-        packageName = "com.coxautoinc.wtm.adbook",
-        outputPath = s"${Properties.userHome}/GitHub/adbook_poc"
-      )
-      generator.createProject(model)
+      new SparkJobGenerator().createProject(model)
     }
 
   }

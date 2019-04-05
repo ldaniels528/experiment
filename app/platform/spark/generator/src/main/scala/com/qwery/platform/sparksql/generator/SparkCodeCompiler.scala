@@ -29,15 +29,19 @@ trait SparkCodeCompiler {
     * @return a list of defined [[TableLike tables and views]]
     */
   def discoverTablesAndViews(invokable: Invokable): List[TableLike] = {
-    def recurse(invokable: Invokable): List[TableLike] = {
-      invokable match {
-        case Create(table: Table) => table :: Nil
-        case Create(view: View) => view :: Nil
-        case i: Include => recurse(incorporateSources(i.path))
-        case m: MainProgram => recurse(m.code)
-        case s: SQL => s.statements.flatMap(recurse)
-        case _ => Nil
-      }
+
+    /**
+      * Recusively traverses the given object graph
+      * @param invokable the given [[Invokable object graph]]
+      * @return the distinct collection of [[TableLike tables and views]]
+      */
+    def recurse(invokable: Invokable): List[TableLike] = invokable match {
+      case Create(table: Table) => table :: Nil
+      case Create(view: View) => view :: Nil
+      case i: Include => recurse(incorporateSources(i.path))
+      case m: MainProgram => recurse(m.code)
+      case s: SQL => s.statements.flatMap(recurse)
+      case _ => Nil
     }
 
     recurse(invokable).distinct
@@ -64,7 +68,7 @@ trait SparkCodeCompiler {
     sb.toString()
   }
 
-  def makeSQL(op: Select)(implicit appArgs: ApplicationArgs): String = {
+  def makeSQL(op: Select)(implicit settings: ApplicationSettings): String = {
     val sb = new StringBuilder()
     sb.append("SELECT\n")
     sb.append(op.fields.map(_.toSQL).mkString(",\n"))
@@ -193,7 +197,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
-      def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+      def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case Console.Debug(text) => s"""logger.debug("$text")"""
           case Console.Error(text) => s"""logger.error("$text")"""
@@ -232,12 +236,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     final implicit class InvokableSQLCompiler(val invokable: Invokable) extends AnyVal {
-      def toSQL(implicit appArgs: ApplicationArgs): String = {
+      def toSQL(implicit settings: ApplicationSettings): String = {
         val result = invokable match {
           case s: Select => makeSQL(s)
           case s: SQL => s.statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>
-            val tableName = s"${appArgs.defaultDB}.${t.name}"
+            val tableName = s"${settings.defaultDB}.${t.name}"
             t.alias.map(alias => s"$tableName AS $alias") getOrElse tableName
           case u: Union => s"${u.query0.toSQL} UNION ${if (u.isDistinct) "DISTINCT" else ""} ${u.query1.toSQL}"
           case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
@@ -247,7 +251,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     final implicit class JoinSQLCompiler(val join: Join) extends AnyVal {
-      def toSQL(implicit appArgs: ApplicationArgs): String = {
+      def toSQL(implicit settings: ApplicationSettings): String = {
         s"${join.`type`.toString.replaceAllLiterally("_", " ")} JOIN ${
           val result = join.source match {
             case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
@@ -278,7 +282,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param insert the given [[Insert]]
       */
     final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-      @inline def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+      @inline def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         ctx.lookupTableOrView(insert.destination.target.compile) match {
           case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
           case table: Table =>
@@ -305,7 +309,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param select the given [[Select]]
       */
     final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
-      def compile(implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+      def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val quote = "\"\"\""
         val buf = ListBuffer[String]()
         buf += s"$quote|"

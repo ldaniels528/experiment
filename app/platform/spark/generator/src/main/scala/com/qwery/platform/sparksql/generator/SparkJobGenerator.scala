@@ -13,17 +13,15 @@ import org.slf4j.LoggerFactory
   * Spark/Scala Job Generator
   * @author lawrence.daniels@gmail.com
   */
-class SparkJobGenerator(className: String,
-                        packageName: String,
-                        outputPath: String) {
+class SparkJobGenerator() {
   private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Generates the SBT build script
     * @return the [[File]] representing the generated build.sbt
     */
-  def createBuildScript()(implicit appArgs: ApplicationArgs): File = {
-    import appArgs._
+  def createBuildScript()(implicit settings: ApplicationSettings): File = {
+    import settings._
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {
       s"""~name := "$appName"
          ~
@@ -63,7 +61,9 @@ class SparkJobGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createMainClass(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
+  def createMainClass(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): File = {
+    import settings._
+
     // create the package directory
     val pkgDir = new File(inferSourceDir(outputPath), packageName.replaceAllLiterally(".", File.separator))
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
@@ -83,20 +83,21 @@ class SparkJobGenerator(className: String,
 
   /**
     * Generates an executable class file
-    * @param templateFile the given template [[File file]]
-    * @param invokable    the [[Invokable]] for which to generate code
+    * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createMainClassFromTemplate(templateFile: File, invokable: Invokable)
-                                 (implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
+  def createMainClassFromTemplate(theTemplateFile: File, invokable: Invokable)
+                                 (implicit settings: ApplicationSettings, ctx: CompileContext): File = {
+    import settings._
+
     // create the package directory
     val pkgDir = new File(inferSourceDir(outputPath), packageName.replaceAllLiterally(".", File.separator))
     if (!pkgDir.mkdirs() && !pkgDir.exists()) die(s"Failed to create the package directory (package '$packageName')")
 
     // write the class to disk
-    logger.info(s"[*] Generating class '$packageName.$className' from template '${templateFile.getCanonicalPath}'...")
+    logger.info(s"[*] Generating class '$packageName.$className' from template '${theTemplateFile.getCanonicalPath}'...")
     writeToDisk(outputFile = new File(pkgDir, s"$className.scala")) {
-      generateClassFromTemplate(templateFile, invokable, imports = List(
+      generateClassFromTemplate(theTemplateFile, invokable, imports = List(
         "org.apache.spark.sql.functions._",
         "org.slf4j.LoggerFactory"
       ))
@@ -108,11 +109,11 @@ class SparkJobGenerator(className: String,
     * @param invokable the [[Invokable]] for which to generate code
     * @return the [[File]] representing the generated Main class
     */
-  def createProject(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
+  def createProject(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): File = {
     val startTime = System.currentTimeMillis()
     lazy val elapsedTime = System.currentTimeMillis() - startTime
 
-    logger.info(s"[*] Generating Spark-Scala project '${appArgs.appName}' [${new File(outputPath).getCanonicalPath}]...")
+    logger.info(s"[*] Generating Spark-Scala project '${settings.appName}' [${settings.outputPath.getCanonicalPath}]...")
     logger.info("[*] Building project structure...")
     createProjectStructure()
 
@@ -120,7 +121,7 @@ class SparkJobGenerator(className: String,
     createBuildScript()
 
     // generate the class file
-    val file = appArgs.templateFile.map(createMainClassFromTemplate(_, invokable)).getOrElse(createMainClass(invokable))
+    val file = settings.templateFile.map(createMainClassFromTemplate(_, invokable)).getOrElse(createMainClass(invokable))
 
     logger.info(s"[*] Process completed in $elapsedTime msec(s)")
     file
@@ -130,8 +131,8 @@ class SparkJobGenerator(className: String,
     * Creates the SBT project structure
     * @return the [[File]] representing the `project` directory
     */
-  def createProjectStructure(): File = {
-    val projectDir = new File(outputPath, "project")
+  def createProjectStructure()(implicit settings: ApplicationSettings): File = {
+    val projectDir = new File(settings.outputPath, "project")
     if (!projectDir.mkdirs() && !projectDir.exists())
       die(s"Failed to create the SBT project directory ('${projectDir.getCanonicalPath}')")
 
@@ -147,9 +148,9 @@ class SparkJobGenerator(className: String,
     projectDir
   }
 
-  def generate(invokable: Invokable)(implicit appArgs: ApplicationArgs, ctx: CompileContext): File = {
-    if (!appArgs.isClassOnly) createProject(invokable) else {
-      appArgs.templateFile match {
+  def generate(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): File = {
+    if (!settings.isClassOnly) createProject(invokable) else {
+      settings.templateFile match {
         case Some(templateFile) => createMainClassFromTemplate(templateFile, invokable)
         case None => createMainClass(invokable)
       }
@@ -158,28 +159,27 @@ class SparkJobGenerator(className: String,
 
   /**
     * Generates a class from a template file
-    * @param templateFile the given template [[File file]]
-    * @param invokable    the [[Invokable]] for which to generate code
-    * @param imports      the collection of imports
-    * @param appArgs      the implicit [[ApplicationArgs]]
+    * @param invokable the [[Invokable]] for which to generate code
+    * @param imports   the collection of imports
+    * @param settings   the implicit [[ApplicationSettings]]
     * @return an option of the contents f the generated file
     */
-  private def generateClassFromTemplate(templateFile: File, invokable: Invokable, imports: Seq[String])
-                                       (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
-    CodeTemplate.fromFile(templateFile).generate(className, packageName, outputPath, invokable)
+  private def generateClassFromTemplate(theTemplateFile: File, invokable: Invokable, imports: Seq[String])
+                                       (implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    CodeTemplate.fromFile(theTemplateFile).generate(invokable)
   }
 
   /**
     * Generates a class file with a main() method
     * @param invokable the [[Invokable]] for which to generate code
     * @param imports   the collection of imports
-    * @param appArgs   the implicit [[ApplicationArgs]]
+    * @param settings   the implicit [[ApplicationSettings]]
     * @return the contents f the generated file
     */
   private def generateClassWithMain(invokable: Invokable, imports: Seq[String])
-                                   (implicit appArgs: ApplicationArgs, ctx: CompileContext): String = {
+                                   (implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     import SparkCodeCompiler.Implicits._
-    import appArgs._
+    import settings._
     s"""~package $packageName
        ~
         ~${imports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}
@@ -224,8 +224,8 @@ class SparkJobGenerator(className: String,
        ~""".stripMargin('~')
   }
 
-  private def inferSourceDir(outputPath: String)(implicit appArgs: ApplicationArgs): File = {
-    if (appArgs.isClassOnly) new File(outputPath) else new File(outputPath, "src/main/scala")
+  private def inferSourceDir(outputPath: File)(implicit settings: ApplicationSettings): File = {
+    if (settings.isClassOnly) outputPath else new File(outputPath, "src/main/scala")
   }
 
   /**
@@ -247,56 +247,24 @@ class SparkJobGenerator(className: String,
   * @example sbt "project platform_sparkcode" "run ./samples/sql/adbook/adbook-client.sql ../adbook_poc/ com.coxautoinc.wtm.adbook.AdBookIngestSparkJob"
   */
 object SparkJobGenerator {
-  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * For stand alone operation
     * @param args the given command line arguments
     */
-  def main(args: Array[String]): Unit = {
-    import com.qwery.util.StringHelper._
-
-    // get the input path, output path and fully qualified class name (e.g. "com.acme.CoyoteCrush") and flags
-    val (inputPath, outputPath, classNameWithPackage, appArgs) = args.toList match {
-      case input :: output :: fullClass :: flags => (input, output, fullClass, ApplicationArgs(flags))
-      case passedArgs =>
-        logger.error(s"Invalid number of arguments passed: [${passedArgs.mkString(",")}]")
-        die(s"java ${SparkJobGenerator.getObjectFullName} <inputPath> <outputPath> <outputClass> [<flags>]")
-    }
-
-    // generate the application
-    generate(inputPath, outputPath, classNameWithPackage)(appArgs)
-  }
+  def main(args: Array[String]): Unit = generate()(ApplicationSettings(args))
 
   /**
     * Performs the Spark job generation
-    * @param inputPath            the input path of the SQL file to translate
-    * @param outputPath           the output path where the class file or project will be generated
-    * @param classNameWithPackage the fully qualified class name (e.g. "com.acme.traps.CoyoteTrap")
-    * @param appArgs              the implicit [[ApplicationArgs]]
+    * @param settings the implicit [[ApplicationSettings]]
     */
-  def generate(inputPath: String, outputPath: String, classNameWithPackage: String)(implicit appArgs: ApplicationArgs): Unit = {
-    // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush") and flags
-    val (className, packageName) = getClassAndPackageNames(classNameWithPackage)
+  def generate()(implicit settings: ApplicationSettings): Unit = {
+    import settings._
 
     // generate the sbt project
-    val model = SQLLanguageParser.parse(new File(inputPath))
+    val model = SQLLanguageParser.parse(inputPath)
     val ctx = CompileContext(model)
-    new SparkJobGenerator(className = className, packageName = packageName, outputPath = outputPath)
-      .generate(model)(appArgs, ctx)
-  }
-
-  /**
-    * Extracts the class and package names from the given fully qualified class name
-    * @param classNameWithPackage the given fully qualified class name (e.g. "com.acme.CoyoteFuture")
-    * @return the class and package names (e.g. "com.acme.CoyoteFuture" => ["com.acme", "CoyoteFuture"])
-    */
-  private def getClassAndPackageNames(classNameWithPackage: String): (String, String) = {
-    import com.qwery.util.StringHelper._
-    classNameWithPackage.lastIndexOfOpt(".").map(classNameWithPackage.splitAt) match {
-      case Some((packageName, className)) => (className.drop(1), packageName)
-      case None => (classNameWithPackage, "com.examples.spark")
-    }
+    new SparkJobGenerator().generate(model)(settings, ctx)
   }
 
 }

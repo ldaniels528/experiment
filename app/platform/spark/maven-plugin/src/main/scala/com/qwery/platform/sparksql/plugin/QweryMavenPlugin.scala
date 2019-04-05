@@ -23,13 +23,13 @@ class QweryMavenPlugin extends AbstractMojo {
     getLog.info(s"Processing ${applicationList.size} applications...")
     for {
       app <- applicationList
-      appArgs = app.toApplicationArgs
+      settings = app.toApplicationArgs
       inputPath = Option(app.inputPath).getOrElse(fail(app, "No input path specified"))
       outputPath = Option(app.outputPath).getOrElse(fail(app, "No output path specified"))
       classNameWithPackage = Option(app.className).getOrElse(fail(app, "No class name specified"))
     } {
       getLog.info(s"Generating '$classNameWithPackage' (${new File(inputPath).getCanonicalPath})...")
-      SparkJobGenerator.generate(inputPath, outputPath, classNameWithPackage)(appArgs)
+      SparkJobGenerator.generate(inputPath, outputPath, classNameWithPackage)(settings)
     }
   }
 
