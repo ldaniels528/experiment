@@ -9,51 +9,60 @@
     <packaging>maven-plugin</packaging>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <qweryVersion>0.4.0</qweryVersion>
+        <java.version>1.8</java.version>
+        <qwery.version>0.4.0</qwery.version>
+        <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.11.11</scala.version>
+
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <project.build.sourcencoding>UTF-8</project.build.sourcencoding>
     </properties>
 
     <dependencies>
+        <!-- Qwery dependencies -->
         <dependency>
             <groupId>com.qwery</groupId>
-            <artifactId>core_2.11</artifactId>
-            <version>${qweryVersion}</version>
+            <artifactId>core_${scala.binary.version}</artifactId>
+            <version>${qwery.version}</version>
             <scope>system</scope>
-            <systemPath>${user.home}/.ivy2/local/com.qwery/core_2.11/0.4.0/jars/core_2.11.jar</systemPath>
+            <systemPath>${user.home}/.ivy2/local/com.qwery/core_${scala.binary.version}/${qwery.version}/jars/core_${scala.binary.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
-            <artifactId>language_2.11</artifactId>
-            <version>${qweryVersion}</version>
+            <artifactId>language_${scala.binary.version}</artifactId>
+            <version>${qwery.version}</version>
             <scope>system</scope>
-            <systemPath>${user.home}/.ivy2/local/com.qwery/language_2.11/0.4.0/jars/language_2.11.jar</systemPath>
+            <systemPath>${user.home}/.ivy2/local/com.qwery/language_${scala.binary.version}/${qwery.version}/jars/language_${scala.binary.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
-            <artifactId>platform-spark-generator_2.11</artifactId>
-            <version>${qweryVersion}</version>
+            <artifactId>platform-spark-generator_${scala.binary.version}</artifactId>
+            <version>${qwery.version}</version>
             <scope>system</scope>
             <systemPath>
-                ${user.home}/.ivy2/local/com.qwery/platform-spark-generator_2.11/0.4.0/jars/platform-spark-generator_2.11.jar
+                ${user.home}/.ivy2/local/com.qwery/platform-spark-generator_${scala.binary.version}/${qwery.version}/jars/platform-spark-generator_${scala.binary.version}.jar
             </systemPath>
         </dependency>
 
+        <!-- Scala dependencies -->
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.11.12</version>
+            <version>${scala.version}</version>
         </dependency>
+
+        <!-- Maven plugin dependencies -->
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
-            <version>3.0</version>
+            <version>3.6.0</version>
+            <scope>provided</scope>
         </dependency>
-
-        <!-- Annotation Dependencies -->
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.4</version>
+            <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -63,6 +72,28 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
+                <configuration>
+                    <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
+                    <scalaVersion>${scala.version}</scalaVersion>
+                    <args>
+                        <arg>-Xlint</arg>
+                        <arg>-deprecation</arg>
+                        <arg>-unchecked</arg>
+                        <arg>-feature</arg>
+                        <arg>-language:postfixOps</arg>
+                        <arg>-language:implicitConversions</arg>
+                        <arg>-language:higherKinds</arg>
+                        <arg>-Xfatal-warnings</arg>
+                        <arg>-Ywarn-unused</arg>
+                        <arg>-Ywarn-unused-import</arg>
+                        <arg>-Ywarn-inaccessible</arg>
+                        <arg>-Ywarn-dead-code</arg>
+                        <arg>-Ypartial-unification</arg>
+                    </args>
+                    <jvmArgs>
+                        <jvmArg>-Xmx4g</jvmArg>
+                    </jvmArgs>
+                </configuration>
                 <executions>
                     <execution>
                         <id>scala-compile-first</id>
@@ -84,6 +115,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
                 <executions>
                     <execution>
                         <phase>compile</phase>
@@ -96,37 +131,6 @@
         </plugins>
         <pluginManagement>
             <plugins>
-                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-                <plugin>
-                    <groupId>org.eclipse.m2e</groupId>
-                    <artifactId>lifecycle-mapping</artifactId>
-                    <version>1.0.0</version>
-                    <configuration>
-                        <lifecycleMappingMetadata>
-                            <pluginExecutions>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>
-                                            org.apache.maven.plugins
-                                        </groupId>
-                                        <artifactId>
-                                            maven-plugin-plugin
-                                        </artifactId>
-                                        <versionRange>
-                                            [3.2,)
-                                        </versionRange>
-                                        <goals>
-                                            <goal>descriptor</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore/>
-                                    </action>
-                                </pluginExecution>
-                            </pluginExecutions>
-                        </lifecycleMappingMetadata>
-                    </configuration>
-                </plugin>
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
@@ -135,7 +139,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>2.0.2</version>
+                    <version>3.8.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -13,8 +13,8 @@ import java.io.File
   * @param inputPath    the path of the input .sql file
   * @param outputPath   the path where the class files or SBT project will be generated
   * @param packageName  the package name of the class to be generated (e.g. "com.acme.coyote.tools")
-  * @param scalaVersion the Scala version the generated project will use (default: "2.11.12")
-  * @param sparkVersion the Apache Spark library version (default: "2.3.3")
+  * @param scalaVersion the Scala version the generated project will use (default: `"2.12.8"`)
+  * @param sparkVersion the Apache Spark library version (default: `"2.4.1"`)
   * @param templateFile the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
@@ -30,13 +30,23 @@ case class ApplicationSettings(appName: String,
                                properties: Map[String, String],
                                scalaVersion: String,
                                sparkVersion: String,
-                               templateFile: Option[File])
+                               templateFile: Option[File]) {
+
+  val fullyQualifiedClassName: String = s"$packageName.$className"
+
+}
 
 /**
   * Application Settings
   * @author lawrence.daniels@gmail.com
   */
 object ApplicationSettings {
+  val defaultAppName = "Untitled"
+  val defaultAppVersion = "1.0"
+  val defaultDB = "global_temp"
+  val defaultParentClass = "Serializable"
+  val defaultScalaVersion = "2.12.8"
+  val defaultSparkVersion = "2.4.1"
 
   /**
     * Creates a new application Settings instance using the given command line arguments
@@ -47,28 +57,33 @@ object ApplicationSettings {
     // parse the command line arguments
     val mappings = createArgumentsMap(args)
 
-      // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush")
-    val classNameWithPackage = mappings.require("--class-name")
-    val (className, packageName) = getClassAndPackageNames(classNameWithPackage)
+    // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush")
+    val fullyQualifiedClassName = mappings.require("1.0--class-name")
+    val (className, packageName) = getClassAndPackageNames(fullyQualifiedClassName)
 
     // create the application settings
     ApplicationSettings(
-      appName = mappings.getOrElse("--app-name", "Untitled"),
-      appVersion = mappings.getOrElse("--app-version", "1.0"),
+      appName = mappings.getOrElse("--app-name", defaultAppName),
+      appVersion = mappings.getOrElse("--app-version", defaultAppVersion),
       className = className,
-      extendsClass = mappings.getOrElse("--extends-class", "Serializable"),
+      extendsClass = mappings.getOrElse("--extends-class", defaultParentClass),
       isClassOnly = mappings.isTrue("--class-only"),
-      defaultDB = mappings.getOrElse("--default-db", "global_temp"),
+      defaultDB = mappings.getOrElse("--default-db", defaultDB),
       inputPath = new File(mappings.require("--input-path")),
       outputPath = new File(mappings.require("--output-path")),
       packageName = packageName,
       properties = mappings,
-      scalaVersion = mappings.getOrElse("--scala-version", "2.12.8"),
-      sparkVersion = mappings.getOrElse("--spark-version", "2.4.1"),
+      scalaVersion = mappings.getOrElse("--scala-version", defaultScalaVersion),
+      sparkVersion = mappings.getOrElse("--spark-version", defaultSparkVersion),
       templateFile = mappings.get("--template-file").map(new File(_))
     )
   }
 
+  /**
+    * Creates a key-value mapping from the command line arguments
+    * @param args the given command line arguments
+    * @return a [[Map map]] containing key-value pairs representing the command line arguments
+    */
   private def createArgumentsMap(args: Seq[String]): Map[String, String] = {
     Map(args.toList.sliding(2, 2).toList map {
       case key :: value :: Nil if key.startsWith("--") => key -> value
@@ -78,14 +93,14 @@ object ApplicationSettings {
 
   /**
     * Extracts the class and package names from the given fully qualified class name
-    * @param classNameWithPackage the given fully qualified class name (e.g. "com.acme.CoyoteFuture")
+    * @param fullyQualifiedClassName the given fully qualified class name (e.g. "com.acme.CoyoteFuture")
     * @return the class and package names (e.g. "com.acme.CoyoteFuture" => ["com.acme", "CoyoteFuture"])
     */
-  private def getClassAndPackageNames(classNameWithPackage: String): (String, String) = {
+  def getClassAndPackageNames(fullyQualifiedClassName: String): (String, String) = {
     import com.qwery.util.StringHelper._
-    classNameWithPackage.lastIndexOfOpt(".").map(classNameWithPackage.splitAt) match {
+    fullyQualifiedClassName.lastIndexOfOpt(".").map(fullyQualifiedClassName.splitAt) match {
       case Some((packageName, className)) => (className.drop(1), packageName)
-      case None => (classNameWithPackage, "com.examples.spark")
+      case None => (fullyQualifiedClassName, "com.examples.spark")
     }
   }
 
@@ -99,7 +114,7 @@ object ApplicationSettings {
 
     @inline def require(name: String): String = mappings.getOrElse(name, fail(name))
 
-    private def fail[A](property: String): A =
+    def fail[A](property: String): A =
       throw new IllegalArgumentException(s"Required property '$property' is missing")
 
   }

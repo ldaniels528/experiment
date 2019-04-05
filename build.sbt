@@ -5,7 +5,7 @@ import sbt._
 import scala.language.postfixOps
 
 val appVersion = "0.4.0"
-val scalaJvmVersion = "2.12.8"
+val scalaJvmVersion = "2.11.11"
 
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
