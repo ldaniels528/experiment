@@ -2,15 +2,14 @@ package com.qwery.platform.sparksql.embedded
 
 import java.io.File
 
-import com.databricks.spark.avro._
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes._
 import com.qwery.models.StorageFormats._
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
-import SparkHelper._
 import com.qwery.platform.sparksql.embedded.EmbeddedSparkCompiler.Implicits._
+import com.qwery.platform.sparksql.embedded.SparkHelper._
 import com.qwery.platform.sparksql.embedded.SparkSelect.{SparkJoin, SparkUnion}
 import com.qwery.util.ConversionHelper._
 import com.qwery.util.OptionHelper._
@@ -104,7 +103,7 @@ object EmbeddedSparkCompiler {
       case table: Table =>
         val reader = rc.spark.read.tableOptions(table)
         table.inputFormat.orFail("Table input format was not specified") match {
-          case AVRO => reader.avro(table.location)
+          case AVRO => reader.format("avro").load(table.location)
           case CSV => reader.schema(rc.createSchema(table.columns)).csv(table.location)
           case JDBC => reader.jdbc(table.location, table.name, table.properties.toProperties)
           case JSON => reader.json(table.location)
@@ -139,7 +138,7 @@ object EmbeddedSparkCompiler {
     case table: Table =>
       val writer = source.write.tableOptions(table).mode(if (append) SaveMode.Append else SaveMode.Overwrite)
       table.outputFormat.orFail("Table output format was not specified") match {
-        case AVRO => writer.avro(table.location)
+        case AVRO => writer.format("avro").save(table.location)
         case CSV => writer.csv(table.location)
         case JDBC => writer.jdbc(table.location, table.name, table.properties.toProperties)
         case JSON => writer.json(table.location)

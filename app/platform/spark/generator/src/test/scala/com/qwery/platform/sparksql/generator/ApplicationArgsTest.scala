@@ -19,18 +19,14 @@ class ApplicationArgsTest extends FunSpec {
         "--class-only", "N",
         "--default-db", "dev_test",
         "--scala-version", "2.11.11",
-        "--spark-avro", "4.0.1",
-        "--spark-csv", "1.5.1",
         "--spark-version", "2.3.2",
-        "--template-class", "./src/main/scala/Test.scala"
+        "--template-file", "./src/main/scala/Test.scala"
       ))
       assert(appArgs.appName == "Hello World")
       assert(appArgs.appVersion == "1.0.1")
       assert(!appArgs.isClassOnly)
       assert(appArgs.defaultDB == "dev_test")
       assert(appArgs.scalaVersion == "2.11.11")
-      assert(appArgs.sparkAvroVersion == "4.0.1")
-      assert(appArgs.sparkCsvVersion == "1.5.1")
       assert(appArgs.sparkVersion == "2.3.2")
       assert(appArgs.templateFile.contains(new File("./src/main/scala/Test.scala")))
     }
@@ -43,10 +39,8 @@ class ApplicationArgsTest extends FunSpec {
           "--class-only", "N",
           "--default-db", "dev_test",
           "--scala-version", "2.11.11",
-          "--spark-avro", "4.0.1",
-          "--spark-csv", "1.5.1",
           "--spark-version", "2.3.2",
-          "--template-class", "./src/main/scala/Test.scala",
+          "--template-file", "./src/main/scala/Test.scala",
           "X", "Y"
         ))
       }

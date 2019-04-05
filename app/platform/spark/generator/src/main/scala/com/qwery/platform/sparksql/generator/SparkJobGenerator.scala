@@ -43,9 +43,8 @@ class SparkJobGenerator(className: String,
          ~  case _ => MergeStrategy.first
          ~}
          ~
-          ~libraryDependencies ++= Seq(
-         ~   "com.databricks" %% "spark-avro" % "$sparkAvroVersion",
-         ~   "com.databricks" %% "spark-csv" % "$sparkCsvVersion",
+         ~libraryDependencies ++= Seq(
+         ~   "org.apache.spark" %% "spark-avro" % "$sparkVersion",
          ~   "org.apache.spark" %% "spark-core" % "$sparkVersion",
          ~   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
          ~   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
@@ -139,9 +138,8 @@ class SparkJobGenerator(className: String,
     // generate the configuration files
     val configFiles = Seq(
       """addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.6")""" -> "assembly.sbt",
-      """sbt.version=0.13.18""" -> "build.properties",
-      """|addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.5")
-         |addSbtPlugin("com.typesafe.akka" % "akka-sbt-plugin" % "2.2.3")""".stripMargin -> "plugins.sbt"
+      """sbt.version=1.2.8""" -> "build.properties",
+      """|""".stripMargin -> "plugins.sbt"
     )
     configFiles foreach { case (contents, path) =>
       writeToDisk(outputFile = new File(projectDir, path))(contents)

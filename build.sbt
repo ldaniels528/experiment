@@ -5,11 +5,11 @@ import sbt._
 import scala.language.postfixOps
 
 val appVersion = "0.4.0"
-val scalaJvmVersion = "2.11.12"
+val scalaJvmVersion = "2.12.8"
 
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
-val sparkVersion = "2.3.3"
+val sparkVersion = "2.4.1"
 
 lazy val testDependencies = Seq(
   libraryDependencies ++= Seq(
@@ -23,10 +23,10 @@ lazy val testDependencies = Seq(
 //      Root Project - builds all artifacts
 /////////////////////////////////////////////////////////////////////////////////
 
-lazy val root = (project in file("./app")).
+lazy val rootProject = (project in file("./app")).
   aggregate(core, language, platform_spark_embedded, platform_spark_generator).
   dependsOn(core, language, platform_spark_embedded, platform_spark_generator).
-  settings(publishingSettings: _*).
+  //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "qwery",
@@ -44,7 +44,7 @@ lazy val root = (project in file("./app")).
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val core = (project in file("./app/core")).
-  settings(publishingSettings: _*).
+  //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "core",
@@ -55,7 +55,6 @@ lazy val core = (project in file("./app/core")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))
@@ -66,7 +65,7 @@ lazy val core = (project in file("./app/core")).
 
 lazy val language = (project in file("./app/language")).
   dependsOn(core).
-  settings(publishingSettings: _*).
+  //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "language",
@@ -77,7 +76,6 @@ lazy val language = (project in file("./app/language")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))
@@ -88,7 +86,7 @@ lazy val language = (project in file("./app/language")).
 
 lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedded")).
   dependsOn(core, language).
-  settings(publishingSettings: _*).
+  //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "platform-spark-embedded",
@@ -99,11 +97,8 @@ lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedd
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := false,
     libraryDependencies ++= Seq(
-      // Spark
-      "com.databricks" %% "spark-avro" % "4.0.0",
-      "com.databricks" %% "spark-csv" % "1.5.0",
+      "org.apache.spark" %% "spark-avro" % sparkVersion,
       "org.apache.spark" %% "spark-core" % sparkVersion,
       "org.apache.spark" %% "spark-hive" % sparkVersion,
       "org.apache.spark" %% "spark-sql" % sparkVersion,
@@ -112,7 +107,7 @@ lazy val platform_spark_embedded = (project in file("./app/platform/spark/embedd
 
 lazy val platform_spark_generator = (project in file("./app/platform/spark/generator")).
   dependsOn(core, language).
-  settings(publishingSettings: _*).
+  //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "platform-spark-generator",
@@ -123,7 +118,6 @@ lazy val platform_spark_generator = (project in file("./app/platform/spark/gener
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
-    coverageEnabled := false,
     libraryDependencies ++= Seq(
 
     ))
@@ -132,6 +126,7 @@ lazy val platform_spark_generator = (project in file("./app/platform/spark/gener
 //      Publishing
 /////////////////////////////////////////////////////////////////////////////////
 
+/*
 lazy val publishingSettings = Seq(
   sonatypeProfileName := "org.xerial",
   publishMavenStyle := true,
@@ -170,6 +165,7 @@ lazy val publishingSettings = Seq(
         </developer>
       </developers>
 )
+*/
 
 // loads the Scalajs-io root project at sbt startup
-onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value
+onLoad in Global := (Command.process("project rootProject", _: State)) compose (onLoad in Global).value

@@ -16,16 +16,24 @@ class SQLFunctionTest extends FunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("""should parse "Avg(LastSale)" (Avg)""") {
-      verify("Avg(LastSale)", Avg('LastSale))
+    it("""should parse "Abs(value)"""") {
+      verify("Abs(value)", Abs('value))
     }
 
-    it("""should parse "ARRAY_MAX(ARRAY(1, 20, NULL, 3))"""") {
-      verify("ARRAY_MAX(ARRAY(1, 20, NULL, 3))" , Array_Max(Array(List(1, 20, Null, 3))))
+    it("""should parse "Array_Max(Array(1, 20, NULL, 3))"""") {
+      verify("Array_Max(Array(1, 20, NULL, 3))" , Array_Max(Array(List(1, 20, Null, 3))))
     }
 
-    it("""should parse "ARRAY_MIN(ARRAY(1, 20, NULL, 3))"""") {
-      verify("ARRAY_MIN(ARRAY(1, 20, NULL, 3))" , Array_Min(Array(List(1, 20, Null, 3))))
+    it("""should parse "Array_Min(ARRAY(1, 20, NULL, 3))"""") {
+      verify("Array_Min(Array(1, 20, NULL, 3))" , Array_Min(Array(List(1, 20, Null, 3))))
+    }
+
+    it("""should parse "Ascii(value)"""") {
+      verify("Ascii(value)", Ascii('value))
+    }
+
+    it("""should parse "Avg(value)"""") {
+      verify("Avg(value)", Avg('value))
     }
 
     it("should parse functions (Case - Type 1)") {

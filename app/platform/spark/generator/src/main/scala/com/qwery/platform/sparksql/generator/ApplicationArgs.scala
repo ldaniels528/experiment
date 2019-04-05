@@ -10,8 +10,6 @@ import java.io.File
   * @param defaultDB        the default database (default: `"global_temp"`)
   * @param extendsClass     the optional class the generated class should extend (default: `Serializable`)
   * @param scalaVersion     the Scala version the generated project will use (default: "2.11.12")
-  * @param sparkAvroVersion the DataStax Spark-Avro library version (default: "4.0.0")
-  * @param sparkCsvVersion  the DataStax Spark-CSV library version (default: "1.5.0")
   * @param sparkVersion     the Apache Spark library version (default: "2.3.3")
   * @param templateFile    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
@@ -23,8 +21,6 @@ case class ApplicationArgs(appName: String,
                            extendsClass: String,
                            properties: Map[String, String],
                            scalaVersion: String,
-                           sparkAvroVersion: String,
-                           sparkCsvVersion: String,
                            sparkVersion: String,
                            templateFile: Option[File])
 
@@ -48,11 +44,9 @@ object ApplicationArgs {
       isClassOnly = mappings.get("--class-only").exists(v => Seq("t", "true", "y", "yes").contains(v.toLowerCase)),
       defaultDB = mappings.getOrElse("--default-db", "global_temp"),
       properties = mappings,
-      scalaVersion = mappings.getOrElse("--scala-version", "2.11.12"),
-      sparkAvroVersion = mappings.getOrElse("--spark-avro", "4.0.0"),
-      sparkCsvVersion = mappings.getOrElse("--spark-csv", "1.5.0"),
-      sparkVersion = mappings.getOrElse("--spark-version", "2.3.3"),
-      templateFile = mappings.get("--template-class").map(new File(_))
+      scalaVersion = mappings.getOrElse("--scala-version", "2.12.8"),
+      sparkVersion = mappings.getOrElse("--spark-version", "2.4.1"),
+      templateFile = mappings.get("--template-file").map(new File(_))
     )
   }
 
