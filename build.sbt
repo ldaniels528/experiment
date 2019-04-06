@@ -84,27 +84,6 @@ lazy val language = (project in file("./app/language")).
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////
 
-lazy val spark_embedded = (project in file("./app/platform/spark/embedded")).
-  dependsOn(core, language).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "platform-spark-embedded",
-    organization := "com.qwery",
-    description := "A SQL-like query language for Spark",
-    version := appVersion,
-    scalaVersion := scalaJvmVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-avro" % sparkVersion,
-      "org.apache.spark" %% "spark-core" % sparkVersion,
-      "org.apache.spark" %% "spark-hive" % sparkVersion,
-      "org.apache.spark" %% "spark-sql" % sparkVersion,
-      "org.apache.spark" %% "spark-streaming" % sparkVersion
-    ))
-
 lazy val spark_generator = (project in file("./app/platform/spark/generator")).
   dependsOn(core, language).
   //settings(publishingSettings: _*).
