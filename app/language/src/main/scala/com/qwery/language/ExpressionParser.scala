@@ -83,20 +83,6 @@ trait ExpressionParser {
   }
 
   /**
-    * Parses a FromUnixTime(timestamp,[format]) function
-    * @param ts the given [[TokenStream token stream]]
-    * @return a [[From_UnixTime]]
-    */
-  private def parseFromUnixTime(ts: TokenStream): Option[From_UnixTime] = {
-    val results = processor.process("( %E:args )", ts)(this)
-    results.expressionLists.get("args") map {
-      case timestamp :: Nil => From_UnixTime(timestamp)
-      case timestamp :: format :: Nil => From_UnixTime(timestamp, format = Option(format))
-      case _ => ts.die("Syntax: FromUnixTime(timestamp,[format])")
-    }
-  }
-
-  /**
     * Parses an internal or user-defined function (e.g. "LEN('Hello World')")
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Expression internal function]]
@@ -139,17 +125,30 @@ trait ExpressionParser {
   }
 
   /**
-    * Parses an IF(condition, trueValue, falseValue) expression
+    * Parses an IF(condition, trueValue, falseValue) statement
     * @param ts the given [[TokenStream token stream]]
     * @return the option of an [[If]]
     */
-  private def parseIf(ts: TokenStream): Option[Expression] = {
+  private def parseIf(ts: TokenStream): Option[If] = {
     val results = processor.process("( %c:condition , %e:true , %e:false )", ts)(this)
     for {
       condition <- results.conditions.get("condition")
       trueValue <- results.expressions.get("true")
       falseValue <- results.expressions.get("false")
     } yield If(condition, trueValue, falseValue)
+  }
+
+  /**
+    * Parses an IfNull(condition, expression) statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return the option of an [[IfNull]]
+    */
+  private def parseIfNull(ts: TokenStream): Option[IfNull] = {
+    val results = processor.process("( %c:condition , %e:expression )", ts)(this)
+    for {
+      condition <- results.conditions.get("condition")
+      expression <- results.expressions.get("expression")
+    } yield IfNull(condition, expression)
   }
 
   /**
@@ -180,9 +179,9 @@ trait ExpressionParser {
     args
   }
 
-  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Array_Index] = {
+  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Array_Position] = {
     val results = processor.process("[ %e:index ]", ts)(this)
-    results.expressions.get("index") map { index => Array_Index(array, index) }
+    results.expressions.get("index") map { index => Array_Position(array, index) }
   }
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
@@ -221,10 +220,10 @@ trait ExpressionParser {
       case ts if ts nextIf "case" => parseCase(ts)
       // is it a Cast function?
       case ts if ts nextIf "cast" => parseCast(ts)
-      // is it a From_UnixTime function?
-      case ts if ts nextIf "from_unixtime" => parseFromUnixTime(ts)
       // is it an If expression?
       case ts if ts nextIf "if" => parseIf(ts)
+      // is it an IfNull expression?
+      case ts if ts nextIf "ifNull" => parseIfNull(ts)
       // is is a null value?
       case ts if ts nextIf "null" => Null
       // is it a constant value?
@@ -364,71 +363,149 @@ trait ExpressionParser {
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
-  private val function0s = Map(
+  private val function0s: Map[String, SQLFunction] = Map(
     "Cume_Dist" -> Cume_Dist,
-    "Current_Date" -> Current_Date
+    "Current_Database" -> Current_Database,
+    "Current_Date" -> Current_Date,
+    "Current_Timestamp" -> Current_Timestamp,
+    "Dense_Rank" -> Dense_Rank,
+    "E" -> E
   )
-  private val function1s = Map(
-    "Abs" -> Abs.apply _,
-    "Array_Max" -> Array_Max.apply _,
-    "Array_Min" -> Array_Min.apply _,
-    "Ascii" -> Ascii.apply _,
-    "Avg" -> Avg.apply _,
-    "Base64" -> Base64.apply _,
-    "Bin" -> Bin.apply _,
-    "Cbrt" -> Cbrt.apply _,
-    "Ceil" -> Ceil.apply _,
-    "Count" -> Count.apply _,
-    "Distinct" -> Distinct.apply _,
-    "Factorial" -> Factorial.apply _,
-    "Floor" -> Floor.apply _,
-    "Length" -> Length.apply _,
-    "Lower" -> Lower.apply _,
-    "LTrim" -> LTrim.apply _,
-    "Max" -> Max.apply _,
-    "Mean" -> Mean.apply _,
-    "Min" -> Min.apply _,
-    "RTrim" -> RTrim.apply _,
-    "StdDev" -> StdDev.apply _,
-    "Sum" -> Sum.apply _,
-    "To_Date" -> To_Date.apply _,
-    "Trim" -> Trim.apply _,
-    "Upper" -> Upper.apply _,
-    "Variance" -> Variance.apply _,
-    "WeekOfYear" -> WeekOfYear.apply _,
-    "Year" -> Year.apply _
+  private val function1s: Map[String, Expression => SQLFunction1] = Map(
+    "Abs" -> Abs,
+    "Acos" -> Acos,
+    "Array_Max" -> Array_Max,
+    "Array_Min" -> Array_Min,
+    "Array_Sort" -> Array_Sort,
+    "Ascii" -> Ascii,
+    "Asin" -> Asin,
+    "Assert_True" -> Assert_True,
+    "Atan" -> Atan,
+    "Avg" -> Avg,
+    "Base64" -> Base64,
+    "BigInt" -> BigInt,
+    "Bin" -> Bin,
+    "Binary" -> Binary,
+    "Bit_Length" -> Bit_Length,
+    "Boolean" -> BooleanF,
+    "Cardinality" -> Cardinality,
+    "Cbrt" -> Cbrt,
+    "Ceil" -> Ceil,
+    "Ceiling" -> Ceil,
+    "Char" -> CharF,
+    "Char_Length" -> Char_Length,
+    "Character_Length" -> Char_Length,
+    "Chr" -> CharF,
+    "Collect_List" -> Collect_List,
+    "Collect_Set" -> Collect_Set,
+    "Cos" -> Cos,
+    "Cosh" -> CosH,
+    "Cot" -> Cot,
+    "Count" -> Count,
+    "CRC32" -> CRC32,
+    "Date" -> Date,
+    "Day" -> Day,
+    "DayOfMonth" -> DayOfMonth,
+    "DayOfWeek" -> DayOfWeek,
+    "Decimal" -> Decimal,
+    "Degrees" -> Degrees,
+    "Distinct" -> Distinct,
+    "Double" -> DoubleF,
+    "Exp" -> Exp,
+    "Explode" -> Explode,
+    "Explode_Outer" -> Explode_Outer,
+    "Expm1" -> Expm1,
+    "Factorial" -> Factorial,
+    "Flatten" -> Flatten,
+    "Float" -> FloatF,
+    "Floor" -> Floor,
+    "Hex" -> Hex,
+    "Hour" -> Hour,
+    "Length" -> Length,
+    "Lower" -> Lower,
+    "LTrim" -> LTrim,
+    "Max" -> Max,
+    "Mean" -> Mean,
+    "Min" -> Min,
+    "RTrim" -> RTrim,
+    "StdDev" -> StdDev,
+    "Sum" -> Sum,
+    "To_Date" -> To_Date,
+    "Trim" -> Trim,
+    "Upper" -> Upper,
+    "Variance" -> Variance,
+    "WeekOfYear" -> WeekOfYear,
+    "Year" -> Year
   )
-  private val function2s = Map(
-    "Add_Months" -> Add_Months.apply _,
-    "Array_Contains" -> Array_Contains.apply _,
-    "Array_Index" -> Array_Index.apply _,
-    "Array_Except" -> Array_Except.apply _,
-    "Array_Intersect" -> Array_Intersect.apply _,
-    "Date_Add" -> Date_Add.apply _,
-    "Split" -> Split.apply _
+  private val function2s: Map[String, (Expression, Expression) => SQLFunction2] = Map(
+    "Add_Months" -> Add_Months,
+    "Array_Contains" -> Array_Contains,
+    "Array_Index" -> Array_Position,
+    "Array_Except" -> Array_Except,
+    "Array_Intersect" -> Array_Intersect,
+    "Array_Overlap" -> Array_Overlap,
+    "Array_Position" -> Array_Position,
+    "Array_Remove" -> Array_Remove,
+    "Array_Repeat" -> Array_Repeat,
+    "Array_Union" -> Array_Union,
+    "Atan2" -> Atan2,
+    "Bround" -> Bround,
+    "Corr" -> Corr,
+    "Covar_Pop" -> Covar_Pop,
+    "Covar_Samp" -> Covar_Samp,
+    "Date_Add" -> Date_Add,
+    "Date_Format" -> Date_Format,
+    "Date_Sub" -> Date_Sub,
+    "Date_Trunc" -> Date_Trunc,
+    "DateDiff" -> DateDiff,
+    "Decode" -> Decode,
+    "Encode" -> Encode,
+    "Find_In_Set" -> Find_In_Set,
+    "Format_Number" -> Format_Number,
+    "From_UnixTime" -> From_UnixTime,
+    "From_UTC_Timestamp" -> From_UTC_Timestamp,
+    "Get_JSON_Object" -> Get_JSON_Object,
+    "Hypot" -> Hypot,
+    "Split" -> Split
   )
-  private val function3s = Map(
-    "LPad" -> LPad.apply _,
-    "RPad" -> RPad.apply _,
-    "Substr" -> Substring.apply _,
-    "Substring" -> Substring.apply _
+  private val function3s: Map[String, (Expression, Expression, Expression) => SQLFunction3] = Map(
+    "LPad" -> LPad,
+    "RPad" -> RPad,
+    "Substr" -> Substring,
+    "Substring" -> Substring
   )
-  private val functionNs = Map(
-    "Array" -> Array.apply _,
-    "Array_Distinct" -> Array_Distinct.apply _,
-    "Coalesce" -> Coalesce.apply _,
-    "Concat" -> Concat.apply _
+  private val functionNs: Map[String, List[Expression] => SQLFunctionN] = Map(
+    "Aggregate" -> Aggregate,
+    "Approx_Count_Distinct" -> Approx_Count_Distinct,
+    "Approx_Percentile" -> Approx_Percentile,
+    "Array" -> Array,
+    "Array_Distinct" -> Array_Distinct,
+    "Array_Join" -> Array_Join,
+    "Arrays_Zip" -> Arrays_Zip,
+    "Coalesce" -> Coalesce,
+    "Concat" -> Concat,
+    "Concat_Ws" -> Concat_Ws,
+    "Conv" -> Conv,
+    "Count_Min_Sketch" -> Count_Min_Sketch,
+    "Cube" -> Cube,
+    "Elt" -> Elt,
+    "First" -> First_Value,
+    "First_Value" -> First_Value,
+    "Format_String" -> Format_String,
+    "From_JSON" -> From_JSON,
+    "Greatest" -> Greatest,
+    "Hash" -> Hash
   )
-  private val conditionalOps = Map(
-    "=" -> EQ.apply _,
-    ">=" -> GE.apply _,
-    ">" -> GT.apply _,
-    "<=" -> LE.apply _,
-    "<" -> LT.apply _,
-    "<>" -> NE.apply _,
-    "!=" -> NE.apply _,
-    "LIKE" -> LIKE.apply _,
-    "RLIKE" -> RLIKE.apply _
+  private val conditionalOps: Map[String, (Expression, Expression) => Condition] = Map(
+    "=" -> EQ,
+    ">=" -> GE,
+    ">" -> GT,
+    "<=" -> LE,
+    "<" -> LT,
+    "<>" -> NE,
+    "!=" -> NE,
+    "LIKE" -> LIKE,
+    "RLIKE" -> RLIKE
   )
 
 }

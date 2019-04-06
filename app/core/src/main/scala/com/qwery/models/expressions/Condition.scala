@@ -6,6 +6,9 @@ package com.qwery.models.expressions
   */
 sealed trait Condition
 
+/**
+  * Logical AND
+  */
 case class AND(a: Condition, b: Condition) extends Condition
 
 case class EQ(a: Expression, b: Expression) extends Condition

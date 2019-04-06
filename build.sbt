@@ -4,6 +4,7 @@ import sbt._
 import scala.language.postfixOps
 
 val appVersion = "0.4.0"
+val pluginVersion = "1.0.0"
 val scalaJvmVersion = "2.12.8"
 
 val scalaTestVersion = "3.0.1"
@@ -130,7 +131,7 @@ lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).
       name := "sbt-qwery",
       organization := "com.qwery",
       description := "SBT plugin for generating Spark/Scala code from an SQL query",
-      version := "1.0.0",
+      version := pluginVersion,
       scalaVersion := scalaJvmVersion,
       scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
       scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),

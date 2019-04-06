@@ -59,7 +59,7 @@ object ApplicationSettings {
     val mappings = createArgumentsMap(args)
 
     // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush")
-    val fullyQualifiedClassName = mappings.require("1.0--class-name")
+    val fullyQualifiedClassName = mappings.require("--class-name")
     val (className, packageName) = getClassAndPackageNames(fullyQualifiedClassName)
 
     // create the application settings

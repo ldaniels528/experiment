@@ -265,7 +265,7 @@ object EmbeddedSparkCompiler {
           case AllFields => col("*")
           case Array(args) => array(args.map(_.compile): _*)
           case Array_Contains(a, b) => array_contains(a.compile, b.asAny)
-          case _: Array_Index => die("Array index is not supported by Spark")
+          case Array_Position(a, b) => array_position(a.compile, b.compile)
           case Ascii(a) => ascii(a.compile)
           case Avg(a) => avg(a.compile)
           case Base64(a) => base64(a.compile)
@@ -285,7 +285,7 @@ object EmbeddedSparkCompiler {
           case Divide(a, b) => a.compile / b.compile
           case Factorial(a) => factorial(a.compile)
           case Floor(a) => floor(a.compile)
-          case From_UnixTime(a, b) => b.map(f => from_unixtime(a.compile, f.asString)) || from_unixtime(a.compile)
+          case From_UnixTime(a, b) => from_unixtime(a.compile, b.asString)
           case FunctionCall(name, args) => callUDF(name, args.map(_.compile): _*)
           case If(condition, trueValue, falseValue) =>
             val (cond, yes, no) = (condition.compile, trueValue.compile, falseValue.compile)
