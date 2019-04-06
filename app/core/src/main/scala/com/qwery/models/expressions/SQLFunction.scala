@@ -747,6 +747,12 @@ object SQLFunction {
 
   case class Trim(field: Expression) extends SQLFunction1
 
+  /**
+    * Converts hexadecimal expr to binary.
+    * @example unhex(expr)
+    */
+  case class UnHex(field: Expression) extends SQLFunction1
+
   case class Upper(field: Expression) extends SQLFunction1
 
   case class Variance(field: Expression) extends SQLFunction1 with Aggregation

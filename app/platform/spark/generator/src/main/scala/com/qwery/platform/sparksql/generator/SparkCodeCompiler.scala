@@ -203,6 +203,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Console.Debug(text) => s"""logger.debug("$text")"""
           case Console.Error(text) => s"""logger.error("$text")"""
           case Console.Info(text) => s"""logger.info("$text")"""
+          case Console.Log(text) => s"""logger.info("$text")"""
           case Console.Print(text) => s"""println("$text")"""
           case Console.Warn(text) => s"""logger.warn("$text")"""
           case Create(tableOrView: TableLike) => sparkRead(tableOrView)
@@ -233,7 +234,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         }
       }
 
-      private def defineColumns(table: Table): String = s"""toDF(${table.columns.map(_.name.codify).mkString(",")})"""
+      private def defineColumns(table: Table): String = s"toDF(${table.columns.map(_.name.codify).mkString(",")})"
     }
 
     final implicit class InvokableSQLCompiler(val invokable: Invokable) extends AnyVal {

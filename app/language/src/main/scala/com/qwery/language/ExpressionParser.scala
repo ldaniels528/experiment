@@ -432,6 +432,7 @@ object ExpressionParser {
     "Sum" -> Sum,
     "To_Date" -> To_Date,
     "Trim" -> Trim,
+    "UnHex" -> UnHex,
     "Upper" -> Upper,
     "Variance" -> Variance,
     "WeekOfYear" -> WeekOfYear,
