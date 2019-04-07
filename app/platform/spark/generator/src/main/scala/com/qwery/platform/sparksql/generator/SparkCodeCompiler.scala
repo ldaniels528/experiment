@@ -115,8 +115,10 @@ trait SparkCodeCompiler {
     * @return the Scala string
     */
   def generate(model: Values): String = {
-    import model._
-    s"""Seq(${values.flatMap(_.map(_.asCode)) mkString ","})"""
+    s"""Seq(${model.values.filterNot(_.isEmpty) map {
+      case list if list.size == 1 => list.head.asCode
+      case list => '(' + list.map(_.asCode).mkString(",") + ')'
+    } mkString ","})"""
   }
 
   /**
