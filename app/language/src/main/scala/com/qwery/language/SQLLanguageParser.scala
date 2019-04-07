@@ -150,7 +150,7 @@ trait SQLLanguageParser {
     */
   protected def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY FUNCTION %a:name AS %a:class ?USING +?JAR +?%a:jar")
-    Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jar = params.atoms.get("jar")))
+    Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
 
   /**

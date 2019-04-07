@@ -1,11 +1,6 @@
 ----------------------------------------------------------------
 --      LiveRamp Ingest
 ----------------------------------------------------------------
-main program 'LiveRampIngest'
-    with arguments as @args
-    with environment as @env
-    with batch processing
-as
 begin
 
     /**

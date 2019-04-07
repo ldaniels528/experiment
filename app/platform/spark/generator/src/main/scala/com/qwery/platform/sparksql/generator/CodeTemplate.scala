@@ -44,7 +44,7 @@ class CodeTemplate(templateCode: String) {
           case s if s equalsIgnoreCase "appName" => settings.appName
           case s if s equalsIgnoreCase "appVersion" => settings.appVersion
           case s if s equalsIgnoreCase "className" => settings.className
-          case s if s equalsIgnoreCase "flow" => invokable.compile
+          case s if s equalsIgnoreCase "flow" => invokable.toCode
           case s if s equalsIgnoreCase "inputPath" => settings.inputPath.getCanonicalPath
           case s if s equalsIgnoreCase "outputPath" => settings.outputPath.getCanonicalPath
           case s if s equalsIgnoreCase "packageName" => settings.packageName

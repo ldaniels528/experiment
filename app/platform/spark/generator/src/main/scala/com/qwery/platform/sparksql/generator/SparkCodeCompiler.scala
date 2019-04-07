@@ -6,6 +6,7 @@ import java.io.File
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.Insert.Values
 import com.qwery.models._
 import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
@@ -48,6 +49,77 @@ trait SparkCodeCompiler {
   }
 
   /**
+    * Generates the SQL Case statements
+    * @param model the given [[Case model]]
+    * @return the SQL string
+    */
+  def generate(model: Case): String = {
+    val sb = new StringBuilder("CASE")
+    model.conditions foreach { case Case.When(condition, result) =>
+      sb.append(s" WHEN ${condition.toSQL} THEN ${result.toSQL}\n")
+    }
+    model.otherwise.foreach(expr => sb.append(s" ELSE ${expr.toSQL}"))
+    sb.append(" END")
+    sb.toString()
+  }
+
+  /**
+    * Generates the SQL Procedure statement
+    * @param model the given [[Procedure model]]
+    * @return the Scala string
+    */
+  def generate(model: Procedure)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    import model._
+    new StringBuilder()
+      .append(s"""def $name(${params.map(_.toCode).mkString(",")}) = {""")
+      .append(s"\n  ${code.toCode}")
+      .append("\n}")
+      .toString()
+  }
+
+  /**
+    * Generates the SQL Select statement
+    * @param model the given [[Select model]]
+    * @return the SQL string
+    */
+  def generate(model: Select)(implicit settings: ApplicationSettings): String = {
+    val sb = new StringBuilder()
+    sb.append("SELECT\n")
+    sb.append(model.fields.map(_.toSQL).mkString(",\n"))
+    model.from foreach { from =>
+      val result = from match {
+        case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
+        case x => x.toSQL
+      }
+      sb.append(s"\nFROM ${result.withAlias(from)}")
+    }
+    if (model.joins.nonEmpty) sb.append(s"\n${model.joins.map(_.toSQL).mkString("\n")}")
+    model.where foreach { condition => sb.append(s"\nWHERE ${condition.toSQL}") }
+    if (model.groupBy.nonEmpty) sb.append(s"\nGROUP BY ${model.groupBy.map(_.toSQL).mkString(",")}")
+    model.having foreach { condition => sb.append(s"\nHAVING ${condition.toSQL}") }
+    if (model.orderBy.nonEmpty) sb.append(s"\nORDER BY ${model.orderBy.map(_.toSQL).mkString(",")}")
+    sb.toString()
+  }
+
+  /**
+    * Generates the SQL CREATE TEMPORARY FUNCTION statement
+    * @param model the given [[UserDefinedFunction model]]
+    * @return the Scala string
+    */
+  def generate(model: UserDefinedFunction): String =
+    s"""registerUDF(name = "${model.name}", `class` = "${model.`class`}")"""
+
+  /**
+    * Generates the SQL VALUES ( ... ) statement
+    * @param model the given [[Values model]]
+    * @return the Scala string
+    */
+  def generate(model: Values): String = {
+    import model._
+    s"""Seq(${values.flatMap(_.map(_.asCode)) mkString ","})"""
+  }
+
+  /**
     * Incorporates the source code of the given path
     * @param path the given .sql source file
     * @return the resultant source code
@@ -56,35 +128,6 @@ trait SparkCodeCompiler {
     val file = new File(path).getCanonicalFile
     logger.info(s"[*] Merging source file '${file.getAbsolutePath}'...")
     SQLLanguageParser.parse(file)
-  }
-
-  def makeSQL(op: Case): String = {
-    val sb = new StringBuilder("CASE")
-    op.conditions foreach { case Case.When(condition, result) =>
-      sb.append(s" WHEN ${condition.toSQL} THEN ${result.toSQL}\n")
-    }
-    op.otherwise.foreach(expr => sb.append(s" ELSE ${expr.toSQL}"))
-    sb.append(" END")
-    sb.toString()
-  }
-
-  def makeSQL(op: Select)(implicit settings: ApplicationSettings): String = {
-    val sb = new StringBuilder()
-    sb.append("SELECT\n")
-    sb.append(op.fields.map(_.toSQL).mkString(",\n"))
-    op.from foreach { from =>
-      val result = from match {
-        case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
-        case x => x.toSQL
-      }
-      sb.append(s"\nFROM ${result.withAlias(from)}")
-    }
-    if (op.joins.nonEmpty) sb.append(s"\n${op.joins.map(_.toSQL).mkString("\n")}")
-    op.where foreach { condition => sb.append(s"\nWHERE ${condition.toSQL}") }
-    if (op.groupBy.nonEmpty) sb.append(s"\nGROUP BY ${op.groupBy.map(_.toSQL).mkString(",")}")
-    op.having foreach { condition => sb.append(s"\nHAVING ${condition.toSQL}") }
-    if (op.orderBy.nonEmpty) sb.append(s"\nORDER BY ${op.orderBy.map(_.toSQL).mkString(",")}")
-    sb.toString()
   }
 
 }
@@ -99,6 +142,10 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     * Implicit definitions
     */
   object Implicits {
+
+    final implicit class ColumnEnrichment(val column: Column) extends AnyVal {
+      def toCode: String = s"${column.name}:${column.`type`.toCode}"
+    }
 
     final implicit class ConditionSQLCompiler(val condition: Condition) extends AnyVal {
       def toSQL: String = condition match {
@@ -121,6 +168,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     final implicit class ExpressionSQLCompiler(val expression: Expression) extends AnyVal {
+      def compile: String = expression match {
+        case Literal(value) => value.asCode
+        case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
+      }
+
       def toSQL: String = {
         val result = expression match {
           case Abs(a) => s"ABS(${a.toSQL})"
@@ -143,7 +195,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case BitwiseAND(a, b) => s"${a.toSQL} & ${b.toSQL}"
           case BitwiseOR(a, b) => s"${a.toSQL} | ${b.toSQL}"
           case BitwiseXOR(a, b) => s"${a.toSQL} ^ ${b.toSQL}"
-          case c: Case => makeSQL(c)
+          case c: Case => generate(c)
           case Cast(value, toType) => s"CAST(${value.toSQL} AS ${toType.toSQL})"
           case Cbrt(a) => s"CBRT(${a.toSQL})"
           case Ceil(a) => s"CEIL(${a.toSQL})"
@@ -159,7 +211,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Factorial(a) => s"FACTORIAL(${a.toSQL})"
           case Floor(a) => s"FLOOR(${a.toSQL})"
           case From_UnixTime(a, b) => s"FROM_UNIXTIME(${a.toSQL}, ${b.toSQL})"
-          case FunctionCall(name, args) => s"CALLUDF(${name.asLit}, ${args.map(_.toSQL).mkString(",")})"
+          case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(",")})"
           case If(condition, trueValue, falseValue) => s"IF(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
           case JoinField(name, tableAlias) => tableAlias.map(alias => s"$alias.$name") getOrElse name
           case Length(a) => s"LENGTH(${a.toSQL})"
@@ -198,7 +250,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
-      def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+      def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case Console.Debug(text) => s"""logger.debug("$text")"""
           case Console.Error(text) => s"""logger.error("$text")"""
@@ -206,26 +258,38 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Console.Log(text) => s"""logger.info("$text")"""
           case Console.Print(text) => s"""println("$text")"""
           case Console.Warn(text) => s"""logger.warn("$text")"""
+          case Create(procedure: Procedure) => generate(procedure)
           case Create(tableOrView: TableLike) => sparkRead(tableOrView)
-          case Include(path) => incorporateSources(path).compile
+          case Create(udf: UserDefinedFunction) => generate(udf)
+          case FileSystem(path) => s"""SparkRuntimeHelper.getFiles("$path")"""
+          case Include(path) => incorporateSources(path).toCode
           case i: Insert => i.compile
-          case m: MainProgram => m.code.compile
+          case m: MainProgram => m.code.toCode
+          case ProcedureCall(name, args) => s"""$name(${args.map(_.compile).mkString(",")})"""
           case s: Select => s.compile
-          case Show(rows, limit) => s"""${rows.compile}.show(${limit.getOrElse(20)})"""
-          case s: SQL => s.statements.map(_.compile).mkString("\n")
+          case Show(rows, limit) => s"${rows.toCode}.show(${limit.getOrElse(20)})"
+          case s: SQL => s.statements.map(_.toCode).mkString("\n")
           case t: TableRef => t.name
-          case x => throw new IllegalStateException(s"Unsupported operation ${Option(x).map(_.getClass.getName).orNull}")
+          case v: Values => generate(v)
+          case x => throw new IllegalStateException(s"Unsupported operation $x")
         }
         result
       }
 
-      private def sparkRead(tableLike: TableLike): String = {
+      private def defineColumns(columns: List[Column]): String = s"toDF(${columns.map(_.name.codify).mkString(",")})"
+
+      private def sparkRead(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         tableLike match {
+          case InlineTable(name, columns, source) =>
+            s"""|${source.toCode}
+                |   .${defineColumns(columns)}
+                |   .createOrReplaceQweryTempView("$name")
+                |""".stripMargin
           case table: Table =>
             table.inputFormat.map(_.toString.toLowerCase()) match {
               case Some(format) =>
                 s"""|spark.read.$format("${table.location}")
-                    |   .${defineColumns(table)}
+                    |   .${defineColumns(table.columns)}
                     |   .createOrReplaceGlobalTempView("${table.name}")
                     |""".stripMargin
               case None => ""
@@ -234,13 +298,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         }
       }
 
-      private def defineColumns(table: Table): String = s"toDF(${table.columns.map(_.name.codify).mkString(",")})"
     }
 
     final implicit class InvokableSQLCompiler(val invokable: Invokable) extends AnyVal {
       def toSQL(implicit settings: ApplicationSettings): String = {
         val result = invokable match {
-          case s: Select => makeSQL(s)
+          case s: Select => generate(s)
           case s: SQL => s.statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>
             val tableName = s"${settings.defaultDB}.${t.name}"
@@ -276,7 +339,9 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param columnType the given [[ColumnType]]
       */
     final implicit class TableColumnTypeExtensions(val columnType: ColumnType) extends AnyVal {
-      @inline def toSQL: String = columnType.toString.replaceAllLiterally("_", "")
+      @inline def toCode: String = columnType.toString.replaceAllLiterally("_", "").toLowerCase.capitalize
+
+      @inline def toSQL: String = toCode
     }
 
     /**
@@ -285,7 +350,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       */
     final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
       @inline def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
-        ctx.lookupTableOrView(insert.destination.target.compile) match {
+        ctx.lookupTableOrView(insert.destination.target.toCode) match {
           case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
           case table: Table =>
             // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
@@ -293,7 +358,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
             // build the expression
             val buf = ListBuffer[String]()
-            buf += s"${insert.source.compile}.write"
+            buf += s"${insert.source.toCode}.write"
             buf ++= table.fieldDelimiter.map(delimiter => s""".option("delimiter", "$delimiter")""").toList
             buf ++= table.headersIncluded.map(enabled => s""".option("header", "$enabled")""").toList
             buf ++= table.nullValue.map(value => s""".option("nullValue", "$value")""").toList
@@ -357,6 +422,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case null => "NULL"
         case Literal(_value) => _value.asLit
         case s: String => s"'$s'"
+        case x => x.toString
+      }
+
+      @inline def asCode: String = value match {
+        case s: String => s""""$s""""
+        case Literal(_value) => _value.asCode
         case x => x.toString
       }
     }

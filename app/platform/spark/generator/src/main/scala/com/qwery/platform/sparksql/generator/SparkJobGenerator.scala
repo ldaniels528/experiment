@@ -46,11 +46,7 @@ class SparkJobGenerator() {
          ~   "org.apache.spark" %% "spark-core" % "$sparkVersion",
          ~   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
          ~   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
-         ~   //
-         ~   // Qwery dependencies
-         ~   "com.qwery" %% "core" % "${AppConstants.version}",
-         ~   "com.qwery" %% "platform-spark-generator" % "${AppConstants.version}",
-         ~   "com.qwery" %% "language" % "${AppConstants.version}"
+         ~   "com.qwery" %% "spark-tools" % "0.4.0"
          ~)
          ~""".stripMargin('~')
     }
@@ -76,7 +72,8 @@ class SparkJobGenerator() {
         "org.apache.spark.sql.DataFrame",
         "org.apache.spark.sql.SaveMode",
         "org.apache.spark.sql.SparkSession",
-        "org.slf4j.LoggerFactory"
+        "org.slf4j.LoggerFactory",
+        "com.qwery.platform.sparksql.SparkRuntimeHelper._"
       ))
     }
   }
@@ -190,7 +187,7 @@ class SparkJobGenerator() {
        ~
         ~  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
        ~     import spark.implicits._
-       ~     ${invokable.compile}
+       ~     ${invokable.toCode}
        ~  }
        ~
         ~}

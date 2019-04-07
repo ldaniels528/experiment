@@ -24,8 +24,8 @@ lazy val testDependencies = Seq(
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, language, spark_embedded, spark_generator).
-  dependsOn(core, language, spark_embedded, spark_generator).
+  aggregate(core, language, spark_generator, spark_tools).
+  dependsOn(core, language, spark_generator, spark_tools).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -99,6 +99,24 @@ lazy val spark_generator = (project in file("./app/platform/spark/generator")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
 
+    ))
+
+lazy val spark_tools = (project in file("./app/platform/spark/tools")).
+  dependsOn(core).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "spark-tools",
+    organization := "com.qwery",
+    description := "Qwery-Spark runtime tools",
+    version := appVersion,
+    scalaVersion := scalaJvmVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-core" % sparkVersion,
+      "org.apache.spark" %% "spark-sql" % sparkVersion
     ))
 
 lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).

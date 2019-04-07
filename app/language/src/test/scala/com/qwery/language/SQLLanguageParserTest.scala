@@ -43,7 +43,7 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support CREATE FUNCTION statements") {
       val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
-      assert(results == Create(UserDefinedFunction(name = "myFunc", `class` = "com.qwery.udf.MyFunc", jar = None)))
+      assert(results == Create(UserDefinedFunction(name = "myFunc", `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
     }
 
     it("should support CREATE INLINE TABLE statements") {
@@ -173,7 +173,7 @@ class SQLLanguageParserTest extends FunSpec {
       assert(results == Create(UserDefinedFunction(
         name = "myFunc",
         `class` = "com.qwery.udf.MyFunc",
-        jar = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
+        jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
       )))
     }
 

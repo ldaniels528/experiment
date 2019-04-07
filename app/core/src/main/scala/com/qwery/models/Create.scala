@@ -5,5 +5,7 @@ package com.qwery.models
   * @param entity the given [[SQLEntity]]
   * @author lawrence.daniels@gmail.com
   */
-case class Create(entity: SQLEntity) extends Invokable
+case class Create(entity: SQLEntity) extends Invokable {
+  override def toString: String = s"${getClass.getSimpleName}(${entity.getClass.getSimpleName})"
+}
 

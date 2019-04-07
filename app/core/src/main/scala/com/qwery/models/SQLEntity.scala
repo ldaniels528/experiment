@@ -108,11 +108,11 @@ object Table {
 
 /**
   * Represents a User-defined Function (UDF)
-  * @param name    the name of the function
-  * @param `class` the fully-qualified function class name
-  * @param jar     the optional Jar file path
+  * @param name        the name of the function
+  * @param `class`     the fully-qualified function class name
+  * @param jarLocation the optional Jar file path
   */
-case class UserDefinedFunction(name: String, `class`: String, jar: Option[String]) extends SQLEntity
+case class UserDefinedFunction(name: String, `class`: String, jarLocation: Option[String]) extends SQLEntity
 
 /**
   * Represents a View definition

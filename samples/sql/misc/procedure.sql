@@ -1,7 +1,7 @@
 ----------------------------------------------------------------
 --      companylist
 ----------------------------------------------------------------
-main program 'companylist' with batch processing {
+begin
 
     -- First, we define our input and output sources
     log 'Loading the input and output sources...';
@@ -14,22 +14,27 @@ main program 'companylist' with batch processing {
     --add jar '/home/taobao/oplog/hivescript/my_udf.jar';
     create function nullFix as 'com.github.ldaniels528.qwery.NullFix';
 
-    create procedure lookupIndustry(industry string) {
+    create procedure lookupIndustry(industry string) as
+    begin
         -- here we perform our filtering/transformation
         select Symbol, `Name`, LastSale, MarketCap, nullFix(IPOyear) as IPOyear, Sector, Industry
         from Securities
         where Industry = $industry
-    };
+    end;
 
     ----------------------------------------------------------------
     --      the transformation
     ----------------------------------------------------------------
+
     log 'Performing the transformation...';
-    set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
+    call lookupIndustry('Oil/Gas Transmission');
+
+    /*set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
+/*
     insert overwrite table OilGasSecurities (Symbol, `Name`, LastSale, MarketCap, IPOyear, Sector, Industry)
     values @dataSet;
 
     -- show the first 5 rows
     show @dataSet limit 5;
-
-};
+    */
+end;

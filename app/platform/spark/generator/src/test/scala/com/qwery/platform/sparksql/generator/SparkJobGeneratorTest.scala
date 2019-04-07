@@ -70,34 +70,38 @@ class SparkJobGeneratorTest extends FunSpec {
 
     it("should compile and execute: companylist.sql") {
       SparkJobGenerator.main(Array(
+        "--app-name", "Companylist Example",
         "--input-path", "./samples/sql/companylist/companylist.sql",
-        "--output-path", "./temp/gen-src",
-        "--class-name", "com.github.ldaniels528.securities.Companylist"
+        "--output-path", "./temp/projects/companylist",
+        "--class-name", "com.github.ldaniels528.qwery.Companylist"
       ))
     }
 
     it("should compile and execute: files.sql") {
       SparkJobGenerator.main(Array(
+        "--app-name", "Files Example",
         "--input-path", "./samples/sql/misc/files.sql",
-        "--output-path", "./temp/gen-src",
-        "--class-name", "com.github.ldaniels528.securities.Files"
+        "--output-path", "./temp/projects/files",
+        "--class-name", "com.github.ldaniels528.qwery.Files"
       ))
     }
 
 
     it("should compile and execute: joins.sql") {
       SparkJobGenerator.main(Array(
+        "--app-name", "Joins Example",
         "--input-path", "./samples/sql/misc/joins.sql",
-        "--output-path", "./temp/gen-src",
-        "--class-name", "com.github.ldaniels528.securities.Joins"
+        "--output-path", "./temp/projects/joins",
+        "--class-name", "com.github.ldaniels528.qwery.Joins"
       ))
     }
 
     it("should compile and execute: procedure.sql") {
       SparkJobGenerator.main(Array(
+        "--app-name", "Procedure Example",
         "--input-path", "./samples/sql/misc/procedure.sql",
-        "--output-path", "./temp/gen-src",
-        "--class-name", "com.github.ldaniels528.securities.Procedures"
+        "--output-path", s"./temp/projects/procedures",
+        "--class-name", "com.github.ldaniels528.qwery.Procedures"
       ))
     }
 

@@ -1,7 +1,7 @@
 ----------------------------------------------------------------
 --      Joins example
 ----------------------------------------------------------------
-main program 'Joins' with batch processing {
+begin
 
     ----------------------------------------------------------------
     --      model definitions
@@ -10,8 +10,16 @@ main program 'Joins' with batch processing {
     /* First, we define our input and output sources */
     log 'Describing the input and output sources... ';
     create table Securities (
-            Symbol STRING, Name STRING, LastSale STRING, MarketCap STRING,
-            IPOyear STRING, Sector STRING, Industry STRING, SummaryQuote STRING, Reserved STRING)
+            Symbol STRING,
+            Name STRING,
+            LastSale STRING,
+            MarketCap STRING,
+            IPOyear STRING,
+            Sector STRING,
+            Industry STRING,
+            SummaryQuote STRING,
+            Reserved STRING
+        )
         row format delimited
         fields terminated by ','
         stored as inputformat 'CSV'
@@ -27,18 +35,6 @@ main program 'Joins' with batch processing {
     --      transformations
     ----------------------------------------------------------------
 
-    /* And finally, we perform our filtering/transformation */
-    log 'Performing the transformation... ';
-    set @dataSet = (
-        select Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry, SummaryQuote, Reserved
-        from Securities
-        inner join SelectSecurities ON Ticker = Symbol
-    );
-
-    ----------------------------------------------------------------
-    --      persistence
-    ----------------------------------------------------------------
-
     /**
      *  show the data
      *  +------+--------------------+--------+---------+-------+----------------+--------------------+--------------------+--------+------+
@@ -50,5 +46,13 @@ main program 'Joins' with batch processing {
      *  |   LNG|Cheniere Energy, ...|   62.76|  $15.57B|    n/a|Public Utilities|Oil/Gas Transmission|https://www.nasda...|    null|   LNG|
      *  +------+--------------------+--------+---------+-------+----------------+--------------------+--------------------+--------+------+
      */
-    show @dataSet limit 100;
-};
+
+    /* And finally, we perform our filtering/transformation */
+    log 'Performing the transformation... ';
+    show (
+        select Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry, SummaryQuote, Reserved
+        from Securities
+        inner join SelectSecurities ON Ticker = Symbol
+    ) limit 100;
+
+end;
