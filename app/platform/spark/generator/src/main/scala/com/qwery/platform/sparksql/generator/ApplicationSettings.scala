@@ -1,6 +1,7 @@
 package com.qwery.platform.sparksql.generator
 
 import java.io.File
+import java.util.Properties
 
 /**
   * Represents the Generated Spark Application's Settings
@@ -54,7 +55,7 @@ object ApplicationSettings {
     * @param args the given command line arguments
     * @return the [[ApplicationSettings]]
     */
-  def apply(args: Seq[String] = Nil): ApplicationSettings = {
+  def fromArgs(args: Seq[String] = Nil): ApplicationSettings = {
     // parse the command line arguments
     val mappings = createArgumentsMap(args)
 
@@ -154,6 +155,180 @@ object ApplicationSettings {
 
   def fail[A](property: String): A =
     throw new IllegalArgumentException(s"Required property '$property' is missing")
+
+  /**
+    * Application Settings Builder
+    * @author lawrence.daniels@gmail.com
+    */
+  class Builder() {
+    private var appName: Option[String] = None
+    private var appVersion: Option[String] = None
+    private var className: Option[String] = None
+    private var isClassOnly: Option[Boolean] = None
+    private var defaultDB: Option[String] = None
+    private var extendsClass: Option[String] = None
+    private var inputPath: Option[File] = None
+    private var outputPath: Option[File] = None
+    private var packageName: Option[String] = None
+    private var properties: Option[Map[String, String]] = None
+    private var scalaVersion: Option[String] = None
+    private var sparkVersion: Option[String] = None
+    private var templateFile: Option[File] = None
+
+    def build: ApplicationSettings = ApplicationSettings(
+      appName = appName,
+      appVersion = appVersion,
+      className = className,
+      isClassOnly = isClassOnly,
+      defaultDB = defaultDB,
+      extendsClass = extendsClass,
+      inputPath = inputPath,
+      outputPath = outputPath,
+      packageName = packageName,
+      properties = properties,
+      scalaVersion = scalaVersion,
+      sparkVersion = sparkVersion,
+      templateFile = templateFile
+    )
+
+    def withAppName(appName: String): this.type = {
+      this.appName = Option(appName)
+      this
+    }
+
+    def withAppName(appName: Option[String]): this.type = {
+      this.appName = appName
+      this
+    }
+
+    def withAppVersion(appVersion: String): this.type = {
+      this.appVersion = Option(appVersion)
+      this
+    }
+
+    def withAppVersion(appVersion: Option[String]): this.type = {
+      this.appVersion = appVersion
+      this
+    }
+
+    def withClassName(className: String): this.type = {
+      this.className = Option(className)
+      this
+    }
+
+    def withClassName(className: Option[String]): this.type = {
+      this.className = className
+      this
+    }
+
+    def withClassOnly(isClassOnly: Boolean): this.type = {
+      this.isClassOnly = Option(isClassOnly)
+      this
+    }
+
+    def withClassOnly(isClassOnly: Option[Boolean]): this.type = {
+      this.isClassOnly = isClassOnly
+      this
+    }
+
+    def withDefaultDB(defaultDB: String): this.type = {
+      this.defaultDB = Option(defaultDB)
+      this
+    }
+
+    def withDefaultDB(defaultDB: Option[String]): this.type = {
+      this.defaultDB = defaultDB
+      this
+    }
+
+    def withExtendsClass(extendsClass: String): this.type = {
+      this.extendsClass = Option(extendsClass)
+      this
+    }
+
+    def withExtendsClass(extendsClass: Option[String]): this.type = {
+      this.extendsClass = extendsClass
+      this
+    }
+
+    def withInputPath(inputPath: File): this.type = {
+      this.inputPath = Option(inputPath)
+      this
+    }
+
+    def withInputPath(inputPath: String): this.type = {
+      this.inputPath = Option(inputPath).map(new File(_))
+      this
+    }
+
+    def withOutputPath(outputPath: File): this.type = {
+      this.outputPath = Option(outputPath)
+      this
+    }
+
+    def withOutputPath(outputPath: String): this.type = {
+      this.outputPath = Option(outputPath).map(new File(_))
+      this
+    }
+
+    def withPackageName(packageName: String): this.type = {
+      this.packageName = Option(packageName)
+      this
+    }
+
+    def withProperties(properties: Map[String, String]): this.type = {
+      this.properties = Option(properties)
+      this
+    }
+
+    def withProperties(properties: Properties): this.type = {
+      import scala.collection.JavaConverters._
+      this.properties = Option(properties.asScala.toMap)
+      this
+    }
+
+    def withProperties(properties: Option[Properties]): this.type = {
+      import scala.collection.JavaConverters._
+      this.properties = properties.map(_.asScala.toMap)
+      this
+    }
+
+    def withScalaVersion(scalaVersion: String): this.type = {
+      this.scalaVersion = Option(scalaVersion)
+      this
+    }
+
+    def withScalaVersion(scalaVersion: Option[String]): this.type = {
+      this.scalaVersion = scalaVersion
+      this
+    }
+
+    def withSparkVersion(sparkVersion: String): this.type = {
+      this.sparkVersion = Option(sparkVersion)
+      this
+    }
+
+    def withSparkVersion(sparkVersion: Option[String]): this.type = {
+      this.sparkVersion = sparkVersion
+      this
+    }
+
+    def withTemplateFile(templateFile: File): this.type = {
+      this.templateFile = Option(templateFile)
+      this
+    }
+
+    def withTemplateFile(templateFile: Option[File]): this.type = {
+      this.templateFile = templateFile
+      this
+    }
+
+    def withTemplateFile(templateFile: String): this.type = {
+      this.templateFile = Option(templateFile).map(new File(_))
+      this
+    }
+
+  }
 
   /**
     * Map Extensions

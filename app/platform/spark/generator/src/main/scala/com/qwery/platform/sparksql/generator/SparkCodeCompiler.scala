@@ -286,7 +286,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Create(procedure: Procedure) => generate(procedure)
           case Create(tableOrView: TableLike) => sparkRead(tableOrView)
           case Create(udf: UserDefinedFunction) => generate(udf)
-          case FileSystem(path) => s"""SparkRuntimeHelper.getFiles("$path")"""
+          case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
           case i: Insert => i.compile
           case m: MainProgram => m.code.toCode

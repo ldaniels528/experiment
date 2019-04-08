@@ -13,7 +13,7 @@ class ApplicationSettingsTest extends FunSpec {
   describe(classOf[ApplicationSettings].getSimpleName) {
 
     it("should parse properly formatted arguments successfully") {
-      val settings = ApplicationSettings(Array(
+      val settings = ApplicationSettings.fromArgs(Array(
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "./src/main/scala/",
         "--class-name", "com.acme.spark.RoadRunnerDetector",
@@ -40,7 +40,7 @@ class ApplicationSettingsTest extends FunSpec {
 
     it("should failed to parse improperly formatted arguments") {
       assertThrows[IllegalArgumentException] {
-        ApplicationSettings(Array(
+        ApplicationSettings.fromArgs(Array(
           "--input-path", "./scripts/daily-report.sql",
           "--output-path", "./src/main/scala/",
           "--class-name", "com.acme.spark.RoadRunnerDetector",

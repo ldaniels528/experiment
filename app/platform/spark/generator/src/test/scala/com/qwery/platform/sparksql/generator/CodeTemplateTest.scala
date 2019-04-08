@@ -18,7 +18,7 @@ class CodeTemplateTest extends FunSpec {
            |END
            |""".stripMargin)
 
-      implicit val args: ApplicationSettings = ApplicationSettings(Array(
+      implicit val args: ApplicationSettings = ApplicationSettings.fromArgs(Array(
         "--app-name", "Coyote Trap",
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "./temp",

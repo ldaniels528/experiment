@@ -44,7 +44,9 @@ class CodeTemplate(templateCode: String) {
           case s if s equalsIgnoreCase "appName" => settings.appName
           case s if s equalsIgnoreCase "appVersion" => settings.appVersion
           case s if s equalsIgnoreCase "className" => settings.className
+          case s if s equalsIgnoreCase "extendsClass" => settings.extendsClass
           case s if s equalsIgnoreCase "flow" => invokable.toCode
+          case s if s equalsIgnoreCase "imports" => s"""${ctx.getImports.map(pkg => s"import $pkg").sortBy(s => s).mkString("\n")}"""
           case s if s equalsIgnoreCase "inputPath" => settings.inputPath.getCanonicalPath
           case s if s equalsIgnoreCase "outputPath" => settings.outputPath.getCanonicalPath
           case s if s equalsIgnoreCase "packageName" => settings.packageName

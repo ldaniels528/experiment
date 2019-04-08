@@ -12,7 +12,7 @@ class SparkJobGeneratorTest extends FunSpec {
   describe(classOf[SparkJobGenerator].getSimpleName) {
 
     it("should generate the OilGasSecurities Spark job main class-only") {
-      implicit val settings: ApplicationSettings = ApplicationSettings(Seq(
+      implicit val settings: ApplicationSettings = ApplicationSettings.fromArgs(Seq(
         "--app-name", "Securities Example",
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "./temp/projects/securities",
@@ -65,7 +65,7 @@ class SparkJobGeneratorTest extends FunSpec {
       )
       implicit val ctx: CompileContext = CompileContext(model)
       val generator = new SparkJobGenerator()
-      generator.createMainClass(model)
+      generator.generate(model)
     }
 
 

@@ -62,29 +62,27 @@ object QweryPlugin extends AutoPlugin {
   )
 
   private def generateTask = Def.task {
-    import scala.collection.JavaConverters._
-
     val log = sLog.value
 
     // extract the class name and package from the fully qualified class name (e.g. "com.acme.CoyoteCrush")
     val (myClassName, myPackageName) = getClassAndPackageNames(qweryClassName.value)
 
     // create the application settings
-    implicit val settings: ApplicationSettings = ApplicationSettings(
-      appName = qweryAppName.value,
-      appVersion = qweryAppVersion.value,
-      className = Option(myClassName),
-      isClassOnly = qweryClassOnly.value,
-      defaultDB = qweryDefaultDB.value,
-      extendsClass = qweryExtendsClass.value,
-      inputPath = Option(qweryInputFile.value),
-      outputPath = Option(qweryOutputDirectory.value),
-      packageName = Option(myPackageName),
-      properties = qweryProperties.value.map(_.asScala.toMap),
-      scalaVersion = qweryScalaVersion.value,
-      sparkVersion = qwerySparkVersion.value,
-      templateFile = qweryTemplateFile.value
-    )
+    implicit val settings: ApplicationSettings = new ApplicationSettings.Builder()
+      .withAppName(qweryAppName.value)
+      .withAppVersion(qweryAppVersion.value)
+      .withAppVersion(myClassName)
+      .withClassOnly(qweryClassOnly.value)
+      .withDefaultDB(qweryDefaultDB.value)
+      .withExtendsClass(qweryExtendsClass.value)
+      .withInputPath(qweryInputFile.value)
+      .withOutputPath(qweryOutputDirectory.value)
+      .withPackageName(myPackageName)
+      .withProperties(qweryProperties.value)
+      .withScalaVersion(qweryScalaVersion.value)
+      .withSparkVersion(qwerySparkVersion.value)
+      .withTemplateFile(qweryTemplateFile.value)
+      .build
 
     // generate the project or class
     log.info(s"Generating class '${settings.fullyQualifiedClassName}'...")

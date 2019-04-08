@@ -6,6 +6,7 @@ import scala.language.postfixOps
 val appVersion = "0.4.0"
 val pluginVersion = "1.0.0"
 val scalaJvmVersion = "2.12.8"
+//val scalaJvmVersion = "2.11.12"
 
 val scalaTestVersion = "3.0.1"
 val slf4jVersion = "1.7.25"
