@@ -299,7 +299,7 @@ trait SQLLanguageParser {
   protected def parseInsert(ts: TokenStream): Insert = {
     val params = SQLTemplateParams(ts, "INSERT %C(mode|INTO|OVERWRITE) %L:target ?( +?%F:fields +?) %V:source")
     val fields = params.fields.getOrElse("fields", Nil)
-    val isOverwrite = params.atoms.get("mode").contains("OVERWRITE")
+    val isOverwrite = params.atoms.get("mode").exists(_ equalsIgnoreCase "OVERWRITE")
     val location = params.locations("target")
     Insert(
       destination = if (isOverwrite) Insert.Overwrite(location) else Insert.Into(location),

@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
---      companylist
+--      Procedures Example
 ----------------------------------------------------------------
 begin
 
@@ -19,7 +19,7 @@ begin
     create procedure lookupIndustry(industry string) as
     begin
         -- here we perform our filtering/transformation
-        select Symbol, `Name`, LastSale, MarketCap, nullFix(IPOyear) as IPOyear, Sector, Industry
+        select Symbol, `Name`, LastSale, MarketCap, coalesce(nullFix(IPOyear), '') as IPOyear, Sector, Industry
         from Securities
         where Industry = '$industry'
     end;
@@ -35,6 +35,6 @@ begin
     values @dataSet;
 
     -- show the first 5 rows
-    show @dataSet limit 5;
+    show @dataSet limit 20;
 
 end;
