@@ -11,7 +11,9 @@ begin
     ----------------------------------------------------------------
     --      functions and procedures
     ----------------------------------------------------------------
-    --add jar '/home/taobao/oplog/hivescript/my_udf.jar';
+
+    --add jar './lib/my_udf.jar';
+
     create function nullFix as 'com.github.ldaniels528.qwery.NullFix';
 
     create procedure lookupIndustry(industry string) as
@@ -19,7 +21,7 @@ begin
         -- here we perform our filtering/transformation
         select Symbol, `Name`, LastSale, MarketCap, nullFix(IPOyear) as IPOyear, Sector, Industry
         from Securities
-        where Industry = $industry
+        where Industry = '$industry'
     end;
 
     ----------------------------------------------------------------
@@ -27,14 +29,12 @@ begin
     ----------------------------------------------------------------
 
     log 'Performing the transformation...';
-    call lookupIndustry('Oil/Gas Transmission');
+    set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
 
-    /*set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
-/*
     insert overwrite table OilGasSecurities (Symbol, `Name`, LastSale, MarketCap, IPOyear, Sector, Industry)
     values @dataSet;
 
     -- show the first 5 rows
     show @dataSet limit 5;
-    */
+
 end;

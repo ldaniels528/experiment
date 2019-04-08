@@ -96,7 +96,7 @@ trait SparkCodeCompiler {
     new StringBuilder()
       .append(s"""def $name(${params.map(_.toCode).mkString(",")}) = {""")
       .append(s"\n  ${code.toCode}")
-      .append("\n}")
+      .append("\n}\n")
       .toString()
   }
 
@@ -130,7 +130,7 @@ trait SparkCodeCompiler {
     * @return the Scala string
     */
   def generate(model: UserDefinedFunction): String =
-    s"""registerUDF(name = "${model.name}", `class` = "${model.`class`}")"""
+    s"""registerUDF(name = "${model.name}", `class` = "${model.`class`}")\n"""
 
   /**
     * Generates the SQL VALUES ( ... ) statement
@@ -138,10 +138,12 @@ trait SparkCodeCompiler {
     * @return the Scala string
     */
   def generate(model: Values): String = {
-    s"""Seq(${model.values.filterNot(_.isEmpty) map {
-      case list if list.size == 1 => list.head.asCode
-      case list => '(' + list.map(_.asCode).mkString(",") + ')'
-    } mkString ","})"""
+    s"""Seq(${
+      model.values.filterNot(_.isEmpty) map {
+        case list if list.size == 1 => list.head.asCode
+        case list => '(' + list.map(_.asCode).mkString(",") + ')'
+      } mkString ","
+    })"""
   }
 
   /**
@@ -182,6 +184,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case IsNull(c) => s"${c.toSQL} IS NULL"
         case LE(a, b) => s"${a.toSQL} <= ${b.toSQL}"
         case LIKE(a, b) => s"${a.toSQL} like ${b.asLit}"
+        case l: LocalVariableRef => s"""s'$$${l.name}'"""
         case LT(a, b) => s"${a.toSQL} < ${b.toSQL}"
         case NE(a, b) => s"${a.toSQL} <> ${b.toSQL}"
         case NOT(IsNull(c)) => s"${c.toSQL}.isNotNull"
@@ -193,7 +196,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     final implicit class ExpressionSQLCompiler(val expression: Expression) extends AnyVal {
-      def compile: String = expression match {
+      def toCode: String = expression match {
         case Literal(value) => value.asCode
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
       }
@@ -289,9 +292,13 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
           case i: Insert => i.compile
+          case l: LocalVariableRef => l.name
           case m: MainProgram => m.code.toCode
-          case ProcedureCall(name, args) => s"""$name(${args.map(_.compile).mkString(",")})"""
+          case ProcedureCall(name, args) => s"""$name(${args.map(_.toCode).mkString(",")})"""
           case s: Select => s.compile
+          case SetRowVariable(name, dataSet) => s"""val $name = ${dataSet.toCode}"""
+          case RowSetVariableRef(name) => name
+          case SetLocalVariable(name, expression) => s"""val $name = ${expression.toCode}"""
           case Show(rows, limit) => s"${rows.toCode}.show(${limit.getOrElse(20)})"
           case s: SQL => s.statements.map(_.toCode).mkString("\n")
           case t: TableRef => t.name
@@ -308,15 +315,13 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case InlineTable(name, columns, source) =>
             s"""|${source.toCode}
                 |   .${defineColumns(columns)}
-                |   .withGlobalTempView("$name")
-                |""".stripMargin
+                |   .withGlobalTempView("$name")""".stripMargin
           case table: Table =>
             table.inputFormat.map(_.toString.toLowerCase()) match {
               case Some(format) =>
                 s"""|spark.read.$format("${table.location}")
                     |   .${defineColumns(table.columns)}
-                    |   .withGlobalTempView("${table.name}")
-                    |""".stripMargin
+                    |   .withGlobalTempView("${table.name}")""".stripMargin
               case None => ""
             }
           case other => die(s"Table entity '${other.name}' could not be translated")
@@ -404,10 +409,14 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val quote = "\"\"\""
         val buf = ListBuffer[String]()
-        buf += s"$quote|"
-        buf ++= Source.fromString(select.toSQL).getLines().map(line => s"|$line")
-        buf += s"|$quote.stripMargin('|')"
-        s"spark.sql(\n${buf mkString "\n"})\n"
+        Source.fromString(select.toSQL).getLines().toList match {
+          case first :: remaining =>
+            buf += s"s$quote|$first"
+            buf ++= remaining.map(line => s"|$line")
+            buf += s"|$quote.stripMargin('|')"
+            s"spark.sql(\n${buf mkString "\n"})\n"
+          case _ => die(s"Corrupted SELECT statement [$select]")
+        }
       }
     }
 
