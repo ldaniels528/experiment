@@ -68,7 +68,7 @@ class SparkCodeCompilerTest extends FunSpec {
            |group by dfp.client_id, ab.client_id;
            |""".stripMargin
       )
-      val tables = SparkCodeCompiler.discoverTablesAndViews(model)
+      val tables = SparkCodeCompiler.findTablesAndViews(model)
       info(s"tables: $tables")
       assert(tables.map(_.name).toSet == Set("kbb_lkp_dfp_o1_advertiser", "kbb_ab_client"))
     }

@@ -24,14 +24,14 @@ lazy val testDependencies = Seq(
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, language, spark_generator, spark_tools).
-  dependsOn(core, language, spark_generator, spark_tools).
+  aggregate(core, util, language, spark_generator, spark_tools).
+  dependsOn(core, util, language, spark_generator, spark_tools).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "qwery",
+    name := "qwery-bundle",
     organization := "com.qwery",
-    description := "Qwery Application",
+    description := "Qwery Application Bundle",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -40,16 +40,33 @@ lazy val root = (project in file("./app")).
   )
 
 /////////////////////////////////////////////////////////////////////////////////
-//      Core Project
+//      Core Projects
 /////////////////////////////////////////////////////////////////////////////////
 
+lazy val util = (project in file("./app/util")).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+      name := "util",
+      organization := "com.qwery",
+      description := "Qwery Helpers and Utilities",
+      version := appVersion,
+      scalaVersion := scalaJvmVersion,
+      scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+      scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+      autoCompilerPlugins := true,
+      libraryDependencies ++= Seq(
+
+      ))
+
 lazy val core = (project in file("./app/core")).
+  dependsOn(util).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "core",
     organization := "com.qwery",
-    description := "A SQL-like query language for performing ETL",
+    description := "Qwery SQL Models",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -59,18 +76,14 @@ lazy val core = (project in file("./app/core")).
 
     ))
 
-/////////////////////////////////////////////////////////////////////////////////
-//      Language/Parsing Project
-/////////////////////////////////////////////////////////////////////////////////
-
 lazy val language = (project in file("./app/language")).
-  dependsOn(core).
+  dependsOn(core, util).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "language",
     organization := "com.qwery",
-    description := "A SQL-like query language for performing ETL",
+    description := "Qwery SQL Language Parsers",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -85,11 +98,11 @@ lazy val language = (project in file("./app/language")).
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val spark_generator = (project in file("./app/platform/spark/generator")).
-  dependsOn(core, language).
+  dependsOn(core, util, language).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-    name := "platform-spark-generator",
+    name := "spark-generator",
     organization := "com.qwery",
     description := "A SQL-like query language for generating Spark/Scala code",
     version := appVersion,
@@ -102,13 +115,13 @@ lazy val spark_generator = (project in file("./app/platform/spark/generator")).
     ))
 
 lazy val spark_tools = (project in file("./app/platform/spark/tools")).
-  dependsOn(core).
+  dependsOn(util).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
     name := "spark-tools",
     organization := "com.qwery",
-    description := "Qwery-Spark runtime tools",
+    description := "Qwery-Spark Runtime Tools",
     version := appVersion,
     scalaVersion := scalaJvmVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
@@ -120,23 +133,23 @@ lazy val spark_tools = (project in file("./app/platform/spark/tools")).
     ))
 
 lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).
-  aggregate(spark_generator).
-  dependsOn(spark_generator).
+  aggregate(core, util, language, spark_generator).
+  dependsOn(core, util, language, spark_generator).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
-      name := "sbt-qwery",
-      organization := "com.qwery",
-      description := "SBT plugin for generating Spark/Scala code from an SQL query",
-      version := pluginVersion,
-      scalaVersion := scalaJvmVersion,
-      scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-      scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-      sbtPlugin := true,
-      scriptedBufferLog := false,
-      libraryDependencies ++= Seq(
-          "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
-      ))
+    name := "sbt-qwery",
+    organization := "com.qwery",
+    description := "SBT plugin for generating Spark/Scala code from an SQL query",
+    version := pluginVersion,
+    scalaVersion := scalaJvmVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    sbtPlugin := true,
+    scriptedBufferLog := false,
+    libraryDependencies ++= Seq(
+      "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
+    ))
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Publishing

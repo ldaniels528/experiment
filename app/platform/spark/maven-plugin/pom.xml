@@ -31,6 +31,13 @@
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
+            <artifactId>util_${scala.binary.version}</artifactId>
+            <version>${qwery.version}</version>
+            <scope>system</scope>
+            <systemPath>${user.home}/.ivy2/local/com.qwery/core_${scala.binary.version}/${qwery.version}/jars/core_${scala.binary.version}.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.qwery</groupId>
             <artifactId>language_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
             <scope>system</scope>
@@ -38,11 +45,11 @@
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
-            <artifactId>platform-spark-generator_${scala.binary.version}</artifactId>
+            <artifactId>spark-generator_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
             <scope>system</scope>
             <systemPath>
-                ${user.home}/.ivy2/local/com.qwery/platform-spark-generator_${scala.binary.version}/${qwery.version}/jars/platform-spark-generator_${scala.binary.version}.jar
+                ${user.home}/.ivy2/local/com.qwery/spark-generator_${scala.binary.version}/${qwery.version}/jars/spark-generator_${scala.binary.version}.jar
             </systemPath>
         </dependency>
 

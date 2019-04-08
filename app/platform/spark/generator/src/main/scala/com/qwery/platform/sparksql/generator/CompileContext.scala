@@ -20,7 +20,7 @@ class CompileContext(tables: Seq[TableLike]) {
 object CompileContext {
 
   def apply(topLevelOp: Invokable): CompileContext = new CompileContext(
-    tables = SparkCodeCompiler.discoverTablesAndViews(topLevelOp)
+    tables = SparkCodeCompiler.findTablesAndViews(topLevelOp)
   )
 
 }

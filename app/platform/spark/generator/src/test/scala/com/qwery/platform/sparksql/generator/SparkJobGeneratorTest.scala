@@ -13,8 +13,9 @@ class SparkJobGeneratorTest extends FunSpec {
 
     it("should generate the OilGasSecurities Spark job main class-only") {
       implicit val settings: ApplicationSettings = ApplicationSettings(Seq(
+        "--app-name", "Securities Example",
         "--input-path", "./scripts/daily-report.sql",
-        "--output-path", "./temp/gen-src",
+        "--output-path", "./temp/projects/securities",
         "--class-name", "com.github.ldaniels528.securities.OilGasSecurities"
       ))
 

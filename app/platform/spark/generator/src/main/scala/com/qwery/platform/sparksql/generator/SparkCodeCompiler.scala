@@ -25,11 +25,34 @@ trait SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
+    * Generates a complete list of defined procedures
+    * @param root the top-level [[Invokable invokable]]
+    * @return a list of defined [[Procedure procedures]]
+    */
+  def findProcedures(root: Invokable): List[Procedure] = {
+
+    /**
+      * Recusively traverses the given object graph
+      * @param invokable the given [[Invokable object graph]]
+      * @return the distinct collection of [[TableLike tables and views]]
+      */
+    def recurse(invokable: Invokable): List[Procedure] = invokable match {
+      case Create(procedure: Procedure) => procedure :: Nil
+      case i: Include => recurse(incorporateSources(i.path))
+      case m: MainProgram => recurse(m.code)
+      case s: SQL => s.statements.flatMap(recurse)
+      case _ => Nil
+    }
+
+    recurse(root).distinct
+  }
+
+  /**
     * Generates a complete list of defined tables and views
-    * @param invokable the top-level [[Invokable invokable]]
+    * @param root the top-level [[Invokable invokable]]
     * @return a list of defined [[TableLike tables and views]]
     */
-  def discoverTablesAndViews(invokable: Invokable): List[TableLike] = {
+  def findTablesAndViews(root: Invokable): List[TableLike] = {
 
     /**
       * Recusively traverses the given object graph
@@ -45,7 +68,7 @@ trait SparkCodeCompiler {
       case _ => Nil
     }
 
-    recurse(invokable).distinct
+    recurse(root).distinct
   }
 
   /**
@@ -285,14 +308,14 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case InlineTable(name, columns, source) =>
             s"""|${source.toCode}
                 |   .${defineColumns(columns)}
-                |   .createOrReplaceQweryTempView("$name")
+                |   .withGlobalTempView("$name")
                 |""".stripMargin
           case table: Table =>
             table.inputFormat.map(_.toString.toLowerCase()) match {
               case Some(format) =>
                 s"""|spark.read.$format("${table.location}")
                     |   .${defineColumns(table.columns)}
-                    |   .createOrReplaceGlobalTempView("${table.name}")
+                    |   .withGlobalTempView("${table.name}")
                     |""".stripMargin
               case None => ""
             }

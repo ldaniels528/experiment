@@ -121,7 +121,7 @@ object SparkRuntimeHelper {
     * @param dataFrame the given [[DataFrame]]
     */
   final implicit class DataFrameEnriched(val dataFrame: DataFrame) extends AnyVal {
-    @inline def createOrReplaceQweryTempView(name: String): DataFrame = {
+    @inline def withGlobalTempView(name: String): DataFrame = {
       dataFrame.createOrReplaceGlobalTempView(name)
       dataFrame
     }
