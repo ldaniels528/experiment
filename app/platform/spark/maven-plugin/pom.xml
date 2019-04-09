@@ -5,7 +5,7 @@
     <name>QweryMavenPlugin</name>
     <groupId>com.qwery</groupId>
     <artifactId>qwery-maven-plugin</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <description>Maven plugin for generating Spark/Scala code from an SQL query</description>
     <packaging>maven-plugin</packaging>
 
@@ -13,7 +13,7 @@
         <java.version>1.8</java.version>
         <qwery.version>0.4.0</qwery.version>
         <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.11</scala.version>
+        <scala.version>2.11.12</scala.version>
 
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -26,31 +26,21 @@
             <groupId>com.qwery</groupId>
             <artifactId>core_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
-            <scope>system</scope>
-            <systemPath>${user.home}/.ivy2/local/com.qwery/core_${scala.binary.version}/${qwery.version}/jars/core_${scala.binary.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
             <artifactId>util_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
-            <scope>system</scope>
-            <systemPath>${user.home}/.ivy2/local/com.qwery/core_${scala.binary.version}/${qwery.version}/jars/core_${scala.binary.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
             <artifactId>language_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
-            <scope>system</scope>
-            <systemPath>${user.home}/.ivy2/local/com.qwery/language_${scala.binary.version}/${qwery.version}/jars/language_${scala.binary.version}.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.qwery</groupId>
             <artifactId>spark-generator_${scala.binary.version}</artifactId>
             <version>${qwery.version}</version>
-            <scope>system</scope>
-            <systemPath>
-                ${user.home}/.ivy2/local/com.qwery/spark-generator_${scala.binary.version}/${qwery.version}/jars/spark-generator_${scala.binary.version}.jar
-            </systemPath>
         </dependency>
 
         <!-- Scala dependencies -->
