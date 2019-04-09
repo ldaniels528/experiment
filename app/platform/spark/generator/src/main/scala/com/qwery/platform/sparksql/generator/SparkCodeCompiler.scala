@@ -105,7 +105,7 @@ trait SparkCodeCompiler {
     * @param model the given [[Select model]]
     * @return the SQL string
     */
-  def generate(model: Select)(implicit settings: ApplicationSettings): String = {
+  def generate(model: Select)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     val sb = new StringBuilder()
     sb.append("SELECT\n")
     sb.append(model.fields.map(_.toSQL).mkString(",\n"))
@@ -146,10 +146,36 @@ trait SparkCodeCompiler {
     })"""
   }
 
-  def generate(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+  def generateCode(insert: Insert)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    ctx.lookupTableOrView(insert.destination.target.toCode) match {
+      case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
+      case table: Table =>
+        // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
+        val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
+
+        // build the expression
+        val buf = ListBuffer[String]()
+        buf += s"${insert.source.toCode}${generateOptions(table)}"
+        buf += ".write"
+        buf ++= (table.properties ++ table.serdeProperties).map { case (key, value) => s""".option("$key", "$value")""" }
+        buf += s""".mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})"""
+        buf += s""".$writer("${table.location}")\n"""
+        buf.mkString("\n")
+      case view: View => die(s"View '${view.name}' is read-only")
+    }
+  }
+
+  def generateCode(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     s"""|while(${model.condition.toCode}) {
         |  ${model.invokable.toCode}
         |}""".stripMargin
+  }
+
+  def generateSQL(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    s"""|WHILE ${model.condition.toSQL}
+        |BEGIN
+        |  ${model.invokable.toSQL}
+        |END""".stripMargin
   }
 
   def generateOptions(table: Table): String = {
@@ -258,7 +284,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * Expression Compiler Extensions
       * @param expression the given [[Expression expression]]
       */
-    final implicit class ExpressionSQLCompiler(val expression: Expression) extends AnyVal {
+    final implicit class ExpressionCompiler(val expression: Expression) extends AnyVal {
 
       def toCode: String = expression match {
         case Literal(value) => value.asCode
@@ -342,24 +368,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param insert the given [[Insert]]
       */
     final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-      @inline def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
-        ctx.lookupTableOrView(insert.destination.target.toCode) match {
-          case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
-          case table: Table =>
-            // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
-            val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
-
-            // build the expression
-            val buf = ListBuffer[String]()
-            buf += s"${insert.source.toCode}${generateOptions(table)}"
-            buf += ".write"
-            buf ++= (table.properties ++ table.serdeProperties).map { case (key, value) => s""".option("$key", "$value")""" }
-            buf += s""".mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})"""
-            buf += s""".$writer("${table.location}")\n"""
-            buf.mkString("\n")
-          case view: View => die(s"View '${view.name}' is read-only")
-        }
-      }
+      @inline def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = generateCode(insert)
     }
 
     /**
@@ -392,13 +401,13 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case s: SQL => s.statements.map(_.toCode).mkString("\n")
           case t: TableRef => t.name
           case v: Values => generate(v)
-          case w: While => generate(w)
+          case w: While => generateCode(w)
           case x => throw new IllegalStateException(s"Unsupported operation $x")
         }
         result
       }
 
-      def toSQL(implicit settings: ApplicationSettings): String = {
+      def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case s: Select => generate(s)
           case s: SQL => s.statements.map(_.toSQL).mkString("\n")
@@ -406,6 +415,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
             val tableName = s"${settings.defaultDB}.${t.name}"
             t.alias.map(alias => s"$tableName AS $alias") getOrElse tableName
           case u: Union => s"${u.query0.toSQL} UNION ${if (u.isDistinct) "DISTINCT" else ""} ${u.query1.toSQL}"
+          case w: While => generateSQL(w)
           case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
         }
         result //.withAlias(invokable)
@@ -417,7 +427,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param join the given [[Join model]]
       */
     final implicit class JoinCompilerExtension(val join: Join) extends AnyVal {
-      @inline def toSQL(implicit settings: ApplicationSettings): String = {
+      @inline def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         s"${join.`type`.toString.replaceAllLiterally("_", " ")} JOIN ${
           val result = join.source match {
             case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
