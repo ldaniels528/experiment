@@ -25,25 +25,24 @@ trait SparkCodeCompiler {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
+    * Recusively traverses the given object graph
+    * @param invokable the given [[Invokable object graph]]
+    * @return the distinct collection of [[TableLike tables and views]]
+    */
+  def find[T](invokable: Invokable)(f: Invokable => List[T]): List[T] = invokable match {
+    case i: Include => find(incorporateSources(i.path))(f)
+    case s: SQL => s.statements.flatMap(find(_)(f))
+    case i => f(i)
+  }
+
+  /**
     * Generates a complete list of defined procedures
     * @param root the top-level [[Invokable invokable]]
     * @return a list of defined [[Procedure procedures]]
     */
-  def findProcedures(root: Invokable): List[Procedure] = {
-
-    /**
-      * Recusively traverses the given object graph
-      * @param invokable the given [[Invokable object graph]]
-      * @return the distinct collection of [[TableLike tables and views]]
-      */
-    def recurse(invokable: Invokable): List[Procedure] = invokable match {
-      case Create(procedure: Procedure) => procedure :: Nil
-      case i: Include => recurse(incorporateSources(i.path))
-      case s: SQL => s.statements.flatMap(recurse)
-      case _ => Nil
-    }
-
-    recurse(root).distinct
+  def findProcedures(root: Invokable): List[Procedure] = find[Procedure](root) {
+    case Create(procedure: Procedure) => procedure :: Nil
+    case _ => Nil
   }
 
   /**
@@ -51,22 +50,9 @@ trait SparkCodeCompiler {
     * @param root the top-level [[Invokable invokable]]
     * @return a list of defined [[TableLike tables and views]]
     */
-  def findTablesAndViews(root: Invokable): List[TableLike] = {
-
-    /**
-      * Recusively traverses the given object graph
-      * @param invokable the given [[Invokable object graph]]
-      * @return the distinct collection of [[TableLike tables and views]]
-      */
-    def recurse(invokable: Invokable): List[TableLike] = invokable match {
-      case Create(table: Table) => table :: Nil
-      case Create(view: View) => view :: Nil
-      case i: Include => recurse(incorporateSources(i.path))
-      case s: SQL => s.statements.flatMap(recurse)
-      case _ => Nil
-    }
-
-    recurse(root).distinct
+  def findTablesAndViews(root: Invokable): List[TableLike] = find[TableLike](root) {
+    case Create(table: Table) => table :: Nil
+    case _ => Nil
   }
 
   /**
@@ -376,6 +362,10 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
+
+      @inline def procedures: Seq[Procedure] = findProcedures(invokable)
+
+      @inline def tablesAndViews: Seq[TableLike] = findTablesAndViews(invokable)
 
       def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
