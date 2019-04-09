@@ -39,7 +39,6 @@ trait SparkCodeCompiler {
     def recurse(invokable: Invokable): List[Procedure] = invokable match {
       case Create(procedure: Procedure) => procedure :: Nil
       case i: Include => recurse(incorporateSources(i.path))
-      case m: MainProgram => recurse(m.code)
       case s: SQL => s.statements.flatMap(recurse)
       case _ => Nil
     }
@@ -63,7 +62,6 @@ trait SparkCodeCompiler {
       case Create(table: Table) => table :: Nil
       case Create(view: View) => view :: Nil
       case i: Include => recurse(incorporateSources(i.path))
-      case m: MainProgram => recurse(m.code)
       case s: SQL => s.statements.flatMap(recurse)
       case _ => Nil
     }
@@ -85,6 +83,8 @@ trait SparkCodeCompiler {
     sb.append(" END")
     sb.toString()
   }
+
+  def generate(columns: List[Column]): String = s"toDF(${columns.map(_.name.codify).mkString(",")})"
 
   /**
     * Generates the SQL Procedure statement
@@ -146,6 +146,39 @@ trait SparkCodeCompiler {
     })"""
   }
 
+  def generate(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    s"""|while(${model.condition.toCode}) {
+        |  ${model.invokable.toCode}
+        |}""".stripMargin
+  }
+
+  def generateOptions(table: Table): String = {
+    new StringBuilder()
+      .append(table.fieldDelimiter.map(delimiter => s"""\n  .option("delimiter", "$delimiter")""").getOrElse(""))
+      .append(table.headersIncluded.map(enabled => s"""\n   .option("header", "$enabled")""").getOrElse(""))
+      .append(table.nullValue.map(value => s"""\n   .option("nullValue", "$value")""").getOrElse(""))
+      .toString()
+  }
+
+  def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    tableLike match {
+      case InlineTable(name, columns, source) =>
+        s"""|${source.toCode}
+            |   .${generate(columns)}
+            |   .withGlobalTempView("$name")""".stripMargin
+      case table: Table =>
+        table.inputFormat.map(_.toString.toLowerCase()) match {
+          case Some(format) =>
+            s"""|spark.read${generateOptions(table)}
+                |   .$format("${table.location}")
+                |   .${generate(table.columns)}
+                |   .withGlobalTempView("${table.name}")""".stripMargin
+          case None => ""
+        }
+      case other => die(s"Table entity '${other.name}' could not be translated")
+    }
+  }
+
   /**
     * Incorporates the source code of the given path
     * @param path the given .sql source file
@@ -170,11 +203,37 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     */
   object Implicits {
 
+    /**
+      * Column Compiler Extensions
+      * @param column the given [[Column column]]
+      */
     final implicit class ColumnEnrichment(val column: Column) extends AnyVal {
       def toCode: String = s"${column.name}:${column.`type`.toCode}"
     }
 
-    final implicit class ConditionSQLCompiler(val condition: Condition) extends AnyVal {
+    /**
+      * Condition Compiler Extensions
+      * @param condition the given [[Condition condition]]
+      */
+    final implicit class ConditionCompiler(val condition: Condition) extends AnyVal {
+
+      def toCode: String = condition match {
+        case AND(a, b) => s"${a.toCode} && ${b.toCode}"
+        case EQ(a, b) => s"${a.toCode} == ${b.toCode}"
+        case GE(a, b) => s"${a.toCode} >= ${b.toCode}"
+        case GT(a, b) => s"${a.toCode} > ${b.toCode}"
+        case IsNotNull(c) => s"${c.toCode} != null"
+        case IsNull(c) => s"${c.toCode} == null"
+        case LE(a, b) => s"${a.toCode} <= ${b.toCode}"
+        case l: LocalVariableRef => l.name
+        case LT(a, b) => s"${a.toCode} < ${b.toCode}"
+        case NE(a, b) => s"${a.toCode} <> ${b.toCode}"
+        case NOT(IsNull(c)) => s"${c.toCode} != null"
+        case NOT(c) => s"!${c.toCode}"
+        case OR(a, b) => s"${a.toCode} || ${b.toCode}"
+        case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into Scala")
+      }
+
       def toSQL: String = condition match {
         case AND(a, b) => s"${a.toSQL} AND ${b.toSQL}"
         case EQ(a, b) => s"${a.toSQL} = ${b.toSQL}"
@@ -195,7 +254,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       }
     }
 
+    /**
+      * Expression Compiler Extensions
+      * @param expression the given [[Expression expression]]
+      */
     final implicit class ExpressionSQLCompiler(val expression: Expression) extends AnyVal {
+
       def toCode: String = expression match {
         case Literal(value) => value.asCode
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
@@ -274,10 +338,36 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     /**
+      * Insert Compiler Extensions
+      * @param insert the given [[Insert]]
+      */
+    final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
+      @inline def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+        ctx.lookupTableOrView(insert.destination.target.toCode) match {
+          case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
+          case table: Table =>
+            // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
+            val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
+
+            // build the expression
+            val buf = ListBuffer[String]()
+            buf += s"${insert.source.toCode}${generateOptions(table)}"
+            buf += ".write"
+            buf ++= (table.properties ++ table.serdeProperties).map { case (key, value) => s""".option("$key", "$value")""" }
+            buf += s""".mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})"""
+            buf += s""".$writer("${table.location}")\n"""
+            buf.mkString("\n")
+          case view: View => die(s"View '${view.name}' is read-only")
+        }
+      }
+    }
+
+    /**
       * Invokable Compiler Extensions
       * @param invokable the given [[Invokable]]
       */
     final implicit class InvokableCompilerExtensions(val invokable: Invokable) extends AnyVal {
+
       def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case Console.Debug(text) => s"""logger.debug("$text")"""
@@ -287,15 +377,14 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Console.Print(text) => s"""println("$text")"""
           case Console.Warn(text) => s"""logger.warn("$text")"""
           case Create(procedure: Procedure) => generate(procedure)
-          case Create(tableOrView: TableLike) => sparkRead(tableOrView)
+          case Create(tableOrView: TableLike) => generateReader(tableOrView)
           case Create(udf: UserDefinedFunction) => generate(udf)
           case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
-          case i: Insert => i.compile
+          case i: Insert => i.toCode
           case l: LocalVariableRef => l.name
-          case m: MainProgram => m.code.toCode
           case ProcedureCall(name, args) => s"""$name(${args.map(_.toCode).mkString(",")})"""
-          case s: Select => s.compile
+          case s: Select => s.toCode
           case SetRowVariable(name, dataSet) => s"""val $name = ${dataSet.toCode}"""
           case RowSetVariableRef(name) => name
           case SetLocalVariable(name, expression) => s"""val $name = ${expression.toCode}"""
@@ -303,34 +392,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case s: SQL => s.statements.map(_.toCode).mkString("\n")
           case t: TableRef => t.name
           case v: Values => generate(v)
+          case w: While => generate(w)
           case x => throw new IllegalStateException(s"Unsupported operation $x")
         }
         result
       }
 
-      private def defineColumns(columns: List[Column]): String = s"toDF(${columns.map(_.name.codify).mkString(",")})"
-
-      private def sparkRead(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
-        tableLike match {
-          case InlineTable(name, columns, source) =>
-            s"""|${source.toCode}
-                |   .${defineColumns(columns)}
-                |   .withGlobalTempView("$name")""".stripMargin
-          case table: Table =>
-            table.inputFormat.map(_.toString.toLowerCase()) match {
-              case Some(format) =>
-                s"""|spark.read.$format("${table.location}")
-                    |   .${defineColumns(table.columns)}
-                    |   .withGlobalTempView("${table.name}")""".stripMargin
-              case None => ""
-            }
-          case other => die(s"Table entity '${other.name}' could not be translated")
-        }
-      }
-
-    }
-
-    final implicit class InvokableSQLCompiler(val invokable: Invokable) extends AnyVal {
       def toSQL(implicit settings: ApplicationSettings): String = {
         val result = invokable match {
           case s: Select => generate(s)
@@ -345,8 +412,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       }
     }
 
-    final implicit class JoinSQLCompiler(val join: Join) extends AnyVal {
-      def toSQL(implicit settings: ApplicationSettings): String = {
+    /**
+      * Join Compiler Extension
+      * @param join the given [[Join model]]
+      */
+    final implicit class JoinCompilerExtension(val join: Join) extends AnyVal {
+      @inline def toSQL(implicit settings: ApplicationSettings): String = {
         s"${join.`type`.toString.replaceAllLiterally("_", " ")} JOIN ${
           val result = join.source match {
             case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
@@ -357,47 +428,14 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       }
     }
 
-    final implicit class OrderColumnSQLCompiler(val orderColumn: OrderColumn) extends AnyVal {
+    /**
+      * Order Column Compiler Extension
+      * @param orderColumn the given [[OrderColumn model]]
+      */
+    final implicit class OrderColumnCompiler(val orderColumn: OrderColumn) extends AnyVal {
       def toSQL: String = orderColumn match {
         case o: OrderColumn => s"${o.name} ${if (o.isAscending) "ASC" else "DESC"}"
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
-      }
-    }
-
-    /**
-      * Table Column Type Compiler Extensions
-      * @param columnType the given [[ColumnType]]
-      */
-    final implicit class TableColumnTypeExtensions(val columnType: ColumnType) extends AnyVal {
-      @inline def toCode: String = columnType.toString.replaceAllLiterally("_", "").toLowerCase.capitalize
-
-      @inline def toSQL: String = toCode
-    }
-
-    /**
-      * Insert Compiler Extensions
-      * @param insert the given [[Insert]]
-      */
-    final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-      @inline def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
-        ctx.lookupTableOrView(insert.destination.target.toCode) match {
-          case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
-          case table: Table =>
-            // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
-            val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
-
-            // build the expression
-            val buf = ListBuffer[String]()
-            buf += s"${insert.source.toCode}.write"
-            buf ++= table.fieldDelimiter.map(delimiter => s""".option("delimiter", "$delimiter")""").toList
-            buf ++= table.headersIncluded.map(enabled => s""".option("header", "$enabled")""").toList
-            buf ++= table.nullValue.map(value => s""".option("nullValue", "$value")""").toList
-            buf ++= (table.properties ++ table.serdeProperties).map { case (key, value) => s""".option("$key", "$value")""" }
-            buf += s""".mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})"""
-            buf += s""".$writer("${table.location}")\n"""
-            buf.mkString("\n")
-          case view: View => die(s"View '${view.name}' is read-only")
-        }
       }
     }
 
@@ -406,7 +444,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param select the given [[Select]]
       */
     final implicit class SelectCompilerExtensions(val select: Select) extends AnyVal {
-      def compile(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+      def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val quote = "\"\"\""
         val buf = ListBuffer[String]()
         Source.fromString(select.toSQL).getLines().toList match {
@@ -441,7 +479,17 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param values the given [[String value]]
       */
     final implicit class StringSeqCompilerExtensions(val values: Seq[String]) extends AnyVal {
-      @inline def compile: String = values.map(s => '"' + s + '"').mkString(",")
+      @inline def toCode: String = values.map(s => '"' + s + '"').mkString(",")
+    }
+
+    /**
+      * Table Column Type Compiler Extensions
+      * @param columnType the given [[ColumnType]]
+      */
+    final implicit class TableColumnTypeExtensions(val columnType: ColumnType) extends AnyVal {
+      @inline def toCode: String = columnType.toString.replaceAllLiterally("_", "").toLowerCase.capitalize
+
+      @inline def toSQL: String = toCode
     }
 
     /**

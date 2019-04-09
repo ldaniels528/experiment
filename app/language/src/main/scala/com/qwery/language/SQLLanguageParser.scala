@@ -50,7 +50,6 @@ trait SQLLanguageParser {
     "INFO" -> parseConsoleInfo,
     "INSERT" -> parseInsert,
     "LOG" -> parseConsoleLog,
-    "MAIN" -> parseMainProgram,
     "PRINT" -> parseConsolePrint,
     "RETURN" -> parseReturn,
     "SELECT" -> parseSelect,
@@ -308,38 +307,6 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parse a MAIN PROGRAM clause - serves as the application entry-point
-    * @example
-    * {{{
-    * MAIN PROGRAM 'StockIngest'
-    *   WITH ARGUMENTS AS @args
-    *   WITH ENVIRONMENT AS @env
-    *   WITH BATCH PROCESSING
-    *   WITH STREAM PROCESSING
-    *   WITH HIVE SUPPORT
-    * AS
-    * BEGIN
-    *   INSERT OVERWRITE LOCATION service_companies (Symbol, Name, Sector, Industry, LastSale, MarketCap)
-    *   SELECT Symbol, Name, Sector, Industry, LastSale, MarketCap
-    *   FROM Companies WHERE Industry = 'EDP Services'
-    * END
-    * }}}
-    * @param ts the [[TokenStream token stream]]
-    * @return the [[MainProgram]]
-    */
-  protected def parseMainProgram(ts: TokenStream): MainProgram = {
-    val params = SQLTemplateParams(ts, "MAIN PROGRAM %a:name %W:props ?AS %N:code")
-    MainProgram(
-      name = params.atoms("name"),
-      code = params.sources("code"),
-      arguments = params.variables.get("props.arguments"),
-      environment = params.variables.get("props.environment"),
-      hiveSupport = params.atoms.get("props.hiveSupport").nonEmpty,
-      streaming = params.atoms.get("props.processing").exists(_ equalsIgnoreCase "STREAM")
-    )
-  }
-
-  /**
     * Optionally parses an alias (e.g. "( ... ) AS O")
     * @param entity the given [[Invokable]]
     * @param ts     the given [[TokenStream]]
@@ -417,9 +384,11 @@ trait SQLLanguageParser {
   protected def parseSelect(ts: TokenStream): Invokable = {
     val params = SQLTemplateParams(ts,
       """|SELECT ?TOP +?%n:top %E:fields
+         |?%C(mode|INTO|OVERWRITE) +?%L:target
          |?FROM +?%q:source %J:joins
          |?WHERE +?%c:condition
          |?GROUP +?BY +?%F:groupBy
+         |?HAVING +?%c:havingCondition
          |?ORDER +?BY +?%o:orderBy
          |?LIMIT +?%n:limit
          |""".stripMargin)
@@ -431,6 +400,7 @@ trait SQLLanguageParser {
       joins = params.joins.getOrElse("joins", Nil),
       where = params.conditions.get("condition"),
       groupBy = params.fields.getOrElse("groupBy", Nil),
+      having = params.conditions.get("havingCondition"),
       orderBy = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
@@ -442,7 +412,22 @@ trait SQLLanguageParser {
         query1 = params.sources("union"),
         isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
     }
-    select
+
+    // select INTO or OVERWRITE?
+    params.locations.get("target") match {
+      case Some(target) =>
+        val isOverwrite = params.atoms.get("mode").exists(_ equalsIgnoreCase "OVERWRITE")
+        Insert(
+          source = select,
+          destination = if (isOverwrite) Insert.Overwrite(target) else Insert.Into(target),
+          fields = params.expressions("fields") map {
+            case field: Field => field
+            case expr: NamedExpression => BasicField(expr.name)
+            case expr => ts.die(s"Invalid field definition $expr")
+          }
+        )
+      case None => select
+    }
   }
 
   /**

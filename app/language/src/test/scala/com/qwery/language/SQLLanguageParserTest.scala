@@ -367,20 +367,21 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
-    it("should support MAIN PROGRAM statements") {
+    it("should support SELECT ... INTO statements") {
       val results = SQLLanguageParser.parse(
-        """|MAIN PROGRAM 'Oil_Companies'
-           |  WITH ARGUMENTS AS @args
-           |  WITH ENVIRONMENT AS @env
-           |  WITH HIVE SUPPORT
-           |  WITH STREAM PROCESSING
-           |AS
-           |BEGIN
-           |  /* does nothing */
-           |END
+        """|SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
+           |INTO TABLE OilGasSecurities
+           |FROM Securities
+           |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == MainProgram(name = "Oil_Companies", code = SQL(),
-        arguments = @@("args"), environment = @@("env"), hiveSupport = true, streaming = true))
+      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
+      assert(results == Insert(Into(Table("OilGasSecurities")),
+        Select(
+          fields = fields,
+          from = Table("Securities"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
+        fields = fields
+      ))
     }
 
     it("should support SELECT ... FILESYSTEM(...) statements") {

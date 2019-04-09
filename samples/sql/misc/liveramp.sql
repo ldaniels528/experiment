@@ -53,8 +53,8 @@ begin
     -- transform the data
     ----------------------------------------------------------------
     info 'Transforming the input data...';
-    insert overwrite table LiveRampCSV (profile_id, visitor_id, identity_type, liveramp_ingestion_date)
     select profile_id, visitor_id, identity_type, liveramp_ingestion_date
+    overwrite table LiveRampCSV
     from LiveRamp;
 
     show (
