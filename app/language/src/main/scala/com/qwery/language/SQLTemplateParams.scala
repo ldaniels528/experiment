@@ -4,8 +4,6 @@ import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 
-import scala.language.postfixOps
-
 /**
   * Represents the extracted SQL template properties
   * @param atoms         the named collection of identifiers (e.g. "FROM './customers.csv')
