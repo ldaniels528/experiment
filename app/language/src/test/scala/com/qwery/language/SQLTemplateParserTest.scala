@@ -154,19 +154,6 @@ class SQLTemplateParserTest extends FunSpec {
       )))
     }
 
-    it("should parse WITH tags (%W)") {
-      verify(text =
-        """|with arguments as @app_args
-           |with environment as @os_env
-           |with batch processing
-           |""".stripMargin, template = "%W:settings")(SQLTemplateParams(
-        atoms = Map("settings.processing" -> "batch"),
-        variables = Map(
-          "settings.arguments" -> @@("app_args"),
-          "settings.environment" -> @@("os_env")
-        )))
-    }
-
     it("should parse optionally required tags (?, +?)") {
       verify(text = "LIMIT 100", template = "?LIMIT +?%n:limit")(SQLTemplateParams(numerics = Map("limit" -> 100d)))
       verifyNot(text = "LIMIT AAA", template = "?LIMIT +?%n:limit")(failure = "'limit' expected")

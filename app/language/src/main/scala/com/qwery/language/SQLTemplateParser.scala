@@ -6,7 +6,6 @@ import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
-import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
 
@@ -132,9 +131,6 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
 
     // insert values (queries, VALUES and variables)? (e.g. "%V:data" => "(SELECT ...)" | "VALUES (...)" | "@numbers")
     case tag if tag.startsWith("%V:") => extractInsertSource(tag drop 3)
-
-    // MAIN PROGRAM ... WITH clause
-    case tag if tag.startsWith("%W:") => extractWithForMainClause(tag drop 3)
 
     // TABLE ... WITH clause
     case tag if tag.startsWith("%w:") => extractWithForTableClause(tag drop 3)
@@ -597,25 +593,6 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       case ts => ts.die("Variable expected")
     }
     SQLTemplateParams(variables = Map(name -> reference))
-  }
-
-  /**
-    * Parses a [MAIN PROGRAM ...] WITH clauses (e.g. "WITH ARGUMENTS AS @args")
-    * @param name the named identifier
-    * @return the [[SQLTemplateParams SQL template parameters]]
-    */
-  private def extractWithForMainClause(name: String) = Try {
-    var template = SQLTemplateParams()
-    while (stream nextIf "WITH") {
-      stream match {
-        case ts if ts nextIf "ARGUMENTS" => template += SQLTemplateParams(ts, s"AS %v:$name.arguments")
-        case ts if ts nextIf "ENVIRONMENT" => template += SQLTemplateParams(ts, s"AS %v:$name.environment")
-        case ts if ts nextIf "HIVE SUPPORT" => template += SQLTemplateParams(atoms = Map(s"$name.hiveSupport" -> "true"))
-        case ts if ts(1).exists(_ is "PROCESSING") => template += SQLTemplateParams(ts, s"%C($name.processing|BATCH|STREAM) PROCESSING")
-        case ts => ts.die("Invalid WITH expression")
-      }
-    }
-    template
   }
 
   /**
