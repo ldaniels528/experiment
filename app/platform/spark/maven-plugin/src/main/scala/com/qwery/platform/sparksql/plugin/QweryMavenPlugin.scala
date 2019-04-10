@@ -11,6 +11,30 @@ import scala.collection.JavaConverters._
 
 /**
   * Qwery Maven Plugin
+  * @example
+  * {{{
+  * <application>
+  *     <appName>AdBook Package</appName>
+  *         <appVersion>1.0</appVersion>
+  *         <className>com.coxautoinc.maid.dataingest.dfpapi.AdBookPackageSparkJob</className>
+  *         <inputPath>./apps/kbb_dfp_api/sql/adbook-package.sql</inputPath>
+  *         <outputPath>./apps/kbb_dfp_api/src/main/scala</outputPath>
+  *         <classOnly>true</classOnly>
+  *         <defaultDB>global_temp</defaultDB>
+  *         <templateFile>./apps/spark_poc/src/main/resources/WtmSparkJobTemplate.txt</templateFile>
+  *         <properties>
+  *             <property>
+  *                 <name>spark.debug.maxToStringFields</name>
+  *                 <value>2048</value>
+  *             </property>
+  *             <property>
+  *                 <name>spark.executor.memory</name>
+  *                 <value>10g</value>
+  *             </property>
+  *         </properties>
+  *     </application>
+  * </applications>
+  * }}}
   * @author lawrence.daniels@gmail.com
   */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.COMPILE)

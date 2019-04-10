@@ -25,6 +25,7 @@ import sbt._
   *     qweryTemplateFile := Some(baseDirectory.value / "src" / "main" / "resources" / "WtmSparkJobTemplate.txt"),
   *   )
   * }}}
+  * @author lawrence.daniels@gmail.com
   */
 object QweryPlugin extends AutoPlugin {
   override val trigger: PluginTrigger = PluginTrigger.NoTrigger
@@ -71,7 +72,7 @@ object QweryPlugin extends AutoPlugin {
     implicit val settings: ApplicationSettings = new ApplicationSettings.Builder()
       .withAppName(qweryAppName.value)
       .withAppVersion(qweryAppVersion.value)
-      .withAppVersion(myClassName)
+      .withClassName(myClassName)
       .withClassOnly(qweryClassOnly.value)
       .withDefaultDB(qweryDefaultDB.value)
       .withExtendsClass(qweryExtendsClass.value)
