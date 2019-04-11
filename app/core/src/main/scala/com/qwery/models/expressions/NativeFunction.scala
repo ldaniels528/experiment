@@ -133,17 +133,15 @@ object NativeFunction {
     two(name = "array_intersect",
       description = "Returns an array of the elements in the intersection of array1 and array2, without duplicates",
       usage = "array_intersect(array1, array2)"),
-    many(name = "array_join", usage = "array_join(array, delimiter[, nullReplacement])",
-      description =
-        """|Concatenates the elements of the given array using the delimiter and an optional string to
-           |replace nulls. If no value is set for nullReplacement, any null value is filtered""".stripMargin),
+    many(name = "array_join", usage = "array_join(array, delimiter[, nullReplacement])", description =
+      """|Concatenates the elements of the given array using the delimiter and an optional string to
+         |replace nulls. If no value is set for nullReplacement, any null value is filtered""".stripMargin),
     one(name = "array_max", usage = "array_max(array)", description = "Returns the maximum value in the array. NULL elements are skipped"),
     one(name = "array_min", usage = "array_min(array)", description = "Returns the minimum value in the array. NULL elements are skipped"),
-    two(name = "array_overlap", usage = "arrays_overlap(array1, array2)",
-      description =
-        """|Returns true if a1 contains at least a non-null element present also in a2. If the arrays have no
-           |common element and they are both non-empty and either of them contains a null element null is returned,
-           |false otherwise""".stripMargin),
+    two(name = "array_overlap", usage = "arrays_overlap(array1, array2)", description =
+      """|Returns true if a1 contains at least a non-null element present also in a2. If the arrays have no
+         |common element and they are both non-empty and either of them contains a null element null is returned,
+         |false otherwise""".stripMargin),
     two(name = "array_position", usage = "array_position(array, element)",
       description = "Returns the (1-based) index of the first element of the array as long"),
     two(name = "array_remove", usage = "array_remove(array, element)",
@@ -194,8 +192,7 @@ object NativeFunction {
     many(name = "coalesce", description = "Returns the first non-null argument if exists. Otherwise, null"),
     one(name = "collect_list", description = "Collects and returns a list of non-unique elements"),
     one(name = "collect_set", description = "Collects and returns a set of unique elements"),
-    many(name = "concat", usage = "concat(col1, col2, ..., colN)",
-      description = "Returns the concatenation of col1, col2, ..., colN"),
+    many(name = "concat", usage = "concat(col1, col2, ..., colN)", description = "Returns the concatenation of col1, col2, ..., colN"),
     many(name = "concat_ws", minArgs = 2, usage = "concat_ws(sep, [str | array(str)]+)",
       description = "Returns the concatenation of the strings separated by sep"),
     many(name = "conv", usage = "conv(num, from_base, to_base)",
@@ -210,11 +207,10 @@ object NativeFunction {
       description = "Returns the cotangent of expr, as if computed by [[java.lang.Math#cot]]"),
     many(name = "count",
       description = "Returns the total number of retrieved rows, including rows containing null"),
-    many(name = "count_min_sketch", usage = "count_min_sketch(col, eps, confidence, seed)",
-      description =
-        """|Returns a count-min sketch of a column with the given esp, confidence and seed.
-           |The result is an array of bytes, which can be deserialized to a CountMinSketch before usage.
-           |Count-min sketch is a probabilistic data structure used for cardinality estimation using sub-linear space""".stripMargin),
+    many(name = "count_min_sketch", usage = "count_min_sketch(col, eps, confidence, seed)", description =
+      """|Returns a count-min sketch of a column with the given esp, confidence and seed.
+         |The result is an array of bytes, which can be deserialized to a CountMinSketch before usage.
+         |Count-min sketch is a probabilistic data structure used for cardinality estimation using sub-linear space""".stripMargin),
     two(name = "covar_pop", description = "Returns the population covariance of a set of number pairs"),
     two(name = "covar_samp", description = "Returns the sample covariance of a set of number pairs"),
     one(name = "crc32",
@@ -351,14 +347,20 @@ object NativeFunction {
     one(name = "length", description =
       """|Returns the character length of string data or number of bytes of binary data. The length of string data
          |includes the trailing spaces. The length of binary data includes binary zeros""".stripMargin),
+    many(name = "locate", minArgs = 2, maxArgs = 3, usage = "locate(substr, str[, pos])", description =
+      """|Returns the position of the first occurrence of substr in str after position pos.
+         |The given pos and return value are 1-based""".stripMargin),
 
     // TODO finish implementing missing functions
 
     one(name = "lower", usage = "lower(str)", description = "Returns str with all characters changed to lowercase"),
-    three(name = "lpad", description = ""),
-    one(name = "ltrim", description = ""),
+    three(name = "lpad", usage = "lpad(str, len, pad)", description =
+      """|Returns str, left-padded with pad to a length of len. If str is longer than len,
+         |the return value is shortened to len characters""".stripMargin),
+    many(name = "ltrim", maxArgs = 2, usage = "ltrim([trimStr, ]str)", description = "Removes the leading space characters from str"),
     one(name = "max", description = ""),
-    one(name = "mean", description = ""),
+    one(name = "md5", description = "Returns an MD5 128-bit checksum as a hex string of expr"),
+    one(name = "mean", description = "Returns the mean calculated from values of a group"),
     one(name = "min", description = ""),
     three(name = "rpad", description = ""),
     one(name = "rtrim", description = ""),
@@ -379,12 +381,21 @@ object NativeFunction {
     many(name = "to_date", maxArgs = 2, usage = "to_date(date_str[, fmt])", description =
       """|Parses the date_str expression with the fmt expression to a date. Returns null with invalid input.
          |By default, it follows casting rules to a date if the fmt is omitted""".stripMargin),
+    three(name = "translate", usage = "translate(input, from, to)", description =
+      """|Translates the input string by replacing the characters present in the from string with the
+         |corresponding characters in the to string.""".stripMargin),
     one(name = "trim", usage = "trim(str)", description = "Removes the leading and trailing space characters from str"),
     one(name = "ucase", usage = "ucase(str)", description = "Returns str with all characters changed to uppercase"),
     one(name = "unbase64", usage = "unbase64(str)", description = "Converts the argument from a base 64 string str to a binary"),
     one(name = "unhex", description = "Converts hexadecimal expr to binary"),
     one(name = "upper", usage = "upper(str)", description = "Returns str with all characters changed to uppercase"),
+    zero(name = "uuid", description =
+      "Returns an universally unique identifier (UUID) string. The value is returned as a canonical UUID 36-character string"),
+    one(name = "var_pop", description = "Returns the population variance calculated from values of a group"),
+    one(name = "var_samp", description = "Returns the sample variance calculated from values of a group"),
     one(name = "variance", description = "", isAggregate = true),
+    one(name = "weekday", usage = "weekday(date)", description =
+      "weekday(date) - Returns the day of the week for date/timestamp (0 = Monday, 1 = Tuesday, ..., 6 = Sunday)"),
     one(name = "weekofyear", usage = "weekofyear(date)", description =
       """|Returns the week of the year of the given date.
          |A week is considered to start on a Monday and week 1 is the first week with >3 days""".stripMargin),

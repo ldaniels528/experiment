@@ -15,10 +15,20 @@ class NativeFunctionsTest extends FunSpec {
 
     it("should generate short-cuts") {
       val results = nativeFunctions.toSeq.sortBy { case (name, _) => name } map {
+        case (name, fx) if fx.minArgs == 0 && fx.maxArgs == 0 =>
+          val realName = toRealName(name)
+          s"""|/**
+              |  * ${fx.description}.
+              |  * @example {{{ ${fx.usage} }}}
+              |  */
+              |object $realName {
+              |   def apply(): FunctionCall = FunctionCall("$name")()
+              |}
+              |""".stripMargin
         case (name, fx) if fx.minArgs == 1 && fx.maxArgs == 1 =>
           val realName = toRealName(name)
           s"""|/**
-              |  * ${fx.description}
+              |  * ${fx.description}.
               |  * @example {{{ ${fx.usage} }}}
               |  */
               |object $realName {
@@ -28,7 +38,7 @@ class NativeFunctionsTest extends FunSpec {
         case (name, fx) if fx.minArgs == 2 && fx.maxArgs == 2 =>
           val realName = toRealName(name)
           s"""|/**
-              |  * ${fx.description}
+              |  * ${fx.description}.
               |  * @example {{{ ${fx.usage} }}}
               |  */
               |object $realName {
@@ -38,7 +48,7 @@ class NativeFunctionsTest extends FunSpec {
         case (name, fx) if fx.minArgs == 3 && fx.maxArgs == 3 =>
           val realName = toRealName(name)
           s"""|/**
-              |  * ${fx.description}
+              |  * ${fx.description}.
               |  * @example {{{ ${fx.usage} }}}
               |  */
               |object $realName {
@@ -48,7 +58,7 @@ class NativeFunctionsTest extends FunSpec {
         case (name, fx) =>
           val realName = toRealName(name)
           s"""|/**
-              |  * ${fx.description}
+              |  * ${fx.description}.
               |  * @example {{{ ${fx.usage} }}}
               |  */
               |object $realName {

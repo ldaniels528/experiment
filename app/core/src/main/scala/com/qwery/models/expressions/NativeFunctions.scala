@@ -7,7 +7,7 @@ package com.qwery.models.expressions
 object NativeFunctions {
 
   /**
-    * Returns the absolute value of the numeric value
+    * Returns the absolute value of the numeric value.
     * @example {{{ abs(expr) }}}
     */
   object Abs {
@@ -15,7 +15,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the inverse cosine (a.k.a. arc cosine) of expr, as if computed by [[java.lang.Math#acos]]
+    * Returns the inverse cosine (a.k.a. arc cosine) of expr, as if computed by [[java.lang.Math#acos]].
     * @example {{{ acos(expr) }}}
     */
   object Acos {
@@ -23,7 +23,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the date that is num_months after start_date
+    * Returns the date that is num_months after start_date.
     * @example {{{ add_months(start_date, num_months) }}}
     */
   object Add_Months {
@@ -32,7 +32,7 @@ object NativeFunctions {
 
   /**
     * Applies a binary operator to an initial state and all elements in the array, and reduces this to a single state.
-    * The final state is converted into the final result by applying a finish function
+    * The final state is converted into the final result by applying a finish function.
     * @example {{{ aggregate(expr1, ...) }}}
     */
   object Aggregate {
@@ -40,7 +40,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the estimated cardinality by HyperLogLog++. relativeSD defines the maximum estimation error allowed
+    * Returns the estimated cardinality by HyperLogLog++. relativeSD defines the maximum estimation error allowed.
     * @example {{{ approx_count_distinct(expr1, ...) }}}
     */
   object Approx_Count_Distinct {
@@ -53,7 +53,7 @@ object NativeFunctions {
     * is a positive numeric literal which controls approximation accuracy at the cost of memory.
     * Higher value of accuracy yields better accuracy, 1.0/accuracy is the relative error of the approximation.
     * When percentage is an array, each value of the percentage array must be between 0.0 and 1.0.
-    * In this case, returns the approximate percentile array of column col at the given percentage array
+    * In this case, returns the approximate percentile array of column col at the given percentage array.
     * @example {{{ approx_percentile(expr1, ...) }}}
     */
   object Approx_Percentile {
@@ -61,7 +61,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an array with the given elements
+    * Returns an array with the given elements.
     * @example {{{ array(expr1, ...) }}}
     */
   object Array {
@@ -69,7 +69,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if the array contains the value
+    * Returns true if the array contains the value.
     * @example {{{ array_contains(expr1, expr2) }}}
     */
   object Array_Contains {
@@ -77,7 +77,7 @@ object NativeFunctions {
   }
 
   /**
-    * Removes duplicate values from the array
+    * Removes duplicate values from the array.
     * @example {{{ array_distinct(expr1, ...) }}}
     */
   object Array_Distinct {
@@ -85,7 +85,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an array of the elements in array1 but not in array2, without duplicates
+    * Returns an array of the elements in array1 but not in array2, without duplicates.
     * @example {{{ array_except(expr1, expr2) }}}
     */
   object Array_Except {
@@ -93,7 +93,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an array of the elements in the intersection of array1 and array2, without duplicates
+    * Returns an array of the elements in the intersection of array1 and array2, without duplicates.
     * @example {{{ array_index(expr1, expr2) }}}
     */
   object Array_Index {
@@ -101,7 +101,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an array of the elements in the intersection of array1 and array2, without duplicates
+    * Returns an array of the elements in the intersection of array1 and array2, without duplicates.
     * @example {{{ array_intersect(array1, array2) }}}
     */
   object Array_Intersect {
@@ -110,7 +110,7 @@ object NativeFunctions {
 
   /**
     * Concatenates the elements of the given array using the delimiter and an optional string to
-    * replace nulls. If no value is set for nullReplacement, any null value is filtered
+    * replace nulls. If no value is set for nullReplacement, any null value is filtered.
     * @example {{{ array_join(array, delimiter[, nullReplacement]) }}}
     */
   object Array_Join {
@@ -118,7 +118,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the maximum value in the array. NULL elements are skipped
+    * Returns the maximum value in the array. NULL elements are skipped.
     * @example {{{ array_max(array) }}}
     */
   object Array_Max {
@@ -126,7 +126,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the minimum value in the array. NULL elements are skipped
+    * Returns the minimum value in the array. NULL elements are skipped.
     * @example {{{ array_min(array) }}}
     */
   object Array_Min {
@@ -136,7 +136,7 @@ object NativeFunctions {
   /**
     * Returns true if a1 contains at least a non-null element present also in a2. If the arrays have no
     * common element and they are both non-empty and either of them contains a null element null is returned,
-    * false otherwise
+    * false otherwise.
     * @example {{{ arrays_overlap(array1, array2) }}}
     */
   object Array_Overlap {
@@ -144,7 +144,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the (1-based) index of the first element of the array as long
+    * Returns the (1-based) index of the first element of the array as long.
     * @example {{{ array_position(array, element) }}}
     */
   object Array_Position {
@@ -152,7 +152,7 @@ object NativeFunctions {
   }
 
   /**
-    * Remove all elements that equal to element from array
+    * Remove all elements that equal to element from array.
     * @example {{{ array_remove(array, element) }}}
     */
   object Array_Remove {
@@ -160,7 +160,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the array containing element count times
+    * Returns the array containing element count times.
     * @example {{{ array_repeat(element, count) }}}
     */
   object Array_Repeat {
@@ -169,7 +169,7 @@ object NativeFunctions {
 
   /**
     * Sorts the input array in ascending order. The elements of the input array must be orderable.
-    * Null elements will be placed at the end of the returned array
+    * Null elements will be placed at the end of the returned array.
     * @example {{{ array_sort(array) }}}
     */
   object Array_Sort {
@@ -177,7 +177,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an array of the elements in the union of array1 and array2, without duplicates
+    * Returns an array of the elements in the union of array1 and array2, without duplicates.
     * @example {{{ array_union(array1, array2) }}}
     */
   object Array_Union {
@@ -185,7 +185,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a merged array of structs in which the N-th struct contains all N-th values of input arrays
+    * Returns a merged array of structs in which the N-th struct contains all N-th values of input arrays.
     * @example {{{ arrays_zip(array1, array2, ...) }}}
     */
   object Arrays_Zip {
@@ -193,7 +193,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the numeric value of the first character of string
+    * Returns the numeric value of the first character of string.
     * @example {{{ ascii(expr) }}}
     */
   object Ascii {
@@ -201,7 +201,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the inverse sine (a.k.a. arc sine) the arc sin of expr, as if computed by [[java.lang.Math#asin]]
+    * Returns the inverse sine (a.k.a. arc sine) the arc sin of expr, as if computed by [[java.lang.Math#asin]].
     * @example {{{ asin(expr) }}}
     */
   object Asin {
@@ -209,7 +209,7 @@ object NativeFunctions {
   }
 
   /**
-    * Throws an exception if expr is not true
+    * Throws an exception if expr is not true.
     * @example {{{ assert_true(expr) }}}
     */
   object Assert_True {
@@ -217,7 +217,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the inverse tangent (a.k.a. arc tangent) of expr, as if computed by [[java.lang.Math#atan]]
+    * Returns the inverse tangent (a.k.a. arc tangent) of expr, as if computed by [[java.lang.Math#atan]].
     * @example {{{ atan(expr) }}}
     */
   object Atan {
@@ -226,7 +226,7 @@ object NativeFunctions {
 
   /**
     * Returns the angle in radians between the positive x-axis of a plane and the point given by the
-    * coordinates (exprX, exprY), as if computed by [[java.lang.Math#atan2]]
+    * coordinates (exprX, exprY), as if computed by [[java.lang.Math#atan2]].
     * @example {{{ atan2(expr1, expr2) }}}
     */
   object Atan2 {
@@ -234,7 +234,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the mean calculated from values of a group
+    * Returns the mean calculated from values of a group.
     * @example {{{ avg(expr) }}}
     */
   object Avg {
@@ -242,7 +242,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts the argument from a binary bin to a base 64 string
+    * Converts the argument from a binary bin to a base 64 string.
     * @example {{{ base64(expr) }}}
     */
   object Base64 {
@@ -250,7 +250,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type bigint
+    * Casts the value expr to the target data type bigint.
     * @example {{{ bigint(expr) }}}
     */
   object Bigint {
@@ -258,7 +258,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the string representation of the long value expr represented in binary
+    * Returns the string representation of the long value expr represented in binary.
     * @example {{{ bin(expr) }}}
     */
   object Bin {
@@ -266,7 +266,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type binary
+    * Casts the value expr to the target data type binary.
     * @example {{{ binary(expr) }}}
     */
   object Binary {
@@ -274,7 +274,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the bit length of string data or number of bits of binary data
+    * Returns the bit length of string data or number of bits of binary data.
     * @example {{{ bit_length(expr) }}}
     */
   object Bit_Length {
@@ -282,7 +282,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type boolean
+    * Casts the value expr to the target data type boolean.
     * @example {{{ boolean(expr) }}}
     */
   object Boolean {
@@ -290,7 +290,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns expr rounded to d decimal places using HALF_EVEN rounding mode
+    * Returns expr rounded to d decimal places using HALF_EVEN rounding mode.
     * @example {{{ bround(expr, d) }}}
     */
   object Bround {
@@ -301,7 +301,7 @@ object NativeFunctions {
     * Returns the size of an array or a map. The function returns -1 if its input is null and
     *spark.sql.legacy.sizeOfNull is set to true. If spark.sql.legacy.sizeOfNull is set to false,
     * the function returns null for null input. By default, the spark.sql.legacy.sizeOfNull parameter
-    * is set to true
+    * is set to true.
     * @example {{{ cardinality(expr) }}}
     */
   object Cardinality {
@@ -309,7 +309,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the cube root of expr
+    * Returns the cube root of expr.
     * @example {{{ cbrt(expr) }}}
     */
   object Cbrt {
@@ -317,7 +317,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the smallest integer not smaller than expr
+    * Returns the smallest integer not smaller than expr.
     * @example {{{ ceil(expr) }}}
     */
   object Ceil {
@@ -325,7 +325,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the smallest integer not smaller than expr
+    * Returns the smallest integer not smaller than expr.
     * @example {{{ ceiling(expr) }}}
     */
   object Ceiling {
@@ -334,7 +334,7 @@ object NativeFunctions {
 
   /**
     * Returns the ASCII character having the binary equivalent to expr.
-    * If n is larger than 256 the result is equivalent to chr(n % 256)
+    * If n is larger than 256 the result is equivalent to chr(n % 256).
     * @example {{{ char(expr) }}}
     */
   object Char {
@@ -343,7 +343,7 @@ object NativeFunctions {
 
   /**
     * Returns the character length of string data or number of bytes of binary data. The length of
-    * string data includes the trailing spaces. The length of binary data includes binary zeros
+    * string data includes the trailing spaces. The length of binary data includes binary zeros.
     * @example {{{ char_length(expr) }}}
     */
   object Char_Length {
@@ -351,7 +351,7 @@ object NativeFunctions {
   }
 
   /**
-    * Collects and returns a list of non-unique elements
+    * Collects and returns a list of non-unique elements.
     * @example {{{ character_length(expr) }}}
     */
   object Character_Length {
@@ -360,7 +360,7 @@ object NativeFunctions {
 
   /**
     * Returns the ASCII character having the binary equivalent to expr.
-    * If n is larger than 256 the result is equivalent to chr(n % 256)
+    * If n is larger than 256 the result is equivalent to chr(n % 256).
     * @example {{{ chr(expr) }}}
     */
   object Chr {
@@ -368,7 +368,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the first non-null argument if exists. Otherwise, null
+    * Returns the first non-null argument if exists. Otherwise, null.
     * @example {{{ coalesce(expr1, ...) }}}
     */
   object Coalesce {
@@ -376,7 +376,7 @@ object NativeFunctions {
   }
 
   /**
-    * Collects and returns a list of non-unique elements
+    * Collects and returns a list of non-unique elements.
     * @example {{{ collect_list(expr) }}}
     */
   object Collect_List {
@@ -384,7 +384,7 @@ object NativeFunctions {
   }
 
   /**
-    * Collects and returns a set of unique elements
+    * Collects and returns a set of unique elements.
     * @example {{{ collect_set(expr) }}}
     */
   object Collect_Set {
@@ -392,7 +392,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the concatenation of col1, col2, ..., colN
+    * Returns the concatenation of col1, col2, ..., colN.
     * @example {{{ concat(col1, col2, ..., colN) }}}
     */
   object Concat {
@@ -400,7 +400,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the concatenation of the strings separated by sep
+    * Returns the concatenation of the strings separated by sep.
     * @example {{{ concat_ws(sep, [str | array(str)]+) }}}
     */
   object Concat_Ws {
@@ -408,7 +408,7 @@ object NativeFunctions {
   }
 
   /**
-    * Convert num from from_base to to_base
+    * Convert num from from_base to to_base.
     * @example {{{ conv(num, from_base, to_base) }}}
     */
   object Conv {
@@ -416,7 +416,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns Pearson coefficient of correlation between a set of number pairs
+    * Returns Pearson coefficient of correlation between a set of number pairs.
     * @example {{{ corr(expr1, expr2) }}}
     */
   object Corr {
@@ -424,7 +424,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the cosine of expr, as if computed by [[java.lang.Math#cos]]
+    * Returns the cosine of expr, as if computed by [[java.lang.Math#cos]].
     * @example {{{ cos(expr) }}}
     */
   object Cos {
@@ -432,7 +432,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the hyperbolic cosine of expr, as if computed by [[java.lang.Math#cosh]]
+    * Returns the hyperbolic cosine of expr, as if computed by [[java.lang.Math#cosh]].
     * @example {{{ cosh(expr) }}}
     */
   object Cosh {
@@ -440,7 +440,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the cotangent of expr, as if computed by [[java.lang.Math#cot]]
+    * Returns the cotangent of expr, as if computed by [[java.lang.Math#cot]].
     * @example {{{ cot(expr) }}}
     */
   object Cot {
@@ -448,7 +448,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the total number of retrieved rows, including rows containing null
+    * Returns the total number of retrieved rows, including rows containing null.
     * @example {{{ count(expr1, ...) }}}
     */
   object Count {
@@ -458,7 +458,7 @@ object NativeFunctions {
   /**
     * Returns a count-min sketch of a column with the given esp, confidence and seed.
     * The result is an array of bytes, which can be deserialized to a CountMinSketch before usage.
-    * Count-min sketch is a probabilistic data structure used for cardinality estimation using sub-linear space
+    * Count-min sketch is a probabilistic data structure used for cardinality estimation using sub-linear space.
     * @example {{{ count_min_sketch(col, eps, confidence, seed) }}}
     */
   object Count_Min_Sketch {
@@ -466,7 +466,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the population covariance of a set of number pairs
+    * Returns the population covariance of a set of number pairs.
     * @example {{{ covar_pop(expr1, expr2) }}}
     */
   object Covar_Pop {
@@ -474,7 +474,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the sample covariance of a set of number pairs
+    * Returns the sample covariance of a set of number pairs.
     * @example {{{ covar_samp(expr1, expr2) }}}
     */
   object Covar_Samp {
@@ -482,7 +482,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a cyclic redundancy check value of the expr as a bigint
+    * Returns a cyclic redundancy check value of the expr as a bigint.
     * @example {{{ crc32(expr) }}}
     */
   object Crc32 {
@@ -490,7 +490,7 @@ object NativeFunctions {
   }
 
   /**
-    * [[https://spark.apache.org/docs/2.4.0/api/sql/index.html#cube]]
+    * [[https://spark.apache.org/docs/2.4.0/api/sql/index.html#cube]].
     * @example {{{ cube(expr1, ...) }}}
     */
   object Cube {
@@ -498,39 +498,39 @@ object NativeFunctions {
   }
 
   /**
-    * Computes the position of a value relative to all values in the partition
+    * Computes the position of a value relative to all values in the partition.
     * @example {{{ cume_dist() }}}
     */
   object Cume_Dist {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("cume_dist")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("cume_dist")()
   }
 
   /**
-    * Returns the current database
+    * Returns the current database.
     * @example {{{ current_database() }}}
     */
   object Current_Database {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("current_database")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("current_database")()
   }
 
   /**
-    * Returns the current date at the start of query evaluation
+    * Returns the current date at the start of query evaluation.
     * @example {{{ current_date() }}}
     */
   object Current_Date {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("current_date")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("current_date")()
   }
 
   /**
-    * Returns the current timestamp at the start of query evaluation
+    * Returns the current timestamp at the start of query evaluation.
     * @example {{{ current_timestamp() }}}
     */
   object Current_Timestamp {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("current_timestamp")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("current_timestamp")()
   }
 
   /**
-    * Casts the value expr to the target data type date
+    * Casts the value expr to the target data type date.
     * @example {{{ date(expr) }}}
     */
   object Date {
@@ -538,7 +538,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the date that is num_days after start_date
+    * Returns the date that is num_days after start_date.
     * @example {{{ date_add(start_date, num_days) }}}
     */
   object Date_Add {
@@ -546,7 +546,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts timestamp to a value of string in the format specified by the date format fmt
+    * Converts timestamp to a value of string in the format specified by the date format fmt.
     * @example {{{ date_format(timestamp, fmt) }}}
     */
   object Date_Format {
@@ -554,7 +554,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the date that is num_days before start_date
+    * Returns the date that is num_days before start_date.
     * @example {{{ date_sub(start_date, num_days) }}}
     */
   object Date_Sub {
@@ -564,7 +564,7 @@ object NativeFunctions {
   /**
     * Returns timestamp ts truncated to the unit specified by the format model fmt.
     * fmt should be one of ["YEAR", "YYYY", "YY", "MON", "MONTH", "MM", "DAY", "DD",
-    * "HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"]
+    * "HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"].
     * @example {{{ date_trunc(expr1, expr2) }}}
     */
   object Date_Trunc {
@@ -572,7 +572,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the number of days from startDate to endDate
+    * Returns the number of days from startDate to endDate.
     * @example {{{ datediff(endDate, startDate) }}}
     */
   object Datediff {
@@ -580,7 +580,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the day of month of the date/timestamp
+    * Returns the day of month of the date/timestamp.
     * @example {{{ day(date) }}}
     */
   object Day {
@@ -588,7 +588,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the day of month of the date/timestamp
+    * Returns the day of month of the date/timestamp.
     * @example {{{ dayofmonth(date) }}}
     */
   object Dayofmonth {
@@ -596,7 +596,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the day of the week for date/timestamp (1 = Sunday, 2 = Monday, ..., 7 = Saturday)
+    * Returns the day of the week for date/timestamp (1 = Sunday, 2 = Monday, ..., 7 = Saturday).
     * @example {{{ dayofweek(date) }}}
     */
   object Dayofweek {
@@ -604,7 +604,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type decimal
+    * Casts the value expr to the target data type decimal.
     * @example {{{ decimal(expr) }}}
     */
   object Decimal {
@@ -612,7 +612,7 @@ object NativeFunctions {
   }
 
   /**
-    * Decodes the first argument using the second argument character set
+    * Decodes the first argument using the second argument character set.
     * @example {{{ decode(bin, charset) }}}
     */
   object Decode {
@@ -620,7 +620,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts radians to degrees
+    * Converts radians to degrees.
     * @example {{{ degrees(expr) }}}
     */
   object Degrees {
@@ -629,15 +629,15 @@ object NativeFunctions {
 
   /**
     * Computes the rank of a value in a group of values. The result is one plus the previously assigned rank value.
-    * Unlike the function rank, dense_rank will not produce gaps in the ranking sequence
+    * Unlike the function rank, dense_rank will not produce gaps in the ranking sequence.
     * @example {{{ dense_rank() }}}
     */
   object Dense_Rank {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("dense_rank")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("dense_rank")()
   }
 
   /**
-    *
+    * .
     * @example {{{ distinct(expr) }}}
     */
   object Distinct {
@@ -645,7 +645,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type double
+    * Casts the value expr to the target data type double.
     * @example {{{ double(expr) }}}
     */
   object Double {
@@ -653,15 +653,15 @@ object NativeFunctions {
   }
 
   /**
-    * Returns Euler's number, e
+    * Returns Euler's number, e.
     * @example {{{ e() }}}
     */
   object E {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("e")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("e")()
   }
 
   /**
-    * Returns the n-th input, e.g., returns input2 when n is 2
+    * Returns the n-th input, e.g., returns input2 when n is 2.
     * @example {{{ elt(n, input1, input2, ...) }}}
     */
   object Elt {
@@ -669,7 +669,7 @@ object NativeFunctions {
   }
 
   /**
-    * Encodes the first argument using the second argument character set
+    * Encodes the first argument using the second argument character set.
     * @example {{{ encode(str, charset) }}}
     */
   object Encode {
@@ -677,7 +677,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns e to the power of expr
+    * Returns e to the power of expr.
     * @example {{{ exp(expr) }}}
     */
   object Exp {
@@ -685,7 +685,7 @@ object NativeFunctions {
   }
 
   /**
-    * Separates the elements of array expr into multiple rows, or the elements of map expr into multiple rows and columns
+    * Separates the elements of array expr into multiple rows, or the elements of map expr into multiple rows and columns.
     * @example {{{ explode(expr) }}}
     */
   object Explode {
@@ -693,7 +693,7 @@ object NativeFunctions {
   }
 
   /**
-    * Separates the elements of array expr into multiple rows, or the elements of map expr into multiple rows and columns
+    * Separates the elements of array expr into multiple rows, or the elements of map expr into multiple rows and columns.
     * @example {{{ explode_outer(expr) }}}
     */
   object Explode_Outer {
@@ -701,7 +701,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns exp(expr) - 1
+    * Returns exp(expr) - 1.
     * @example {{{ expm1(expr) }}}
     */
   object Expm1 {
@@ -709,7 +709,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the factorial of expr. expr is [0..20]. Otherwise, null
+    * Returns the factorial of expr. expr is [0..20]. Otherwise, null.
     * @example {{{ factorial(expr) }}}
     */
   object Factorial {
@@ -718,7 +718,7 @@ object NativeFunctions {
 
   /**
     * Returns the index (1-based) of the given string (str) in the comma-delimited list (str_array).
-    * Returns 0, if the string was not found or if the given string (str) contains a comma
+    * Returns 0, if the string was not found or if the given string (str) contains a comma.
     * @example {{{ find_in_set(expr1, expr2) }}}
     */
   object Find_In_Set {
@@ -726,7 +726,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the first value of expr for a group of rows. If isIgnoreNull is true, returns only non-null values
+    * Returns the first value of expr for a group of rows. If isIgnoreNull is true, returns only non-null values.
     * @example {{{ first(expr[, isIgnoreNull]) }}}
     */
   object First {
@@ -734,7 +734,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the first value of expr for a group of rows. If isIgnoreNull is true, returns only non-null values
+    * Returns the first value of expr for a group of rows. If isIgnoreNull is true, returns only non-null values.
     * @example {{{ first_value(expr[, isIgnoreNull]) }}}
     */
   object First_Value {
@@ -742,7 +742,7 @@ object NativeFunctions {
   }
 
   /**
-    * Transforms an array of arrays into a single array
+    * Transforms an array of arrays into a single array.
     * @example {{{ flatten(arrayOfArrays) }}}
     */
   object Flatten {
@@ -750,7 +750,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type float
+    * Casts the value expr to the target data type float.
     * @example {{{ float(expr) }}}
     */
   object Float {
@@ -758,7 +758,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the largest integer not greater than expr
+    * Returns the largest integer not greater than expr.
     * @example {{{ floor(expr) }}}
     */
   object Floor {
@@ -768,7 +768,7 @@ object NativeFunctions {
   /**
     * Formats the number expr1 like '#,###,###.##', rounded to expr2 decimal places.
     * If expr2 is 0, the result has no decimal point or fractional part. expr2 also accept a user specified format.
-    * This is supposed to function like MySQL's FORMAT
+    * This is supposed to function like MySQL's FORMAT.
     * @example {{{ format_number(expr1, expr2) }}}
     */
   object Format_Number {
@@ -776,7 +776,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a formatted string from printf-style format strings
+    * Returns a formatted string from printf-style format strings.
     * @example {{{ format_string(strfmt, obj, ...) }}}
     */
   object Format_String {
@@ -784,7 +784,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a struct value with the given jsonStr and schema
+    * Returns a struct value with the given jsonStr and schema.
     * @example {{{ from_json(jsonStr, schema[, options]) }}}
     */
   object From_Json {
@@ -792,7 +792,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns unix_time in the specified format
+    * Returns unix_time in the specified format.
     * @example {{{ from_unixtime(unix_time, format) }}}
     */
   object From_Unixtime {
@@ -802,7 +802,7 @@ object NativeFunctions {
   /**
     * Given a timestamp like '2017-07-14 02:40:00.0', interprets it as a time in UTC,
     * and renders that time as a timestamp in the given time zone.
-    * For example, 'GMT+1' would yield '2017-07-14 03:40:00.0'
+    * For example, 'GMT+1' would yield '2017-07-14 03:40:00.0'.
     * @example {{{ from_utc_timestamp(timestamp, timezone) }}}
     */
   object From_Utc_Timestamp {
@@ -810,7 +810,7 @@ object NativeFunctions {
   }
 
   /**
-    * Extracts a json object from path
+    * Extracts a json object from path.
     * @example {{{ get_json_object(json_txt, path) }}}
     */
   object Get_Json_Object {
@@ -818,7 +818,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the greatest value of all parameters, skipping null values
+    * Returns the greatest value of all parameters, skipping null values.
     * @example {{{ greatest(expr1, ...) }}}
     */
   object Greatest {
@@ -826,7 +826,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a hash value of the arguments
+    * Returns a hash value of the arguments.
     * @example {{{ hash(expr1, ...) }}}
     */
   object Hash {
@@ -834,7 +834,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts expr to hexadecimal
+    * Converts expr to hexadecimal.
     * @example {{{ hex(expr) }}}
     */
   object Hex {
@@ -842,7 +842,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the hour component of the string/timestamp
+    * Returns the hour component of the string/timestamp.
     * @example {{{ hour(timestamp) }}}
     */
   object Hour {
@@ -850,7 +850,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns sqrt(expr1^2 + expr2^2)
+    * Returns sqrt(expr1^2 + expr2^2).
     * @example {{{ hypot(expr1, expr2) }}}
     */
   object Hypot {
@@ -858,7 +858,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if expr equals to any valN
+    * Returns true if expr equals to any valN.
     * @example {{{ in(expr1, ...) }}}
     */
   object In {
@@ -867,7 +867,7 @@ object NativeFunctions {
 
   /**
     * Returns str with the first letter of each word in uppercase. All other letters are in lowercase.
-    * Words are delimited by white space
+    * Words are delimited by white space.
     * @example {{{ initcap(str) }}}
     */
   object Initcap {
@@ -875,7 +875,7 @@ object NativeFunctions {
   }
 
   /**
-    * Explodes an array of structs into a table
+    * Explodes an array of structs into a table.
     * @example {{{ inline(expr) }}}
     */
   object Inline {
@@ -883,7 +883,7 @@ object NativeFunctions {
   }
 
   /**
-    * Explodes an array of structs into a table
+    * Explodes an array of structs into a table.
     * @example {{{ inline_outer(expr) }}}
     */
   object Inline_Outer {
@@ -891,31 +891,31 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the length of the block being read, or -1 if not available
+    * Returns the length of the block being read, or -1 if not available.
     * @example {{{ input_file_block_length() }}}
     */
   object Input_File_Block_Length {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("input_file_block_length")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("input_file_block_length")()
   }
 
   /**
-    * Returns the start offset of the block being read, or -1 if not available
+    * Returns the start offset of the block being read, or -1 if not available.
     * @example {{{ input_file_block_start() }}}
     */
   object Input_File_Block_Start {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("input_file_block_start")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("input_file_block_start")()
   }
 
   /**
-    * Returns the name of the file being read, or empty string if not available
+    * Returns the name of the file being read, or empty string if not available.
     * @example {{{ input_file_name() }}}
     */
   object Input_File_Name {
-    def apply(expr: Expression*): FunctionCall = FunctionCall("input_file_name")(expr: _*)
+    def apply(): FunctionCall = FunctionCall("input_file_name")()
   }
 
   /**
-    * Returns the (1-based) index of the first occurrence of substr in str
+    * Returns the (1-based) index of the first occurrence of substr in str.
     * @example {{{ instr(str, substr) }}}
     */
   object Instr {
@@ -923,7 +923,7 @@ object NativeFunctions {
   }
 
   /**
-    * Casts the value expr to the target data type int
+    * Casts the value expr to the target data type int.
     * @example {{{ int(expr) }}}
     */
   object Int {
@@ -931,7 +931,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if expr is NaN, or false otherwise
+    * Returns true if expr is NaN, or false otherwise.
     * @example {{{ isnan(expr) }}}
     */
   object Isnan {
@@ -939,7 +939,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if expr is not null, or false otherwise
+    * Returns true if expr is not null, or false otherwise.
     * @example {{{ isnotnull(expr) }}}
     */
   object Isnotnull {
@@ -947,7 +947,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if expr is null, or false otherwise
+    * Returns true if expr is null, or false otherwise.
     * @example {{{ isnull(expr) }}}
     */
   object Isnull {
@@ -955,7 +955,7 @@ object NativeFunctions {
   }
 
   /**
-    * Calls a method with reflection
+    * Calls a method with reflection.
     * @example {{{ java_method(class, method[, arg1[, arg2 ..]]) }}}
     */
   object Java_Method {
@@ -964,7 +964,7 @@ object NativeFunctions {
 
   /**
     * Returns a tuple like the function get_json_object, but it takes multiple names.
-    * All the input parameters and output column types are string
+    * All the input parameters and output column types are string.
     * @example {{{ json_tuple(jsonStr, p1, p2, ..., pn) }}}
     */
   object Json_Tuple {
@@ -972,7 +972,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the kurtosis value calculated from values of a group
+    * Returns the kurtosis value calculated from values of a group.
     * @example {{{ kurtosis(expr) }}}
     */
   object Kurtosis {
@@ -983,7 +983,7 @@ object NativeFunctions {
     * Returns the value of input at the offsetth row before the current row in the window. The default value of
     * offset is 1 and the default value of default is null. If the value of  input at the offsetth row is null,
     * null is returned. If there is no such offset row (e.g., when the offset is 1, the first row of the window
-    * does not have any previous row), default is returned
+    * does not have any previous row), default is returned.
     * @example {{{ lag(input[, offset[, default]]) }}}
     */
   object Lag {
@@ -992,7 +992,7 @@ object NativeFunctions {
 
   /**
     * Returns the last value of expr for a group of rows. If isIgnoreNull is true,
-    * returns only non-null values
+    * returns only non-null values.
     * @example {{{ last(expr[, isIgnoreNull]) }}}
     */
   object Last {
@@ -1000,7 +1000,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the last day of the month which the date belongs to
+    * Returns the last day of the month which the date belongs to.
     * @example {{{ last_day(date) }}}
     */
   object Last_Day {
@@ -1009,7 +1009,7 @@ object NativeFunctions {
 
   /**
     * Returns the last value of expr for a group of rows. If isIgnoreNull is true,
-    * returns only non-null values
+    * returns only non-null values.
     * @example {{{ last_value(expr[, isIgnoreNull]) }}}
     */
   object Last_Value {
@@ -1017,7 +1017,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to lowercase
+    * Returns str with all characters changed to lowercase.
     * @example {{{ lcase(str) }}}
     */
   object Lcase {
@@ -1028,7 +1028,7 @@ object NativeFunctions {
     * Returns the value of input at the offsetth row after the current row in the window. The default value of
     * offset is 1 and the default value of default is null. If the value of  input at the offsetth row is null,
     * null is returned. If there is no such an offset row (e.g., when the offset is 1, the last row of the window
-    * does not have any subsequent row), default is returned
+    * does not have any subsequent row), default is returned.
     * @example {{{ lead(input[, offset[, default]])  }}}
     */
   object Lead {
@@ -1036,7 +1036,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the least value of all parameters, skipping null values
+    * Returns the least value of all parameters, skipping null values.
     * @example {{{ least(expr1, ...) }}}
     */
   object Least {
@@ -1045,7 +1045,7 @@ object NativeFunctions {
 
   /**
     * Returns the leftmost len(len can be string type) characters from the string str,
-    * if len is less or equal than 0 the result is an empty string
+    * if len is less or equal than 0 the result is an empty string.
     * @example {{{ left(str, len) }}}
     */
   object Left {
@@ -1054,7 +1054,7 @@ object NativeFunctions {
 
   /**
     * Returns the character length of string data or number of bytes of binary data. The length of string data
-    * includes the trailing spaces. The length of binary data includes binary zeros
+    * includes the trailing spaces. The length of binary data includes binary zeros.
     * @example {{{ length(expr) }}}
     */
   object Length {
@@ -1062,7 +1062,16 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to lowercase
+    * Returns the position of the first occurrence of substr in str after position pos.
+    * The given pos and return value are 1-based.
+    * @example {{{ locate(substr, str[, pos]) }}}
+    */
+  object Locate {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("locate")(expr: _*)
+  }
+
+  /**
+    * Returns str with all characters changed to lowercase.
     * @example {{{ lower(str) }}}
     */
   object Lower {
@@ -1070,23 +1079,24 @@ object NativeFunctions {
   }
 
   /**
-    *
-    * @example {{{ lpad(expr1, expr2, expr3) }}}
+    * Returns str, left-padded with pad to a length of len. If str is longer than len,
+    * the return value is shortened to len characters.
+    * @example {{{ lpad(str, len, pad) }}}
     */
   object Lpad {
     def apply(expr1: Expression, expr2: Expression, expr3: Expression): FunctionCall = FunctionCall("lpad")(expr1, expr2, expr3)
   }
 
   /**
-    *
-    * @example {{{ ltrim(expr) }}}
+    * Removes the leading space characters from str.
+    * @example {{{ ltrim([trimStr, ]str) }}}
     */
   object Ltrim {
-    def apply(expr: Expression): FunctionCall = FunctionCall("ltrim")(expr)
+    def apply(expr: Expression*): FunctionCall = FunctionCall("ltrim")(expr: _*)
   }
 
   /**
-    *
+    * .
     * @example {{{ max(expr) }}}
     */
   object Max {
@@ -1094,7 +1104,15 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * Returns an MD5 128-bit checksum as a hex string of expr.
+    * @example {{{ md5(expr) }}}
+    */
+  object Md5 {
+    def apply(expr: Expression): FunctionCall = FunctionCall("md5")(expr)
+  }
+
+  /**
+    * Returns the mean calculated from values of a group.
     * @example {{{ mean(expr) }}}
     */
   object Mean {
@@ -1102,7 +1120,7 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * .
     * @example {{{ min(expr) }}}
     */
   object Min {
@@ -1110,7 +1128,7 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * .
     * @example {{{ rpad(expr1, expr2, expr3) }}}
     */
   object Rpad {
@@ -1118,7 +1136,7 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * .
     * @example {{{ rtrim(expr) }}}
     */
   object Rtrim {
@@ -1126,7 +1144,7 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * .
     * @example {{{ split(expr1, expr2) }}}
     */
   object Split {
@@ -1134,7 +1152,7 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * .
     * @example {{{ stddev(expr) }}}
     */
   object Stddev {
@@ -1143,7 +1161,7 @@ object NativeFunctions {
 
   /**
     * Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-    * starts at pos and is of length len
+    * starts at pos and is of length len.
     * @example {{{ substr(str, pos[, len]) }}}
     */
   object Substr {
@@ -1152,7 +1170,7 @@ object NativeFunctions {
 
   /**
     * Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-    * starts at pos and is of length len
+    * starts at pos and is of length len.
     * @example {{{ substring(str, pos[, len]) }}}
     */
   object Substring {
@@ -1163,7 +1181,7 @@ object NativeFunctions {
     * Returns the substring from str before count occurrences of the delimiter delim. If count is positive,
     * everything to the left of the final delimiter (counting from the left) is returned. If count is negative,
     * everything to the right of the final delimiter (counting from the right) is returned. The function
-    * substring_index performs a case-sensitive match when searching for  delim
+    * substring_index performs a case-sensitive match when searching for  delim.
     * @example {{{ substring_index(str, delim, count) }}}
     */
   object Substring_Index {
@@ -1171,7 +1189,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the sum calculated from values of a group
+    * Returns the sum calculated from values of a group.
     * @example {{{ sum(expr) }}}
     */
   object Sum {
@@ -1180,7 +1198,7 @@ object NativeFunctions {
 
   /**
     * Parses the date_str expression with the fmt expression to a date. Returns null with invalid input.
-    * By default, it follows casting rules to a date if the fmt is omitted
+    * By default, it follows casting rules to a date if the fmt is omitted.
     * @example {{{ to_date(date_str[, fmt]) }}}
     */
   object To_Date {
@@ -1188,7 +1206,16 @@ object NativeFunctions {
   }
 
   /**
-    * Removes the leading and trailing space characters from str
+    * Translates the input string by replacing the characters present in the from string with the
+    * corresponding characters in the to string..
+    * @example {{{ translate(input, from, to) }}}
+    */
+  object Translate {
+    def apply(expr1: Expression, expr2: Expression, expr3: Expression): FunctionCall = FunctionCall("translate")(expr1, expr2, expr3)
+  }
+
+  /**
+    * Removes the leading and trailing space characters from str.
     * @example {{{ trim(str) }}}
     */
   object Trim {
@@ -1196,7 +1223,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to uppercase
+    * Returns str with all characters changed to uppercase.
     * @example {{{ ucase(str) }}}
     */
   object Ucase {
@@ -1204,7 +1231,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts the argument from a base 64 string str to a binary
+    * Converts the argument from a base 64 string str to a binary.
     * @example {{{ unbase64(str) }}}
     */
   object Unbase64 {
@@ -1212,7 +1239,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts hexadecimal expr to binary
+    * Converts hexadecimal expr to binary.
     * @example {{{ unhex(expr) }}}
     */
   object Unhex {
@@ -1220,7 +1247,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to uppercase
+    * Returns str with all characters changed to uppercase.
     * @example {{{ upper(str) }}}
     */
   object Upper {
@@ -1228,7 +1255,31 @@ object NativeFunctions {
   }
 
   /**
-    *
+    * Returns an universally unique identifier (UUID) string. The value is returned as a canonical UUID 36-character string.
+    * @example {{{ uuid() }}}
+    */
+  object Uuid {
+    def apply(): FunctionCall = FunctionCall("uuid")()
+  }
+
+  /**
+    * Returns the population variance calculated from values of a group.
+    * @example {{{ var_pop(expr) }}}
+    */
+  object Var_Pop {
+    def apply(expr: Expression): FunctionCall = FunctionCall("var_pop")(expr)
+  }
+
+  /**
+    * Returns the sample variance calculated from values of a group.
+    * @example {{{ var_samp(expr) }}}
+    */
+  object Var_Samp {
+    def apply(expr: Expression): FunctionCall = FunctionCall("var_samp")(expr)
+  }
+
+  /**
+    * .
     * @example {{{ variance(expr) }}}
     */
   object Variance {
@@ -1236,8 +1287,16 @@ object NativeFunctions {
   }
 
   /**
+    * weekday(date) - Returns the day of the week for date/timestamp (0 = Monday, 1 = Tuesday, ..., 6 = Sunday).
+    * @example {{{ weekday(date) }}}
+    */
+  object Weekday {
+    def apply(expr: Expression): FunctionCall = FunctionCall("weekday")(expr)
+  }
+
+  /**
     * Returns the week of the year of the given date.
-    * A week is considered to start on a Monday and week 1 is the first week with >3 days
+    * A week is considered to start on a Monday and week 1 is the first week with >3 days.
     * @example {{{ weekofyear(date) }}}
     */
   object Weekofyear {
@@ -1245,7 +1304,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a string array of values within the nodes of xml that match the XPath expression
+    * Returns a string array of values within the nodes of xml that match the XPath expression.
     * @example {{{ xpath(xml, xpath) }}}
     */
   object Xpath {
@@ -1253,7 +1312,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns true if the XPath expression evaluates to true, or if a matching node is found
+    * Returns true if the XPath expression evaluates to true, or if a matching node is found.
     * @example {{{ xpath_boolean(xml, xpath) }}}
     */
   object Xpath_Boolean {
@@ -1261,7 +1320,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric
+    * Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric.
     * @example {{{ xpath_double(xml, xpath) }}}
     */
   object Xpath_Double {
@@ -1269,7 +1328,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a float value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric
+    * Returns a float value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric.
     * @example {{{ xpath_float(xml, xpath) }}}
     */
   object Xpath_Float {
@@ -1277,7 +1336,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an integer value, or the value zero if no match is found, or a match is found but the value is non-numeric
+    * Returns an integer value, or the value zero if no match is found, or a match is found but the value is non-numeric.
     * @example {{{ xpath_int(xml, xpath) }}}
     */
   object Xpath_Int {
@@ -1285,7 +1344,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a long integer value, or the value zero if no match is found, or a match is found but the value is non-numeric
+    * Returns a long integer value, or the value zero if no match is found, or a match is found but the value is non-numeric.
     * @example {{{ xpath_long(xml, xpath) }}}
     */
   object Xpath_Long {
@@ -1293,7 +1352,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric
+    * Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric.
     * @example {{{ xpath_number(xml, xpath) }}}
     */
   object Xpath_Number {
@@ -1301,7 +1360,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns a short integer value, or the value zero if no match is found, or a match is found but the value is non-numeric
+    * Returns a short integer value, or the value zero if no match is found, or a match is found but the value is non-numeric.
     * @example {{{ xpath_short(xml, xpath) }}}
     */
   object Xpath_Short {
@@ -1309,7 +1368,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the text contents of the first xml node that matches the XPath expression
+    * Returns the text contents of the first xml node that matches the XPath expression.
     * @example {{{ xpath_string(xml, xpath) }}}
     */
   object Xpath_String {
@@ -1317,7 +1376,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the year component of the date/timestamp
+    * Returns the year component of the date/timestamp.
     * @example {{{ year(date) }}}
     */
   object Year {
@@ -1326,7 +1385,7 @@ object NativeFunctions {
 
   /**
     * Merges the two given arrays, element-wise, into a single array using function. If one array is shorter,
-    * nulls are appended at the end to match the length of the longer array, before applying function
+    * nulls are appended at the end to match the length of the longer array, before applying function.
     * @example {{{ zip_with(left, right, func) }}}
     */
   object Zip_With {
