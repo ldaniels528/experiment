@@ -108,7 +108,7 @@ package object expressions {
       */
     final implicit class ExpressionExtensions(val expr0: Expression) extends AnyVal {
 
-      import SQLFunction._
+      import NativeFunctions._
 
       @inline def ===(expr1: Expression) = EQ(expr0, expr1)
 
@@ -124,7 +124,7 @@ package object expressions {
 
       @inline def +(expr1: Expression) = Add(expr0, expr1)
 
-      @inline def ||(expr1: Expression) = Concat(List(expr0, expr1))
+      @inline def ||(expr1: Expression) = Concat(expr0, expr1)
 
       @inline def -(expr1: Expression) = Subtract(expr0, expr1)
 

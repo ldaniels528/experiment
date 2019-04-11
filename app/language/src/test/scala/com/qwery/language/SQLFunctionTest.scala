@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models.ColumnTypes
 import com.qwery.models.expressions.Case.When
-import com.qwery.models.expressions.SQLFunction._
+import com.qwery.models.expressions.NativeFunctions._
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
 
@@ -21,11 +21,11 @@ class SQLFunctionTest extends FunSpec {
     }
 
     it("""should parse "Array_Max(Array(1, 20, NULL, 3))"""") {
-      verify("Array_Max(Array(1, 20, NULL, 3))" , Array_Max(Array(List(1, 20, Null, 3))))
+      verify("Array_Max(Array(1, 20, NULL, 3))" , Array_Max(Array(1, 20, Null, 3)))
     }
 
     it("""should parse "Array_Min(ARRAY(1, 20, NULL, 3))"""") {
-      verify("Array_Min(Array(1, 20, NULL, 3))" , Array_Min(Array(List(1, 20, Null, 3))))
+      verify("Array_Min(Array(1, 20, NULL, 3))" , Array_Min(Array(1, 20, Null, 3)))
     }
 
     it("""should parse "Ascii(value)"""") {

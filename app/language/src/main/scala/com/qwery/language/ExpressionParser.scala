@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.language.ExpressionParser._
 import com.qwery.language.TokenStreamHelpers._
-import com.qwery.models.expressions.SQLFunction._
+import com.qwery.models.expressions.NativeFunctions._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
 
@@ -57,7 +57,7 @@ trait ExpressionParser {
           case ts if ts nextIf "&" => for (a <- expression; b <- parseNextExpression(ts)) yield a & b
           case ts if ts nextIf "|" => for (a <- expression; b <- parseNextExpression(ts)) yield a | b
           case ts if ts nextIf "^" => for (a <- expression; b <- parseNextExpression(ts)) yield a ^ b
-          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(List(a, b))
+          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(a, b)
           case _ => None
         }
         // if the expression was resolved ...
@@ -88,37 +88,17 @@ trait ExpressionParser {
     * @return an [[Expression internal function]]
     */
   private def parseFunction(stream: TokenStream): Option[Expression] = {
+    import NativeFunction._
     stream match {
-      // is it a no parameter function? (e.g. "Current_Date")
-      case ts if function0s.exists { case (name, _) => ts is name } =>
-        function0s.find { case (name, _) => ts nextIf name } map { case (_, fx) => fx }
-      // is it a single-parameter function? (e.g. "Trim('Hello ')")
-      case ts if function1s.exists { case (name, _) => ts is name } =>
-        function1s.find { case (name, _) => ts nextIf name } map { case (name, fx) =>
-          parseArguments(ts, name, count = 1) match {
-            case a :: Nil => fx(a)
-            case params => ts.die(s"Invalid parameters: expected 1, found ${params.size}")
-          }
+      // is it a native function?
+      case ts if nativeFunctions.exists { case (name, _) => ts is name } =>
+        nativeFunctions.find { case (name, _) => ts nextIf name } map { case (name, fx) =>
+          val args = parseArguments(ts)
+          if (args.length < fx.minArgs) ts.die(s"At least ${fx.minArgs} arguments expected for function $name")
+          else if (args.length > fx.maxArgs) ts.die(s"Too many arguments for function $name")
+          else FunctionCall(name, args)
         }
-      // is it a two-parameter function? (e.g. "Left('Hello World', 6)")
-      case ts if function2s.exists { case (name, _) => ts is name } =>
-        function2s.find { case (name, _) => ts nextIf name } map { case (name, fx) =>
-          parseArguments(ts, name, count = 2) match {
-            case a :: b :: Nil => fx(a, b)
-            case params => ts.die(s"Invalid parameters: expected 2, found ${params.size}")
-          }
-        }
-      // is it a three-parameter function? (e.g. "SubString('Hello World', 6, 5)")
-      case ts if function3s.exists { case (name, _) => ts is name } =>
-        function3s.find { case (name, _) => ts nextIf name } map { case (name, fx) =>
-          parseArguments(ts, name, count = 3) match {
-            case a :: b :: c :: Nil => fx(a, b, c)
-            case params => ts.die(s"Invalid parameters: expected 3, found ${params.size}")
-          }
-        }
-      // is it a N-parameter function? (e.g. "Coalesce(dept, 'N/A')")
-      case ts if functionNs.exists { case (name, _) => ts is name } =>
-        functionNs.find { case (name, _) => ts nextIf name } map { case (_, fx) => fx(parseArguments(ts)) }
+
       // must be a user-defined function
       case ts => Option(FunctionCall(name = ts.next().text, parseArguments(ts)))
     }
@@ -160,26 +140,7 @@ trait ExpressionParser {
     processor.process("( %E:args )", ts)(this).expressionLists.getOrElse("args", Nil)
   }
 
-  /**
-    * Extracts a fixed number of function arguments
-    * @param ts    the given [[TokenStream token stream]]
-    * @param name  the name of the function
-    * @param count the number of arguments to expect
-    * @return a collection of [[Expression argument expressions]]
-    */
-  private def parseArguments(ts: TokenStream, name: String, count: Int): List[Expression] = {
-    val args = parseArguments(ts)
-    if (args.size != count) {
-      count match {
-        case 0 => ts.die(s"Function $name expects no parameters")
-        case 1 => ts.die(s"Function $name expects a single parameter")
-        case n => ts.die(s"Function $name expects $n parameters")
-      }
-    }
-    args
-  }
-
-  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Array_Position] = {
+  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Expression] = {
     val results = processor.process("[ %e:index ]", ts)(this)
     results.expressions.get("index") map { index => Array_Position(array, index) }
   }
@@ -363,140 +324,6 @@ trait ExpressionParser {
   * @author lawrence.daniels@gmail.com
   */
 object ExpressionParser {
-  private val function0s: Map[String, SQLFunction] = Map(
-    "Cume_Dist" -> Cume_Dist,
-    "Current_Database" -> Current_Database,
-    "Current_Date" -> Current_Date,
-    "Current_Timestamp" -> Current_Timestamp,
-    "Dense_Rank" -> Dense_Rank,
-    "E" -> E
-  )
-  private val function1s: Map[String, Expression => SQLFunction1] = Map(
-    "Abs" -> Abs,
-    "Acos" -> Acos,
-    "Array_Max" -> Array_Max,
-    "Array_Min" -> Array_Min,
-    "Array_Sort" -> Array_Sort,
-    "Ascii" -> Ascii,
-    "Asin" -> Asin,
-    "Assert_True" -> Assert_True,
-    "Atan" -> Atan,
-    "Avg" -> Avg,
-    "Base64" -> Base64,
-    "BigInt" -> BigInt,
-    "Bin" -> Bin,
-    "Binary" -> Binary,
-    "Bit_Length" -> Bit_Length,
-    "Boolean" -> BooleanF,
-    "Cardinality" -> Cardinality,
-    "Cbrt" -> Cbrt,
-    "Ceil" -> Ceil,
-    "Ceiling" -> Ceil,
-    "Char" -> CharF,
-    "Char_Length" -> Char_Length,
-    "Character_Length" -> Char_Length,
-    "Chr" -> CharF,
-    "Collect_List" -> Collect_List,
-    "Collect_Set" -> Collect_Set,
-    "Cos" -> Cos,
-    "Cosh" -> CosH,
-    "Cot" -> Cot,
-    "Count" -> Count,
-    "CRC32" -> CRC32,
-    "Date" -> Date,
-    "Day" -> Day,
-    "DayOfMonth" -> DayOfMonth,
-    "DayOfWeek" -> DayOfWeek,
-    "Decimal" -> Decimal,
-    "Degrees" -> Degrees,
-    "Distinct" -> Distinct,
-    "Double" -> DoubleF,
-    "Exp" -> Exp,
-    "Explode" -> Explode,
-    "Explode_Outer" -> Explode_Outer,
-    "Expm1" -> Expm1,
-    "Factorial" -> Factorial,
-    "Flatten" -> Flatten,
-    "Float" -> FloatF,
-    "Floor" -> Floor,
-    "Hex" -> Hex,
-    "Hour" -> Hour,
-    "Length" -> Length,
-    "Lower" -> Lower,
-    "LTrim" -> LTrim,
-    "Max" -> Max,
-    "Mean" -> Mean,
-    "Min" -> Min,
-    "RTrim" -> RTrim,
-    "StdDev" -> StdDev,
-    "Sum" -> Sum,
-    "To_Date" -> To_Date,
-    "Trim" -> Trim,
-    "UnHex" -> UnHex,
-    "Upper" -> Upper,
-    "Variance" -> Variance,
-    "WeekOfYear" -> WeekOfYear,
-    "Year" -> Year
-  )
-  private val function2s: Map[String, (Expression, Expression) => SQLFunction2] = Map(
-    "Add_Months" -> Add_Months,
-    "Array_Contains" -> Array_Contains,
-    "Array_Index" -> Array_Position,
-    "Array_Except" -> Array_Except,
-    "Array_Intersect" -> Array_Intersect,
-    "Array_Overlap" -> Array_Overlap,
-    "Array_Position" -> Array_Position,
-    "Array_Remove" -> Array_Remove,
-    "Array_Repeat" -> Array_Repeat,
-    "Array_Union" -> Array_Union,
-    "Atan2" -> Atan2,
-    "Bround" -> Bround,
-    "Corr" -> Corr,
-    "Covar_Pop" -> Covar_Pop,
-    "Covar_Samp" -> Covar_Samp,
-    "Date_Add" -> Date_Add,
-    "Date_Format" -> Date_Format,
-    "Date_Sub" -> Date_Sub,
-    "Date_Trunc" -> Date_Trunc,
-    "DateDiff" -> DateDiff,
-    "Decode" -> Decode,
-    "Encode" -> Encode,
-    "Find_In_Set" -> Find_In_Set,
-    "Format_Number" -> Format_Number,
-    "From_UnixTime" -> From_UnixTime,
-    "From_UTC_Timestamp" -> From_UTC_Timestamp,
-    "Get_JSON_Object" -> Get_JSON_Object,
-    "Hypot" -> Hypot,
-    "Split" -> Split
-  )
-  private val function3s: Map[String, (Expression, Expression, Expression) => SQLFunction3] = Map(
-    "LPad" -> LPad,
-    "RPad" -> RPad,
-    "Substr" -> Substring,
-    "Substring" -> Substring
-  )
-  private val functionNs: Map[String, List[Expression] => SQLFunctionN] = Map(
-    "Aggregate" -> Aggregate,
-    "Approx_Count_Distinct" -> Approx_Count_Distinct,
-    "Approx_Percentile" -> Approx_Percentile,
-    "Array" -> Array,
-    "Array_Distinct" -> Array_Distinct,
-    "Array_Join" -> Array_Join,
-    "Arrays_Zip" -> Arrays_Zip,
-    "Coalesce" -> Coalesce,
-    "Concat" -> Concat,
-    "Concat_Ws" -> Concat_Ws,
-    "Conv" -> Conv,
-    "Count_Min_Sketch" -> Count_Min_Sketch,
-    "Cube" -> Cube,
-    "Elt" -> Elt,
-    "First" -> First_Value,
-    "First_Value" -> First_Value,
-    "Format_String" -> Format_String,
-    "From_JSON" -> From_JSON,
-    "Greatest" -> Greatest,
-    "Hash" -> Hash
-  )
   private val conditionalOps: Map[String, (Expression, Expression) => Condition] = Map(
     "=" -> EQ,
     ">=" -> GE,

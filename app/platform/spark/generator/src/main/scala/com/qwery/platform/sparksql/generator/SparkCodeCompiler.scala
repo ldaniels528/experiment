@@ -8,7 +8,6 @@ import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.Insert.Values
 import com.qwery.models._
-import com.qwery.models.expressions.SQLFunction._
 import com.qwery.models.expressions._
 import com.qwery.platform.sparksql.generator.SparkCodeCompiler.Implicits._
 import com.qwery.util.OptionHelper._
@@ -285,76 +284,29 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     final implicit class ExpressionCompiler(val expression: Expression) extends AnyVal {
 
       def toCode: String = expression match {
+        case FunctionCall(name, args) => s"$name(${args.map(_.toCode).mkString(",")})"
         case Literal(value) => value.asCode
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
       }
 
       def toSQL: String = {
         val result = expression match {
-          case Abs(a) => s"ABS(${a.toSQL})"
           case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
-          case Add_Months(a, b) => s"ADD_MONTHS(${a.toSQL}, ${b.toSQL})"
           case AllFields => "*"
-          case Array(args) => s"ARRAY(${args.map(_.toSQL).mkString(",")})"
-          case Array_Contains(a, b) => s"ARRAY_CONTAINS(${a.toSQL}, ${b.toSQL})"
-          case Array_Distinct(args) => s"ARRAY_DISTINCT(${args.map(_.toSQL).mkString(",")})"
-          case Array_Except(a, b) => s"ARRAY_EXCEPT(${a.toSQL}, ${b.toSQL})"
-          case Array_Intersect(a, b) => s"ARRAY_INTERSECT(${a.toSQL}, ${b.toSQL})"
-          case Array_Max(a) => s"ARRAY_MAX(${a.toSQL})"
-          case Array_Min(a) => s"ARRAY_MIN(${a.toSQL})"
-          case Array_Position(a, b) => s"Array_Position(${a.toSQL}, ${b.toSQL})"
-          case Ascii(a) => s"ASCII(${a.toSQL})"
-          case Avg(a) => s"AVG(${a.toSQL})"
-          case Base64(a) => s"BASE64(${a.toSQL})"
           case BasicField(name) => name
-          case Bin(a) => s"BIN(${a.toSQL})"
           case BitwiseAND(a, b) => s"${a.toSQL} & ${b.toSQL}"
           case BitwiseOR(a, b) => s"${a.toSQL} | ${b.toSQL}"
           case BitwiseXOR(a, b) => s"${a.toSQL} ^ ${b.toSQL}"
           case c: Case => generateSQL(c)
           case Cast(value, toType) => s"CAST(${value.toSQL} AS ${toType.toSQL})"
-          case Cbrt(a) => s"CBRT(${a.toSQL})"
-          case Ceil(a) => s"CEIL(${a.toSQL})"
-          case Coalesce(args) => s"COALESCE(${args.map(_.toSQL).mkString(",")})"
-          case Concat(args) => s"CONCAT(${args.map(_.toSQL).mkString(",")})"
-          case Count(Distinct(a)) => s"COUNT(DISTINCT(${a.toSQL}))"
-          case Count(a) => s"COUNT(${a.toSQL})"
-          case Cume_Dist => "CUME_DIST()"
-          case Current_Database => "Current_Database()"
-          case Current_Date => "CURRENT_DATE()"
-          case Date_Add(a, b) => s"DATE_ADD(${a.toSQL}, ${b.toSQL})"
-          case Divide(a, b) => s"${a.toSQL} / ${b.toSQL}"
-          case Factorial(a) => s"FACTORIAL(${a.toSQL})"
-          case Floor(a) => s"FLOOR(${a.toSQL})"
-          case From_UnixTime(a, b) => s"FROM_UNIXTIME(${a.toSQL}, ${b.toSQL})"
           case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(",")})"
           case If(condition, trueValue, falseValue) => s"IF(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
-          case JoinField(name, tableAlias) => tableAlias.map(alias => s"$alias.$name") getOrElse name
-          case Length(a) => s"LENGTH(${a.toSQL})"
           case Literal(value) => value.asSQL
           case LocalVariableRef(name) => name.asSQL
-          case Lower(a) => s"LOWER(${a.toSQL})"
-          case LPad(a, b, c) => s"LPAD(${a.toSQL}, ${b.toSQL}, ${c.toSQL})"
-          case LTrim(a) => s"LTRIM(${a.toSQL})"
-          case Max(a) => s"MAX(${a.toSQL})"
-          case Mean(a) => s"MEAN(${a.toSQL})"
-          case Min(a) => s"MIN(${a.toSQL})"
           case Modulo(a, b) => s"${a.toSQL} % ${b.toSQL}"
           case Multiply(a, b) => s"${a.toSQL} * ${b.toSQL}"
           case Pow(a, b) => s"POW(${a.toSQL}, ${b.toSQL})"
-          case RPad(a, b, c) => s"RPAD(${a.toSQL}, ${b.toSQL}, ${c.toSQL})"
-          case RTrim(a) => s"RTRIM(${a.toSQL})"
-          case Split(a, b) => s"SPLIT(${a.toSQL}, ${b.toSQL})"
           case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
-          case Substring(a, b, c) => s"SUBSTRING(${a.toSQL}, ${b.asInt}, ${c.asInt})"
-          case Sum(Distinct(a)) => s"SUM(DISTINCT(${a.toSQL}))"
-          case Sum(a) => s"SUM(${a.toSQL})"
-          case To_Date(a) => s"TO_DATE(${a.toSQL})"
-          case Trim(a) => s"TRIM(${a.toSQL})"
-          case Upper(a) => s"UPPER(${a.toSQL})"
-          case Variance(a) => s"VARIANCE(${a.toSQL})"
-          case WeekOfYear(a) => s"WEEKOFYEAR(${a.toSQL})"
-          case Year(a) => s"YEAR(${a.toSQL})"
           case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
         }
         result.withAlias(expression)
@@ -381,12 +333,9 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
-          case Console.Debug(text) => s"""logger.debug("$text")"""
-          case Console.Error(text) => s"""logger.error("$text")"""
-          case Console.Info(text) => s"""logger.info("$text")"""
-          case Console.Log(text) => s"""logger.info("$text")"""
-          case Console.Print(text) => s"""println("$text")"""
-          case Console.Warn(text) => s"""logger.warn("$text")"""
+          case Console(name, text) if name == "print" => s"""println("$text")"""
+          case Console(name, text) if name == "log" => s"""logger.info("$text")"""
+          case Console(name, text) => s"""logger.$name("$text")"""
           case Create(procedure: Procedure) => generateCode(procedure)
           case Create(tableOrView: TableLike) => generateReader(tableOrView)
           case Create(udf: UserDefinedFunction) => generateCode(udf)

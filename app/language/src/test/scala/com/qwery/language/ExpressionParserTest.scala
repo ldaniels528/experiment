@@ -1,7 +1,7 @@
 package com.qwery.language
 
 import com.qwery.models._
-import com.qwery.models.expressions.SQLFunction._
+import com.qwery.models.expressions.NativeFunctions._
 import com.qwery.models.expressions._
 import org.scalatest.FunSpec
 
@@ -106,8 +106,6 @@ class ExpressionParserTest extends FunSpec {
       verify("(x + 3) * 2", Multiply(Add('x, 3), 2))
     }
 
-
-
     it("should parse functions (Min)") {
       verify("Min(LastSale)", Min('LastSale))
     }
@@ -116,16 +114,16 @@ class ExpressionParserTest extends FunSpec {
       verify("Max(LastSale)", Max('LastSale))
     }
 
-    it("should parse functions (LPad)") {
-      verify("LPad(Symbol, 5, ' ')", LPad('Symbol, 5, " "))
+    it("should parse functions (Lpad)") {
+      verify("LPad(Symbol, 5, ' ')", Lpad('Symbol, 5, " "))
     }
 
-    it("should parse functions (RPad)") {
-      verify("RPad(Symbol, 5, ' ')", RPad('Symbol, 5, " "))
+    it("should parse functions (Rpad)") {
+      verify("RPad(Symbol, 5, ' ')", Rpad('Symbol, 5, " "))
     }
 
-    it("should parse functions (StdDev)") {
-      verify("StdDev(LastSale)", StdDev('LastSale))
+    it("should parse functions (Stddev)") {
+      verify("StdDev(LastSale)", Stddev('LastSale))
     }
 
     it("should parse functions (Substring)") {

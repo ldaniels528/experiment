@@ -394,7 +394,7 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT ... GROUP BY statements") {
-      import SQLFunction._
+      import NativeFunctions._
 
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal

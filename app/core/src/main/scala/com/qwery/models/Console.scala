@@ -14,6 +14,8 @@ sealed trait Console extends Invokable {
   */
 object Console {
 
+  def unapply(console: Console): Option[(String, String)] = Some((console.getClass.getSimpleName.toLowerCase, console.text))
+
   /**
     * DEBUG statement
     * @example
