@@ -36,7 +36,7 @@ object NativeFunction {
           isAggregate: Boolean = false): NativeFunction =
     many(
       name = name,
-      minArgs = 1,
+      //minArgs = 1,
       maxArgs = 1,
       description = description,
       usage = usage,
@@ -127,7 +127,7 @@ object NativeFunction {
       "Returns true if the array contains the value"),
     many(name = "array_distinct", description = "Removes duplicate values from the array"),
     two(name = "array_except", description =
-      "Returns an array of the elements in array1 but not in array2, without duplicates."),
+      "Returns an array of the elements in array1 but not in array2, without duplicates"),
     two(name = "array_index", description =
       "Returns an array of the elements in the intersection of array1 and array2, without duplicates"),
     two(name = "array_intersect",
@@ -199,7 +199,7 @@ object NativeFunction {
     many(name = "concat_ws", minArgs = 2, usage = "concat_ws(sep, [str | array(str)]+)",
       description = "Returns the concatenation of the strings separated by sep"),
     many(name = "conv", usage = "conv(num, from_base, to_base)",
-      description = "Convert num from from_base to to_base."),
+      description = "Convert num from from_base to to_base"),
     two(name = "corr",
       description = "Returns Pearson coefficient of correlation between a set of number pairs"),
     one(name = "cos",
@@ -242,7 +242,7 @@ object NativeFunction {
          |fmt should be one of ["YEAR", "YYYY", "YY", "MON", "MONTH", "MM", "DAY", "DD",
          |"HOUR", "MINUTE", "SECOND", "WEEK", "QUARTER"]""".stripMargin),
     two(name = "datediff", usage = "datediff(endDate, startDate)",
-      description = "Returns the number of days from startDate to endDate."),
+      description = "Returns the number of days from startDate to endDate"),
     one(name = "day", usage = "day(date)",
       description = "Returns the day of month of the date/timestamp"),
     one(name = "dayofmonth", usage = "dayofmonth(date)",
@@ -288,7 +288,7 @@ object NativeFunction {
     two(name = "format_number", description =
       """|Formats the number expr1 like '#,###,###.##', rounded to expr2 decimal places.
          |If expr2 is 0, the result has no decimal point or fractional part. expr2 also accept a user specified format.
-         |This is supposed to function like MySQL's FORMAT.""".stripMargin),
+         |This is supposed to function like MySQL's FORMAT""".stripMargin),
     many(name = "format_string", minArgs = 2, usage = "format_string(strfmt, obj, ...)", description =
       "Returns a formatted string from printf-style format strings"),
     many(name = "from_json", minArgs = 2, usage = "from_json(jsonStr, schema[, options])", description =
@@ -333,19 +333,28 @@ object NativeFunction {
          |does not have any previous row), default is returned""".stripMargin),
     many(name = "last", maxArgs = 2, usage = "last(expr[, isIgnoreNull])", description =
       """|Returns the last value of expr for a group of rows. If isIgnoreNull is true,
-         |returns only non-null values.""".stripMargin),
+         |returns only non-null values""".stripMargin),
     one(name = "last_day", usage = "last_day(date)", description = "Returns the last day of the month which the date belongs to"),
     many(name = "last_value", maxArgs = 2, usage = "last_value(expr[, isIgnoreNull])", description =
       """|Returns the last value of expr for a group of rows. If isIgnoreNull is true,
-         |returns only non-null values.""".stripMargin),
+         |returns only non-null values""".stripMargin),
     one(name = "lcase", usage = "lcase(str)", description = "Returns str with all characters changed to lowercase"),
+    many(name = "lead", maxArgs = 3, usage = "lead(input[, offset[, default]]) ", description =
+      """|Returns the value of input at the offsetth row after the current row in the window. The default value of
+         |offset is 1 and the default value of default is null. If the value of  input at the offsetth row is null,
+         |null is returned. If there is no such an offset row (e.g., when the offset is 1, the last row of the window
+         |does not have any subsequent row), default is returned""".stripMargin),
+    many(name = "least", description = "Returns the least value of all parameters, skipping null values"),
+    two(name = "left", usage = "left(str, len)", description =
+      """|Returns the leftmost len(len can be string type) characters from the string str,
+         |if len is less or equal than 0 the result is an empty string""".stripMargin),
+    one(name = "length", description =
+      """|Returns the character length of string data or number of bytes of binary data. The length of string data
+         |includes the trailing spaces. The length of binary data includes binary zeros""".stripMargin),
 
-    // TODO finish implementing all functions
+    // TODO finish implementing missing functions
 
-    //
-
-    one(name = "length", description = ""),
-    one(name = "lower", description = ""),
+    one(name = "lower", usage = "lower(str)", description = "Returns str with all characters changed to lowercase"),
     three(name = "lpad", description = ""),
     one(name = "ltrim", description = ""),
     one(name = "max", description = ""),
@@ -355,18 +364,55 @@ object NativeFunction {
     one(name = "rtrim", description = ""),
     two(name = "split", description = ""),
     one(name = "stddev", description = "", isAggregate = true),
-    three(name = "substr", description = ""),
-    three(name = "substring", description = ""),
-    one(name = "sum", description = "", isAggregate = true),
-    one(name = "to_date", description = ""),
-    one(name = "trim", description = ""),
+    many(name = "substr", minArgs = 2, maxArgs = 3, usage = "substr(str, pos[, len])", description =
+      """|Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
+         |starts at pos and is of length len""".stripMargin),
+    many(name = "substring", minArgs = 2, maxArgs = 3, usage = "substring(str, pos[, len])", description =
+      """|Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
+         |starts at pos and is of length len""".stripMargin),
+    three(name = "substring_index", usage = "substring_index(str, delim, count)", description =
+      """|Returns the substring from str before count occurrences of the delimiter delim. If count is positive,
+         |everything to the left of the final delimiter (counting from the left) is returned. If count is negative,
+         |everything to the right of the final delimiter (counting from the right) is returned. The function
+         |substring_index performs a case-sensitive match when searching for  delim""".stripMargin),
+    one(name = "sum", description = "Returns the sum calculated from values of a group", isAggregate = true),
+    many(name = "to_date", maxArgs = 2, usage = "to_date(date_str[, fmt])", description =
+      """|Parses the date_str expression with the fmt expression to a date. Returns null with invalid input.
+         |By default, it follows casting rules to a date if the fmt is omitted""".stripMargin),
+    one(name = "trim", usage = "trim(str)", description = "Removes the leading and trailing space characters from str"),
     one(name = "ucase", usage = "ucase(str)", description = "Returns str with all characters changed to uppercase"),
     one(name = "unbase64", usage = "unbase64(str)", description = "Converts the argument from a base 64 string str to a binary"),
     one(name = "unhex", description = "Converts hexadecimal expr to binary"),
-    one(name = "upper", description = ""),
+    one(name = "upper", usage = "upper(str)", description = "Returns str with all characters changed to uppercase"),
     one(name = "variance", description = "", isAggregate = true),
-    one(name = "weekofyear", description = ""),
-    one(name = "year", description = "")
+    one(name = "weekofyear", usage = "weekofyear(date)", description =
+      """|Returns the week of the year of the given date.
+         |A week is considered to start on a Monday and week 1 is the first week with >3 days""".stripMargin),
+
+    // TODO finish implementing missing functions
+
+    two(name = "xpath", usage = "xpath(xml, xpath)", description =
+      "Returns a string array of values within the nodes of xml that match the XPath expression"),
+    two(name = "xpath_boolean", usage = "xpath_boolean(xml, xpath)", description =
+      "Returns true if the XPath expression evaluates to true, or if a matching node is found"),
+    two(name = "xpath_double", usage = "xpath_double(xml, xpath)", description =
+      "Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric"),
+    two(name = "xpath_float", usage = "xpath_float(xml, xpath)", description =
+      "Returns a float value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric"),
+    two(name = "xpath_int", usage = "xpath_int(xml, xpath)", description =
+      " Returns an integer value, or the value zero if no match is found, or a match is found but the value is non-numeric"),
+    two(name = "xpath_long", usage = "xpath_long(xml, xpath)", description =
+      "Returns a long integer value, or the value zero if no match is found, or a match is found but the value is non-numeric"),
+    two(name = "xpath_number", usage = "xpath_number(xml, xpath)", description =
+      "Returns a double value, the value zero if no match is found, or NaN if a match is found but the value is non-numeric"),
+    two(name = "xpath_short", usage = "xpath_short(xml, xpath)", description =
+      "Returns a short integer value, or the value zero if no match is found, or a match is found but the value is non-numeric"),
+    two(name = "xpath_string", usage = "xpath_string(xml, xpath)", description =
+      "Returns the text contents of the first xml node that matches the XPath expression"),
+    one(name = "year", usage = "year(date)", description = "Returns the year component of the date/timestamp"),
+    three(name = "zip_with", usage = "zip_with(left, right, func)", description =
+      """|Merges the two given arrays, element-wise, into a single array using function. If one array is shorter,
+         |nulls are appended at the end to match the length of the longer array, before applying function""".stripMargin)
   ).map(f => f.name -> f): _*)
 
 }
