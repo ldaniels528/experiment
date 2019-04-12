@@ -139,9 +139,11 @@ trait SparkCodeCompiler {
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
       case InlineTable(name, columns, source) =>
-        s"""|${source.toCode}
-            |   .${generateCode(columns)}
-            |   .withGlobalTempView("$name")""".stripMargin
+        new StringBuilder(source.toCode)
+          .append(s".${generateCode(columns)}")
+          .append(s""".withGlobalTempView("$name")""")
+          .toString()
+
       case table: Table =>
         table.inputFormat.map(_.toString.toLowerCase()) match {
           case Some(format) =>
@@ -151,9 +153,12 @@ trait SparkCodeCompiler {
                 |   .withGlobalTempView("${table.name}")""".stripMargin
           case None => ""
         }
+
       case View(name, query) =>
-        s"""|${query.toCode}
-            |   .withGlobalTempView("$name")""".stripMargin
+        new StringBuilder(query.toCode)
+          .append(s""".withGlobalTempView("$name")""")
+          .toString()
+
       case other => die(s"Table entity '${other.name}' could not be translated")
     }
   }

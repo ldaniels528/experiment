@@ -163,6 +163,7 @@ class SparkJobGenerator() {
         |
         |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
         |     import spark.implicits._
+        |
         |     {{ flow }}
         |  }
         |

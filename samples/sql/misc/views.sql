@@ -21,8 +21,8 @@ begin
     -- process the data
     create view  OilGasSecurities as
     select symbol, name, lastsale, marketcap, ipoyear, sector, industry
-    from securities
-    where industry = 'oil/gas transmission';
+    from Securities
+    where industry = 'Oil/Gas Transmission';
 
     show ( select * from OilGasSecurities );
 

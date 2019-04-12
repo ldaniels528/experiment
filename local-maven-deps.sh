@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Installs the Qwery dependencies locally
 
 mvn install:install-file \
    -Dfile=./app/core/target/scala-2.11/core_2.11-0.4.0.jar \
