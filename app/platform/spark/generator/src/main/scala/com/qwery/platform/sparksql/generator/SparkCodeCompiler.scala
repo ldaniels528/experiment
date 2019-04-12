@@ -151,6 +151,9 @@ trait SparkCodeCompiler {
                 |   .withGlobalTempView("${table.name}")""".stripMargin
           case None => ""
         }
+      case View(name, query) =>
+        s"""|${query.toCode}
+            |   .withGlobalTempView("$name")""".stripMargin
       case other => die(s"Table entity '${other.name}' could not be translated")
     }
   }
