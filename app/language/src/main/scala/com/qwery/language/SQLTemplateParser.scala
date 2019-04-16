@@ -659,6 +659,26 @@ object SQLTemplateParser {
   def apply(ts: TokenStream): SQLTemplateParser = new SQLTemplateParser(ts)
 
   /**
+    * Invokable Enrichment
+    * @param invokable the given [[Invokable]]
+    */
+  final implicit class InvokableEnriched(val invokable: Invokable) extends AnyVal {
+
+    @inline def isQuery: Boolean = invokable match {
+      case _: FileSystem => true
+      case _: ProcedureCall => true
+      case _: Select => true
+      case _: Union => true
+      case _ => false
+    }
+
+    @inline def isVariable: Boolean = invokable match {
+      case _: VariableRef => true
+      case _ => false
+    }
+  }
+
+  /**
     * SQL Template Parser Extensions
     * @param tag the given tag
     */

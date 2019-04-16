@@ -77,4 +77,8 @@ object OptionHelper {
 
   }
 
+  final implicit class SequenceEnrichment[T](val values: Seq[T]) extends AnyVal {
+    @inline def toOption: Option[Seq[T]] = if(values.isEmpty) None else Some(values)
+  }
+
 }

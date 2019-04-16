@@ -62,7 +62,7 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Securities Example",
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "./temp/projects/securities",
-        "--class-name", "com.github.ldaniels528.securities.OilGasSecurities"
+        "--class-name", "com.github.ldaniels528.qwery.OilGasSecurities"
       ))
 
       val model = SQLLanguageParser.parse(

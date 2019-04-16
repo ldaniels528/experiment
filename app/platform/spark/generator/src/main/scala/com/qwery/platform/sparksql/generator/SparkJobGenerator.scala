@@ -154,7 +154,7 @@ class SparkJobGenerator() {
         |
         |/**
         |  * {{ appName }} Spark Job
-        |  * Generated on {{ date:MM-dd-yyyy }} at {{ date:hh:mma }}
+        |  * @note Generated on {{ date:MM-dd-yyyy }} at {{ date:hh:mma }}
         |  * @author {{ jvm:user.name }}
         |  */
         |class {{ className }}() extends {{ extendsClass }} {
@@ -169,15 +169,27 @@ class SparkJobGenerator() {
         |
         |}
         |
+        |/**
+        |  * {{ appName }} Spark Job Companion
+        |  * @author {{ jvm:user.name }}
+        |  */
         |object {{ className }} {
         |   private[this] val logger = LoggerFactory.getLogger(getClass)
         |
+        |   /**
+        |    * Application startup
+        |    * @param args the given command line arguments
+        |    */
         |   def main(args: Array[String]): Unit = {
         |     implicit val spark: SparkSession = createSparkSession()
         |     new {{ className }}().start(args)
         |     spark.stop()
         |   }
         |
+        |   /**
+        |    * Creates a new Spark session
+        |    * @return the [[SparkSession Spark session]]
+        |    */
         |   def createSparkSession(): SparkSession = {
         |     val sparkConf = new SparkConf()
         |     val builder = SparkSession.builder()
