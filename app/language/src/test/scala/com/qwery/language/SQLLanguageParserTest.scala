@@ -384,6 +384,19 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support SELECT w/BETWEEN statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |FROM Customers
+           |WHERE IPOYear BETWEEN '2000' AND '2019'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+        from = Table("Customers"),
+        where = BETWEEN('IPOYear, "2000", "2019")
+      ))
+    }
+
     it("should support SELECT ... FILESYSTEM(...) statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT * FROM (FILESYSTEM('models/'))

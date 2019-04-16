@@ -11,6 +11,8 @@ sealed trait Condition
   */
 case class AND(a: Condition, b: Condition) extends Condition
 
+case class BETWEEN(expr: Expression, a: Expression, b: Expression) extends Condition
+
 case class EQ(a: Expression, b: Expression) extends Condition
 
 case class GE(a: Expression, b: Expression) extends Condition

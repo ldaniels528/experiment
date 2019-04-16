@@ -273,6 +273,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toSQL: String = condition match {
         case AND(a, b) => s"${a.toSQL} and ${b.toSQL}"
+        case BETWEEN(expr, a, b) => s"${expr.toSQL} between ${a.toSQL} and ${b.toSQL}"
         case EQ(a, b) => s"${a.toSQL} = ${b.toSQL}"
         case GE(a, b) => s"${a.toSQL} >= ${b.toSQL}"
         case GT(a, b) => s"${a.toSQL} > ${b.toSQL}"

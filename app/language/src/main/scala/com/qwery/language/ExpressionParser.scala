@@ -68,6 +68,21 @@ trait ExpressionParser {
   }
 
   /**
+    * Parses a SQL BETWEEN clause
+    * @param stream the given [[TokenStream token stream]]
+    * @return the option of a new [[Condition]]
+    */
+  private def parseBetween(stream: TokenStream): Option[Condition] = {
+    for {
+      expr <- parseNextExpression(stream)
+      _ = stream expect "BETWEEN"
+      a <- parseNextExpression(stream)
+      _ = stream expect "AND"
+      b <- parseNextExpression(stream)
+    } yield BETWEEN(expr, a, b)
+  }
+
+  /**
     * Creates a new field from a token stream
     * @param stream the given [[TokenStream token stream]]
     * @return a new [[Field field]] instance
@@ -147,6 +162,7 @@ trait ExpressionParser {
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
     stream match {
+      case ts if ts.peekAhead(1).exists(_ is "BETWEEN") => parseBetween(ts)
       case ts if ts nextIf "NOT" => parseNOT(ts)
       case ts =>
         var condition: Option[Condition] = None
