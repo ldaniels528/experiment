@@ -404,13 +404,20 @@ trait SQLLanguageParser {
       orderBy = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
-    // is it a UNION statement?
-    while (ts nextIf "UNION") {
-      val params = SQLTemplateParams(ts, "?%C(mode|ALL|DISTINCT) %Q:union")
-      select = Union(
-        query0 = select,
-        query1 = params.sources("union"),
-        isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
+    // is it a SUBTRACT or UNION statement?
+    while ((ts is "SUBTRACT") || (ts is "UNION")) {
+      ts match {
+        case tsx if tsx nextIf "SUBTRACT" =>
+          val params = SQLTemplateParams(tsx, "%Q:subtract")
+          select = Except(query0 = select, query1 = params.sources("subtract"))
+        case tsx if tsx nextIf "UNION" =>
+          val params = SQLTemplateParams(tsx, "?%C(mode|ALL|DISTINCT) %Q:union")
+          select = Union(
+            query0 = select,
+            query1 = params.sources("union"),
+            isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
+        case tsx => tsx die "Syntax error"
+      }
     }
 
     // select INTO or OVERWRITE?

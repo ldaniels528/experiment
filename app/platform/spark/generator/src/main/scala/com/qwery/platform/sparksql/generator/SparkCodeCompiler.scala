@@ -375,14 +375,15 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
+          case Except(a, b) => s"${a.toSQL} except ${b.toSQL}"
           case s: Select => generateSQL(s)
-          case s: SQL => s.statements.map(_.toSQL).mkString("\n")
+          case SQL(statements) => statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>
             val tableName = s"${settings.defaultDB}.${t.name}"
             t.alias.map(alias => s"$tableName as $alias") getOrElse tableName
-          case u: Union => s"${u.query0.toSQL} union ${if (u.isDistinct) "distinct" else ""} ${u.query1.toSQL}"
+          case Union(a, b, isDistinct) => s"${a.toSQL} union ${if (isDistinct) "distinct" else ""} ${b.toSQL}"
           case w: While => generateSQL(w)
-          case z => die(s"Model class '${Option(z).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
+          case x => die(s"Model class '${x.getClass.getSimpleName}' could not be translated into SQL")
         }
         result //.withAlias(invokable)
       }
