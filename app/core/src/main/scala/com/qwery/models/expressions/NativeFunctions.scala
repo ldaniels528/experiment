@@ -1128,6 +1128,22 @@ object NativeFunctions {
   }
 
   /**
+    * Calculates the rank of a value in a group of values.
+    * @example {{{ rank() over(window_spec)) }}}
+    */
+  object Rank {
+    def apply(): FunctionCall = FunctionCall("rank")()
+  }
+
+  /**
+    * Assigns a unique number to each row to which it is applied.
+    * @example {{{ row_number() over(window_spec)) }}}
+    */
+  object Row_Number {
+    def apply(): FunctionCall = FunctionCall("row_number")()
+  }
+
+  /**
     * .
     * @example {{{ rpad(expr1, expr2, expr3) }}}
     */

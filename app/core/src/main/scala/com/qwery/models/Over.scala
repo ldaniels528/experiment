@@ -1,7 +1,6 @@
 package com.qwery.models
 
-import com.qwery.models.Over.Range
-import com.qwery.models.expressions.Field
+import com.qwery.models.expressions.{Condition, Expression, Field}
 
 /**
   * Window-Over clause
@@ -16,18 +15,7 @@ import com.qwery.models.expressions.Field
   * }}}
   * @see [[https://stackoverflow.com/questions/33207164/spark-window-functions-rangebetween-dates]]
   */
-class Over(partitionBy: Seq[Field] = Nil,
-           orderBy: Seq[OrderColumn] = Nil,
-           range: Option[Range] = None) extends Invokable
-
-/**
-  * Over Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object Over {
-
-  sealed trait Range
-
-  class RangeBetween() extends Range
-
-}
+case class Over(expression: Expression,
+                partitionBy: Seq[Field] = Nil,
+                orderBy: Seq[OrderColumn] = Nil,
+                range: Option[Condition] = None) extends Expression

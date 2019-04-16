@@ -323,14 +323,53 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfExpressions(name: String) = Try {
 
     def fetchNext(ts: TokenStream): Expression = {
-      val expression = parseExpression(ts)
-      val result = if (ts nextIf "AS") expression.map(_.as(stream.next().text)) else expression
-      result.getOrElse(ts.die("Unexpected end of statement"))
+      var expression: Option[Expression] = parseExpression(ts)
+      if (ts nextIf "OVER") expression = expression.map(parseOver(_, ts))
+      if (ts nextIf "AS") expression = expression.map(_.as(ts.next().text))
+      expression.getOrElse(ts die "Unexpected end of statement")
     }
 
     var expressions: List[Expression] = Nil
     do expressions = fetchNext(stream) :: expressions while (stream nextIf ",")
     SQLTemplateParams(expressions = Map(name -> expressions.reverse))
+  }
+
+  /**
+    * Parses a Window function
+    * @param expression the given expression; usually a function to window over
+    * @param stream     the given [[TokenStream token stream]]
+    * @return the option of a [[Over]]
+    * @example
+    * {{{
+    *   OVER (
+    *     [ <PARTITION BY clause> ]
+    *     [ <ORDER BY clause> ]
+    *     [ <ROW or RANGE clause> ]
+    *   )
+    * }}}
+    */
+  private def parseOver(expression: Expression, stream: TokenStream): Expression = {
+    // create an empty OVER clause
+    var clause = Over(expression = expression)
+
+    // process the inside of the parenthesis block
+    stream expect "("
+    while (stream isnt ")") {
+      stream match {
+        case ts if ts nextIf "ORDER BY" =>
+          clause = clause.copy(orderBy = SQLTemplateParams(ts, "%o:orderBy").orderedFields("orderBy"))
+        case ts if ts nextIf "PARTITION BY" =>
+          clause = clause.copy(partitionBy = SQLTemplateParams(ts, "%F:partitionBy").fields("partitionBy"))
+        case ts if ts nextIf "RANGE" =>
+          clause = clause.copy(range = SQLTemplateParams(ts, "%c:condition").conditions.get("condition"))
+        case ts if ts nextIf "ROW" =>
+          ts.die("SELECT ... OVER ROW is not yet supported")
+        case ts =>
+          ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROW")
+      }
+    }
+    stream expect ")"
+    clause
   }
 
   /**

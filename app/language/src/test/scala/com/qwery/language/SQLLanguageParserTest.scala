@@ -466,6 +466,29 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support SELECT ... OVER statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote,
+           |       MEAN(LastSale) OVER (
+           |          PARTITION BY Symbol
+           |          ORDER BY TradeDate ASC
+           |       // RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
+           |       ) AS mean
+           |FROM Customers
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote).map(x => x: Field) ::: Over(
+          expression = NativeFunctions.Mean('LastSale),
+          partitionBy = List('Symbol),
+          orderBy = List('TradeDate.asc),
+          range = None
+        ).as("mean") :: Nil,
+        from = Table("Customers"),
+        where = Field('Industry) === "Oil/Gas Transmission"
+      ))
+    }
+
     it("should support SELECT ... UNION statements") {
       Seq("ALL", "DISTINCT", "") foreach { modifier =>
         val results = SQLLanguageParser.parse(

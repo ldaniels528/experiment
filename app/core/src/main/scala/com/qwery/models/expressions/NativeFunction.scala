@@ -17,6 +17,14 @@ case class NativeFunction(name: String,
   */
 object NativeFunction {
 
+  /**
+    * Generates a function definition with zero parameters
+    * @param name        the name of the function
+    * @param description the description of the function
+    * @param usage       an example of the function's usage
+    * @param isAggregate indicates whether the function is an aggregate function
+    * @return a zero-parameter function
+    */
   def zero(name: String,
            description: String,
            usage: String = "",
@@ -30,6 +38,14 @@ object NativeFunction {
       isAggregate = isAggregate
     )
 
+  /**
+    * Generates a function definition with one parameter
+    * @param name        the name of the function
+    * @param description the description of the function
+    * @param usage       an example of the function's usage
+    * @param isAggregate indicates whether the function is an aggregate function
+    * @return a single-parameter function
+    */
   def one(name: String,
           description: String,
           usage: String = "",
@@ -43,6 +59,14 @@ object NativeFunction {
       isAggregate = isAggregate
     )
 
+  /**
+    * Generates a function definition with two parameters
+    * @param name        the name of the function
+    * @param description the description of the function
+    * @param usage       an example of the function's usage
+    * @param isAggregate indicates whether the function is an aggregate function
+    * @return a two-parameter function
+    */
   def two(name: String,
           description: String,
           usage: String = "",
@@ -56,6 +80,14 @@ object NativeFunction {
       isAggregate = isAggregate
     )
 
+  /**
+    * Generates a function definition with three parameters
+    * @param name        the name of the function
+    * @param description the description of the function
+    * @param usage       an example of the function's usage
+    * @param isAggregate indicates whether the function is an aggregate function
+    * @return a three-parameter function
+    */
   def three(name: String,
             description: String,
             usage: String = "",
@@ -69,6 +101,16 @@ object NativeFunction {
       isAggregate = isAggregate
     )
 
+  /**
+    * Generates a function definition with variable parameters
+    * @param name        the name of the function
+    * @param minArgs     the minimum number of arguments to expect
+    * @param maxArgs     the maximum number of arguments to expect
+    * @param description the description of the function
+    * @param usage       an example of the function's usage
+    * @param isAggregate indicates whether the function is an aggregate function
+    * @return a variable-parameter function
+    */
   def many(name: String,
            minArgs: Int = 1,
            maxArgs: Int = Int.MaxValue,
@@ -102,6 +144,7 @@ object NativeFunction {
   /**
     * The Native SQL functions
     * @see [[https://spark.apache.org/docs/2.4.0/api/sql/index.html]]
+    * @see [[https://www.ibm.com/support/knowledgecenter/en/SSULQD_7.1.0/com.ibm.nz.dbu.doc/r_dbuser_functions.html]]
     */
   val nativeFunctions: Map[String, NativeFunction] = Map(Seq(
     one(name = "abs", description = "Returns the absolute value of the numeric value"),
@@ -362,6 +405,10 @@ object NativeFunction {
     one(name = "md5", description = "Returns an MD5 128-bit checksum as a hex string of expr"),
     one(name = "mean", description = "Returns the mean calculated from values of a group"),
     one(name = "min", description = ""),
+    zero(name = "rank", usage = "rank() over(window_spec))", description =
+      "Calculates the rank of a value in a group of values"),
+    zero(name = "row_number", usage = "row_number() over(window_spec))", description =
+      "Assigns a unique number to each row to which it is applied"),
     three(name = "rpad", description = ""),
     one(name = "rtrim", description = ""),
     two(name = "split", description = ""),
