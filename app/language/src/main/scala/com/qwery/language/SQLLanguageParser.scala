@@ -3,6 +3,7 @@ package com.qwery.language
 import java.io.{File, InputStream}
 import java.net.URL
 
+import com.qwery.language.SQLTemplateParams.MappedParameters
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
@@ -302,7 +303,7 @@ trait SQLLanguageParser {
     val location = params.locations("target")
     Insert(
       destination = if (isOverwrite) Insert.Overwrite(location) else Insert.Into(location),
-      source = params.sources("source"),
+      source = params.sources("source").toQueryable,
       fields = fields)
   }
 
@@ -378,11 +379,11 @@ trait SQLLanguageParser {
     * WHERE A.exchange = 'NASDAQ'
     * LIMIT 5
     * }}}
-    * @param ts the given [[TokenStream token stream]]
+    * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable executable]]
     */
-  protected def parseSelect(ts: TokenStream): Invokable = {
-    val params = SQLTemplateParams(ts,
+  protected def parseSelect(stream: TokenStream): Invokable = {
+    val params = SQLTemplateParams(stream,
       """|SELECT ?TOP +?%n:top %E:fields
          |?%C(mode|INTO|OVERWRITE) +?%L:target
          |?FROM +?%q:source %J:joins
@@ -393,10 +394,10 @@ trait SQLLanguageParser {
          |?LIMIT +?%n:limit
          |""".stripMargin)
 
-    // create the SELECT statement
-    var select: Invokable = Select(
+    // create the SELECT model
+    var select: Queryable = Select(
       fields = params.expressions("fields"),
-      from = params.sources.get("source"),
+      from = params.sources.get("source") map (_.toQueryable),
       joins = params.joins.getOrElse("joins", Nil),
       where = params.conditions.get("condition"),
       groupBy = params.fields.getOrElse("groupBy", Nil),
@@ -404,35 +405,33 @@ trait SQLLanguageParser {
       orderBy = params.orderedFields.getOrElse("orderBy", Nil),
       limit = (params.numerics.get("limit") ?? params.numerics.get("top")).map(_.toInt))
 
-    // is it a SUBTRACT or UNION statement?
-    while ((ts is "SUBTRACT") || (ts is "UNION")) {
-      ts match {
-        case tsx if tsx nextIf "SUBTRACT" =>
-          val params = SQLTemplateParams(tsx, "%Q:subtract")
-          select = Except(query0 = select, query1 = params.sources("subtract"))
-        case tsx if tsx nextIf "UNION" =>
-          val params = SQLTemplateParams(tsx, "?%C(mode|ALL|DISTINCT) %Q:union")
-          select = Union(
-            query0 = select,
-            query1 = params.sources("union"),
-            isDistinct = params.atoms.get("mode").exists(_ equalsIgnoreCase "DISTINCT"))
-        case tsx => tsx die "Syntax error"
+    def getQuery(tsx: TokenStream): Queryable = SQLTemplateParams(tsx, "%Q:query").sources("query").toQueryable
+
+    // is there an EXCEPT or UNION clause?
+    while ((stream is "EXCEPT") || (stream is "INTERSECT") || (stream is "UNION")) {
+      select = stream match {
+        case ts if ts nextIf "EXCEPT" => Except(query0 = select, query1 = getQuery(ts))
+        case ts if ts nextIf "INTERSECT" => Intersect(query0 = select, query1 = getQuery(ts))
+        case ts if ts nextIf "UNION" =>
+          val params = SQLTemplateParams(ts, "?%C(mode|ALL|DISTINCT) %Q:query")
+          val isDistinct = params.atoms.is("mode", _ equalsIgnoreCase "DISTINCT")
+          Union(query0 = select, query1 = params.sources("query"), isDistinct)
+        case ts => ts die "Expected EXCEPT, INTERSECT or UNION"
       }
     }
 
-    // select INTO or OVERWRITE?
+    // is there an INTO or OVERWRITE clause?
     params.locations.get("target") match {
       case Some(target) =>
-        val isOverwrite = params.atoms.get("mode").exists(_ equalsIgnoreCase "OVERWRITE")
+        val isOverwrite = params.atoms.is("mode", _ equalsIgnoreCase "OVERWRITE")
         Insert(
           source = select,
           destination = if (isOverwrite) Insert.Overwrite(target) else Insert.Into(target),
           fields = params.expressions("fields") map {
             case field: Field => field
             case expr: NamedExpression => BasicField(expr.name)
-            case expr => ts.die(s"Invalid field definition $expr")
-          }
-        )
+            case expr => stream.die(s"Invalid field definition $expr")
+          })
       case None => select
     }
   }

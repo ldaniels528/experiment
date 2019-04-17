@@ -163,7 +163,7 @@ trait SparkCodeCompiler {
           case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
           case x => x.toSQL
         }
-        s"from ${result.withAlias(from)}"
+        s"from ${result.withAlias(from: Invokable)}"
       })
       .append(model.joins.map(_.toSQL))
       .append(model.where.map(condition => s"where ${condition.toSQL}"))
@@ -376,6 +376,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case Except(a, b) => s"${a.toSQL} except ${b.toSQL}"
+          case Intersect(a, b) => s"${a.toSQL} intersect ${b.toSQL}"
           case s: Select => generateSQL(s)
           case SQL(statements) => statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>

@@ -489,13 +489,57 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support SELECT ... EXCEPT statements") {
+        val results = SQLLanguageParser.parse(
+          s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+              |FROM Customers
+              |WHERE Industry = 'Oil/Gas Transmission'
+              |   EXCEPT
+              |SELECT Symbol, Name, Sector, Industry, SummaryQuote
+              |FROM Customers
+              |WHERE Industry = 'Computer Manufacturing'
+              |""".stripMargin)
+        assert(results == Except(
+          query0 = Select(
+            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+            from = Table("Customers"),
+            where = Field('Industry) === "Oil/Gas Transmission"),
+          query1 = Select(
+            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+            from = Table("Customers"),
+            where = Field('Industry) === "Computer Manufacturing")
+        ))
+    }
+
+    it("should support SELECT ... INTERSECT statements") {
+      val results = SQLLanguageParser.parse(
+        s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+            |FROM Customers
+            |WHERE Industry = 'Oil/Gas Transmission'
+            |   INTERSECT
+            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
+            |FROM Customers
+            |WHERE Industry = 'Computer Manufacturing'
+            |""".stripMargin)
+      assert(results == Intersect(
+        query0 = Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
+        query1 = Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = Field('Industry) === "Computer Manufacturing")
+      ))
+    }
+
     it("should support SELECT ... UNION statements") {
       Seq("ALL", "DISTINCT", "") foreach { modifier =>
         val results = SQLLanguageParser.parse(
           s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
               |FROM Customers
               |WHERE Industry = 'Oil/Gas Transmission'
-              |UNION $modifier
+              |   UNION $modifier
               |SELECT Symbol, Name, Sector, Industry, SummaryQuote
               |FROM Customers
               |WHERE Industry = 'Computer Manufacturing'

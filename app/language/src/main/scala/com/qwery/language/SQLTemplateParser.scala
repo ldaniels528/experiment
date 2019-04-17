@@ -703,14 +703,7 @@ object SQLTemplateParser {
     */
   final implicit class InvokableEnriched(val invokable: Invokable) extends AnyVal {
 
-    @inline def isQuery: Boolean = invokable match {
-      case _: Except => true
-      case _: FileSystem => true
-      case _: ProcedureCall => true
-      case _: Select => true
-      case _: Union => true
-      case _ => false
-    }
+    @inline def isQuery: Boolean = invokable.isInstanceOf[Queryable]
 
     @inline def isVariable: Boolean = invokable match {
       case _: VariableRef => true

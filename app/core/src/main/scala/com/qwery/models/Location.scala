@@ -4,7 +4,7 @@ package com.qwery.models
   * Represents a location of a data set (e.g. table or file)
   * @author lawrence.daniels@gmail.com
   */
-sealed trait Location extends Invokable with Aliasable {
+sealed trait Location extends Queryable with Aliasable {
   def description: String
 }
 

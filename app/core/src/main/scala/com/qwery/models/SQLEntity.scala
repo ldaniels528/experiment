@@ -117,7 +117,7 @@ case class UserDefinedFunction(name: String, `class`: String, jarLocation: Optio
 /**
   * Represents a View definition
   * @param name  the name of the view
-  * @param query the given [[Invokable query]]
+  * @param query the given [[Queryable query]]
   * @example
   * {{{
   *   CREATE VIEW OilAndGas AS
@@ -126,4 +126,4 @@ case class UserDefinedFunction(name: String, `class`: String, jarLocation: Optio
   *   WHERE Industry = 'Oil/Gas Transmission'
   * }}}
   */
-case class View(name: String, query: Invokable) extends TableLike
+case class View(name: String, query: Invokable) extends TableLike with Queryable

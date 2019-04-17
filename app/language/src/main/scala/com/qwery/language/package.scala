@@ -1,6 +1,6 @@
 package com.qwery
 
-import com.qwery.models.Invokable
+import com.qwery.models.{Invokable, Queryable}
 import com.qwery.util.FormattingHelper._
 
 /**
@@ -32,7 +32,10 @@ package object language {
     @inline def decode(tuples: (String, TokenStream => Invokable)*): Invokable =
       decodeOpt(tuples: _*).getOrElse(ts.dieKeyword(tuples.map(_._1).toList.sortBy(x => x)))
 
-    @inline def decodeOpt(tuples: (String, TokenStream => Invokable)*): Option[Invokable] =
+    @inline def decodeQuery(tuples: (String, TokenStream => Queryable)*): Queryable =
+      decodeOpt(tuples: _*).getOrElse(ts.dieKeyword(tuples.map(_._1).toList.sortBy(x => x)))
+
+    @inline def decodeOpt[T](tuples: (String, TokenStream => T)*): Option[T] =
       for (fx <- tuples.find { case (name, _) => ts is name } map (_._2)) yield fx(ts)
 
   }

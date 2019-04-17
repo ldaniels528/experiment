@@ -6,10 +6,10 @@ import com.qwery.models.expressions.{Expression, Field}
 /**
   * Represents a SQL-like Insert statement
   * @param destination the given [[Destination destination]]
-  * @param source      the given [[Invokable source]]
+  * @param source      the given [[Queryable source]]
   * @param fields      the given collection of [[Field]]s
   */
-case class Insert(destination: Destination, source: Invokable, fields: Seq[Field] = Nil) extends Invokable
+case class Insert(destination: Destination, source: Queryable, fields: Seq[Field] = Nil) extends Invokable
 
 /**
   * Insert Companion
@@ -56,6 +56,6 @@ object Insert {
     * Represents a static insert values collection
     * @param values the given collection of [[DataRow row]]s
     */
-  case class Values(values: List[DataRow]) extends Invokable
+  case class Values(values: List[DataRow]) extends Queryable
 
 }
