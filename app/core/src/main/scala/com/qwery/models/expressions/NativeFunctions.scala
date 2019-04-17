@@ -1,8 +1,9 @@
 package com.qwery.models.expressions
 
 /**
-  * Native Function Model Facades
+  * Native SQL Functions Model Facades
   * @author lawrence.daniels@gmail.com
+  * @note This is a generated class.
   */
 object NativeFunctions {
 
@@ -1409,3 +1410,4 @@ object NativeFunctions {
   }
 
 }
+

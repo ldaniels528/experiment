@@ -1,11 +1,19 @@
 package com.qwery.language
 
-import com.qwery.models.expressions.NativeFunction
+import java.io.{File, PrintWriter}
+
+import com.qwery.models.expressions.{NativeFunction, NativeFunctions}
+import com.qwery.util.OptionHelper._
+import com.qwery.util.ResourceHelper._
+import com.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
+import scala.io.Source
+
 /**
-  * Native Functions Test
+  * Generates the Native Functions class file
   * @author lawrence.daniels@gmail.com
+  * @see [[NativeFunctions]]
   */
 class NativeFunctionsTest extends FunSpec {
 
@@ -14,7 +22,7 @@ class NativeFunctionsTest extends FunSpec {
   describe(classOf[NativeFunction].getSimpleName) {
 
     it("should generate short-cuts") {
-      val results = nativeFunctions.toSeq.sortBy { case (name, _) => name } map {
+      val members = nativeFunctions.toSeq.sortBy { case (name, _) => name } map {
         case (name, fx) if fx.minArgs == 0 && fx.maxArgs == 0 =>
           val realName = toRealName(name)
           s"""|/**
@@ -67,16 +75,43 @@ class NativeFunctionsTest extends FunSpec {
               |""".stripMargin
       }
 
-      results.foreach(s => println(s))
+      writeToDisk(NativeFunctions.getObjectFullName) {
+        Source.fromString(members.mkString("\n")).getLines() map (line => "\t" + line) mkString "\n"
+      }
     }
 
   }
 
-  def toRealName(name: String):String = {
+  def toRealName(name: String): String = {
     name match {
       case s if s.contains("_") => s.split("[_]").map(_.capitalize).mkString("_")
       case s => s.capitalize
     }
+  }
+
+  def writeToDisk(fullyQualifiedClassName: String)(contents: => String): Unit = {
+    val (packageName, className) = fullyQualifiedClassName.lastIndexOfOpt(".")
+      .map(fullyQualifiedClassName.splitAt)
+      .map { case (_pkg, _class) => _pkg -> _class.drop(1) }
+      .orFail(s"Invalid class name - $fullyQualifiedClassName")
+
+    val srcDir = new File("app.core.src.main.scala".replace('.', File.separatorChar))
+    val classDir = new File(srcDir, packageName.replace('.', File.separatorChar))
+    val classFile = new File(classDir, s"$className.scala")
+    new PrintWriter(classFile) use (_.println(
+      s"""|package $packageName
+          |
+          |/**
+          |  * Native SQL Functions Model Facades
+          |  * @author lawrence.daniels@gmail.com
+          |  * @note This is a generated class.
+          |  */
+          |object $className {
+          |
+          | $contents
+          |}
+          |""".stripMargin
+    ))
   }
 
 }
