@@ -71,3 +71,6 @@ scripts/adbook_poc.sh
 samples/sql/adbook/*
 scripts/*
 *.iml
+samples/informatica/Sync_KbbVehicle.XML
+samples/informatica/wkf_BuyerConnect_Load.XML
+samples/informatica/wkf_BuyerConnect_Load.XML.sql

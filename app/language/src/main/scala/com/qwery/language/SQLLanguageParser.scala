@@ -408,15 +408,16 @@ trait SQLLanguageParser {
     def getQuery(tsx: TokenStream): Queryable = SQLTemplateParams(tsx, "%Q:query").sources("query").toQueryable
 
     // is there an EXCEPT or UNION clause?
-    while ((stream is "EXCEPT") || (stream is "INTERSECT") || (stream is "UNION")) {
+    val keywords = Seq("EXCEPT", "INTERSECT", "MINUS", "UNION")
+    while (keywords.exists(stream is _)) {
       select = stream match {
-        case ts if ts nextIf "EXCEPT" => Except(query0 = select, query1 = getQuery(ts))
+        case ts if (ts nextIf "EXCEPT") | (ts nextIf "MINUS") => Except(query0 = select, query1 = getQuery(ts))
         case ts if ts nextIf "INTERSECT" => Intersect(query0 = select, query1 = getQuery(ts))
         case ts if ts nextIf "UNION" =>
           val params = SQLTemplateParams(ts, "?%C(mode|ALL|DISTINCT) %Q:query")
           val isDistinct = params.atoms.is("mode", _ equalsIgnoreCase "DISTINCT")
           Union(query0 = select, query1 = params.sources("query"), isDistinct)
-        case ts => ts die "Expected EXCEPT, INTERSECT or UNION"
+        case ts => ts die "Expected EXCEPT, INTERSECT, MINUS or UNION"
       }
     }
 

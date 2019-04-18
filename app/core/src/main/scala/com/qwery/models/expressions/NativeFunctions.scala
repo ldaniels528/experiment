@@ -1063,6 +1063,22 @@ object NativeFunctions {
   }
 
   /**
+    * Returns the Levenshtein distance between the two given strings.
+    * @example {{{ levenshtein(str1, str2) }}}
+    */
+  object Levenshtein {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("levenshtein")(expr1, expr2)
+  }
+
+  /**
+    * Returns the natural logarithm (base e) of `expr`.
+    * @example {{{ ln(expr) }}}
+    */
+  object Ln {
+    def apply(expr: Expression): FunctionCall = FunctionCall("ln")(expr)
+  }
+
+  /**
     * Returns the position of the first occurrence of substr in str after position pos.
     * The given pos and return value are 1-based.
     * @example {{{ locate(substr, str[, pos]) }}}
@@ -1072,7 +1088,39 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to lowercase.
+    * Returns the logarithm of `expr` with `base`.
+    * @example {{{ log(base, expr) }}}
+    */
+  object Log {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("log")(expr1, expr2)
+  }
+
+  /**
+    * Returns the logarithm of `expr` with base 10.
+    * @example {{{ log10(expr) }}}
+    */
+  object Log10 {
+    def apply(expr: Expression): FunctionCall = FunctionCall("log10")(expr)
+  }
+
+  /**
+    * Returns log(1 + `expr`).
+    * @example {{{ log1p(expr) }}}
+    */
+  object Log1p {
+    def apply(expr: Expression): FunctionCall = FunctionCall("log1p")(expr)
+  }
+
+  /**
+    * Returns the logarithm of `expr` with base 2.
+    * @example {{{ log2(expr) }}}
+    */
+  object Log2 {
+    def apply(expr: Expression): FunctionCall = FunctionCall("log2")(expr)
+  }
+
+  /**
+    * Returns `str` with all characters changed to lowercase.
     * @example {{{ lower(str) }}}
     */
   object Lower {
@@ -1080,7 +1128,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str, left-padded with pad to a length of len. If str is longer than len,
+    * Returns `str`, left-padded with pad to a length of len. If `str` is longer than len,
     * the return value is shortened to len characters.
     * @example {{{ lpad(str, len, pad) }}}
     */
@@ -1089,7 +1137,7 @@ object NativeFunctions {
   }
 
   /**
-    * Removes the leading space characters from str.
+    * Removes the leading space characters from `str`.
     * @example {{{ ltrim([trimStr, ]str) }}}
     */
   object Ltrim {
@@ -1097,7 +1145,55 @@ object NativeFunctions {
   }
 
   /**
-    * .
+    * Creates a map with the given key/value pairs.
+    * @example {{{ map(key0, value0, key1, value1, ...) }}}
+    */
+  object Map {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("map")(expr: _*)
+  }
+
+  /**
+    * Returns the union of all the given maps.
+    * @example {{{ map_concat(map, ...) }}}
+    */
+  object Map_Concat {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("map_concat")(expr: _*)
+  }
+
+  /**
+    * Creates a map with a pair of the given key/value arrays. All elements in keys should not be null.
+    * @example {{{ map_from_arrays(keys, values) }}}
+    */
+  object Map_From_Arrays {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("map_from_arrays")(expr1, expr2)
+  }
+
+  /**
+    * Returns a map created from the given array of entries.
+    * @example {{{ map_from_entries(arrayOfEntries) }}}
+    */
+  object Map_From_Entries {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("map_from_entries")(expr: _*)
+  }
+
+  /**
+    * Returns an unordered array containing the keys of the map.
+    * @example {{{ map_keys(map) }}}
+    */
+  object Map_Keys {
+    def apply(expr: Expression): FunctionCall = FunctionCall("map_keys")(expr)
+  }
+
+  /**
+    * Returns an unordered array containing the values of the map.
+    * @example {{{ map_values(map) }}}
+    */
+  object Map_Values {
+    def apply(expr: Expression): FunctionCall = FunctionCall("map_values")(expr)
+  }
+
+  /**
+    * Returns the maximum value of `expr`.
     * @example {{{ max(expr) }}}
     */
   object Max {
@@ -1105,7 +1201,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns an MD5 128-bit checksum as a hex string of expr.
+    * Returns an MD5 128-bit checksum as a hex string of `expr`.
     * @example {{{ md5(expr) }}}
     */
   object Md5 {
@@ -1121,11 +1217,114 @@ object NativeFunctions {
   }
 
   /**
-    * .
+    * Returns the minimum value of `expr`.
     * @example {{{ min(expr) }}}
     */
   object Min {
     def apply(expr: Expression): FunctionCall = FunctionCall("min")(expr)
+  }
+
+  /**
+    * Returns the minute component of the string/timestamp.
+    * @example {{{ minute(timestamp) }}}
+    */
+  object Minute {
+    def apply(expr: Expression): FunctionCall = FunctionCall("minute")(expr)
+  }
+
+  /**
+    * monotonically_increasing_id() - Returns monotonically increasing 64-bit integers.
+    * The generated ID is guaranteed to be monotonically increasing and unique, but not consecutive.
+    * The current implementation puts the partition ID in the upper 31 bits, and the lower 33 bits
+    * represent the record number within each partition. The assumption is that the data frame has
+    * less than 1 billion partitions, and each partition has less than 8 billion records. The function
+    * is non-deterministic because its result depends on partition IDs.
+    * @example {{{ monotonically_increasing_id() }}}
+    */
+  object Monotonically_Increasing_Id {
+    def apply(): FunctionCall = FunctionCall("monotonically_increasing_id")()
+  }
+
+  /**
+    * Returns the month component of the date/timestamp.
+    * @example {{{ month(date) }}}
+    */
+  object Month {
+    def apply(expr: Expression): FunctionCall = FunctionCall("month")(expr)
+  }
+
+  /**
+    * If timestamp1 is later than timestamp2, then the result is positive. If timestamp1 and timestamp2 are
+    * on the same day of month, or both are the last day of month, time of day will be ignored. Otherwise,
+    * the difference is calculated based on 31 days per month, and rounded to 8 digits unless roundOff=false.
+    * @example {{{ months_between(timestamp1, timestamp2[, roundOff])  }}}
+    */
+  object Months_Between {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("months_between")(expr: _*)
+  }
+
+  /**
+    * Creates a struct with the given field names and values.
+    * @example {{{ named_struct(name1, val1, name2, val2, ...) }}}
+    */
+  object Named_Struct {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("named_struct")(expr: _*)
+  }
+
+  /**
+    * Returns `expr1` if it's not NaN, or `expr2` otherwise.
+    * @example {{{ nanvl(expr1, expr2) }}}
+    */
+  object Nanvl {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("nanvl")(expr1, expr2)
+  }
+
+  /**
+    * Returns the negated value of `expr`.
+    * @example {{{ negative(expr) }}}
+    */
+  object Negative {
+    def apply(expr: Expression): FunctionCall = FunctionCall("negative")(expr)
+  }
+
+  /**
+    * Returns the first date which is later than start_date and named as indicated.
+    * @example {{{ next_day(start_date, day_of_week) }}}
+    */
+  object Next_Day {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("next_day")(expr1, expr2)
+  }
+
+  /**
+    * Returns the current timestamp at the start of query evaluation.
+    * @example {{{ now() }}}
+    */
+  object Now {
+    def apply(): FunctionCall = FunctionCall("now")()
+  }
+
+  /**
+    * Divides the rows for each window partition into n buckets ranging from 1 to at most `n`.
+    * @example {{{ ntile(n) }}}
+    */
+  object Ntile {
+    def apply(expr: Expression): FunctionCall = FunctionCall("ntile")(expr)
+  }
+
+  /**
+    * Returns null if `expr1` equals to `expr2`, or `expr1` otherwise.
+    * @example {{{ nullif(expr1, expr2) }}}
+    */
+  object Nullif {
+    def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("nullif")(expr1, expr2)
+  }
+
+  /**
+    * Extracts a part from a URL.
+    * @example {{{ parse_url(url, partToExtract[, key]) }}}
+    */
+  object Parse_Url {
+    def apply(expr: Expression*): FunctionCall = FunctionCall("parse_url")(expr: _*)
   }
 
   /**
@@ -1137,6 +1336,14 @@ object NativeFunctions {
   }
 
   /**
+    * Returns a reversed string or an array with reverse order of elements.
+    * @example {{{ reverse(array) }}}
+    */
+  object Reverse {
+    def apply(expr: Expression): FunctionCall = FunctionCall("reverse")(expr)
+  }
+
+  /**
     * Assigns a unique number to each row to which it is applied.
     * @example {{{ row_number() over(window_spec)) }}}
     */
@@ -1145,31 +1352,32 @@ object NativeFunctions {
   }
 
   /**
-    * .
-    * @example {{{ rpad(expr1, expr2, expr3) }}}
+    * Returns str, right-padded with pad to a length of len. If str is longer than len,
+    * the return value is shortened to len characters.
+    * @example {{{ rpad(str, len, pad) }}}
     */
   object Rpad {
     def apply(expr1: Expression, expr2: Expression, expr3: Expression): FunctionCall = FunctionCall("rpad")(expr1, expr2, expr3)
   }
 
   /**
-    * .
-    * @example {{{ rtrim(expr) }}}
+    * Removes the trailing space characters from `str`.
+    * @example {{{ rtrim(str) }}}
     */
   object Rtrim {
     def apply(expr: Expression): FunctionCall = FunctionCall("rtrim")(expr)
   }
 
   /**
-    * .
-    * @example {{{ split(expr1, expr2) }}}
+    * Splits `str` around occurrences that match `regex`.
+    * @example {{{ split(str, regex) }}}
     */
   object Split {
     def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("split")(expr1, expr2)
   }
 
   /**
-    * .
+    * Returns the sample standard deviation calculated from values of a group.
     * @example {{{ stddev(expr) }}}
     */
   object Stddev {
@@ -1177,8 +1385,8 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-    * starts at pos and is of length len.
+    * Returns the substring of `str` that starts at pos and is of length `len`, or the slice of byte array that
+    * starts at `pos` and is of length `len`.
     * @example {{{ substr(str, pos[, len]) }}}
     */
   object Substr {
@@ -1186,8 +1394,8 @@ object NativeFunctions {
   }
 
   /**
-    * Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-    * starts at pos and is of length len.
+    * Returns the substring of str that starts at `pos` and is of length `len`, or the slice of byte array that
+    * starts at pos and is of length `len`.
     * @example {{{ substring(str, pos[, len]) }}}
     */
   object Substring {
@@ -1232,7 +1440,7 @@ object NativeFunctions {
   }
 
   /**
-    * Removes the leading and trailing space characters from str.
+    * Removes the leading and trailing space characters from `str`.
     * @example {{{ trim(str) }}}
     */
   object Trim {
@@ -1240,7 +1448,7 @@ object NativeFunctions {
   }
 
   /**
-    * Returns str with all characters changed to uppercase.
+    * Returns `str` with all characters changed to uppercase.
     * @example {{{ ucase(str) }}}
     */
   object Ucase {
@@ -1248,7 +1456,7 @@ object NativeFunctions {
   }
 
   /**
-    * Converts the argument from a base 64 string str to a binary.
+    * Converts the argument from a base 64 string `str` to a binary.
     * @example {{{ unbase64(str) }}}
     */
   object Unbase64 {

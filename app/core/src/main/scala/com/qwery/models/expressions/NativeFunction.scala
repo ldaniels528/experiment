@@ -390,35 +390,88 @@ object NativeFunction {
     one(name = "length", description =
       """|Returns the character length of string data or number of bytes of binary data. The length of string data
          |includes the trailing spaces. The length of binary data includes binary zeros""".stripMargin),
+    two(name = "levenshtein", usage = "levenshtein(str1, str2)", description =
+      "Returns the Levenshtein distance between the two given strings"),
+    one(name = "ln", description = "Returns the natural logarithm (base e) of `expr`"),
     many(name = "locate", minArgs = 2, maxArgs = 3, usage = "locate(substr, str[, pos])", description =
       """|Returns the position of the first occurrence of substr in str after position pos.
          |The given pos and return value are 1-based""".stripMargin),
-
-    // TODO finish implementing missing functions
-
-    one(name = "lower", usage = "lower(str)", description = "Returns str with all characters changed to lowercase"),
+    two(name = "log", usage = "log(base, expr)", description = "Returns the logarithm of `expr` with `base`"),
+    one(name = "log10", description = "Returns the logarithm of `expr` with base 10"),
+    one(name = "log1p", description = "Returns log(1 + `expr`)"),
+    one(name = "log2", description = "Returns the logarithm of `expr` with base 2"),
+    one(name = "lower", usage = "lower(str)", description = "Returns `str` with all characters changed to lowercase"),
     three(name = "lpad", usage = "lpad(str, len, pad)", description =
-      """|Returns str, left-padded with pad to a length of len. If str is longer than len,
+      """|Returns `str`, left-padded with pad to a length of len. If `str` is longer than len,
          |the return value is shortened to len characters""".stripMargin),
-    many(name = "ltrim", maxArgs = 2, usage = "ltrim([trimStr, ]str)", description = "Removes the leading space characters from str"),
-    one(name = "max", description = ""),
-    one(name = "md5", description = "Returns an MD5 128-bit checksum as a hex string of expr"),
+    many(name = "ltrim", maxArgs = 2, usage = "ltrim([trimStr, ]str)", description =
+      "Removes the leading space characters from `str`"),
+    many(name = "map", usage = "map(key0, value0, key1, value1, ...)", description =
+      "Creates a map with the given key/value pairs"),
+    many(name = "map_concat", usage = "map_concat(map, ...)", description =
+      "Returns the union of all the given maps"),
+    two(name = "map_from_arrays", usage = "map_from_arrays(keys, values)", description =
+      "Creates a map with a pair of the given key/value arrays. All elements in keys should not be null"),
+    many(name = "map_from_entries", usage = "map_from_entries(arrayOfEntries)", description =
+      "Returns a map created from the given array of entries"),
+    one(name = "map_keys", usage = "map_keys(map)", description =
+      "Returns an unordered array containing the keys of the map"),
+    one(name = "map_values", usage = "map_values(map)", description =
+      "Returns an unordered array containing the values of the map"),
+    one(name = "max", description = "Returns the maximum value of `expr`"),
+    one(name = "md5", description = "Returns an MD5 128-bit checksum as a hex string of `expr`"),
     one(name = "mean", description = "Returns the mean calculated from values of a group"),
-    one(name = "min", description = ""),
+    one(name = "min", description = "Returns the minimum value of `expr`"),
+    one(name = "minute", usage = "minute(timestamp)", description =
+      "Returns the minute component of the string/timestamp"),
+    zero(name = "monotonically_increasing_id", description =
+      """|monotonically_increasing_id() - Returns monotonically increasing 64-bit integers.
+         |The generated ID is guaranteed to be monotonically increasing and unique, but not consecutive.
+         |The current implementation puts the partition ID in the upper 31 bits, and the lower 33 bits
+         |represent the record number within each partition. The assumption is that the data frame has
+         |less than 1 billion partitions, and each partition has less than 8 billion records. The function
+         |is non-deterministic because its result depends on partition IDs""".stripMargin),
+    one(name = "month", usage = "month(date)", description = "Returns the month component of the date/timestamp"),
+    many(name = "months_between", maxArgs = 3, usage = "months_between(timestamp1, timestamp2[, roundOff]) ", description =
+      """|If timestamp1 is later than timestamp2, then the result is positive. If timestamp1 and timestamp2 are
+         |on the same day of month, or both are the last day of month, time of day will be ignored. Otherwise,
+         |the difference is calculated based on 31 days per month, and rounded to 8 digits unless roundOff=false""".stripMargin),
+    many(name = "named_struct", usage = "named_struct(name1, val1, name2, val2, ...)", description =
+      "Creates a struct with the given field names and values"),
+    two(name = "nanvl", description = "Returns `expr1` if it's not NaN, or `expr2` otherwise"),
+    one(name = "negative", description = "Returns the negated value of `expr`"),
+    two(name = "next_day", usage = "next_day(start_date, day_of_week)", description =
+      "Returns the first date which is later than start_date and named as indicated"),
+    zero(name = "now", description = "Returns the current timestamp at the start of query evaluation"),
+    one(name = "ntile", usage = "ntile(n)", description =
+      "Divides the rows for each window partition into n buckets ranging from 1 to at most `n`"),
+    two(name = "nullif", description = "Returns null if `expr1` equals to `expr2`, or `expr1` otherwise"),
+    many(name = "parse_url", maxArgs = 3, usage = "parse_url(url, partToExtract[, key])", description =
+      "Extracts a part from a URL"),
+
+    // TODO add missing functions
+
     zero(name = "rank", usage = "rank() over(window_spec))", description =
       "Calculates the rank of a value in a group of values"),
+    one(name = "reverse", usage = "reverse(array)", description =
+      "Returns a reversed string or an array with reverse order of elements"),
     zero(name = "row_number", usage = "row_number() over(window_spec))", description =
       "Assigns a unique number to each row to which it is applied"),
-    three(name = "rpad", description = ""),
-    one(name = "rtrim", description = ""),
-    two(name = "split", description = ""),
-    one(name = "stddev", description = "", isAggregate = true),
+    three(name = "rpad", usage = "rpad(str, len, pad)", description =
+      """|Returns str, right-padded with pad to a length of len. If str is longer than len,
+         |the return value is shortened to len characters""".stripMargin),
+    one(name = "rtrim", usage = "rtrim(str)", description =
+      "Removes the trailing space characters from `str`"),
+    two(name = "split", usage = "split(str, regex)", description =
+      "Splits `str` around occurrences that match `regex`"),
+    one(name = "stddev", isAggregate = true, description =
+      "Returns the sample standard deviation calculated from values of a group"),
     many(name = "substr", minArgs = 2, maxArgs = 3, usage = "substr(str, pos[, len])", description =
-      """|Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-         |starts at pos and is of length len""".stripMargin),
+      """|Returns the substring of `str` that starts at pos and is of length `len`, or the slice of byte array that
+         |starts at `pos` and is of length `len`""".stripMargin),
     many(name = "substring", minArgs = 2, maxArgs = 3, usage = "substring(str, pos[, len])", description =
-      """|Returns the substring of str that starts at pos and is of length len, or the slice of byte array that
-         |starts at pos and is of length len""".stripMargin),
+      """|Returns the substring of str that starts at `pos` and is of length `len`, or the slice of byte array that
+         |starts at pos and is of length `len`""".stripMargin),
     three(name = "substring_index", usage = "substring_index(str, delim, count)", description =
       """|Returns the substring from str before count occurrences of the delimiter delim. If count is positive,
          |everything to the left of the final delimiter (counting from the left) is returned. If count is negative,
@@ -431,9 +484,9 @@ object NativeFunction {
     three(name = "translate", usage = "translate(input, from, to)", description =
       """|Translates the input string by replacing the characters present in the from string with the
          |corresponding characters in the to string.""".stripMargin),
-    one(name = "trim", usage = "trim(str)", description = "Removes the leading and trailing space characters from str"),
-    one(name = "ucase", usage = "ucase(str)", description = "Returns str with all characters changed to uppercase"),
-    one(name = "unbase64", usage = "unbase64(str)", description = "Converts the argument from a base 64 string str to a binary"),
+    one(name = "trim", usage = "trim(str)", description = "Removes the leading and trailing space characters from `str`"),
+    one(name = "ucase", usage = "ucase(str)", description = "Returns `str` with all characters changed to uppercase"),
+    one(name = "unbase64", usage = "unbase64(str)", description = "Converts the argument from a base 64 string `str` to a binary"),
     one(name = "unhex", description = "Converts hexadecimal expr to binary"),
     one(name = "upper", usage = "upper(str)", description = "Returns str with all characters changed to uppercase"),
     zero(name = "uuid", description =
@@ -446,9 +499,6 @@ object NativeFunction {
     one(name = "weekofyear", usage = "weekofyear(date)", description =
       """|Returns the week of the year of the given date.
          |A week is considered to start on a Monday and week 1 is the first week with >3 days""".stripMargin),
-
-    // TODO finish implementing missing functions
-
     two(name = "xpath", usage = "xpath(xml, xpath)", description =
       "Returns a string array of values within the nodes of xml that match the XPath expression"),
     two(name = "xpath_boolean", usage = "xpath_boolean(xml, xpath)", description =

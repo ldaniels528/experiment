@@ -391,7 +391,7 @@ class SQLLanguageParserTest extends FunSpec {
            |WHERE IPOYear BETWEEN '2000' AND '2019'
            |""".stripMargin)
       assert(results == Select(
-        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+        fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
         from = Table("Customers"),
         where = BETWEEN('IPOYear, "2000", "2019")
       ))
@@ -403,12 +403,11 @@ class SQLLanguageParserTest extends FunSpec {
            |WHERE name like '%.csv'
            |ORDER BY name DESC
            |""".stripMargin)
-      assert(results == Select(List('*), from = FileSystem("models/"), where = LIKE('name, "%.csv"), orderBy = Seq('name desc)))
+      assert(results == Select(Seq('*), from = FileSystem("models/"), where = LIKE('name, "%.csv"), orderBy = Seq('name desc)))
     }
 
     it("should support SELECT ... GROUP BY statements") {
       import NativeFunctions._
-
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
            |FROM Customers
@@ -467,6 +466,25 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT ... OVER statements") {
+      import NativeFunctions._
+      val results = SQLLanguageParser.parse(
+        """|SELECT PAT_ID, DEPT_ID, INS_AMT,
+           |MIN(INS_AMT) OVER (PARTITION BY DEPT_ID ORDER BY DEPT_ID ASC) AS MIN_INS_AMT,
+           |MAX(INS_AMT) OVER (PARTITION BY DEPT_ID ORDER BY DEPT_ID ASC) AS MAX_INS_AMT
+           |FROM PATIENT
+           |""".stripMargin
+      )
+      assert(results == Select(
+        fields = List('PAT_ID, 'DEPT_ID, 'INS_AMT,
+          Min('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MIN_INS_AMT"),
+          Max('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MAX_INS_AMT")
+        ),
+        from = Table("PATIENT")
+      ))
+    }
+
+    it("should support SELECT ... OVER w/RANGE statements") {
+      import NativeFunctions._
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote,
            |       MEAN(LastSale) OVER (
@@ -478,37 +496,33 @@ class SQLLanguageParserTest extends FunSpec {
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
       assert(results == Select(
-        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote).map(x => x: Field) ::: Over(
-          expression = NativeFunctions.Mean('LastSale),
-          partitionBy = List('Symbol),
-          orderBy = List('TradeDate.asc),
-          range = None
-        ).as("mean") :: Nil,
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote,
+          Mean('LastSale).over(partitionBy = Seq('Symbol), orderBy = Seq('TradeDate.asc), range = None).as("mean")),
         from = Table("Customers"),
         where = Field('Industry) === "Oil/Gas Transmission"
       ))
     }
 
     it("should support SELECT ... EXCEPT statements") {
-        val results = SQLLanguageParser.parse(
-          s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
-              |FROM Customers
-              |WHERE Industry = 'Oil/Gas Transmission'
-              |   EXCEPT
-              |SELECT Symbol, Name, Sector, Industry, SummaryQuote
-              |FROM Customers
-              |WHERE Industry = 'Computer Manufacturing'
-              |""".stripMargin)
-        assert(results == Except(
-          query0 = Select(
-            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
-            from = Table("Customers"),
-            where = Field('Industry) === "Oil/Gas Transmission"),
-          query1 = Select(
-            fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
-            from = Table("Customers"),
-            where = Field('Industry) === "Computer Manufacturing")
-        ))
+      val results = SQLLanguageParser.parse(
+        s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+            |FROM Customers
+            |WHERE Industry = 'Oil/Gas Transmission'
+            |   EXCEPT
+            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
+            |FROM Customers
+            |WHERE Industry = 'Computer Manufacturing'
+            |""".stripMargin)
+      assert(results == Except(
+        query0 = Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = Field('Industry) === "Oil/Gas Transmission"),
+        query1 = Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = Field('Industry) === "Computer Manufacturing")
+      ))
     }
 
     it("should support SELECT ... INTERSECT statements") {

@@ -18,15 +18,11 @@ package object language {
     @inline def die[A](message: => String, cause: Throwable = null): A = throw SyntaxException(message, ts, cause)
 
     @inline def dieKeyword[A](symbols: Symbol*): A = {
-      throw SyntaxException(s"Expected keyword ${symbols.or()} near '${
-        ts.peek.map(_.text).orNull
-      }'", ts)
+      throw SyntaxException(s"Expected keyword ${symbols.or()} near '${ts.peek.map(_.text).orNull}'", ts)
     }
 
     @inline def dieKeyword[A](symbols: List[String]): A = {
-      throw SyntaxException(s"Expected keyword ${symbols.or()} near '${
-        ts.peek.map(_.text).orNull
-      }'", ts)
+      throw SyntaxException(s"Expected keyword ${symbols.or()} near '${ts.peek.map(_.text).orNull}'", ts)
     }
 
     @inline def decode(tuples: (String, TokenStream => Invokable)*): Invokable =

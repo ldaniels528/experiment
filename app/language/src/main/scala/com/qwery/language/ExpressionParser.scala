@@ -2,7 +2,6 @@ package com.qwery.language
 
 import com.qwery.language.ExpressionParser._
 import com.qwery.language.TokenStreamHelpers._
-import com.qwery.models.expressions.NativeFunctions._
 import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
 
@@ -41,6 +40,7 @@ trait ExpressionParser {
     * @return the option of a [[Expression]]
     */
   def parseExpression(stream: TokenStream): Option[Expression] = {
+    import com.qwery.models.expressions.NativeFunctions._
     var expression: Option[Expression] = None
     var done: Boolean = false
     do {
@@ -156,6 +156,7 @@ trait ExpressionParser {
   }
 
   private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Expression] = {
+    import com.qwery.models.expressions.NativeFunctions._
     val results = processor.process("[ %e:index ]", ts)(this)
     results.expressions.get("index") map { index => Array_Position(array, index) }
   }

@@ -42,7 +42,6 @@ object SparkRuntimeHelper {
     }) toDF("name", "absolutePath", "length", "canExecute", "canRead", "canWrite", "parent", "isDirectory", "isFile", "isHidden")
   }
 
-
   /**
     * Registers a UDF for use with Spark
     * @param name    the name of the UDF
@@ -81,39 +80,42 @@ object SparkRuntimeHelper {
   }
 
   /**
+    * Returns the Spark data type that corresponds to the given class name
+    * @param className the given class name
+    * @return the [[DataType]]
+    */
+  private def toSparkType(className: String): DataType = className match {
+    case null | "null" => DataTypes.NullType
+    case c if c.startsWith("[") => DataTypes.BinaryType // [B
+    case "java.lang.Byte" | "scala.Byte" => DataTypes.ByteType
+    case "java.util.Calendar" => DataTypes.CalendarIntervalType
+    case "java.sql.Date" | "java.util.Date" => DataTypes.DateType
+    case "java.lang.Double" | "scala.Double" => DataTypes.DoubleType
+    case "java.lang.Float" | "scala.Float" => DataTypes.FloatType
+    case "java.lang.Integer" | "scala.Int" => DataTypes.IntegerType
+    case "java.lang.Long" | "scala.Long" => DataTypes.LongType
+    case "java.lang.Short" | "scala.Short" => DataTypes.ShortType
+    case "java.lang.String" => DataTypes.StringType
+    case "java.sql.Timestamp" => DataTypes.TimestampType
+    case _ =>
+      logger.warn(s"Type '$className' was translated to 'DataTypes.StringType'")
+      DataTypes.StringType
+  }
+
+  /**
     * JVM Class-To-Spark Conversion
     * @param `class` the given [[Class]]
     */
   final implicit class ClassToSparkConversion[T](val `class`: Class[T]) extends AnyVal {
-    @inline def toSpark: DataType = `class`.getName match {
-      case "scala.Byte" | "java.lang.Byte" => DataTypes.ByteType
-      case "java.util.Date" => DataTypes.DateType
-      case "java.lang.Double" => DataTypes.DoubleType
-      case "scala.Int" | "java.lang.Integer" => DataTypes.IntegerType
-      case "scala.Long" | "java.lang.Long" => DataTypes.LongType
-      case "java.lang.Object" => DataTypes.StringType
-      case "java.lang.String" => DataTypes.StringType
-      case "java.sql.Timestamp" => DataTypes.TimestampType
-      case unknown => throw new IllegalStateException(s"Unsupported type conversion '$unknown'")
-    }
+    @inline def toSpark: DataType = toSparkType(`class`.getName)
   }
 
   /**
     * JVM Type-To-Spark Conversion
     * @param `type` the given [[Type]]
     */
-  final implicit class TypeToSparkConversion[T](val `type`: Type) extends AnyVal {
-    @inline def toSpark: DataType = `type`.getTypeName match {
-      case "scala.Byte" | "java.lang.Byte" => DataTypes.ByteType
-      case "java.util.Date" => DataTypes.DateType
-      case "java.lang.Double" => DataTypes.DoubleType
-      case "scala.Int" | "java.lang.Integer" => DataTypes.IntegerType
-      case "scala.Long" | "java.lang.Long" => DataTypes.LongType
-      case "java.lang.Object" => DataTypes.StringType
-      case "java.lang.String" => DataTypes.StringType
-      case "java.sql.Timestamp" => DataTypes.TimestampType
-      case unknown => throw new IllegalStateException(s"Unsupported type conversion '$unknown'")
-    }
+  final implicit class TypeToSparkConversion(val `type`: Type) extends AnyVal {
+    @inline def toSpark: DataType = toSparkType(`type`.getTypeName)
   }
 
   /**

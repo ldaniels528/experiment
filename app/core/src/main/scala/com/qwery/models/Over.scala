@@ -4,6 +4,10 @@ import com.qwery.models.expressions.{Condition, Expression, Field}
 
 /**
   * Window-Over clause
+  * @param expression  the host [[Expression]]
+  * @param partitionBy the given partition by columns
+  * @param orderBy     the given order by columns
+  * @param range       the RANGE BETWEEN clause
   * @example
   * {{{
   * SELECT *, mean(some_value) OVER (
