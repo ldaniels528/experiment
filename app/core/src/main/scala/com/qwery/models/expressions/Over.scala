@@ -1,6 +1,6 @@
-package com.qwery.models
+package com.qwery.models.expressions
 
-import com.qwery.models.expressions.{Condition, Expression, Field}
+import com.qwery.models.OrderColumn
 
 /**
   * Window-Over clause

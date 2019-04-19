@@ -25,17 +25,3 @@ case class LocalVariableRef(name: String) extends VariableRef with NamedExpressi
   * @param name the name of the variable
   */
 case class RowSetVariableRef(name: String) extends VariableRef with Queryable
-
-/**
-  * Local Variable assignment
-  * @param name       the given variable name
-  * @param expression the given [[Expression expression]]
-  */
-case class SetLocalVariable(name: String, expression: Expression) extends Invokable
-
-/**
-  * Row Variable assignment
-  * @param name    the given variable name
-  * @param dataset the given [[Queryable dataset]]
-  */
-case class SetRowVariable(name: String, dataset: Invokable) extends Invokable

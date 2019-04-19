@@ -2,8 +2,8 @@ package com.qwery.language
 
 import com.qwery.language.ExpressionParser._
 import com.qwery.language.TokenStreamHelpers._
-import com.qwery.models.expressions._
 import com.qwery.models.expressions.implicits._
+import com.qwery.models.expressions.{NativeFunctions => f, _}
 
 /**
   * Expression Parser
@@ -13,7 +13,7 @@ trait ExpressionParser {
   private val processor = new ExpressionTemplateProcessor {}
 
   /**
-    * Parses a condition from the given stream
+    * Parses a conditional expression from the given stream
     * @param stream the given [[TokenStream stream]]
     * @return the option of a [[Condition]]
     */
@@ -24,8 +24,8 @@ trait ExpressionParser {
       if (condition.isEmpty) condition = parseNextCondition(stream)
       else {
         val newCondition = stream match {
-          case ts if ts nextIf "AND" => for (a <- condition; b <- parseNextCondition(ts)) yield AND(a, b)
-          case ts if ts nextIf "OR" => for (a <- condition; b <- parseNextCondition(ts)) yield OR(a, b)
+          case ts if ts nextIf "AND" => for (a <- condition; b <- parseNextCondition(ts)) yield a && b
+          case ts if ts nextIf "OR" => for (a <- condition; b <- parseNextCondition(ts)) yield a || b
           case _ => None
         }
         if (newCondition.nonEmpty) condition = newCondition else done = true
@@ -40,7 +40,6 @@ trait ExpressionParser {
     * @return the option of a [[Expression]]
     */
   def parseExpression(stream: TokenStream): Option[Expression] = {
-    import com.qwery.models.expressions.NativeFunctions._
     var expression: Option[Expression] = None
     var done: Boolean = false
     do {
@@ -57,7 +56,7 @@ trait ExpressionParser {
           case ts if ts nextIf "&" => for (a <- expression; b <- parseNextExpression(ts)) yield a & b
           case ts if ts nextIf "|" => for (a <- expression; b <- parseNextExpression(ts)) yield a | b
           case ts if ts nextIf "^" => for (a <- expression; b <- parseNextExpression(ts)) yield a ^ b
-          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield Concat(a, b)
+          case ts if ts nextIf "||" => for (a <- expression; b <- parseNextExpression(ts)) yield f.concat(a, b)
           case _ => None
         }
         // if the expression was resolved ...
@@ -79,7 +78,7 @@ trait ExpressionParser {
       a <- parseNextExpression(stream)
       _ = stream expect "AND"
       b <- parseNextExpression(stream)
-    } yield BETWEEN(expr, a, b)
+    } yield Between(expr, a, b)
   }
 
   /**
@@ -134,19 +133,6 @@ trait ExpressionParser {
   }
 
   /**
-    * Parses an IfNull(condition, expression) statement
-    * @param ts the given [[TokenStream token stream]]
-    * @return the option of an [[IfNull]]
-    */
-  private def parseIfNull(ts: TokenStream): Option[IfNull] = {
-    val results = processor.process("( %c:condition , %e:expression )", ts)(this)
-    for {
-      condition <- results.conditions.get("condition")
-      expression <- results.expressions.get("expression")
-    } yield IfNull(condition, expression)
-  }
-
-  /**
     * Extracts a variable number of function arguments
     * @param ts the given [[TokenStream token stream]]
     * @return a collection of [[Expression argument expressions]]
@@ -155,10 +141,9 @@ trait ExpressionParser {
     processor.process("( %E:args )", ts)(this).expressionLists.getOrElse("args", Nil)
   }
 
-  private def parseArrayIndex(array: Expression, ts: TokenStream): Option[Expression] = {
-    import com.qwery.models.expressions.NativeFunctions._
+  private def parseArrayIndex(expr: Expression, ts: TokenStream): Option[Expression] = {
     val results = processor.process("[ %e:index ]", ts)(this)
-    results.expressions.get("index") map { index => Array_Position(array, index) }
+    results.expressions.get("index") map { index => f.array_position(expr, index) }
   }
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
@@ -200,8 +185,6 @@ trait ExpressionParser {
       case ts if ts nextIf "cast" => parseCast(ts)
       // is it an If expression?
       case ts if ts nextIf "if" => parseIf(ts)
-      // is it an IfNull expression?
-      case ts if ts nextIf "ifNull" => parseIfNull(ts)
       // is is a null value?
       case ts if ts nextIf "null" => Null
       // is it a constant value?
@@ -261,7 +244,7 @@ trait ExpressionParser {
       // parse the condition
       val condition = {
         if (primaryExpr.isEmpty) parseCondition(ts) else {
-          for {expr0 <- primaryExpr; expr1 <- parseExpression(ts)} yield EQ(expr0, expr1)
+          for {expr0 <- primaryExpr; expr1 <- parseExpression(ts)} yield expr0 === expr1
         }
       } getOrElse ts.die("Conditional expression expected")
 
@@ -342,13 +325,13 @@ trait ExpressionParser {
   */
 object ExpressionParser {
   private val conditionalOps: Map[String, (Expression, Expression) => Condition] = Map(
-    "=" -> EQ,
-    ">=" -> GE,
-    ">" -> GT,
-    "<=" -> LE,
-    "<" -> LT,
-    "<>" -> NE,
-    "!=" -> NE,
+    "=" -> { (expr0, expr1) => expr0 === expr1 },
+    ">=" -> { (expr0, expr1) => expr0 >= expr1 },
+    ">" -> { (expr0, expr1) => expr0 > expr1 },
+    "<=" -> { (expr0, expr1) => expr0 <= expr1 },
+    "<" -> { (expr0, expr1) => expr0 < expr1 },
+    "<>" -> { (expr0, expr1) => expr0 !== expr1 },
+    "!=" -> { (expr0, expr1) => expr0 !== expr1 },
     "LIKE" -> LIKE,
     "RLIKE" -> RLIKE
   )

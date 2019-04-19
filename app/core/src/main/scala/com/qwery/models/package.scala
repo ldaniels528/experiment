@@ -23,39 +23,6 @@ package object models {
   def @@(name: String) = RowSetVariableRef(name)
 
   /**
-    * Expression Enrichment
-    * @param expression the given [[Expression expression]]
-    */
-  final implicit class ExpressionEnrichment(val expression: Expression) extends AnyVal {
-
-    /**
-      * Creates an BETWEEN clause
-      * @param from the from expression
-      * @param to the to expression
-      * @return a [[BETWEEN]] expression
-      */
-    @inline def between(from: Expression, to: Expression): BETWEEN = BETWEEN(expr = expression, from, to)
-
-    /**
-      * Creates an OVER clause
-      * @param partitionBy the given partition by columns
-      * @param orderBy     the given order by columns
-      * @param range       the RANGE BETWEEN clause
-      * @return a [[Over window]] expression
-      */
-    @inline def over(partitionBy: Seq[Field] = Nil,
-                     orderBy: Seq[OrderColumn] = Nil,
-                     range: Option[Condition] = None): Over = {
-      Over(
-        expression = expression,
-        partitionBy = partitionBy,
-        orderBy = orderBy,
-        range = range
-      )
-    }
-  }
-
-  /**
     * Invokable Conversions
     * @param invokable the given [[Invokable invokable]]
     */

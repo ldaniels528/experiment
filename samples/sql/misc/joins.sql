@@ -8,7 +8,7 @@ begin
     ----------------------------------------------------------------
 
     /* First, we define our input and output sources */
-    log 'Describing the input and output sources... ';
+    info 'Describing the input and output sources... ';
     create table Securities (
             Symbol STRING,
             Name STRING,
@@ -48,7 +48,7 @@ begin
      */
 
     /* And finally, we perform our filtering/transformation */
-    log 'Performing the transformation... ';
+    info 'Performing the transformation... ';
     show (
         select Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry, SummaryQuote, Reserved
         from Securities

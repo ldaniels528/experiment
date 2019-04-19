@@ -50,7 +50,6 @@ trait SQLLanguageParser {
     "INCLUDE" -> parseInclude,
     "INFO" -> parseConsoleInfo,
     "INSERT" -> parseInsert,
-    "LOG" -> parseConsoleLog,
     "PRINT" -> parseConsolePrint,
     "RETURN" -> parseReturn,
     "SELECT" -> parseSelect,
@@ -98,15 +97,6 @@ trait SQLLanguageParser {
     */
   protected def parseConsoleInfo(ts: TokenStream): Console.Info =
     Console.Info(text = SQLTemplateParams(ts, "INFO %a:text").atoms("text"))
-
-  /**
-    * Parses a console LOG statement
-    * @example {{{ LOG 'This is a log message' }}}
-    * @param ts the [[TokenStream token stream]]
-    * @return the [[Console.Log]]
-    */
-  protected def parseConsoleLog(ts: TokenStream): Console.Log =
-    Console.Log(text = SQLTemplateParams(ts, "LOG %a:text").atoms("text"))
 
   /**
     * Parses a console PRINT statement

@@ -108,43 +108,56 @@ package object expressions {
       */
     final implicit class ExpressionExtensions(val expr0: Expression) extends AnyVal {
 
-      import NativeFunctions._
+      import expressions.{NativeFunctions => f}
 
-      @inline def ===(expr1: Expression) = EQ(expr0, expr1)
+      @inline def ===(expr1: Expression) = ConditionalOp(expr0, expr1, "==", "=")
 
-      @inline def !==(expr1: Expression) = NE(expr0, expr1)
+      @inline def !==(expr1: Expression) = ConditionalOp(expr0, expr1, "!=", "<>")
 
-      @inline def >(expr1: Expression) = GT(expr0, expr1)
+      @inline def >(expr1: Expression) = ConditionalOp(expr0, expr1, ">")
 
-      @inline def >=(expr1: Expression) = GE(expr0, expr1)
+      @inline def >=(expr1: Expression) = ConditionalOp(expr0, expr1, ">=")
 
-      @inline def <(expr1: Expression) = LT(expr0, expr1)
+      @inline def <(expr1: Expression) = ConditionalOp(expr0, expr1, "<")
 
-      @inline def <=(expr1: Expression) = LE(expr0, expr1)
+      @inline def <=(expr1: Expression) = ConditionalOp(expr0, expr1, "<=")
 
-      @inline def +(expr1: Expression) = Add(expr0, expr1)
+      @inline def +(expr1: Expression) = MathOp(expr0, expr1, "+")
 
-      @inline def ||(expr1: Expression) = Concat(expr0, expr1)
+      @inline def ||(expr1: Expression): Expression = f.concat(expr0, expr1)
 
-      @inline def -(expr1: Expression) = Subtract(expr0, expr1)
+      @inline def -(expr1: Expression) = MathOp(expr0, expr1, "-")
 
-      @inline def *(expr1: Expression) = Multiply(expr0, expr1)
+      @inline def *(expr1: Expression) = MathOp(expr0, expr1, "*")
 
-      @inline def **(expr1: Expression) = Pow(expr0, expr1)
+      @inline def **(expr1: Expression): Expression = f.pow(expr0, expr1)
 
-      @inline def /(expr1: Expression) = Divide(expr0, expr1)
+      @inline def /(expr1: Expression) = MathOp(expr0, expr1, "/")
 
-      @inline def %(expr1: Expression) = Modulo(expr0, expr1)
+      @inline def %(expr1: Expression): Expression = f.mod(expr0, expr1)
 
-      @inline def &(expr1: Expression) = BitwiseAND(expr0, expr1)
+      @inline def &(expr1: Expression) = MathOp(expr0, expr1, "&")
 
-      @inline def |(expr1: Expression) = BitwiseOR(expr0, expr1)
+      @inline def |(expr1: Expression) = MathOp(expr0, expr1, "|")
 
-      @inline def ^(expr1: Expression) = BitwiseXOR(expr0, expr1)
+      @inline def ^(expr1: Expression) = MathOp(expr0, expr1, "^")
+
+      @inline def between(from: Expression, to: Expression): Between = Between(expr0, from, to)
 
       @inline def isNotNull: Condition = IsNotNull(expr0)
 
-      @inline def isNull: Condition = IsNull(expr0)
+      @inline def isNull: Condition = IsNull(expr0) // f.isnull(expr0)
+
+      @inline def over(partitionBy: Seq[Field] = Nil,
+                       orderBy: Seq[OrderColumn] = Nil,
+                       range: Option[Condition] = None): Over = {
+        Over(
+          expression = expr0,
+          partitionBy = partitionBy,
+          orderBy = orderBy,
+          range = range
+        )
+      }
 
     }
 

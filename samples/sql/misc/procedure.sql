@@ -4,7 +4,7 @@
 begin
 
     -- First, we define our input and output sources
-    log 'Loading the input and output sources...';
+    info 'Loading the input and output sources...';
     include './samples/sql/companylist/companylist-input.sql';
     include './samples/sql/companylist/companylist-output-json.sql';
 
@@ -28,7 +28,7 @@ begin
     --      the transformation
     ----------------------------------------------------------------
 
-    log 'Performing the transformation...';
+    info 'Performing the transformation...';
     set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
 
     insert overwrite table OilGasSecurities (Symbol, `Name`, LastSale, MarketCap, IPOyear, Sector, Industry)

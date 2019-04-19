@@ -344,6 +344,8 @@ object NativeFunction {
     one(name = "hex", description = "Converts expr to hexadecimal"),
     one(name = "hour", usage = "hour(timestamp)", description = "Returns the hour component of the string/timestamp"),
     two(name = "hypot", description = "Returns sqrt(expr1^2 + expr2^2)"),
+    three(name = "if", description = " If `expr1` evaluates to true, then returns `expr2`; otherwise returns `expr3`"),
+    two(name = "ifnull", description = "Returns expr2 if expr1 is null, or expr1 otherwise"),
     many(name = "in", description = "Returns true if expr equals to any valN"),
     one(name = "initcap", usage = "initcap(str)", description =
       """|Returns str with the first letter of each word in uppercase. All other letters are in lowercase.
@@ -424,6 +426,7 @@ object NativeFunction {
     one(name = "min", description = "Returns the minimum value of `expr`"),
     one(name = "minute", usage = "minute(timestamp)", description =
       "Returns the minute component of the string/timestamp"),
+    two(name = "mod", usage = "expr1 mod expr2", description = "Returns the remainder after expr1/expr2"),
     zero(name = "monotonically_increasing_id", description =
       """|monotonically_increasing_id() - Returns monotonically increasing 64-bit integers.
          |The generated ID is guaranteed to be monotonically increasing and unique, but not consecutive.
@@ -448,13 +451,39 @@ object NativeFunction {
     two(name = "nullif", description = "Returns null if `expr1` equals to `expr2`, or `expr1` otherwise"),
     many(name = "parse_url", maxArgs = 3, usage = "parse_url(url, partToExtract[, key])", description =
       "Extracts a part from a URL"),
-
-    // TODO add missing functions
-
+    two(name = "pow", usage = "pow(expr1, expr2)", description = "Raises expr1 to the power of expr2"),
+    two(name = "power", usage = "power(expr1, expr2)", description = "Raises expr1 to the power of expr2"),
+    many(name = "printf", minArgs = 2, usage = "printf(strfmt, obj, ...)", description =
+      "Returns a formatted string from printf-style format strings"),
+    one(name = "quarter", usage = "quarter(date)", description =
+      "Returns the quarter of the year for date, in the range 1 to 4"),
+    one(name = "radians", description = "Converts degrees to radians"),
+    many(name = "rand", maxArgs = 1, usage = "rand([seed])", description =
+      "Returns a random value with independent and identically distributed (i.i.d.) uniformly distributed values in [0, 1)"),
+    many(name = "randn", maxArgs = 1, usage = "randn([seed])", description =
+      "Returns a random value with independent and identically distributed (i.i.d.) values drawn from the standard normal distribution"),
     zero(name = "rank", usage = "rank() over(window_spec))", description =
-      "Calculates the rank of a value in a group of values"),
+      """|Computes the rank of a value in a group of values. The result is one plus the number of rows preceding or
+         |equal to the current row in the ordering of the partition. The values will produce gaps in the sequence""".stripMargin),
+    many(name = "reflect", minArgs = 2, usage = "reflect(class, method[, arg1[, arg2 ..]])", description = "Calls a method with reflection"),
+    many(name = "regexp_extract", minArgs = 2, maxArgs = 3, usage = "regexp_extract(str, regexp[, idx])", description =
+      "Extracts a group that matches `regexp`"),
+    three(name = "regexp_replace", usage = "regexp_replace(str, regexp, rep)", description =
+      "Replaces all substrings of `str` that match `regexp` with `rep`"),
+    two(name = "repeat", usage = "repeat(str, n)", description =
+      "Returns the string which repeats the given string value n times"),
+    many(name = "replace", maxArgs = 3, usage = "replace(str, search[, replace])", description =
+      "Replaces all occurrences of `search` with `replace`"),
     one(name = "reverse", usage = "reverse(array)", description =
       "Returns a reversed string or an array with reverse order of elements"),
+    two(name = "right", usage = "right(str, len)", description =
+      """|Returns the rightmost `len`(`len` can be string type) characters from the string `str`,
+         |if `len` is less or equal than 0 the result is an empty string""".stripMargin),
+    one(name = "rint", description =
+      "Returns the double value that is closest in value to the argument and is equal to a mathematical integer"),
+
+    // TODO implement missing functions
+
     zero(name = "row_number", usage = "row_number() over(window_spec))", description =
       "Assigns a unique number to each row to which it is applied"),
     three(name = "rpad", usage = "rpad(str, len, pad)", description =

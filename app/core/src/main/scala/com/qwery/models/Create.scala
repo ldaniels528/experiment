@@ -6,6 +6,6 @@ package com.qwery.models
   * @author lawrence.daniels@gmail.com
   */
 case class Create(entity: SQLEntity) extends Invokable {
-  override def toString: String = s"${getClass.getSimpleName}(${entity.getClass.getSimpleName})"
+  override def toString: String = s"${getClass.getSimpleName}($entity)"
 }
 

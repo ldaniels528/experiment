@@ -256,15 +256,10 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toCode: String = condition match {
         case AND(a, b) => s"${a.toCode} && ${b.toCode}"
-        case EQ(a, b) => s"${a.toCode} == ${b.toCode}"
-        case GE(a, b) => s"${a.toCode} >= ${b.toCode}"
-        case GT(a, b) => s"${a.toCode} > ${b.toCode}"
+        case ConditionalOp(a, b, codeOp, _) => s"${a.toCode} $codeOp ${b.toCode}"
         case IsNotNull(c) => s"${c.toCode} != null"
         case IsNull(c) => s"${c.toCode} == null"
-        case LE(a, b) => s"${a.toCode} <= ${b.toCode}"
         case l: LocalVariableRef => l.name
-        case LT(a, b) => s"${a.toCode} < ${b.toCode}"
-        case NE(a, b) => s"${a.toCode} <> ${b.toCode}"
         case NOT(IsNull(c)) => s"${c.toCode} != null"
         case NOT(c) => s"!${c.toCode}"
         case OR(a, b) => s"${a.toCode} || ${b.toCode}"
@@ -273,17 +268,12 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toSQL: String = condition match {
         case AND(a, b) => s"${a.toSQL} and ${b.toSQL}"
-        case BETWEEN(expr, a, b) => s"${expr.toSQL} between ${a.toSQL} and ${b.toSQL}"
-        case EQ(a, b) => s"${a.toSQL} = ${b.toSQL}"
-        case GE(a, b) => s"${a.toSQL} >= ${b.toSQL}"
-        case GT(a, b) => s"${a.toSQL} > ${b.toSQL}"
+        case Between(expr, a, b) => s"${expr.toSQL} between ${a.toSQL} and ${b.toSQL}"
+        case ConditionalOp(a, b, _, sqlOp) => s"${a.toSQL} $sqlOp ${b.toSQL}"
         case IsNotNull(c) => s"${c.toSQL} is not null"
         case IsNull(c) => s"${c.toSQL} is null"
-        case LE(a, b) => s"${a.toSQL} <= ${b.toSQL}"
         case LIKE(a, b) => s"${a.toSQL} like ${b.asSQL}"
         case l: LocalVariableRef => s"""s'$$${l.name}'"""
-        case LT(a, b) => s"${a.toSQL} < ${b.toSQL}"
-        case NE(a, b) => s"${a.toSQL} <> ${b.toSQL}"
         case NOT(IsNull(c)) => s"${c.toSQL} is not null"
         case NOT(c) => s"not ${c.toSQL}"
         case OR(a, b) => s"${a.toSQL} or ${b.toSQL}"
@@ -300,40 +290,27 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       def toCode: String = expression match {
         case FunctionCall(name, args) => s"$name(${args.map(_.toCode).mkString(",")})"
+        case If(condition, trueValue, falseValue) => s"if(${condition.toCode}) ${trueValue.toCode} else ${falseValue.toCode})"
         case Literal(value) => value.asCode
+        case MathOp(a, b, op) => s"${a.toCode} $op ${b.toCode}"
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
       }
 
       def toSQL: String = {
         val result = expression match {
-          case Add(a, b) => s"${a.toSQL} + ${b.toSQL}"
           case AllFields => "*"
           case BasicField(name) => name
-          case BitwiseAND(a, b) => s"${a.toSQL} & ${b.toSQL}"
-          case BitwiseOR(a, b) => s"${a.toSQL} | ${b.toSQL}"
-          case BitwiseXOR(a, b) => s"${a.toSQL} ^ ${b.toSQL}"
           case c: Case => generateSQL(c)
           case Cast(value, toType) => s"cast(${value.toSQL} as ${toType.toSQL})"
           case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(",")})"
           case If(condition, trueValue, falseValue) => s"if(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
           case Literal(value) => value.asSQL
           case LocalVariableRef(name) => name.asSQL
-          case Modulo(a, b) => s"${a.toSQL} % ${b.toSQL}"
-          case Multiply(a, b) => s"${a.toSQL} * ${b.toSQL}"
-          case Pow(a, b) => s"pow(${a.toSQL}, ${b.toSQL})"
-          case Subtract(a, b) => s"${a.toSQL} - ${b.toSQL}"
+          case MathOp(a, b, op) => s"${a.toSQL} $op ${b.toSQL}"
           case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
         }
         result.withAlias(expression)
       }
-    }
-
-    /**
-      * Insert Compiler Extensions
-      * @param insert the given [[Insert]]
-      */
-    final implicit class InsertCompilerExtensions(val insert: Insert) extends AnyVal {
-      @inline def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = generateWriter(insert)
     }
 
     /**
@@ -356,7 +333,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Create(udf: UserDefinedFunction) => generateCode(udf)
           case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
-          case i: Insert => i.toCode
+          case i: Insert => generateWriter(i)
           case l: LocalVariableRef => l.name
           case ProcedureCall(name, args) => s"""$name(${args.map(_.toCode).mkString(",")})"""
           case s: Select => s.toCode

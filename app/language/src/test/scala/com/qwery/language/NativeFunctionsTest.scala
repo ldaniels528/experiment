@@ -23,70 +23,68 @@ class NativeFunctionsTest extends FunSpec {
 
     it("should generate short-cuts") {
       val members = nativeFunctions.toSeq.sortBy { case (name, _) => name } map {
-        case (name, fx) if fx.minArgs == 0 && fx.maxArgs == 0 =>
-          val realName = toRealName(name)
-          s"""|/**
-              |  * ${fx.description}.
-              |  * @example {{{ ${fx.usage} }}}
-              |  */
-              |object $realName {
-              |   def apply(): FunctionCall = FunctionCall("$name")()
-              |}
-              |""".stripMargin
-        case (name, fx) if fx.minArgs == 1 && fx.maxArgs == 1 =>
-          val realName = toRealName(name)
-          s"""|/**
-              |  * ${fx.description}.
-              |  * @example {{{ ${fx.usage} }}}
-              |  */
-              |object $realName {
-              |   def apply(expr: Expression): FunctionCall = FunctionCall("$name")(expr)
-              |}
-              |""".stripMargin
-        case (name, fx) if fx.minArgs == 2 && fx.maxArgs == 2 =>
-          val realName = toRealName(name)
-          s"""|/**
-              |  * ${fx.description}.
-              |  * @example {{{ ${fx.usage} }}}
-              |  */
-              |object $realName {
-              |   def apply(expr1: Expression, expr2: Expression): FunctionCall = FunctionCall("$name")(expr1, expr2)
-              |}
-              |""".stripMargin
-        case (name, fx) if fx.minArgs == 3 && fx.maxArgs == 3 =>
-          val realName = toRealName(name)
-          s"""|/**
-              |  * ${fx.description}.
-              |  * @example {{{ ${fx.usage} }}}
-              |  */
-              |object $realName {
-              |   def apply(expr1: Expression, expr2: Expression, expr3: Expression): FunctionCall = FunctionCall("$name")(expr1, expr2, expr3)
-              |}
-              |""".stripMargin
-        case (name, fx) =>
-          val realName = toRealName(name)
-          s"""|/**
-              |  * ${fx.description}.
-              |  * @example {{{ ${fx.usage} }}}
-              |  */
-              |object $realName {
-              |   def apply(expr: Expression*): FunctionCall = FunctionCall("$name")(expr:_*)
-              |}
-              |""".stripMargin
+        case (name, fx) if fx.minArgs == 0 && fx.maxArgs == 0 => zero(name, fx)
+        case (name, fx) if fx.minArgs == 1 && fx.maxArgs == 1 => one(name, fx)
+        case (name, fx) if fx.minArgs == 2 && fx.maxArgs == 2 => two(name, fx)
+        case (name, fx) if fx.minArgs == 3 && fx.maxArgs == 3 => three(name, fx)
+        case (name, fx) => variable(name, fx)
       }
 
       writeToDisk(NativeFunctions.getObjectFullName) {
-        Source.fromString(members.mkString("\n")).getLines() map (line => "\t" + line) mkString "\n"
+        Source.fromString(members.mkString("\n")).getLines() map (line => " " * 2 + line) mkString "\n"
       }
     }
 
-  }
-
-  def toRealName(name: String): String = {
-    name match {
-      case s if s.contains("_") => s.split("[_]").map(_.capitalize).mkString("_")
-      case s => s.capitalize
+    def zero(name: String, fx: NativeFunction): String = {
+      s"""|/**
+          |  * ${fx.description}.
+          |  * @example {{{ ${fx.usage} }}}
+          |  */
+          |def $name(): Expression = FunctionCall("$name")()
+          |""".stripMargin
     }
+
+    def one(name: String, fx: NativeFunction): String = {
+      s"""|/**
+          |  * ${fx.description}.
+          |  * @example {{{ ${fx.usage} }}}
+          |  */
+          |def ${fixName(name)}(expr: Expression): Expression = FunctionCall("$name")(expr)
+          |""".stripMargin
+    }
+
+    def two(name: String, fx: NativeFunction): String = {
+      s"""|/**
+          |  * ${fx.description}.
+          |  * @example {{{ ${fx.usage} }}}
+          |  */
+          |def ${fixName(name)}(expr1: Expression, expr2: Expression): Expression = FunctionCall("$name")(expr1, expr2)
+          |""".stripMargin
+    }
+
+    def three(name: String, fx: NativeFunction): String = {
+      s"""|/**
+          |  * ${fx.description}.
+          |  * @example {{{ ${fx.usage} }}}
+          |  */
+          |def ${fixName(name)}(expr1: Expression, expr2: Expression, expr3: Expression): Expression = FunctionCall("$name")(expr1, expr2, expr3)
+          |""".stripMargin
+    }
+
+    def variable(name: String, fx: NativeFunction): String = {
+      s"""|/**
+          |  * ${fx.description}.
+          |  * @example {{{ ${fx.usage} }}}
+          |  */
+          |def ${fixName(name)}(expr: Expression*): Expression = FunctionCall("$name")(expr:_*)
+          |""".stripMargin
+    }
+
+    def fixName(name: String): String = name match {
+      case "if" => "`if`"
+      case x => x
+    }
+
   }
 
   def writeToDisk(fullyQualifiedClassName: String)(contents: => String): Unit = {
@@ -106,10 +104,17 @@ class NativeFunctionsTest extends FunSpec {
           |  * @author lawrence.daniels@gmail.com
           |  * @note This is a generated class.
           |  */
-          |object $className {
+          |trait $className {
           |
-          | $contents
+          |$contents
+          |
           |}
+          |
+          |/**
+          |  * Native SQL Functions Singleton
+          |  * @author lawrence.daniels@gmail.com
+          |  */
+          |object $className extends $className
           |""".stripMargin
     ))
   }

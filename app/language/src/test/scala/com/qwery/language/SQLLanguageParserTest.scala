@@ -198,7 +198,6 @@ class SQLLanguageParserTest extends FunSpec {
         Expected("DEBUG", Console.Debug.apply, "This is a debug message"),
         Expected("ERROR", Console.Error.apply, "This is an error message"),
         Expected("INFO", Console.Info.apply, "This is an informational message"),
-        Expected("LOG", Console.Log.apply, "This is an informational message"),
         Expected("PRINT", Console.Print.apply, "This message will be printed to STDOUT"),
         Expected("WARN", Console.Warn.apply, "This is a warning message"))
       tests foreach { case Expected(command, opCode, message) =>
@@ -393,7 +392,7 @@ class SQLLanguageParserTest extends FunSpec {
       assert(results == Select(
         fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
         from = Table("Customers"),
-        where = BETWEEN('IPOYear, "2000", "2019")
+        where = Between('IPOYear, "2000", "2019")
       ))
     }
 
@@ -414,8 +413,8 @@ class SQLLanguageParserTest extends FunSpec {
            |GROUP BY Sector, Industry
            |""".stripMargin)
       assert(results == Select(
-        fields = List('Sector, 'Industry, Avg('LastSale).as('LastSale),
-          Count('*).as('total), Count(Distinct('*)).as('distinctTotal)),
+        fields = List('Sector, 'Industry, avg('LastSale).as('LastSale),
+          count('*).as('total), count(distinct('*)).as('distinctTotal)),
         from = Table("Customers"),
         groupBy = List('Sector, 'Industry)
       ))
@@ -476,8 +475,8 @@ class SQLLanguageParserTest extends FunSpec {
       )
       assert(results == Select(
         fields = List('PAT_ID, 'DEPT_ID, 'INS_AMT,
-          Min('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MIN_INS_AMT"),
-          Max('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MAX_INS_AMT")
+          min('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MIN_INS_AMT"),
+          max('INS_AMT).over(partitionBy = Seq('DEPT_ID), orderBy = Seq('DEPT_ID asc)).as("MAX_INS_AMT")
         ),
         from = Table("PATIENT")
       ))
@@ -497,7 +496,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results == Select(
         fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote,
-          Mean('LastSale).over(partitionBy = Seq('Symbol), orderBy = Seq('TradeDate.asc), range = None).as("mean")),
+          mean('LastSale).over(partitionBy = Seq('Symbol), orderBy = Seq('TradeDate.asc), range = None).as("mean")),
         from = Table("Customers"),
         where = Field('Industry) === "Oil/Gas Transmission"
       ))

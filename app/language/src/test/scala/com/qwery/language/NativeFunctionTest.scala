@@ -2,8 +2,7 @@ package com.qwery.language
 
 import com.qwery.models.ColumnTypes
 import com.qwery.models.expressions.Case.When
-import com.qwery.models.expressions.NativeFunctions._
-import com.qwery.models.expressions._
+import com.qwery.models.expressions.{NativeFunctions => f, _}
 import org.scalatest.FunSpec
 
 /**
@@ -16,56 +15,56 @@ class NativeFunctionTest extends FunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("should parse: Abs(value)") {
-      verify("Abs(value)", Abs('value))
+    it("should parse: abs(value)") {
+      verify("abs(value)", f.abs('value))
     }
 
-    it("should parse: Acos(value)") {
-      verify("Acos(value)", Acos('value))
+    it("should parse: acos(value)") {
+      verify("acos(value)", f.acos('value))
     }
 
-    it("should parse: Add_Months(startDate, offset)") {
-      verify("Add_Months(startDate, offset)", Add_Months('startDate, 'offset))
+    it("should parse: add_months(startDate, offset)") {
+      verify("add_months(startDate, offset)", f.add_months('startDate, 'offset))
     }
 
-    it("should parse: Aggregate(value)") {
-      verify("Aggregate(value)", Aggregate('value))
+    it("should parse: aggregate(value)") {
+      verify("aggregate(value)", f.aggregate('value))
     }
 
-    it("should parse: Approx_Count_Distinct(value)") {
-      verify("Approx_Count_Distinct(value)", Approx_Count_Distinct('value))
+    it("should parse: approx_count_distinct(value)") {
+      verify("approx_count_distinct(value)", f.approx_count_distinct('value))
     }
 
-    it("should parse: Approx_Percentile(value)") {
-      verify("Approx_Percentile(value)", Approx_Percentile('value))
+    it("should parse: approx_percentile(value)") {
+      verify("approx_percentile(value)", f.approx_percentile('value))
     }
 
-    it("should parse: Array_Contains(Array(1, 20, NULL, 3), 1)") {
-      verify("Array_Contains(Array(1, 20, NULL, 3), 1)" , Array_Contains(Array(1, 20, Null, 3), 1))
+    it("should parse: array_contains(array(1, 20, NULL, 3), 1)") {
+      verify("array_contains(array(1, 20, NULL, 3), 1)", f.array_contains(f.array(1, 20, Null, 3), 1))
     }
 
-    it("should parse: Array_Distinct(Array(1, 20, NULL, 3))") {
-      verify("Array_Distinct(Array(1, 20, NULL, 3))" , Array_Distinct(Array(1, 20, Null, 3)))
+    it("should parse: array_distinct(array(1, 20, NULL, 3))") {
+      verify("array_distinct(array(1, 20, NULL, 3))", f.array_distinct(f.array(1, 20, Null, 3)))
     }
 
-    it("should parse: Array_Except(Array(1, 20, NULL, 3), Array(1, 3))") {
-      verify("Array_Except(Array(1, 20, NULL, 3), Array(1, 3))" , Array_Except(Array(1, 20, Null, 3), Array(1, 3)))
+    it("should parse: array_Except(array(1, 20, NULL, 3), array(1, 3))") {
+      verify("array_Except(array(1, 20, NULL, 3), array(1, 3))", f.array_except(f.array(1, 20, Null, 3), f.array(1, 3)))
     }
 
-    it("should parse: Array_Max(Array(1, 20, NULL, 3))") {
-      verify("Array_Max(Array(1, 20, NULL, 3))" , Array_Max(Array(1, 20, Null, 3)))
+    it("should parse: array_max(array(1, 20, NULL, 3))") {
+      verify("array_Max(array(1, 20, NULL, 3))", f.array_max(f.array(1, 20, Null, 3)))
     }
 
-    it("should parse: Array_Min(Array(1, 20, NULL, 3))") {
-      verify("Array_Min(Array(1, 20, NULL, 3))" , Array_Min(Array(1, 20, Null, 3)))
+    it("should parse: array_min(array(1, 20, NULL, 3))") {
+      verify("array_Min(array(1, 20, NULL, 3))", f.array_min(f.array(1, 20, Null, 3)))
     }
 
-    it("should parse: Ascii(value)") {
-      verify("Ascii(value)", Ascii('value))
+    it("should parse: ascii(value)") {
+      verify("ascii(value)", f.ascii('value))
     }
 
-    it("should parse: Avg(value)") {
-      verify("Avg(value)", Avg('value))
+    it("should parse: avg(value)") {
+      verify("avg(value)", f.avg('value))
     }
 
     it("should parse: CASE field ...") {
@@ -96,52 +95,52 @@ class NativeFunctionTest extends FunSpec {
         )(otherwise = "Unknown": Expression))
     }
 
-    it("should parse: Cast(LastSale AS String)") {
-      verify("Cast(LastSale AS String)", Cast('LastSale, ColumnTypes.STRING))
+    it("should parse: cast(LastSale AS String)") {
+      verify("cast(LastSale AS String)", Cast('LastSale, ColumnTypes.STRING))
     }
 
-    it("should parse: Count(*)") {
-      verify("Count(*)", Count('*))
+    it("should parse: count(*)") {
+      verify("count(*)", f.count('*))
     }
 
-    it("should parse: Count(LastSale)") {
-      verify("Count(LastSale)", Count('LastSale))
+    it("should parse: count(LastSale)") {
+      verify("count(LastSale)", f.count('LastSale))
     }
 
-    it("should parse: From_Unixtime(event_time, 'YYYY-MM-dd')") {
-      verify("From_Unixtime(event_time, 'YYYY-MM-dd')", From_Unixtime('event_time, "YYYY-MM-dd"))
+    it("should parse: from_unixtime(event_time, 'YYYY-MM-dd')") {
+      verify("from_unixtime(event_time, 'YYYY-MM-dd')", f.from_unixtime('event_time, "YYYY-MM-dd"))
     }
 
-    it("should parse: From_Utc_Timestamp(event_time, 'YYYY-MM-dd')") {
-      verify("From_Utc_Timestamp(event_time, 'YYYY-MM-dd')", From_Utc_Timestamp('event_time, "YYYY-MM-dd"))
+    it("should parse: from_utc_timestamp(event_time, 'YYYY-MM-dd')") {
+      verify("from_utc_timestamp(event_time, 'YYYY-MM-dd')", f.from_utc_timestamp('event_time, "YYYY-MM-dd"))
     }
 
-    it("should parse: If(LastSale < 1, 'Penny Stock', 'Stock')") {
-      verify("If(LastSale < 1, 'Penny Stock', 'Stock')", If(Field('LastSale) < 1, "Penny Stock", "Stock"))
+    it("should parse: if(LastSale < 1, 'Penny Stock', 'Stock')") {
+      verify("if(LastSale < 1, 'Penny Stock', 'Stock')", If(Field('LastSale) < 1, "Penny Stock", "Stock"))
     }
 
-    it("should parse: Max(LastSale)") {
-      verify("Max(LastSale)", Max('LastSale))
+    it("should parse: max(LastSale)") {
+      verify("max(LastSale)", f.max('LastSale))
     }
 
-    it("should parse: Min(LastSale)") {
-      verify("Min(LastSale)", Min('LastSale))
+    it("should parse: min(LastSale)") {
+      verify("min(LastSale)", f.min('LastSale))
     }
 
-    it("should parse: Sum(LastSale)") {
-      verify("Sum(LastSale)", Sum('LastSale))
+    it("should parse: sum(LastSale)") {
+      verify("sum(LastSale)", f.sum('LastSale))
     }
 
-    it("should parse: Trim('Hello World')") {
-      verify("Trim('Hello World')", Trim("Hello World"))
+    it("should parse: trim('Hello World')") {
+      verify("trim('Hello World')", f.trim("Hello World"))
     }
 
     it("should parse UDF: toDecimal(MarketCap)") {
       verify("toDecimal(MarketCap)", FunctionCall("toDecimal")('MarketCap))
     }
 
-    it("should parse: Year(startDate)") {
-      verify("Year(startDate)", Year('startDate))
+    it("should parse: year(startDate)") {
+      verify("year(startDate)", f.year('startDate))
     }
 
   }

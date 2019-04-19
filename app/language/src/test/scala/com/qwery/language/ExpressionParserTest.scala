@@ -1,8 +1,7 @@
 package com.qwery.language
 
 import com.qwery.models._
-import com.qwery.models.expressions.NativeFunctions._
-import com.qwery.models.expressions._
+import com.qwery.models.expressions.{NativeFunctions => f, _}
 import org.scalatest.FunSpec
 
 /**
@@ -36,15 +35,15 @@ class ExpressionParserTest extends FunSpec {
     }
 
     it("""should parse "y + (x * 2)" (expression)""") {
-      verify("y + (x * 2)", Add('y, Field('x) * 2))
+      verify("y + (x * 2)", Field('y) + (Field('x) * 2))
     }
 
     it("""should parse "y + (x / 2)" (expression)""") {
-      verify("y + (x / 2)", Add('y, Field('x) / 2))
+      verify("y + (x / 2)", Field('y) + (Field('x) / 2))
     }
 
     it("""should parse "(y - (x / 2)) AS 'calc'" (expression)""") {
-      verify("(y - (x / 2))  AS 'calc'", Subtract('y, Field('x) / 2).as("calc"))
+      verify("(y - (x / 2))  AS 'calc'", Field('y) - (Field('x) / 2).as("calc"))
     }
 
     it("""should parse "LastSale = 100" (equal)""") {
@@ -103,35 +102,39 @@ class ExpressionParserTest extends FunSpec {
     }
 
     it("""should parse "(x + 3) * 2" (quantities)""") {
-      verify("(x + 3) * 2", Multiply(Add('x, 3), 2))
+      verify("(x + 3) * 2", (Field('x) + 3) * 2)
     }
 
     it("should parse functions (Min)") {
-      verify("Min(LastSale)", Min('LastSale))
+      verify("Min(LastSale)", f.min('LastSale))
     }
 
     it("should parse functions (Max)") {
-      verify("Max(LastSale)", Max('LastSale))
+      verify("Max(LastSale)", f.max('LastSale))
     }
 
-    it("should parse functions (Lpad)") {
-      verify("LPad(Symbol, 5, ' ')", Lpad('Symbol, 5, " "))
+    it("should parse functions (lpad)") {
+      verify("lpad(Symbol, 5, ' ')", f.lpad('Symbol, 5, " "))
+    }
+
+    it("should parse functions (printf)") {
+      verify("""printf("Hello World %d %s", 100, "days")""", f.printf("Hello World %d %s", 100, "days"))
     }
 
     it("should parse functions (Rpad)") {
-      verify("RPad(Symbol, 5, ' ')", Rpad('Symbol, 5, " "))
+      verify("RPad(Symbol, 5, ' ')", f.rpad('Symbol, 5, " "))
     }
 
     it("should parse functions (Stddev)") {
-      verify("StdDev(LastSale)", Stddev('LastSale))
+      verify("StdDev(LastSale)", f.stddev('LastSale))
     }
 
     it("should parse functions (Substring)") {
-      verify("Substring(Sector, 1, 5)", Substring('Sector, 1, 5))
+      verify("Substring(Sector, 1, 5)", f.substring('Sector, 1, 5))
     }
 
     it("should parse functions (Sum)") {
-      verify("Sum(LastSale)", Sum('LastSale))
+      verify("Sum(LastSale)", f.sum('LastSale))
     }
 
     it("should parse local variables: \"$total\"") {
