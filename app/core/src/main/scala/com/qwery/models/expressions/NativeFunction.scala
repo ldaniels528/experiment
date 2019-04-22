@@ -480,9 +480,9 @@ object NativeFunction {
          |if `len` is less or equal than 0 the result is an empty string""".stripMargin),
     one(name = "rint", description =
       "Returns the double value that is closest in value to the argument and is equal to a mathematical integer"),
-
-    // TODO implement missing functions
-
+    zero(name = "rollup", description = "TODO documentation"),
+    two(name = "round", usage = "round(expr, d)", description =
+      "Returns `expr` rounded to `d` decimal places using `HALF_UP` rounding mode"),
     zero(name = "row_number", usage = "row_number() over(window_spec))", description =
       "Assigns a unique number to each row to which it is applied"),
     three(name = "rpad", usage = "rpad(str, len, pad)", description =
