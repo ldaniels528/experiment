@@ -1,15 +1,16 @@
 package com.qwery.language
 
 import com.qwery.language.TokenStreamHelpers._
+import com.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
 /**
-  * Token Stream Tests
+  * Token Stream Helpers Tests
   * @author lawrence.daniels@gmail.com
   */
-class TokenStreamTest extends FunSpec {
+class TokenStreamHelpersTest extends FunSpec {
 
-  describe(classOf[TokenStream].getSimpleName) {
+  describe(TokenStreamHelpers.getObjectSimpleName) {
 
     it("""should identify "100" as a constant""") {
       assert(TokenStream("100 = 1").isConstant)
@@ -23,8 +24,8 @@ class TokenStreamTest extends FunSpec {
       assert(TokenStream("`Symbol` = 100").isField)
     }
 
-    it("""should identify "Symbol" as a field""") {
-      assert(TokenStream("Symbol = 100").isField)
+    it("""should identify "PROPERTY_VAL" as a field""") {
+      assert(TokenStream("PROPERTY_VAL = 100").isField)
     }
 
     it("""should identify "A.Symbol" as a JOIN column""") {
@@ -37,6 +38,10 @@ class TokenStreamTest extends FunSpec {
 
     it("""should NOT identify "ABC + (1 * x)" as a function""") {
       assert(!TokenStream("ABC + (1 * x)").isFunction)
+    }
+
+    it("should support identifiers containing $ symbols") {
+      assert(TokenStream("$$DATA_SOURCE_ID").isIdentifier)
     }
 
     it("should match multiple tokens (is)") {

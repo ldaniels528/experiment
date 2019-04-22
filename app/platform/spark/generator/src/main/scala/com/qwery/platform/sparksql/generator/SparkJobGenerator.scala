@@ -250,12 +250,17 @@ class SparkJobGenerator() {
   * @example sbt "project platform_sparkcode" "run ./samples/sql/adbook/adbook-client.sql ../adbook_poc/ com.coxautoinc.wtm.adbook.AdBookIngestSparkJob"
   */
 object SparkJobGenerator {
+  private[this] val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * For stand alone operation
     * @param args the given command line arguments
     */
-  def main(args: Array[String]): Unit = generate()(ApplicationSettings.fromArgs(args))
+  def main(args: Array[String]): Unit = {
+    logger.info(s"[*] Qwery v${AppConstants.version}: Spark Job Generator")
+
+    generate()(ApplicationSettings.fromArgs(args))
+  }
 
   /**
     * Performs the Spark job generation

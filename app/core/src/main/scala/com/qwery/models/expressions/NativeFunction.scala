@@ -297,8 +297,7 @@ object NativeFunction {
     zero(name = "dense_rank", description =
       """|Computes the rank of a value in a group of values. The result is one plus the previously assigned rank value.
          |Unlike the function rank, dense_rank will not produce gaps in the ranking sequence""".stripMargin),
-    one(name = "distinct",
-      description = ""),
+    many(name = "distinct", description = ""),
     one(name = "double",
       description = "Casts the value expr to the target data type double"),
     zero(name = "e", description = "Returns Euler's number, e"),

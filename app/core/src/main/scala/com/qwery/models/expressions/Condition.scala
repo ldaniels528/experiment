@@ -4,7 +4,7 @@ package com.qwery.models.expressions
   * Base class for all conditional expressions
   * @author lawrence.daniels@gmail.com
   */
-sealed trait Condition extends Expression
+trait Condition extends Expression
 
 /**
   * Represents a conditional expression
@@ -36,12 +36,6 @@ case class AND(a: Condition, b: Condition) extends Condition
   * @param to   the upper bound [[Expression expression]]
   */
 case class Between(expr: Expression, from: Expression, to: Expression) extends Condition
-
-/**
-  * If expr1 evaluates to true, then returns expr2; otherwise returns expr3.
-  * @example if(expr1, expr2, expr3)
-  */
-case class If(condition: Condition, trueValue: Expression, falseValue: Expression) extends Expression
 
 case class IsNotNull(expr: Expression) extends Condition
 

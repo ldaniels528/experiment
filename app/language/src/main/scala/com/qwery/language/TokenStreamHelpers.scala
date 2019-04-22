@@ -1,11 +1,13 @@
 package com.qwery.language
 
+import org.slf4j.LoggerFactory
+
 /**
   * Token Stream Helpers
   * @author lawrence.daniels@gmail.com
   */
 object TokenStreamHelpers {
-  private val identifierRegEx = "[_a-zA-Z][_a-zA-Z0-9]{0,64}"
+  private val identifierRegEx = "[$_a-zA-Z][_a-zA-Z0-9]{0,64}"
 
   /**
     * Token Extensions

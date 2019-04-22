@@ -12,7 +12,8 @@ case class CodeBuilder(indent: Int = 2, prepend: String = "") {
   def append(cb: CodeBuilder): this.type = {
     val newSegments = cb.segments match {
       case Nil => Nil
-      case head :: tail => head.copy(prepend = "", indent = cb.indent + indent) :: tail.map(_.copy(indent = cb.indent + indent))
+      //case head :: tail => head.copy(prepend = "", indent = cb.indent + indent) :: tail.map(_.copy(indent = cb.indent + indent))
+      case list => list.map(_.copy(indent = cb.indent + indent))
     }
     append(buildCode(newSegments, noCRLF = true))
   }

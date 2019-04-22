@@ -6,7 +6,7 @@ import java.lang.String.copyValueOf
   * Token Iterator
   * @author lawrence.daniels@gmail.com
   */
-case class TokenIterator(input: String) extends Iterator[Token] {
+class TokenIterator(input: String) extends Iterator[Token] {
   private var pos = 0
   private val ca = input.toCharArray
   private val operators = "=*-+/|&><".toCharArray
@@ -18,7 +18,7 @@ case class TokenIterator(input: String) extends Iterator[Token] {
 
   def getLineNumber(position: Int): Int = 1 + input.take(position).count(_ == '\n')
 
-  def getColumnNumber(position: Int): Int = 1 + input.take(position).lastIndexOf('\n') match {
+  def getColumnNumber(position: Int): Int = input.take(position).lastIndexOf('\n') match {
     case -1 => position
     case index => position - index
   }
@@ -144,4 +144,12 @@ case class TokenIterator(input: String) extends Iterator[Token] {
 
   private def skipWhitespace(): Unit = while (hasMore && ca(pos).isWhitespace) pos += 1
 
+}
+
+/**
+  * Token Iterator Companion
+  * @author lawrence.daniels@gmail.com
+  */
+object TokenIterator {
+  def apply(input: String): TokenIterator = new TokenIterator(input: String)
 }

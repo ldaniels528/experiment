@@ -366,6 +366,22 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support simple SELECT statements without a FROM clause") {
+      val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
+      assert(results == Select(fields = List(Field("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
+    }
+
+    it("should support SELECT DISTINCT statements") {
+      val results = SQLLanguageParser.parse(
+        "SELECT DISTINCT Ticker_Symbol FROM Securities WHERE Industry = 'Oil/Gas Transmission'")
+      assert(results ==
+        Select(
+          fields = List(Distinct('Ticker_Symbol)),
+          from = Table("Securities"),
+          where = Field('Industry) === "Oil/Gas Transmission")
+      )
+    }
+
     it("should support SELECT ... INTO statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
@@ -380,19 +396,6 @@ class SQLLanguageParserTest extends FunSpec {
           from = Table("Securities"),
           where = Field('Industry) === "Oil/Gas Transmission"),
         fields = fields
-      ))
-    }
-
-    it("should support SELECT w/BETWEEN statements") {
-      val results = SQLLanguageParser.parse(
-        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
-           |FROM Customers
-           |WHERE IPOYear BETWEEN '2000' AND '2019'
-           |""".stripMargin)
-      assert(results == Select(
-        fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
-        from = Table("Customers"),
-        where = Between('IPOYear, "2000", "2019")
       ))
     }
 
@@ -414,7 +417,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results == Select(
         fields = List('Sector, 'Industry, avg('LastSale).as('LastSale),
-          count('*).as('total), count(distinct('*)).as('distinctTotal)),
+          count('*).as('total), count(Distinct('*)).as('distinctTotal)),
         from = Table("Customers"),
         groupBy = List('Sector, 'Industry)
       ))
@@ -571,10 +574,36 @@ class SQLLanguageParserTest extends FunSpec {
       }
     }
 
+    it("should support SELECT ... WHERE BETWEEN statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |FROM Customers
+           |WHERE IPOYear BETWEEN '2000' AND '2019'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+        from = Table("Customers"),
+        where = Between('IPOYear, "2000", "2019")
+      ))
+    }
+
+    it("should support SELECT ... WHERE IN (...) statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |FROM Customers
+           |WHERE IPOYear IN ('2000', '2001', '2003', '2008', '2019')
+           |""".stripMargin)
+      assert(results == Select(
+        fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+        from = Table("Customers"),
+        where = IN('IPOYear)("2000", "2001", "2003", "2008", "2019")
+      ))
+    }
+
     it("should support SELECT w/CROSS JOIN statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
+           |FROM Customers AS C
            |CROSS JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
            |CROSS JOIN Addresses as A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'

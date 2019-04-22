@@ -3,12 +3,21 @@ package com.qwery.language
 import com.qwery.models._
 import com.qwery.models.expressions.{Expression, Field}
 
+import scala.util.{Failure, Success, Try}
+
 /**
   * Expression Template Processor
   * @author lawrence.daniels@gmail.com
   */
 trait ExpressionTemplateProcessor {
 
+  /**
+    * Parses the given template expression
+    * @param template the given template expression (e.g. "%a:name")
+    * @param ts       the given [[TokenStream]]
+    * @param parser   the implicit [[ExpressionParser expression parser]]
+    * @return the [[ExpressionTemplate]]
+    */
   def process(template: String, ts: TokenStream)(implicit parser: ExpressionParser): ExpressionTemplate = {
     val tags = template.split("[ ]")
     tags.foldLeft[ExpressionTemplate](ExpressionTemplate()) {
@@ -28,6 +37,25 @@ trait ExpressionTemplateProcessor {
       case (result, tag) if tag.startsWith("%v:") => result + extractVariable(name = tag.drop(3), ts)
       // must be a keyword/symbol tag
       case (result, tag) => ts.expect(tag); result
+    }
+  }
+
+  /**
+    * Upon successful processing of the given template expression, the state is updated and a value is returned.
+    * @param template the given template expression (e.g. "%a:name")
+    * @param ts       the given [[TokenStream]]
+    * @param parser   the implicit [[ExpressionParser expression parser]]
+    * @return the option of the [[ExpressionTemplate]]
+    */
+  def processOpt(template: String, ts: TokenStream)(implicit parser: ExpressionParser): Option[ExpressionTemplate] = {
+    ts.mark()
+    Try(process(template, ts)) match {
+      case Success(result) =>
+        ts.discard()
+        Option(result)
+      case Failure(_) =>
+        ts.reset()
+        None
     }
   }
 

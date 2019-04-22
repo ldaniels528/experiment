@@ -6,7 +6,6 @@ import java.io.File
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.ColumnTypes.ColumnType
-import com.qwery.models.Insert.Values
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
 import com.qwery.models.expressions._
@@ -85,10 +84,10 @@ trait SparkCodeCompiler {
 
   /**
     * Generates the SQL VALUES ( ... ) statement
-    * @param model the given [[Values model]]
+    * @param model the given [[Insert.Values model]]
     * @return the Scala Code string
     */
-  def generateCode(model: Values): String = {
+  def generateCode(model: Insert.Values): String = {
     s"""Seq(${
       model.values.filterNot(_.isEmpty) map {
         case List(expression) => expression.asCode
@@ -138,7 +137,7 @@ trait SparkCodeCompiler {
     * @param model the given [[Case model]]
     * @return the SQL string
     */
-  def generateSQL(model: Case): String = {
+  def generateSQL(model: Case)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     CodeBuilder()
       .append("case")
       .append(model.conditions map { case Case.When(condition, result) =>
@@ -171,6 +170,10 @@ trait SparkCodeCompiler {
       .append(model.having.map(condition => s"having ${condition.toSQL}"))
       .append(model.orderBy.toOption.map(orderBy => s"order by ${orderBy.map(_.toSQL).mkString(",")}"))
       .build()
+  }
+
+  def generateSQL(model: IN.Values)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+    s"( ${model.items.map(_.toSQL).mkString(", ")} )"
   }
 
   def generateSQL(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
@@ -227,6 +230,11 @@ trait SparkCodeCompiler {
 
   def withGlobalTempView(name: String): String = s"""withGlobalTempView("$name")"""
 
+  def wrapIdentifier(name: String): String = name match {
+    case s if s.contains("$") => s"`$s`"
+    case s => s
+  }
+
 }
 
 /**
@@ -266,10 +274,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into Scala")
       }
 
-      def toSQL: String = condition match {
+      def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = condition match {
         case AND(a, b) => s"${a.toSQL} and ${b.toSQL}"
         case Between(expr, a, b) => s"${expr.toSQL} between ${a.toSQL} and ${b.toSQL}"
         case ConditionalOp(a, b, _, sqlOp) => s"${a.toSQL} $sqlOp ${b.toSQL}"
+        case IN(expr, source) => s"${expr.toSQL} in (${source.toSQL})"
         case IsNotNull(c) => s"${c.toSQL} is not null"
         case IsNull(c) => s"${c.toSQL} is null"
         case LIKE(a, b) => s"${a.toSQL} like ${b.asSQL}"
@@ -289,28 +298,32 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     final implicit class ExpressionCompiler(val expression: Expression) extends AnyVal {
 
       def toCode: String = expression match {
-        case FunctionCall(name, args) => s"$name(${args.map(_.toCode).mkString(",")})"
+        case FunctionCall(name, args) => s"$name(${args.map(_.toCode).mkString(", ")})"
         case If(condition, trueValue, falseValue) => s"if(${condition.toCode}) ${trueValue.toCode} else ${falseValue.toCode})"
         case Literal(value) => value.asCode
         case MathOp(a, b, op) => s"${a.toCode} $op ${b.toCode}"
         case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
       }
 
-      def toSQL: String = {
+      def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = expression match {
           case AllFields => "*"
-          case BasicField(name) => name
+          case BasicField(name) => name.wrap
           case c: Case => generateSQL(c)
           case Cast(value, toType) => s"cast(${value.toSQL} as ${toType.toSQL})"
-          case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(",")})"
+          case Distinct(expressions) => s"distinct(${expressions.map(_.toSQL).mkString(", ")})"
+          case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
+          case JoinField(name, tableAlias) => tableAlias.map(alias => s"${alias.wrap}.${name.wrap}") getOrElse name.wrap
           case If(condition, trueValue, falseValue) => s"if(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
           case Literal(value) => value.asSQL
-          case LocalVariableRef(name) => name.asSQL
+          case LocalVariableRef(name) => name.asSQL.wrap
           case MathOp(a, b, op) => s"${a.toSQL} $op ${b.toSQL}"
+          case Null => "null"
           case x => die(s"Model class '${Option(x).map(_.getClass.getSimpleName).orNull}' could not be translated into SQL")
         }
         result.withAlias(expression)
       }
+
     }
 
     /**
@@ -326,7 +339,6 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       def toCode(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = invokable match {
           case Console(name, text) if name == "print" => s"""println("$text")"""
-          case Console(name, text) if name == "log" => s"""logger.info("$text")"""
           case Console(name, text) => s"""logger.$name("$text")"""
           case Create(procedure: Procedure) => generateCode(procedure)
           case Create(tableOrView: TableLike) => generateReader(tableOrView)
@@ -341,9 +353,9 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case RowSetVariableRef(name) => name
           case SetLocalVariable(name, expression) => s"""val $name = ${expression.toCode}"""
           case Show(rows, limit) => s"${rows.toCode}.show(${limit.getOrElse(20)})"
-          case s: SQL => s.statements.map(_.toCode).mkString("\n")
+          case SQL(items) => items.map(_.toCode).mkString("\n")
           case t: TableRef => t.name
-          case v: Values => generateCode(v)
+          case v: Insert.Values => generateCode(v)
           case w: While => generateCode(w)
           case z => throw new IllegalStateException(s"Unsupported operation $z")
         }
@@ -360,6 +372,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
             val tableName = s"${settings.defaultDB}.${t.name}"
             t.alias.map(alias => s"$tableName as $alias") getOrElse tableName
           case Union(a, b, isDistinct) => s"${a.toSQL} union ${if (isDistinct) "distinct" else ""} ${b.toSQL}"
+          case v: IN.Values => generateSQL(v)
           case w: While => generateSQL(w)
           case x => die(s"Model class '${x.getClass.getSimpleName}' could not be translated into SQL")
         }
@@ -437,6 +450,9 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case a: Aliasable => a.alias.map(alias => s"$string AS $alias") getOrElse string
         case _ => string
       }
+
+      @inline def wrap: String = wrapIdentifier(string)
+
     }
 
     /**
@@ -486,6 +502,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case s: String => s"'$s'"
         case x => x.toString
       }
+
     }
 
   }

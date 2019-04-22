@@ -11,6 +11,7 @@ import com.qwery.models.expressions.{NativeFunctions => f, _}
   */
 trait ExpressionParser {
   private val processor = new ExpressionTemplateProcessor {}
+  private val sqlLanguageParser = new SQLLanguageParser {}
 
   /**
     * Parses a conditional expression from the given stream
@@ -68,16 +69,16 @@ trait ExpressionParser {
 
   /**
     * Parses a SQL BETWEEN clause
-    * @param stream the given [[TokenStream token stream]]
+    * @param expression the given [[Expression]]
+    * @param stream     the given [[TokenStream token stream]]
     * @return the option of a new [[Condition]]
     */
-  private def parseBetween(stream: TokenStream): Option[Condition] = {
+  private def parseBetween(expression: Option[Expression], stream: TokenStream): Option[Condition] = {
     for {
-      expr <- parseNextExpression(stream)
-      _ = stream expect "BETWEEN"
-      a <- parseNextExpression(stream)
+      expr <- expression
+      a <- parseExpression(stream)
       _ = stream expect "AND"
-      b <- parseNextExpression(stream)
+      b <- parseExpression(stream)
     } yield Between(expr, a, b)
   }
 
@@ -90,7 +91,7 @@ trait ExpressionParser {
     import TokenStreamHelpers._
     stream match {
       case ts if ts nextIf "*" => AllFields
-      case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse (throw SyntaxException("Invalid field alias", ts))
+      case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse ts.die("Invalid field alias")
       case ts if ts.isField => Field(ts.next().text)
       case ts => ts.die(s"Token is not valid (type: ${ts.peek.map(_.getClass.getName).orNull})")
     }
@@ -133,6 +134,21 @@ trait ExpressionParser {
   }
 
   /**
+    * Parses a SQL IN clause
+    * @param expression the given [[Expression expression]]
+    * @param ts         the given [[TokenStream token stream]]
+    * @return the option of a new [[Condition]]
+    */
+  private def parseIN(expression: Option[Expression], ts: TokenStream): Option[Condition] = {
+    expression map { expr =>
+      processor.processOpt("( %E:args )", ts)(this) match {
+        case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)
+        case None => IN(expr, sqlLanguageParser.parseNextQueryOrVariable(ts))
+      }
+    }
+  }
+
+  /**
     * Extracts a variable number of function arguments
     * @param ts the given [[TokenStream token stream]]
     * @return a collection of [[Expression argument expressions]]
@@ -148,7 +164,6 @@ trait ExpressionParser {
 
   private def parseNextCondition(stream: TokenStream): Option[Condition] = {
     stream match {
-      case ts if ts.peekAhead(1).exists(_ is "BETWEEN") => parseBetween(ts)
       case ts if ts nextIf "NOT" => parseNOT(ts)
       case ts =>
         var condition: Option[Condition] = None
@@ -157,6 +172,8 @@ trait ExpressionParser {
 
         do {
           if (expression.isEmpty) expression = parseExpression(ts)
+          else if (ts nextIf "BETWEEN") condition = parseBetween(expression, ts)
+          else if (ts nextIf "IN") condition = parseIN(expression, ts)
           else if (ts nextIf "IS") {
             if (condition.nonEmpty) ts.die("Illegal start of expression")
             val isNot = ts nextIf "NOT"
@@ -180,13 +197,15 @@ trait ExpressionParser {
     import com.qwery.util.OptionHelper.Implicits.Risky._
     stream match {
       // is it a Case expression?
-      case ts if ts nextIf "case" => parseCase(ts)
+      case ts if ts nextIf "CASE" => parseCase(ts)
       // is it a Cast function?
-      case ts if ts nextIf "cast" => parseCast(ts)
+      case ts if ts nextIf "CAST" => parseCast(ts)
+      // is it a Distinct function?
+      case ts if ts nextIf "DISTINCT" => parseDistinct(ts)
       // is it an If expression?
-      case ts if ts nextIf "if" => parseIf(ts)
+      case ts if ts nextIf "IF" => parseIf(ts)
       // is is a null value?
-      case ts if ts nextIf "null" => Null
+      case ts if ts nextIf "NULL" => Null
       // is it a constant value?
       case ts if ts.isConstant => Literal(value = ts.next().value)
       // is it an all fields reference?
@@ -273,7 +292,7 @@ trait ExpressionParser {
   /**
     * Parses a CAST expression (e.g. "CAST(1234 as String)")
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[Expression CAST expression]]
+    * @return the option of an [[Expression CAST expression]]
     */
   private def parseCast(ts: TokenStream): Option[Cast] = {
     val results = processor.process("( %e:value AS %t:type )", ts)(this)
@@ -281,6 +300,18 @@ trait ExpressionParser {
       value <- results.expressions.get("value")
       toType <- results.types.get("type")
     } yield Cast(value, toType)
+  }
+
+
+  /**
+    * Parses a DISTINCT function/expression (e.g. "DISTINCT firstName, lastName")
+    * @param ts the given [[TokenStream token stream]]
+    * @return the option of a [[Distinct DISTINCT function/expression]]
+    */
+  private def parseDistinct(ts: TokenStream): Option[Distinct] = {
+    val template = if (ts is "(") "( %E:args )" else "%E:args"
+    val expressions = processor.process(template, ts)(this).expressionLists.getOrElse("args", Nil)
+    Option(Distinct(expressions = expressions))
   }
 
   /**
@@ -296,7 +327,7 @@ trait ExpressionParser {
   /**
     * Parses a NOT condition (e.g. "NOT X = 1")
     * @param ts the given [[TokenStream token stream]]
-    * @return a [[Condition condition]]
+    * @return the option of a [[Condition condition]]
     */
   private def parseNOT(ts: TokenStream): Option[NOT] =
     Option(NOT(parseCondition(ts).getOrElse(ts.die("Conditional expression expected"))))

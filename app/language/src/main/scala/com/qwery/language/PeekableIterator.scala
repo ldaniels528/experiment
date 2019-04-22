@@ -14,6 +14,14 @@ class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) exten
     true
   }
 
+  def indexOf(f: T => Boolean): Option[Int] = {
+    (for {
+      pos <- position until length
+      value = values(pos)
+      foundIndex = pos if f(value)
+    } yield foundIndex).headOption
+  }
+
   /**
     * Tests whether this iterator can provide another element.
     * @return `true` if a subsequent call to `next` will yield an element,

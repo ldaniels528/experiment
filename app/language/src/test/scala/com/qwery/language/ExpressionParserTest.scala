@@ -18,6 +18,18 @@ class ExpressionParserTest extends FunSpec {
       verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
     }
 
+    it("""should parse "DISTINCT(PROPERTY_VAL)" """) {
+      verify("DISTINCT(PROPERTY_VAL)", Distinct(Field("PROPERTY_VAL")))
+    }
+
+    it("""should parse "DISTINCT A.Symbol, A.Exchange" """) {
+      verify("DISTINCT A.Symbol, A.Exchange", Distinct(JoinField("Symbol", tableAlias = "A"), JoinField("Exchange", tableAlias = "A")))
+    }
+
+    it("""should parse "A.Symbol IN ('AAPL', 'AMZN', 'AMD')" """) {
+      verify("A.Symbol IN ('AAPL', 'AMZN', 'AMD')", IN(JoinField("Symbol", tableAlias = "A"))("AAPL", "AMZN", "AMD"))
+    }
+
     it("""should parse conditional expression "100 < 1" (conditional expression)""") {
       verify("100 < 1", Literal(100) < 1)
     }

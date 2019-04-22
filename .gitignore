@@ -74,3 +74,4 @@ scripts/*
 samples/informatica/Sync_KbbVehicle.XML
 samples/informatica/wkf_BuyerConnect_Load.XML
 samples/informatica/wkf_BuyerConnect_Load.XML.sql
+samples/sql/cox/buyer-connect.sql

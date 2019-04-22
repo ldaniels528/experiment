@@ -66,7 +66,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return
     */
-  protected def parseCall(ts: TokenStream): ProcedureCall = {
+  def parseCall(ts: TokenStream): ProcedureCall = {
     val params = SQLTemplateParams(ts, "CALL %a:name ( %E:args )")
     ProcedureCall(name = params.atoms("name"), args = params.expressions("args"))
   }
@@ -77,7 +77,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Debug]]
     */
-  protected def parseConsoleDebug(ts: TokenStream): Console.Debug =
+  def parseConsoleDebug(ts: TokenStream): Console.Debug =
     Console.Debug(text = SQLTemplateParams(ts, "DEBUG %a:text").atoms("text"))
 
   /**
@@ -86,7 +86,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Error]]
     */
-  protected def parseConsoleError(ts: TokenStream): Console.Error =
+  def parseConsoleError(ts: TokenStream): Console.Error =
     Console.Error(text = SQLTemplateParams(ts, "ERROR %a:text").atoms("text"))
 
   /**
@@ -95,7 +95,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Info]]
     */
-  protected def parseConsoleInfo(ts: TokenStream): Console.Info =
+  def parseConsoleInfo(ts: TokenStream): Console.Info =
     Console.Info(text = SQLTemplateParams(ts, "INFO %a:text").atoms("text"))
 
   /**
@@ -104,7 +104,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Print]]
     */
-  protected def parseConsolePrint(ts: TokenStream): Console.Print =
+  def parseConsolePrint(ts: TokenStream): Console.Print =
     Console.Print(text = SQLTemplateParams(ts, "PRINT %a:text").atoms("text"))
 
   /**
@@ -113,7 +113,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Warn]]
     */
-  protected def parseConsoleWarn(ts: TokenStream): Console.Warn =
+  def parseConsoleWarn(ts: TokenStream): Console.Warn =
     Console.Warn(text = SQLTemplateParams(ts, "WARN %a:text").atoms("text"))
 
   /**
@@ -121,7 +121,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  protected def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
+  def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
     "CREATE EXTERNAL TABLE" -> parseCreateTable,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INLINE TABLE" -> parseCreateInlineTable,
@@ -138,7 +138,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  protected def parseCreateFunction(ts: TokenStream): Create = {
+  def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY FUNCTION %a:name AS %a:class ?USING +?JAR +?%a:jar")
     Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
@@ -148,7 +148,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  protected def parseCreateInlineTable(ts: TokenStream): Create = {
+  def parseCreateInlineTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INLINE TABLE %t:name ( %P:columns ) FROM %V:source")
     Create(InlineTable(
       name = params.atoms("name"),
@@ -162,7 +162,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Create]]
     */
-  protected def parseCreateProcedure(ts: TokenStream): Create = {
+  def parseCreateProcedure(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY PROCEDURE %a:name ( ?%P:params ) ?AS %N:code")
     Create(Procedure(name = params.atoms("name"), params = params.columns("params"), code = params.sources("code")))
   }
@@ -172,7 +172,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  protected def parseCreateTable(ts: TokenStream): Create = {
+  def parseCreateTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE %t:name ( %P:columns ) %w:props")
     Create(Table(
       name = params.atoms("name"),
@@ -201,7 +201,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[View executable]]
     */
-  protected def parseCreateView(ts: TokenStream): Create = {
+  def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY VIEW %t:name ?AS %Q:query")
     Create(View(name = params.atoms("name"), query = params.sources("query")))
   }
@@ -212,7 +212,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return a [[FileSystem]]
     */
-  protected def parseFileSystem(ts: TokenStream): FileSystem =
+  def parseFileSystem(ts: TokenStream): FileSystem =
     FileSystem(path = SQLTemplateParams(ts, "FILESYSTEM ( %a:path )").atoms("path"))
 
   /**
@@ -229,7 +229,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[While]]
     */
-  protected def parseForLoop(stream: TokenStream): ForEach = {
+  def parseForLoop(stream: TokenStream): ForEach = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
     val variable = params.variables("variable") match {
       case v: RowSetVariableRef => v
@@ -250,7 +250,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Include]]
     */
-  protected def parseInclude(ts: TokenStream): Include = {
+  def parseInclude(ts: TokenStream): Include = {
     val params = SQLTemplateParams(ts, "INCLUDE %a:path")
     Include(path = params.atoms("path"))
   }
@@ -260,7 +260,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  protected def parseIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
+  def parseIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
     // parse the indirect query (e.g. "( SELECT * FROM Customers ) AS C")
     ts.expect("(")
     val query = f(ts)
@@ -286,7 +286,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Insert]]
     */
-  protected def parseInsert(ts: TokenStream): Insert = {
+  def parseInsert(ts: TokenStream): Insert = {
     val params = SQLTemplateParams(ts, "INSERT %C(mode|INTO|OVERWRITE) %L:target ?( +?%F:fields +?) %V:source")
     val fields = params.fields.getOrElse("fields", Nil)
     val isOverwrite = params.atoms.get("mode").exists(_ equalsIgnoreCase "OVERWRITE")
@@ -303,7 +303,7 @@ trait SQLLanguageParser {
     * @param ts     the given [[TokenStream]]
     * @return the resultant [[Invokable]]
     */
-  protected def parseNextAlias(entity: Invokable, ts: TokenStream): Invokable = {
+  def parseNextAlias(entity: Invokable, ts: TokenStream): Invokable = {
     import Aliasable._
     if (ts nextIf "AS") entity.as(alias = ts.next().text) else entity
   }
@@ -313,7 +313,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  protected def parseNextQueryOrVariable(stream: TokenStream): Invokable = stream match {
+  def parseNextQueryOrVariable(stream: TokenStream): Invokable = stream match {
     // indirect query?
     case ts if ts is "(" => parseIndirectQuery(ts)(parseNextQueryOrVariable)
     // row variable (e.g. "@results")?
@@ -329,7 +329,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream]]
     * @return the resultant [[Select]], [[TableRef]] or [[VariableRef]]
     */
-  protected def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
+  def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
     // table (e.g. "Months" or "`Months of the Year`")?
     case ts if ts.isBackticks | ts.isText => parseNextAlias(Table(ts.next().text), ts)
     // must be a sub-query or variable
@@ -341,7 +341,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  protected def parseNextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
+  def parseNextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
     "CALL" -> parseCall,
     "FILESYSTEM" -> parseFileSystem,
     "SELECT" -> parseSelect
@@ -352,7 +352,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Return]]
     */
-  protected def parseReturn(ts: TokenStream): Return =
+  def parseReturn(ts: TokenStream): Return =
     Return(value = SQLTemplateParams(ts, "RETURN ?%q:value").sources.get("value"))
 
   /**
@@ -372,7 +372,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable executable]]
     */
-  protected def parseSelect(stream: TokenStream): Invokable = {
+  def parseSelect(stream: TokenStream): Invokable = {
     val params = SQLTemplateParams(stream,
       """|SELECT ?TOP +?%n:top %E:fields
          |?%C(mode|INTO|OVERWRITE) +?%L:target
@@ -434,7 +434,7 @@ trait SQLLanguageParser {
     * @param endElem   the given ending element (e.g. "}")
     * @return an [[SQL code block]]
     */
-  protected def parseSequence(ts: TokenStream, startElem: String, endElem: String): SQL = {
+  def parseSequence(ts: TokenStream, startElem: String, endElem: String): SQL = {
     var operations: List[Invokable] = Nil
     if (ts nextIf startElem) {
       while (ts.hasNext && !(ts nextIf endElem)) {
@@ -452,7 +452,7 @@ trait SQLLanguageParser {
     * @example {{{ SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 ) }}}
     * @example {{{ SET $customers = $customers + 1 }}}
     */
-  protected def parseSet(ts: TokenStream): Invokable = {
+  def parseSet(ts: TokenStream): Invokable = {
     val params = SQLTemplateParams(ts, "SET %v:variable =")
     params.variables("variable") match {
       case v: LocalVariableRef => SetLocalVariable(v.name, SQLTemplateParams(ts, "%e:expr").assignables("expr"))
@@ -469,7 +469,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return a [[Show]]
     */
-  protected def parseShow(ts: TokenStream): Show = {
+  def parseShow(ts: TokenStream): Show = {
     val params = SQLTemplateParams(ts, "SHOW %V:rows ?LIMIT +?%n:limit")
     Show(rows = params.sources("rows"), limit = params.numerics.get("limit").map(_.toInt))
   }
@@ -485,7 +485,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Update]]
     */
-  protected def parseUpdate(ts: TokenStream): Update = {
+  def parseUpdate(ts: TokenStream): Update = {
     val params = SQLTemplateParams(ts, "UPDATE %L:target SET %U:assignments ?WHERE +?%c:condition")
     Update(
       table = params.locations("target"),
@@ -506,7 +506,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[While]]
     */
-  protected def parseWhile(ts: TokenStream): While = {
+  def parseWhile(ts: TokenStream): While = {
     val params = SQLTemplateParams(ts, "WHILE %c:condition %N:command")
     While(condition = params.conditions("condition"), invokable = params.sources("command"))
   }
