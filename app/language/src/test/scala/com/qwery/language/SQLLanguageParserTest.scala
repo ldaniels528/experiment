@@ -695,6 +695,25 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support SELECT w/JOIN ... USING statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
+           |FROM Customers as C
+           |JOIN CustomerAddresses as CA USING customerId
+           |JOIN Addresses as A USING addressId
+           |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        from = Table("Customers").as("C"),
+        joins = List(
+          Join(Table("CustomerAddresses").as("CA"), columns = Seq("customerId"), JoinTypes.INNER),
+          Join(Table("Addresses").as("A"), columns = Seq("addressId"), JoinTypes.INNER)
+        ),
+        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+      ))
+    }
+
     it("should support SET local variable statements") {
       val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
       assert(results == SetLocalVariable(name = "customers", $("customers") + 1))

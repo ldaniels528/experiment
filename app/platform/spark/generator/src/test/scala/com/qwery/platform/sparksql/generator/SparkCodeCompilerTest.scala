@@ -1,6 +1,7 @@
 package com.qwery.platform.sparksql.generator
 
 import com.qwery.language.SQLLanguageParser
+import com.qwery.util.StringHelper._
 import org.scalatest.FunSpec
 
 /**
@@ -8,8 +9,6 @@ import org.scalatest.FunSpec
   * @author lawrence.daniels@gmail.com
   */
 class SparkCodeCompilerTest extends FunSpec {
-
-  import com.qwery.util.StringHelper._
 
   describe(SparkCodeCompiler.getObjectSimpleName) {
 

@@ -18,12 +18,12 @@ class CodeTemplateTest extends FunSpec {
            |END
            |""".stripMargin)
 
-      implicit val args: ApplicationSettings = ApplicationSettings.fromArgs(Array(
+      implicit val args: ApplicationSettings = ApplicationSettings.fromArgs(
         "--app-name", "Coyote Trap",
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "./temp",
         "--class-name", "com.acme.tools.CoyoteTrap"
-      ))
+      )
       implicit val ctx: CompileContext = CompileContext(invokable)
 
       val template = CodeTemplate.fromString(

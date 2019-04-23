@@ -375,7 +375,9 @@ trait NativeFunctions {
   def crc32(expr: Expression): Expression = FunctionCall("crc32")(expr)
 
   /**
-    * [[https://spark.apache.org/docs/2.4.0/api/sql/index.html#cube]].
+    * cube multi-dimensional aggregate operator is an extension of groupBy operator that allows calculating
+    * subtotals and a grand total across all combinations of specified group of n + 1 dimensions (with n being
+    * the number of columns as cols and col1 and 1 for where values become null, i.e. undefined)..
     * @example {{{ cube(expr1, ...) }}}
     */
   def cube(expr: Expression*): Expression = FunctionCall("cube")(expr: _*)
@@ -1126,10 +1128,10 @@ trait NativeFunctions {
   def rint(expr: Expression): Expression = FunctionCall("rint")(expr)
 
   /**
-    * TODO documentation.
-    * @example {{{ rollup() }}}
+    * Create a multi-dimensional rollup for the SparkDataFrame using the specified columns..
+    * @example {{{ rollup(expr1, ...) }}}
     */
-  def rollup(): Expression = FunctionCall("rollup")()
+  def rollup(expr: Expression*): Expression = FunctionCall("rollup")(expr: _*)
 
   /**
     * Returns `expr` rounded to `d` decimal places using `HALF_UP` rounding mode.
@@ -1277,6 +1279,13 @@ trait NativeFunctions {
     * @example {{{ weekofyear(date) }}}
     */
   def weekofyear(expr: Expression): Expression = FunctionCall("weekofyear")(expr)
+
+  /**
+    * window generates tumbling, sliding or delayed time windows of windowDuration duration given a
+    * timeColumn timestamp specifying column.
+    * @example {{{ window(time, windowDuration[, slideDuration, startTime]) }}}
+    */
+  def window(expr: Expression*): Expression = FunctionCall("window")(expr: _*)
 
   /**
     * Returns a string array of values within the nodes of xml that match the XPath expression.

@@ -364,8 +364,8 @@ trait SQLLanguageParser {
     * @example
     * {{{
     * SELECT A.symbol, A.exchange, A.lastSale AS lastSaleA, B.lastSale AS lastSaleB
-    * FROM companlist AS A
-    * INNER JOIN companlist2 AS B ON B.Symbol = A.Symbol
+    * FROM Securities AS A
+    * INNER JOIN Securities AS B ON B.symbol = A.symbol
     * WHERE A.exchange = 'NASDAQ'
     * LIMIT 5
     * }}}

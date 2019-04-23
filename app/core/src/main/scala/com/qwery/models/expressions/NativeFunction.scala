@@ -256,10 +256,12 @@ object NativeFunction {
          |Count-min sketch is a probabilistic data structure used for cardinality estimation using sub-linear space""".stripMargin),
     two(name = "covar_pop", description = "Returns the population covariance of a set of number pairs"),
     two(name = "covar_samp", description = "Returns the sample covariance of a set of number pairs"),
-    one(name = "crc32",
-      description = "Returns a cyclic redundancy check value of the expr as a bigint"),
-    many(name = "cube",
-      description = "[[https://spark.apache.org/docs/2.4.0/api/sql/index.html#cube]]"),
+    one(name = "crc32", description =
+      "Returns a cyclic redundancy check value of the expr as a bigint"),
+    many(name = "cube", description =
+      """|cube multi-dimensional aggregate operator is an extension of groupBy operator that allows calculating
+         |subtotals and a grand total across all combinations of specified group of n + 1 dimensions (with n being
+         |the number of columns as cols and col1 and 1 for where values become null, i.e. undefined).""".stripMargin),
     zero(name = "cume_dist",
       description = "Computes the position of a value relative to all values in the partition"),
     zero(name = "current_database",
@@ -480,7 +482,8 @@ object NativeFunction {
          |if `len` is less or equal than 0 the result is an empty string""".stripMargin),
     one(name = "rint", description =
       "Returns the double value that is closest in value to the argument and is equal to a mathematical integer"),
-    zero(name = "rollup", description = "TODO documentation"),
+    many(name = "rollup", description =
+      "Create a multi-dimensional rollup for the SparkDataFrame using the specified columns."),
     two(name = "round", usage = "round(expr, d)", description =
       "Returns `expr` rounded to `d` decimal places using `HALF_UP` rounding mode"),
     zero(name = "row_number", usage = "row_number() over(window_spec))", description =
@@ -527,6 +530,9 @@ object NativeFunction {
     one(name = "weekofyear", usage = "weekofyear(date)", description =
       """|Returns the week of the year of the given date.
          |A week is considered to start on a Monday and week 1 is the first week with >3 days""".stripMargin),
+    many(name = "window", minArgs = 2, maxArgs = 4, usage = "window(time, windowDuration[, slideDuration, startTime])", description =
+      """|window generates tumbling, sliding or delayed time windows of windowDuration duration given a
+         |timeColumn timestamp specifying column""".stripMargin),
     two(name = "xpath", usage = "xpath(xml, xpath)", description =
       "Returns a string array of values within the nodes of xml that match the XPath expression"),
     two(name = "xpath_boolean", usage = "xpath_boolean(xml, xpath)", description =

@@ -19,8 +19,8 @@ class SparkJobGenerator() {
   /**
     * Generates an SBT project for the given [[Invokable]]
     * @param invokable the given [[Invokable]]
-    * @param settings the implicit [[ApplicationSettings]]
-    * @param ctx the implicit [[CompileContext]]
+    * @param settings  the implicit [[ApplicationSettings]]
+    * @param ctx       the implicit [[CompileContext]]
     * @return a [[File]] representing the project or class
     */
   def generate(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): File = {
@@ -131,7 +131,7 @@ class SparkJobGenerator() {
     * @return the [[File]] representing the generated Main class
     */
   private def createSparkJob(templateString: String, invokable: Invokable)
-                    (implicit settings: ApplicationSettings, ctx: CompileContext): File = {
+                            (implicit settings: ApplicationSettings, ctx: CompileContext): File = {
     import settings._
 
     // create the package directory
@@ -163,7 +163,6 @@ class SparkJobGenerator() {
         |
         |  def start(args: Array[String])(implicit spark: SparkSession): Unit = {
         |     import spark.implicits._
-        |
         |     {{ flow }}
         |  }
         |
@@ -213,7 +212,7 @@ class SparkJobGenerator() {
   /**
     * Determines the source directory for the desired project or class file
     * @param outputFile the given output [[File file]]
-    * @param settings the implicit [[ApplicationSettings]]
+    * @param settings   the implicit [[ApplicationSettings]]
     * @return the source [[File directory]]
     */
   private def inferSourceDir(outputFile: File)(implicit settings: ApplicationSettings): File = {
@@ -259,7 +258,7 @@ object SparkJobGenerator {
   def main(args: Array[String]): Unit = {
     logger.info(s"[*] Qwery v${AppConstants.version}: Spark Job Generator")
 
-    generate()(ApplicationSettings.fromArgs(args))
+    generate()(ApplicationSettings.fromArgs(args: _*))
   }
 
   /**

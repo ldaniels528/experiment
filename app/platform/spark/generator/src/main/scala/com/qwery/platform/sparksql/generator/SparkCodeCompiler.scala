@@ -11,7 +11,7 @@ import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.platform.sparksql.generator.SparkCodeCompiler.Implicits._
 import com.qwery.util.OptionHelper._
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.io.Source
 
@@ -20,7 +20,7 @@ import scala.io.Source
   * @author lawrence.daniels@gmail.com
   */
 trait SparkCodeCompiler {
-  private[this] val logger = LoggerFactory.getLogger(getClass)
+  protected[this] val logger: Logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Recusively traverses the given object graph
@@ -68,7 +68,7 @@ trait SparkCodeCompiler {
   def generateCode(model: Procedure)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     import model._
     CodeBuilder().append(
-      s"""def $name(${params.map(_.toCode).mkString(",")}) = {""",
+      s"def $name(${params.map(_.toCode).mkString(",")}) = {",
       code.toCode,
       "}"
     ).build()
@@ -159,12 +159,12 @@ trait SparkCodeCompiler {
       .append(CodeBuilder(prepend = ",").append(model.fields.map(_.toSQL)))
       .append(model.from map { from =>
         val result = from match {
-          case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
-          case x => x.toSQL
+          case tableRef: TableRef => tableRef.toSQL
+          case query => s"(\n ${query.toSQL} \n)".withAlias(query)
         }
-        s"from ${result.withAlias(from: Invokable)}"
+        s"from $result"
       })
-      .append(model.joins.map(_.toSQL))
+      .append(model.joins.map(_.toSQL(model)))
       .append(model.where.map(condition => s"where ${condition.toSQL}"))
       .append(model.groupBy.toOption.map(groupBy => s"group by ${groupBy.map(_.toSQL).mkString(",")}"))
       .append(model.having.map(condition => s"having ${condition.toSQL}"))
@@ -348,6 +348,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case i: Insert => generateWriter(i)
           case l: LocalVariableRef => l.name
           case ProcedureCall(name, args) => s"""$name(${args.map(_.toCode).mkString(",")})"""
+          case Return(value_?) => value_?.map(value => s"return ${value.toCode}") getOrElse "return"
           case s: Select => s.toCode
           case SetRowVariable(name, dataSet) => s"""val $name = ${dataSet.toCode}"""
           case RowSetVariableRef(name) => name
@@ -366,6 +367,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         val result = invokable match {
           case Except(a, b) => s"${a.toSQL} except ${b.toSQL}"
           case Intersect(a, b) => s"${a.toSQL} intersect ${b.toSQL}"
+          case _: Return => die("RETURN is not supported in Spark SQL")
           case s: Select => generateSQL(s)
           case SQL(statements) => statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>
@@ -382,15 +384,35 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
     /**
       * Join Compiler Extension
-      * @param join the given [[Join model]]
+      * @param theJoin the given [[Join model]]
       */
-    final implicit class JoinCompilerExtension(val join: Join) extends AnyVal {
-      @inline def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
-        val result = join.source match {
-          case a: Aliasable if a.alias.nonEmpty => s"(\n ${a.toSQL} \n)"
-          case x => x.toSQL
+    final implicit class JoinCompilerExtension(val theJoin: Join) extends AnyVal {
+
+      @inline def toSQL(select: Select)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
+        theJoin match {
+          // JOIN ... ON ...
+          case Join.On(source, condition, joinType) =>
+            val result = source match {
+              case tableRef: TableRef => tableRef.toSQL
+              case query => s"(\n ${query.toSQL} \n)"
+            }
+            s"${joinType.toSQL} join $result on ${condition.toSQL}"
+
+          // JOIN ... USING ...
+          case Join.Using(source, columns, joinType) =>
+            val result = source match {
+              case tableRef: TableRef => tableRef.toSQL
+              case query => s"(\n ${query.toSQL} \n)"
+            }
+            // TODO solve this
+            /*
+            val condition: Condition = {
+              val sources = select.from.toList ::: select.joins.map(_.source).toList
+              sources.foreach(src => logger.info(s"source: $src"))
+
+            }*/
+            s"${joinType.toSQL} join $result using ${columns.mkString(", ")}"
         }
-        s"${join.`type`.toSQL} join ${result.withAlias(join.source)} on ${join.condition.toSQL}"
       }
     }
 
@@ -437,17 +459,21 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     }
 
     /**
-      * String SQLCompiler Extensions
+      * String Compiler Extensions
       * @param string the given [[String value]]
       */
     final implicit class StringCompilerExtensions(val string: String) extends AnyVal {
+
       @inline def toCode: String = string.asCode
 
       @inline def withAlias(model: Aliasable): String =
         model.alias.map(alias => s"$string as $alias") getOrElse string
 
+      @inline def withAlias(model: Queryable): String =
+        model.alias.map(alias => s"$string As $alias") getOrElse string
+
       @inline def withAlias(model: Invokable): String = model match {
-        case a: Aliasable => a.alias.map(alias => s"$string AS $alias") getOrElse string
+        case aliasable: Aliasable => aliasable.alias.map(alias => s"$string AS $alias") getOrElse string
         case _ => string
       }
 

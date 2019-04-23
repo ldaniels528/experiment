@@ -246,11 +246,23 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     var joins: List[Join] = Nil
 
     def join(ts: TokenStream, `type`: JoinType): Join = {
-      val params = SQLTemplateParams(ts, "%LQ:source ON %c:condition")
-      Join(
-        source = if (params.locations.contains("source")) params.locations("source") else params.sources("source"),
-        condition = params.conditions("condition"),
-        `type` = `type`)
+      // JOIN ... ON ...
+      if (matches("%LQ:source ON %c:condition")) {
+        val params = SQLTemplateParams(ts, "%LQ:source ON %c:condition")
+        Join(
+          source = if (params.locations.contains("source")) params.locations("source") else params.sources("source"),
+          condition = params.conditions("condition"),
+          `type` = `type`)
+      }
+      // JOIN ... USING ...
+      else if (matches("%LQ:source USING %F:fields")) {
+        val params = SQLTemplateParams(ts, "%LQ:source USING %F:fields")
+        Join(
+          source = if (params.locations.contains("source")) params.locations("source") else params.sources("source"),
+          columns = params.fields("fields").map(_.name),
+          `type` = `type`)
+      }
+      else ts.die("JOIN ON or USING clause expected")
     }
 
     while (predicates.exists(stream is _)) {

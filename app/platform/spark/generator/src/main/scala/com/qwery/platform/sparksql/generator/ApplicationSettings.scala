@@ -55,7 +55,7 @@ object ApplicationSettings {
     * @param args the given command line arguments
     * @return the [[ApplicationSettings]]
     */
-  def fromArgs(args: Seq[String] = Nil): ApplicationSettings = {
+  def fromArgs(args: String*): ApplicationSettings = {
     // parse the command line arguments
     val mappings = createArgumentsMap(args)
 
