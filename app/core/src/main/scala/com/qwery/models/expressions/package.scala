@@ -1,6 +1,7 @@
 package com.qwery.models
 
 import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.expressions.Over.RangeBetween
 
 /**
   * expressions package object
@@ -144,7 +145,7 @@ package object expressions {
 
       @inline def ^(expr1: Expression) = MathOp(expr0, expr1, "^")
 
-      @inline def between(from: Expression, to: Expression): Expression = Between(expr0, from, to)
+      @inline def between(from: Expression, to: Expression): Condition = Between(expr0, from, to)
 
       @inline def cast(toType: ColumnType): Expression = Cast(expr0, toType)
 
@@ -158,7 +159,7 @@ package object expressions {
 
       @inline def over(partitionBy: Seq[Field] = Nil,
                        orderBy: Seq[OrderColumn] = Nil,
-                       range: Option[Condition] = None): Over = {
+                       range: Option[RangeBetween] = None): Over = {
         Over(
           expression = expr0,
           partitionBy = partitionBy,

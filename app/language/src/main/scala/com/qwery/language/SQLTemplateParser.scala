@@ -4,6 +4,7 @@ import com.qwery.language.SQLTemplateParser._
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
+import com.qwery.models.expressions.Over.RangeBetween
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 
@@ -373,7 +374,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
         case ts if ts nextIf "PARTITION BY" =>
           clause = clause.copy(partitionBy = SQLTemplateParams(ts, "%F:partitionBy").fields("partitionBy"))
         case ts if ts nextIf "RANGE" =>
-          clause = clause.copy(range = SQLTemplateParams(ts, "%c:condition").conditions.get("condition"))
+          clause = clause.copy(range = parseRangeBetween(stream))
         case ts if ts nextIf "ROW" =>
           ts.die("SELECT ... OVER ROW is not yet supported")
         case ts =>
@@ -382,6 +383,15 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     }
     stream expect ")"
     clause
+  }
+
+  private def parseRangeBetween(stream: TokenStream): Option[RangeBetween] = {
+    stream.expect("BETWEEN")
+    for {
+      a <- parseExpression(stream)
+      _ = stream expect "AND"
+      b <- parseExpression(stream)
+    } yield RangeBetween(a, b)
   }
 
   /**
