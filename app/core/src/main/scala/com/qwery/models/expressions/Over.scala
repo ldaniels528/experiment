@@ -1,14 +1,15 @@
 package com.qwery.models.expressions
 
 import com.qwery.models.OrderColumn
-import com.qwery.models.expressions.Over.RangeBetween
+import com.qwery.models.expressions.Over.BetweenTypes.BetweenType
+import com.qwery.models.expressions.Over.RangeOrRowsBetween
 
 /**
   * Window-Over clause
   * @param expression  the host [[Expression]]
   * @param partitionBy the given partition by columns
   * @param orderBy     the given order by columns
-  * @param range       the [[RangeBetween RANGE BETWEEN]] clause
+  * @param between     the [[RangeOrRowsBetween RANGE/ROWS BETWEEN]] clause
   * @example
   * {{{
   * SELECT *, mean(some_value) OVER (
@@ -23,7 +24,7 @@ import com.qwery.models.expressions.Over.RangeBetween
 case class Over(expression: Expression,
                 partitionBy: Seq[Field] = Nil,
                 orderBy: Seq[OrderColumn] = Nil,
-                range: Option[RangeBetween] = None) extends Expression
+                between: Option[RangeOrRowsBetween] = None) extends Expression
 
 /**
   * Over Companion
@@ -32,11 +33,25 @@ case class Over(expression: Expression,
 object Over {
 
   /**
-    * SQL: RANGE BETWEEN `expression` AND `expression`
-    * @param from the lower bound [[Expression expression]]
-    * @param to   the upper bound [[Expression expression]]
+    * Between Types
+    * @author lawrence.daniels@gmail.com
+    */
+  object BetweenTypes extends Enumeration {
+    type BetweenType = Value
+    val ROWS, RANGE: BetweenType = Value
+  }
+
+  case class Following(expr: Expression) extends Expression
+
+  case class Preceding(expr: Expression) extends Expression
+
+  /**
+    * SQL: RANGE/ROWS BETWEEN `expression` [PRECEDING] AND `expression`
+    * @param betweenType the given [[BetweenType between type]]
+    * @param from        the lower bound [[Expression expression]]
+    * @param to          the upper bound [[Expression expression]]
     * @example {{{ RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW }}}
     */
-  case class RangeBetween(from: Expression, to: Expression) extends Condition
+  case class RangeOrRowsBetween(betweenType: BetweenType, from: Expression, to: Expression) extends Condition
 
 }

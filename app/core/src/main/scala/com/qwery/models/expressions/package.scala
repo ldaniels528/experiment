@@ -1,7 +1,6 @@
 package com.qwery.models
 
 import com.qwery.models.ColumnTypes.ColumnType
-import com.qwery.models.expressions.Over.RangeBetween
 
 /**
   * expressions package object
@@ -159,12 +158,12 @@ package object expressions {
 
       @inline def over(partitionBy: Seq[Field] = Nil,
                        orderBy: Seq[OrderColumn] = Nil,
-                       range: Option[RangeBetween] = None): Over = {
+                       between: Option[Over.RangeOrRowsBetween] = None): Over = {
         Over(
           expression = expr0,
           partitionBy = partitionBy,
           orderBy = orderBy,
-          range = range
+          between = between
         )
       }
 

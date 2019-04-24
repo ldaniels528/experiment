@@ -12,7 +12,7 @@ trait NativeFunctions {
     * @example {{{ abs(expr) }}}
     */
   def abs(expr: Expression): Expression = FunctionCall("abs")(expr)
-  
+
   /**
     * Returns the inverse cosine (a.k.a. arc cosine) of expr, as if computed by [[java.lang.Math#acos]].
     * @example {{{ acos(expr) }}}

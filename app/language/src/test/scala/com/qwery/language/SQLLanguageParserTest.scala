@@ -486,20 +486,29 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SELECT ... OVER w/RANGE statements") {
+      import IntervalTypes._
       import NativeFunctions._
+      import Over.BetweenTypes._
+      import Over._
+      import com.qwery.util.OptionHelper.Implicits.Risky._
+
       val results = SQLLanguageParser.parse(
-        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote,
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote, LastSale,
            |       MEAN(LastSale) OVER (
            |          PARTITION BY Symbol
            |          ORDER BY TradeDate ASC
-           |       // RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
-           |       ) AS mean
+           |          RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
+           |       ) AS LastSaleMean
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
       assert(results == Select(
-        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote,
-          mean('LastSale).over(partitionBy = Seq('Symbol), orderBy = Seq('TradeDate.asc), range = None).as("mean")),
+        fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote, 'LastSale,
+          mean('LastSale)
+            .over(partitionBy = Seq('Symbol),
+              orderBy = Seq('TradeDate.asc),
+              between = RangeOrRowsBetween(RANGE, Preceding(Interval(7, DAY)), CurrentRow))
+            .as("LastSaleMean")),
         from = Table("Customers"),
         where = Field('Industry) === "Oil/Gas Transmission"
       ))

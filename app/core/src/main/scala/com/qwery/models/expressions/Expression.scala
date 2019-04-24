@@ -28,6 +28,12 @@ object Expression {
 case class Cast(value: Expression, toType: ColumnType) extends Expression
 
 /**
+  * Current Row
+  * @see [[Over]]
+  */
+case object CurrentRow extends Expression
+
+/**
   * If expr1 evaluates to true, then returns expr2; otherwise returns expr3.
   * @example if(expr1, expr2, expr3)
   */

@@ -177,7 +177,7 @@ trait ExpressionParser {
     import IntervalTypes._
     for {
       count <- parseExpression(stream)
-      (_, intervalType) = intervalTypes.find { case (name, _) => (stream is name) || (stream is name + "S") }
+      (_, intervalType) = intervalTypes.find { case (name, _) => (stream nextIf name) || (stream nextIf name + "S") }
         .getOrElse(stream.die("Invalid interval type"))
     } yield Interval(count, intervalType)
   }
@@ -321,17 +321,12 @@ trait ExpressionParser {
   protected def parseNextExpression(stream: TokenStream): Option[Expression] = {
     import com.qwery.util.OptionHelper.Implicits.Risky._
     stream match {
-      // is it a Case expression?
       case ts if ts nextIf "CASE" => parseCase(ts)
-      // is it a Cast function?
       case ts if ts nextIf "CAST" => parseCast(ts)
-      // is it a Distinct function?
+      case ts if ts nextIf "CURRENT ROW" => Option(CurrentRow)
       case ts if ts nextIf "DISTINCT" => parseDistinct(ts)
-      // is it an If expression?
       case ts if ts nextIf "IF" => parseIf(ts)
-      // is it an INTERVAL?
       case ts if ts nextIf "INTERVAL" => parseInterval(ts)
-      // is is a null value?
       case ts if ts nextIf "NULL" => Null
       // is it a constant value?
       case ts if ts.isConstant => Literal(value = ts.next().value)

@@ -4,9 +4,11 @@ import com.qwery.language.SQLTemplateParser._
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
-import com.qwery.models.expressions.Over.RangeBetween
+import com.qwery.models.expressions.Over.BetweenTypes
+import com.qwery.models.expressions.Over.BetweenTypes.BetweenType
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
+import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
 
@@ -15,6 +17,7 @@ import scala.util.{Failure, Success, Try}
   * @author lawrence.daniels@gmail.com
   */
 class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLanguageParser {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Indicates whether the given stream matches the given template
@@ -357,9 +360,10 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     *   OVER (
     *     [ <PARTITION BY clause> ]
     *     [ <ORDER BY clause> ]
-    *     [ <ROW or RANGE clause> ]
+    *     [ <ROWS or RANGE clause> ]
     *   )
     * }}}
+    * @see [[https://stevestedman.com/2013/04/rows-and-range-preceding-and-following/]]
     */
   private def parseOver(expression: Expression, stream: TokenStream): Expression = {
     // create an empty OVER clause
@@ -369,29 +373,54 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     stream expect "("
     while (stream isnt ")") {
       stream match {
-        case ts if ts nextIf "ORDER BY" =>
+        case ts if ts nextIf "ORDER" =>
+          ts.expect("BY")
           clause = clause.copy(orderBy = SQLTemplateParams(ts, "%o:orderBy").orderedFields("orderBy"))
-        case ts if ts nextIf "PARTITION BY" =>
+        case ts if ts nextIf "PARTITION" =>
+          ts.expect("BY")
           clause = clause.copy(partitionBy = SQLTemplateParams(ts, "%F:partitionBy").fields("partitionBy"))
         case ts if ts nextIf "RANGE" =>
-          clause = clause.copy(range = parseRangeBetween(stream))
-        case ts if ts nextIf "ROW" =>
-          ts.die("SELECT ... OVER ROW is not yet supported")
+          clause = clause.copy(between = parseOver_Between(stream, BetweenTypes.RANGE))
+        case ts if (ts nextIf "ROW") | (ts nextIf "ROWS") =>
+          clause = clause.copy(between = parseOver_Between(stream, BetweenTypes.ROWS))
         case ts =>
-          ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROW")
+          ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROWS")
       }
     }
     stream expect ")"
     clause
   }
 
-  private def parseRangeBetween(stream: TokenStream): Option[RangeBetween] = {
+  /**
+    * Extracts a RANGE/ROWS BETWEEN clause
+    * @param stream      the given [[TokenStream token stream]]
+    * @param betweenType the given [[BetweenType traversal type]]
+    * @return the option of a [[Over.RangeOrRowsBetween]]
+    * @example RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
+    */
+  private def parseOver_Between(stream: TokenStream, betweenType: BetweenType): Option[Over.RangeOrRowsBetween] = {
     stream.expect("BETWEEN")
     for {
-      a <- parseExpression(stream)
+      a <- parseOver_Expression(stream)
       _ = stream expect "AND"
-      b <- parseExpression(stream)
-    } yield RangeBetween(a, b)
+      b <- parseOver_Expression(stream)
+    } yield Over.RangeOrRowsBetween(betweenType, a, b)
+  }
+
+  /**
+    * Extracts the next expression from the stream, including OVER specific modifiers
+    * @param stream the given [[TokenStream token stream]]
+    * @return the option of an [[Expression]]
+    */
+  private def parseOver_Expression(stream: TokenStream): Option[Expression] = {
+    import Over._
+    parseExpression(stream) map { expr =>
+      stream match {
+        case ts if ts nextIf "FOLLOWING" => Following(expr)
+        case ts if ts nextIf "PRECEDING" => Preceding(expr)
+        case _ => expr
+      }
+    }
   }
 
   /**
