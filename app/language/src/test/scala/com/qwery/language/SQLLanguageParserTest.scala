@@ -399,6 +399,17 @@ class SQLLanguageParserTest extends FunSpec {
       ))
     }
 
+    it("should support SELECT ... EXISTS(...) statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT * FROM Departments WHERE EXISTS(SELECT employee_id FROM Employees WHERE role = 'MANAGER')
+           |""".stripMargin)
+      assert(results ==
+        Select(Seq('*),
+          from = Table("Departments"),
+          where = Exists(Select(fields = Seq('employee_id), from = Table("Employees"), where = Field('role) === "MANAGER"))
+        ))
+    }
+
     it("should support SELECT ... FILESYSTEM(...) statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT * FROM (FILESYSTEM('models/'))

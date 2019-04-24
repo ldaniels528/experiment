@@ -374,11 +374,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     while (stream isnt ")") {
       stream match {
         case ts if ts nextIf "ORDER" =>
-          ts.expect("BY")
-          clause = clause.copy(orderBy = SQLTemplateParams(ts, "%o:orderBy").orderedFields("orderBy"))
+          clause = clause.copy(orderBy = SQLTemplateParams(ts.expect("BY"), "%o:orderBy").orderedFields("orderBy"))
         case ts if ts nextIf "PARTITION" =>
-          ts.expect("BY")
-          clause = clause.copy(partitionBy = SQLTemplateParams(ts, "%F:partitionBy").fields("partitionBy"))
+          clause = clause.copy(partitionBy = SQLTemplateParams(ts.expect("BY"), "%F:partitionBy").fields("partitionBy"))
         case ts if (ts is "RANGE") | (ts is "ROWS") =>
           clause = clause.copy(modifier = parseOver_AccessModifier(stream))
         case ts =>

@@ -4,6 +4,7 @@ import com.qwery.language.ExpressionParser._
 import com.qwery.language.TokenStreamHelpers._
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{NativeFunctions => f, _}
+import org.slf4j.LoggerFactory
 
 /**
   * Expression Parser
@@ -100,6 +101,16 @@ trait ExpressionParser {
       _ = stream expect "AND"
       b <- parseExpression(stream)
     } yield expr.between(a, b)
+  }
+
+  /**
+    * Parses a SQL EXISTS clause
+    * @param stream the given [[TokenStream token stream]]
+    * @return the option of a new [[Condition]]
+    */
+  protected def parseExists(stream: TokenStream): Option[Condition] = {
+    LoggerFactory.getLogger(getClass).info(s"next: ${(0 to 6).flatMap(stream.peekAhead).mkString("|")}")
+    Option(Exists(sqlLanguageParser.parseNextQueryOrVariable(stream)))
   }
 
   /**
@@ -221,8 +232,7 @@ trait ExpressionParser {
       } getOrElse ts.die("Conditional expression expected")
 
       // parse the 'THEN' expression
-      ts.expect("THEN")
-      val result = parseExpression(ts) getOrElse ts.die("Results expression expected")
+      val result = parseExpression(ts.expect("THEN")) getOrElse ts.die("Results expression expected")
 
       // parse the 'ELSE' expression?
       if (ts nextIf "ELSE") {
@@ -284,6 +294,7 @@ trait ExpressionParser {
     */
   protected def parseNextCondition(stream: TokenStream): Option[Condition] = {
     stream match {
+      case ts if ts nextIf "EXISTS" => parseExists(ts)
       case ts if ts nextIf "NOT" => parseNOT(ts)
       case ts =>
         var condition: Option[Condition] = None

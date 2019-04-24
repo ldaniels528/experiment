@@ -1,5 +1,7 @@
 package com.qwery.models.expressions
 
+import com.qwery.models.Invokable
+
 /**
   * Base class for all conditional expressions
   * @author lawrence.daniels@gmail.com
@@ -40,11 +42,17 @@ case class AND(a: Condition, b: Condition) extends Condition
 
 /**
   * SQL: `expression` BETWEEN `expression` AND `expression`
-  * @param expr tthe [[Expression expression]] to evaluate
+  * @param expr the [[Expression expression]] to evaluate
   * @param from the lower bound [[Expression expression]]
   * @param to   the upper bound [[Expression expression]]
   */
 case class Between(expr: Expression, from: Expression, to: Expression) extends Condition
+
+/**
+  * SQL: EXISTS( SELECT column_name FROM table_name WHERE condition )
+  * @param query the given [[Invokable query]]
+  */
+case class Exists(query: Invokable) extends Condition
 
 /**
   * SQL: `expression` IS NOT NULL 
