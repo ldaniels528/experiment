@@ -385,6 +385,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
     /**
       * Join Compiler Extension
       * @param theJoin the given [[Join model]]
+      * @see [[https://stackoverflow.com/questions/11366006/mysql-on-vs-using]]
       */
     final implicit class JoinCompilerExtension(val theJoin: Join) extends AnyVal {
 
@@ -404,12 +405,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
               case tableRef: TableRef => tableRef.toSQL
               case query => s"(\n ${query.toSQL} \n)"
             }
-            // TODO solve this
+            // TODO convert from JOIN ... USING to JOIN ... ON syntax
             /*
             val condition: Condition = {
               val sources = select.from.toList ::: select.joins.map(_.source).toList
               sources.foreach(src => logger.info(s"source: $src"))
-
             }*/
             s"${joinType.toSQL} join $result using ${columns.mkString(", ")}"
         }

@@ -149,6 +149,20 @@ trait ExpressionParser {
   }
 
   /**
+    * Extracts an INTERVAL expression (e.g. "INTERVAL 7 DAYS")
+    * @param stream the given [[TokenStream token stream]]
+    * @return the option of a new [[Expression]]
+    */
+  private def parseInterval(stream: TokenStream): Option[Expression] = {
+    import IntervalTypes._
+    for {
+      count <- parseExpression(stream)
+      (_, intervalType) = intervalTypes.find { case (name, _) => (stream is name) || (stream is name + "S") }
+        .getOrElse(stream.die("Invalid interval type"))
+    } yield Interval(count, intervalType)
+  }
+
+  /**
     * Extracts a variable number of function arguments
     * @param ts the given [[TokenStream token stream]]
     * @return a collection of [[Expression argument expressions]]
@@ -204,6 +218,8 @@ trait ExpressionParser {
       case ts if ts nextIf "DISTINCT" => parseDistinct(ts)
       // is it an If expression?
       case ts if ts nextIf "IF" => parseIf(ts)
+      // is it an INTERVAL?
+      case ts if ts nextIf "INTERVAL" => parseInterval(ts)
       // is is a null value?
       case ts if ts nextIf "NULL" => Null
       // is it a constant value?

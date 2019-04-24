@@ -147,7 +147,7 @@ class SparkJobGenerator() {
   /**
     * Returns the default Spark job template
     */
-  private def defaultTemplate: String = {
+  private val defaultTemplate: String = {
     s"""|package {{ packageName }}
         |
         |{{ imports }}

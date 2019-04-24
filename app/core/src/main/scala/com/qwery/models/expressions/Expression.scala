@@ -2,6 +2,7 @@ package com.qwery.models.expressions
 
 import com.qwery.models.Aliasable
 import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.expressions.IntervalTypes.IntervalType
 
 /**
   * Represents an expression; which in its simplest form is a value (boolean, double or string)
@@ -32,6 +33,47 @@ case class Cast(value: Expression, toType: ColumnType) extends Expression
   * @example if(expr1, expr2, expr3)
   */
 case class If(condition: Condition, trueValue: Expression, falseValue: Expression) extends Expression
+
+/**
+  * Represents an Interval (e.g. "7 YEARS")
+  * @param count  the [[Expression numeric]] interval
+  * @param `type` the [[IntervalType interval type]]
+  */
+case class Interval(count: Expression, `type`: IntervalType) extends Expression
+
+/**
+  * Represents an Interval Type (e.g. "7 YEARS")
+  * @author lawrence.daniels@gmail.com
+  */
+object IntervalTypes extends Enumeration {
+  type IntervalType = Value
+
+  val MICROSECOND, SECOND, MINUTE, DAY, WEEK, MONTH, QUARTER, YEAR,
+  SECOND_MICROSECOND, MINUTE_MICROSECOND, MINUTE_SECOND, HOUR_MICROSECOND, HOUR_SECOND,
+  HOUR_MINUTE, DAY_MICROSECOND, DAY_SECOND, DAY_MINUTE, DAY_HOUR, YEAR_MONTH: IntervalType = Value
+
+  val intervalTypes: Map[String, IntervalType] = Map(
+    "MICROSECOND" -> MICROSECOND,
+    "SECOND" -> SECOND,
+    "MINUTE" -> MINUTE,
+    "DAY" -> DAY,
+    "WEEK" -> WEEK,
+    "MONTH" -> MONTH,
+    "QUARTER" -> QUARTER,
+    "YEAR" -> YEAR,
+    "SECOND_MICROSECOND" -> SECOND_MICROSECOND,
+    "MINUTE_MICROSECOND" -> MINUTE_MICROSECOND,
+    "MINUTE_SECOND" -> MINUTE_SECOND,
+    "HOUR_MICROSECOND" -> HOUR_MICROSECOND,
+    "HOUR_SECOND" -> HOUR_SECOND,
+    "HOUR_MINUTE" -> HOUR_MINUTE,
+    "DAY_MICROSECOND" -> DAY_MICROSECOND,
+    "DAY_SECOND" -> DAY_SECOND,
+    "DAY_MINUTE" -> DAY_MINUTE,
+    "DAY_HOUR" -> DAY_HOUR,
+    "YEAR_MONTH" -> YEAR_MONTH
+  )
+}
 
 /**
   * Represents a literal value (e.g. "Hello")

@@ -14,6 +14,10 @@ class ExpressionParserTest extends FunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
+    it("""should parse "INTERVAL 7 DAYS" (expression)""") {
+      verify("INTERVAL 7 DAYS", Interval(7, IntervalTypes.DAY))
+    }
+
     it("""should parse "A.Symbol" (expression)""") {
       verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
     }
