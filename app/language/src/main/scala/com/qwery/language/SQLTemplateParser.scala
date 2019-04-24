@@ -4,8 +4,8 @@ import com.qwery.language.SQLTemplateParser._
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
-import com.qwery.models.expressions.Over.BetweenTypes
-import com.qwery.models.expressions.Over.BetweenTypes.BetweenType
+import com.qwery.models.expressions.Over.{DataAccessTypes, Unbounded}
+import com.qwery.models.expressions.Over.DataAccessTypes.DataAccessType
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
@@ -379,10 +379,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
         case ts if ts nextIf "PARTITION" =>
           ts.expect("BY")
           clause = clause.copy(partitionBy = SQLTemplateParams(ts, "%F:partitionBy").fields("partitionBy"))
-        case ts if ts nextIf "RANGE" =>
-          clause = clause.copy(between = parseOver_Between(stream, BetweenTypes.RANGE))
-        case ts if (ts nextIf "ROW") | (ts nextIf "ROWS") =>
-          clause = clause.copy(between = parseOver_Between(stream, BetweenTypes.ROWS))
+        case ts if (ts is "RANGE") | (ts is "ROWS") =>
+          clause = clause.copy(modifier = parseOver_AccessModifier(stream))
         case ts =>
           ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROWS")
       }
@@ -392,34 +390,48 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   }
 
   /**
-    * Extracts a RANGE/ROWS BETWEEN clause
-    * @param stream      the given [[TokenStream token stream]]
-    * @param betweenType the given [[BetweenType traversal type]]
+    * Extracts a RANGE/ROWS BETWEEN/UNBOUNDED clause
+    * @param stream the given [[TokenStream token stream]]
     * @return the option of a [[Over.RangeOrRowsBetween]]
     * @example RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
+    * @example ROWS UNBOUNDED PRECEDING
     */
-  private def parseOver_Between(stream: TokenStream, betweenType: BetweenType): Option[Over.RangeOrRowsBetween] = {
-    stream.expect("BETWEEN")
-    for {
-      a <- parseOver_Expression(stream)
-      _ = stream expect "AND"
-      b <- parseOver_Expression(stream)
-    } yield Over.RangeOrRowsBetween(betweenType, a, b)
+  private def parseOver_AccessModifier(stream: TokenStream): Option[Expression] = {
+    val accessType = parseOver_AccessType(stream)
+    stream match {
+      case ts if ts nextIf "BETWEEN" =>
+        for {
+          a <- parseExpression(ts) map parseOver_Expression
+          _ = stream expect "AND"
+          b <- parseExpression(ts) map parseOver_Expression
+        } yield Over.RangeOrRowsBetween(accessType, a, b)
+      case ts if ts nextIf "UNBOUNDED" => Option(parseOver_Expression(Unbounded(accessType)))
+      case ts => ts.die("BETWEEN or UNBOUNDED expected")
+    }
+  }
+
+  /**
+    * Determines the access type of the window function (e.g. ROWS or RANGE)
+    * @param stream the given [[TokenStream token stream]]
+    * @return the [[DataAccessType access type]]
+    */
+  private def parseOver_AccessType(stream: TokenStream): DataAccessType = stream match {
+    case ts if ts nextIf "RANGE" => DataAccessTypes.RANGE
+    case ts if ts nextIf "ROWS" => DataAccessTypes.ROWS
+    case ts => ts.die("RANGE or ROWS expected")
   }
 
   /**
     * Extracts the next expression from the stream, including OVER specific modifiers
-    * @param stream the given [[TokenStream token stream]]
+    * @param expr the host [[Expression]]
     * @return the option of an [[Expression]]
     */
-  private def parseOver_Expression(stream: TokenStream): Option[Expression] = {
+  private def parseOver_Expression(expr: Expression): Expression = {
     import Over._
-    parseExpression(stream) map { expr =>
-      stream match {
-        case ts if ts nextIf "FOLLOWING" => Following(expr)
-        case ts if ts nextIf "PRECEDING" => Preceding(expr)
-        case _ => expr
-      }
+    stream match {
+      case ts if ts nextIf "FOLLOWING" => Following(expr)
+      case ts if ts nextIf "PRECEDING" => Preceding(expr)
+      case _ => expr
     }
   }
 

@@ -158,12 +158,12 @@ package object expressions {
 
       @inline def over(partitionBy: Seq[Field] = Nil,
                        orderBy: Seq[OrderColumn] = Nil,
-                       between: Option[Over.RangeOrRowsBetween] = None): Over = {
+                       modifier: Option[Expression] = None): Over = {
         Over(
           expression = expr0,
           partitionBy = partitionBy,
           orderBy = orderBy,
-          between = between
+          modifier = modifier
         )
       }
 

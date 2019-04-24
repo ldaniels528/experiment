@@ -1,15 +1,14 @@
 package com.qwery.models.expressions
 
 import com.qwery.models.OrderColumn
-import com.qwery.models.expressions.Over.BetweenTypes.BetweenType
-import com.qwery.models.expressions.Over.RangeOrRowsBetween
+import com.qwery.models.expressions.Over.DataAccessTypes.DataAccessType
 
 /**
   * Window-Over clause
   * @param expression  the host [[Expression]]
   * @param partitionBy the given partition by columns
   * @param orderBy     the given order by columns
-  * @param between     the [[RangeOrRowsBetween RANGE/ROWS BETWEEN]] clause
+  * @param modifier    the given [[Expression access modifier]]
   * @example
   * {{{
   * SELECT *, mean(some_value) OVER (
@@ -24,7 +23,7 @@ import com.qwery.models.expressions.Over.RangeOrRowsBetween
 case class Over(expression: Expression,
                 partitionBy: Seq[Field] = Nil,
                 orderBy: Seq[OrderColumn] = Nil,
-                between: Option[RangeOrRowsBetween] = None) extends Expression
+                modifier: Option[Expression] = None) extends Expression
 
 /**
   * Over Companion
@@ -33,25 +32,39 @@ case class Over(expression: Expression,
 object Over {
 
   /**
-    * Between Types
+    * Data Access Types
     * @author lawrence.daniels@gmail.com
     */
-  object BetweenTypes extends Enumeration {
-    type BetweenType = Value
-    val ROWS, RANGE: BetweenType = Value
+  object DataAccessTypes extends Enumeration {
+    type DataAccessType = Value
+    val ROWS, RANGE: DataAccessType = Value
   }
 
+  /**
+    * SQL: RANGE/ROWS BETWEEN X AND Y FOLLOWING
+    * @param expr the given [[Expression]]
+    */
   case class Following(expr: Expression) extends Expression
 
+  /**
+    * SQL: RANGE/ROWS BETWEEN X AND Y PRECEDING
+    * @param expr the given [[Expression]]
+    */
   case class Preceding(expr: Expression) extends Expression
 
   /**
     * SQL: RANGE/ROWS BETWEEN `expression` [PRECEDING] AND `expression`
-    * @param betweenType the given [[BetweenType between type]]
-    * @param from        the lower bound [[Expression expression]]
-    * @param to          the upper bound [[Expression expression]]
+    * @param accessType the given [[DataAccessType data access type]]
+    * @param from       the lower bound [[Expression expression]]
+    * @param to         the upper bound [[Expression expression]]
     * @example {{{ RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW }}}
     */
-  case class RangeOrRowsBetween(betweenType: BetweenType, from: Expression, to: Expression) extends Condition
+  case class RangeOrRowsBetween(accessType: DataAccessType, from: Expression, to: Expression) extends Condition
+
+  /**
+    * SQL: RANGE/ROWS UNBOUNDED [FOLLOWING/PRECEDING]
+    * @param accessType the given [[DataAccessType data access type]]
+    */
+  case class Unbounded(accessType: DataAccessType) extends Expression
 
 }
