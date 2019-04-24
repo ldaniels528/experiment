@@ -12,5 +12,12 @@ case class Distinct(expressions: List[Expression]) extends Expression
   * @author lawrence.daniels@gmail.com
   */
 object Distinct {
+
+  /**
+    * Creates a new Distinct expression
+    * @param expressions the given [[Expression]]s for which to aggregate the distinct values
+    * @return a new [[Distinct distinct]] expression
+    */
   def apply(expressions: Expression*): Distinct = new Distinct(expressions.toList)
+
 }

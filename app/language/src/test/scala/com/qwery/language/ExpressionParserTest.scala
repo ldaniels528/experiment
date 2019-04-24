@@ -23,7 +23,7 @@ class ExpressionParserTest extends FunSpec {
     }
 
     it("""should parse "DISTINCT(PROPERTY_VAL)" """) {
-      verify("DISTINCT(PROPERTY_VAL)", Distinct(Field("PROPERTY_VAL")))
+      verify("DISTINCT(PROPERTY_VAL)", Distinct('PROPERTY_VAL))
     }
 
     it("""should parse "DISTINCT A.Symbol, A.Exchange" """) {
@@ -114,7 +114,7 @@ class ExpressionParserTest extends FunSpec {
 
     it("""should parse expressions containing 'AND' and 'OR'""") {
       verify("Sector = 'Basic Industries' AND Industry LIKE '%Gas%' OR Industry LIKE '%Oil%'",
-        Field('Sector) === "Basic Industries" && LIKE('Industry, "%Gas%") || LIKE(Field('Industry), "%Oil%"))
+        Field('Sector) === "Basic Industries" && LIKE('Industry, "%Gas%") || LIKE('Industry, "%Oil%"))
     }
 
     it("""should parse "(x + 3) * 2" (quantities)""") {

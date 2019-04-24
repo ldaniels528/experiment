@@ -515,11 +515,11 @@ object SparkCodeCompiler extends SparkCodeCompiler {
         case x => x.toString
       }
 
+      @inline def asDouble: Double = value.asSQL.toDouble
+
       @inline def asLong: Long = asDouble.toLong
 
       @inline def asInt: Int = asDouble.toInt
-
-      @inline def asDouble: Double = value.asSQL.toDouble
 
       @inline def asSQL: String = value match {
         case null => "null"

@@ -14,10 +14,10 @@ case class FunctionCall(name: String, args: List[Expression]) extends NamedExpre
 object FunctionCall {
 
   /**
-    * Creates a new function call
+    * Creates a new function-call
     * @param name the name of the function
     * @param args the function-call arguments
-    * @return a [[FunctionCall]]
+    * @return a new [[FunctionCall function-call]]
     */
   def apply(name: String)(args: Expression*) = new FunctionCall(name, args.toList)
 

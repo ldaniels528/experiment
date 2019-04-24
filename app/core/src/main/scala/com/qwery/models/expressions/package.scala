@@ -1,5 +1,7 @@
 package com.qwery.models
 
+import com.qwery.models.ColumnTypes.ColumnType
+
 /**
   * expressions package object
   * @author lawrence.daniels@gmail.com
@@ -142,7 +144,13 @@ package object expressions {
 
       @inline def ^(expr1: Expression) = MathOp(expr0, expr1, "^")
 
-      @inline def between(from: Expression, to: Expression): Between = Between(expr0, from, to)
+      @inline def between(from: Expression, to: Expression): Expression = Between(expr0, from, to)
+
+      @inline def cast(toType: ColumnType): Expression = Cast(expr0, toType)
+
+      @inline def in(query: Invokable): Expression = IN(expr0, query)
+
+      @inline def in(values: Expression*): Expression = IN(expr0)(values: _*)
 
       @inline def isNotNull: Condition = IsNotNull(expr0)
 
