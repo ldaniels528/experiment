@@ -41,16 +41,22 @@ object Over {
   }
 
   /**
-    * SQL: RANGE/ROWS BETWEEN X AND Y FOLLOWING
+    * SQL: RANGE BETWEEN INTERVAL 7 DAYS FOLLOWING AND CURRENT ROW
     * @param expr the given [[Expression]]
     */
   case class Following(expr: Expression) extends Expression
 
   /**
-    * SQL: RANGE/ROWS BETWEEN X AND Y PRECEDING
+    * SQL: ROWS BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
     * @param expr the given [[Expression]]
     */
   case class Preceding(expr: Expression) extends Expression
+
+  /**
+    * SQL: RANGE/ROWS UNBOUNDED [FOLLOWING/PRECEDING]
+    * @param accessType the given [[DataAccessType data access type]]
+    */
+  case class Unbounded(accessType: DataAccessType) extends Expression
 
   /**
     * SQL: RANGE/ROWS BETWEEN `expression` [PRECEDING] AND `expression`
@@ -59,12 +65,6 @@ object Over {
     * @param to         the upper bound [[Expression expression]]
     * @example {{{ RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW }}}
     */
-  case class RangeOrRowsBetween(accessType: DataAccessType, from: Expression, to: Expression) extends Condition
-
-  /**
-    * SQL: RANGE/ROWS UNBOUNDED [FOLLOWING/PRECEDING]
-    * @param accessType the given [[DataAccessType data access type]]
-    */
-  case class Unbounded(accessType: DataAccessType) extends Expression
+  case class WindowBetween(accessType: DataAccessType, from: Expression, to: Expression) extends Condition
 
 }

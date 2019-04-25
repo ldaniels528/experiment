@@ -14,6 +14,13 @@ sealed trait Token {
   def is(value: String): Boolean = text equalsIgnoreCase value
 
   /**
+    * Indicates whether the given text does not match the current token
+    * @param value the given text value
+    * @return true, if the value matches the current token
+    */
+  def isnt(value: String): Boolean = !is(text)
+
+  /**
     * @return the line number of this token
     */
   def lineNo: Int

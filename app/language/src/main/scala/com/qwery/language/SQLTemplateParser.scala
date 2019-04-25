@@ -4,8 +4,8 @@ import com.qwery.language.SQLTemplateParser._
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
-import com.qwery.models.expressions.Over.{DataAccessTypes, Unbounded}
 import com.qwery.models.expressions.Over.DataAccessTypes.DataAccessType
+import com.qwery.models.expressions.Over.{DataAccessTypes, Unbounded, WindowBetween}
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
@@ -307,16 +307,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractListOfArguments(name: String) = Try {
     var expressions: List[Expression] = Nil
-    var done = false
-
-    stream.expect("(")
-    do {
-      done = stream is ")"
-      if (!done) {
-        expressions = parseExpression(stream).getOrElse(stream.die("Expression expected")) :: expressions
-        if (stream isnt ")") stream.expect(",")
-      }
-    } while (!done)
+    stream.capture(begin = "(", end = ")", delimiter = Some(",")) { ts =>
+      expressions = parseExpression(ts).getOrElse(ts.die("Expression expected")) :: expressions
+    }
     SQLTemplateParams(expressions = Map(name -> expressions.reverse))
   }
 
@@ -370,27 +363,23 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     var clause = Over(expression = expression)
 
     // process the inside of the parenthesis block
-    stream expect "("
-    while (stream isnt ")") {
-      stream match {
-        case ts if ts nextIf "ORDER" =>
-          clause = clause.copy(orderBy = SQLTemplateParams(ts.expect("BY"), "%o:orderBy").orderedFields("orderBy"))
-        case ts if ts nextIf "PARTITION" =>
-          clause = clause.copy(partitionBy = SQLTemplateParams(ts.expect("BY"), "%F:partitionBy").fields("partitionBy"))
-        case ts if (ts is "RANGE") | (ts is "ROWS") =>
-          clause = clause.copy(modifier = parseOver_AccessModifier(stream))
-        case ts =>
-          ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROWS")
-      }
+    stream.capture(begin = "(", end = ")") {
+      case ts if ts nextIf "ORDER" =>
+        clause = clause.copy(orderBy = SQLTemplateParams(ts.expect("BY"), "%o:orderBy").orderedFields("orderBy"))
+      case ts if ts nextIf "PARTITION" =>
+        clause = clause.copy(partitionBy = SQLTemplateParams(ts.expect("BY"), "%F:partitionBy").fields("partitionBy"))
+      case ts if (ts is "RANGE") | (ts is "ROWS") =>
+        clause = clause.copy(modifier = parseOver_AccessModifier(stream))
+      case ts =>
+        ts.die("Expected ORDER BY, PARTITION BY, RANGE or ROWS")
     }
-    stream expect ")"
     clause
   }
 
   /**
     * Extracts a RANGE/ROWS BETWEEN/UNBOUNDED clause
     * @param stream the given [[TokenStream token stream]]
-    * @return the option of a [[Over.RangeOrRowsBetween]]
+    * @return the option of a [[WindowBetween]]
     * @example RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW
     * @example ROWS UNBOUNDED PRECEDING
     */
@@ -402,7 +391,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
           a <- parseExpression(ts) map parseOver_Expression
           _ = stream expect "AND"
           b <- parseExpression(ts) map parseOver_Expression
-        } yield Over.RangeOrRowsBetween(accessType, a, b)
+        } yield WindowBetween(accessType, a, b)
       case ts if ts nextIf "UNBOUNDED" => Option(parseOver_Expression(Unbounded(accessType)))
       case ts => ts.die("BETWEEN or UNBOUNDED expected")
     }
@@ -562,30 +551,20 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractProperties(name: String) = Try {
 
-    def extractKeyOrValue(): String = {
-      if (!stream.hasNext || !stream.isQuoted) throw SyntaxException("Properties: quoted value expected", stream)
-      else stream.next().text
+    def extractKeyOrValue(ts: TokenStream): String = {
+      if (!ts.hasNext || !ts.isQuoted) ts.die("Properties: quoted value expected") else ts.next().text
     }
 
-    def extractKVP(): (String, String) = {
-      val key = extractKeyOrValue()
-      stream expect "="
-      val value = extractKeyOrValue()
+    def extractKVP(ts: TokenStream): (String, String) = {
+      val (key, _, value) = (extractKeyOrValue(ts), ts expect "=", extractKeyOrValue(ts))
       key -> value
     }
 
     // gather the properties
     var props = Map[String, String]()
-    var done = false
-    stream expect "("
-    do {
-      done = stream is ")"
-      if (!done) {
-        props = props + extractKVP()
-        if (stream isnt ")") stream expect ","
-      }
-    } while (!done)
-    stream expect ")"
+    stream.capture(begin = "(", end = ")", delimiter = Some(",")) { ts =>
+      props = props + extractKVP(ts)
+    }
     SQLTemplateParams(properties = Map(name -> props))
   }
 

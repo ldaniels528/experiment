@@ -518,7 +518,7 @@ class SQLLanguageParserTest extends FunSpec {
           mean('LastSale)
             .over(partitionBy = Seq('Symbol),
               orderBy = Seq('TradeDate.asc),
-              modifier = RangeOrRowsBetween(RANGE, Preceding(Interval(7, DAY)), CurrentRow))
+              modifier = WindowBetween(RANGE, Preceding(Interval(7, DAY)), CurrentRow))
             .as("LastSaleMean")),
         from = Table("Customers"),
         where = Field('Industry) === "Oil/Gas Transmission"
@@ -547,7 +547,7 @@ class SQLLanguageParserTest extends FunSpec {
           mean('LastSale)
             .over(partitionBy = Seq('Symbol),
               orderBy = Seq('TradeDate.asc),
-              modifier = RangeOrRowsBetween(ROWS, Following(Interval(7, DAY)), CurrentRow))
+              modifier = WindowBetween(ROWS, Following(Interval(7, DAY)), CurrentRow))
             .as("LastSaleMean")),
         from = Table("Customers"),
         where = Field('Industry) === "Oil/Gas Transmission"

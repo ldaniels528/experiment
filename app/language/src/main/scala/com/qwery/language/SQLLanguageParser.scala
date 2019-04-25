@@ -8,6 +8,7 @@ import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
+import com.qwery.util.ResourceHelper._
 
 import scala.io.Source
 import scala.language.postfixOps
@@ -25,7 +26,7 @@ trait SQLLanguageParser {
     */
   def iterate(ts: TokenStream): Iterator[Invokable] = new Iterator[Invokable] {
     override def hasNext: Boolean = {
-      while (ts.hasNext && (ts is ";")) ts.next()
+      while (ts.hasNext && (ts nextIf ";")) {}
       ts.hasNext
     }
 
@@ -235,8 +236,7 @@ trait SQLLanguageParser {
       case v: RowSetVariableRef => v
       case _ => stream.die("Local variables are not compatible with row sets")
     }
-    ForEach(variable,
-      rows = params.sources("rows"),
+    ForEach(variable, rows = params.sources("rows"),
       invokable = stream match {
         case ts if ts is "LOOP" => parseSequence(ts, startElem = "LOOP", endElem = "END LOOP")
         case ts => parseNext(ts)
@@ -251,23 +251,16 @@ trait SQLLanguageParser {
     * @return an [[Include]]
     */
   def parseInclude(ts: TokenStream): Include = {
-    val params = SQLTemplateParams(ts, "INCLUDE %a:path")
-    Include(path = params.atoms("path"))
+    Include(path = SQLTemplateParams(ts, "INCLUDE %a:path").atoms("path"))
   }
 
   /**
-    * Parses an indirect query from the stream
+    * Parses an indirect query from the stream (e.g. "( SELECT * FROM Customers ) AS C")
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
   def parseIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
-    // parse the indirect query (e.g. "( SELECT * FROM Customers ) AS C")
-    ts.expect("(")
-    val query = f(ts)
-    ts.expect(")")
-
-    // is there an alias?
-    parseNextAlias(query, ts)
+    parseNextAlias(ts.extract(begin = "(", end = ")")(f), ts)
   }
 
   /**
@@ -412,19 +405,17 @@ trait SQLLanguageParser {
     }
 
     // is there an INTO or OVERWRITE clause?
-    params.locations.get("target") match {
-      case Some(target) =>
-        val isOverwrite = params.atoms.is("mode", _ equalsIgnoreCase "OVERWRITE")
-        Insert(
-          source = select,
-          destination = if (isOverwrite) Insert.Overwrite(target) else Insert.Into(target),
-          fields = params.expressions("fields") map {
-            case field: Field => field
-            case expr: NamedExpression => BasicField(expr.name)
-            case expr => stream.die(s"Invalid field definition $expr")
-          })
-      case None => select
-    }
+    params.locations.get("target") map { target =>
+      val isOverwrite = params.atoms.is("mode", _ equalsIgnoreCase "OVERWRITE")
+      Insert(
+        source = select,
+        destination = if (isOverwrite) Insert.Overwrite(target) else Insert.Into(target),
+        fields = params.expressions("fields") map {
+          case field: Field => field
+          case expr: NamedExpression => BasicField(expr.name)
+          case expr => stream.die(s"Invalid field definition $expr")
+        })
+    } getOrElse select
   }
 
   /**
@@ -435,14 +426,7 @@ trait SQLLanguageParser {
     * @return an [[SQL code block]]
     */
   def parseSequence(ts: TokenStream, startElem: String, endElem: String): SQL = {
-    var operations: List[Invokable] = Nil
-    if (ts nextIf startElem) {
-      while (ts.hasNext && !(ts nextIf endElem)) {
-        operations = parseNext(ts) :: operations
-        if (ts isnt endElem) ts expect ";"
-      }
-    }
-    SQL(operations.reverse)
+    SQL(ts.captureIf(startElem, endElem, delimiter = Some(";"))(parseNext))
   }
 
   /**
@@ -534,8 +518,6 @@ trait SQLLanguageParser {
   * @author lawrence.daniels@gmail.com
   */
 object SQLLanguageParser {
-
-  import com.qwery.util.ResourceHelper._
 
   /**
     * Parses the contents of the given file into an [[Invokable invokable]]

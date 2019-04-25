@@ -4,7 +4,6 @@ import com.qwery.language.ExpressionParser._
 import com.qwery.language.TokenStreamHelpers._
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{NativeFunctions => f, _}
-import org.slf4j.LoggerFactory
 
 /**
   * Expression Parser
@@ -109,7 +108,6 @@ trait ExpressionParser {
     * @return the option of a new [[Condition]]
     */
   protected def parseExists(stream: TokenStream): Option[Condition] = {
-    LoggerFactory.getLogger(getClass).info(s"next: ${(0 to 6).flatMap(stream.peekAhead).mkString("|")}")
     Option(Exists(sqlLanguageParser.parseNextQueryOrVariable(stream)))
   }
 
@@ -170,7 +168,7 @@ trait ExpressionParser {
     * @param ts         the given [[TokenStream token stream]]
     * @return the option of a new [[Condition condition]]
     */
-  protected def parseIN(expression: Option[Expression], ts: TokenStream): Option[Condition] = {
+  protected def parseIn(expression: Option[Expression], ts: TokenStream): Option[Condition] = {
     expression map { expr =>
       processor.processOpt("( %E:args )", ts)(this) match {
         case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)
@@ -304,7 +302,7 @@ trait ExpressionParser {
         do {
           if (expression.isEmpty) expression = parseExpression(ts)
           else if (ts nextIf "BETWEEN") condition = parseBetween(expression, ts)
-          else if (ts nextIf "IN") condition = parseIN(expression, ts)
+          else if (ts nextIf "IN") condition = parseIn(expression, ts)
           else if (ts nextIf "IS") {
             if (condition.nonEmpty) ts.die("Illegal start of expression")
             val isNot = ts nextIf "NOT"
