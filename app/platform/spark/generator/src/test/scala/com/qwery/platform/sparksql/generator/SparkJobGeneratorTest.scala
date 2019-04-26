@@ -16,7 +16,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Customer Demo",
         "--class-name", "com.github.ldaniels528.qwery.CustomerDemo",
         "--input-path", "./app/platform/spark/generator/src/test/resources/join_using.sql",
-        "--output-path", "../temp/projects/customer_demo"
+        "--output-path", "../temp/projects/customer_demo",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -25,7 +27,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Company List Demo",
         "--input-path", "./samples/sql/companylist/companylist.sql",
         "--output-path", "../temp/projects/company_list_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Companylist"
+        "--class-name", "com.github.ldaniels528.qwery.Companylist",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -34,7 +38,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Files Demo",
         "--input-path", "./samples/sql/misc/files.sql",
         "--output-path", "../temp/projects/files_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Files"
+        "--class-name", "com.github.ldaniels528.qwery.Files",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -44,7 +50,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Joins Demo",
         "--input-path", "./samples/sql/misc/joins.sql",
         "--output-path", "../temp/projects/joins_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Joins"
+        "--class-name", "com.github.ldaniels528.qwery.Joins",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -53,7 +61,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Procedure Demo",
         "--input-path", "./samples/sql/misc/procedure.sql",
         "--output-path", "../temp/projects/procedure_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Procedures"
+        "--class-name", "com.github.ldaniels528.qwery.Procedures",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -62,7 +72,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "View Demo",
         "--input-path", "./samples/sql/misc/views.sql",
         "--output-path", "../temp/projects/view_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Views"
+        "--class-name", "com.github.ldaniels528.qwery.Views",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       ))
     }
 
@@ -71,7 +83,9 @@ class SparkJobGeneratorTest extends FunSpec {
         "--app-name", "Securities Demo",
         "--input-path", "./scripts/daily-report.sql",
         "--output-path", "../temp/projects/securities_demo",
-        "--class-name", "com.github.ldaniels528.qwery.OilGasSecurities"
+        "--class-name", "com.github.ldaniels528.qwery.OilGasSecurities",
+        "spark.debug.maxToStringFields", "2048",
+        "spark.executor.memory", "10g"
       )
 
       val model = SQLLanguageParser.parse(

@@ -41,6 +41,7 @@ class CodeTemplate(templateCode: String) {
           case s if s.toLowerCase startsWith "env:" => Properties.envOrElse(s.drop(4), "")
           case s if s.toLowerCase startsWith "jvm:" => System.getProperty(s.drop(4), "")
           case s if s.toLowerCase startsWith "prop:" => settings.properties.getOrElse(s.drop(5), "")
+          case s if s.toLowerCase startsWith "spark:" => settings.sparkProperties.getOrElse(s.drop(6), "")
           case s if s equalsIgnoreCase "appName" => settings.appName
           case s if s equalsIgnoreCase "appVersion" => settings.appVersion
           case s if s equalsIgnoreCase "className" => settings.className
@@ -50,6 +51,7 @@ class CodeTemplate(templateCode: String) {
           case s if s equalsIgnoreCase "inputPath" => settings.inputPath.getCanonicalPath
           case s if s equalsIgnoreCase "outputPath" => settings.outputPath.getCanonicalPath
           case s if s equalsIgnoreCase "packageName" => settings.packageName
+          case s if s equalsIgnoreCase "sparkConf" => generateSparkConf()
           case s if s equalsIgnoreCase "templateFile" => settings.templateFile.map(_.getCanonicalPath).getOrElse("")
           case _ => die(s"Property '$property' is not recognized")
         }
@@ -62,6 +64,12 @@ class CodeTemplate(templateCode: String) {
     }
     code.toString()
   }
+
+  private def generateSparkConf()(implicit settings: ApplicationSettings): String = {
+    s"""|new SparkConf()
+        |${settings.sparkProperties map { case (key, value) => s"""${"\t" * 4}.set("$key", "$value")""" } mkString "\n"}""".stripMargin
+  }
+
 }
 
 /**

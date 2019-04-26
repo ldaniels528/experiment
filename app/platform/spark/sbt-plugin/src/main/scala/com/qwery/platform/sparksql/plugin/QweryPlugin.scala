@@ -40,8 +40,9 @@ object QweryPlugin extends AutoPlugin {
     lazy val qweryExtendsClass = settingKey[Option[String]]("the optional class the generated class should extend.")
     lazy val qweryInputFile = settingKey[File]("the path of the input .sql file.")
     lazy val qweryOutputDirectory = settingKey[File]("the path where the class files or SBT project will be generated.")
-    lazy val qweryProperties = settingKey[Option[java.util.Properties]]("the optional Spark configuration properties   .")
+    lazy val qweryProperties = settingKey[Option[java.util.Properties]]("the optional user-defined configuration properties.")
     lazy val qweryScalaVersion = settingKey[Option[String]]("the Scala version the generated project will use.")
+    lazy val qwerySparkProperties = settingKey[Option[java.util.Properties]]("the optional Spark configuration properties.")
     lazy val qwerySparkVersion = settingKey[Option[String]]("the Apache Spark API version.")
     lazy val qweryTemplateFile = settingKey[Option[File]]("the optional template class to use in generating the Spark Job.")
     lazy val generate = taskKey[Unit]("Generates the class or project files.")
@@ -57,6 +58,7 @@ object QweryPlugin extends AutoPlugin {
     qweryExtendsClass := None,
     qweryProperties := None,
     qweryScalaVersion := None,
+    qwerySparkProperties := None,
     qwerySparkVersion := None,
     qweryTemplateFile := None,
     generate := generateTask.value
@@ -81,6 +83,7 @@ object QweryPlugin extends AutoPlugin {
       .withPackageName(myPackageName)
       .withProperties(qweryProperties.value)
       .withScalaVersion(qweryScalaVersion.value)
+      .withSparkProperties(qwerySparkProperties.value)
       .withSparkVersion(qwerySparkVersion.value)
       .withTemplateFile(qweryTemplateFile.value)
       .build

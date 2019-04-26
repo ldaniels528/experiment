@@ -40,3 +40,7 @@ mvn install:install-file \
    -Dversion=0.4.0 \
    -Dpackaging=jar \
    -DgeneratePom=true
+
+cd ./app/platform/spark/maven-plugin
+mvn install
+cd -

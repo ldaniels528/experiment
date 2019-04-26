@@ -5,19 +5,20 @@ import java.util.Properties
 
 /**
   * Represents the Generated Spark Application's Settings
-  * @param appName      the Spark application name (default: `"Untitled"`)
-  * @param appVersion   the version identifier of your application (default: `"1.0"`)
-  * @param className    the name of the class to generate (e.g. "CoyoteTrap")
-  * @param isClassOnly  indicates whether only a Scala class should be generated (default: `false`)
-  * @param defaultDB    the default database (default: `"global_temp"`)
-  * @param extendsClass the optional class the generated class should extend (default: `Serializable`)
-  * @param inputPath    the path of the input .sql file
-  * @param outputPath   the path where the class files or SBT project will be generated
-  * @param packageName  the package name of the class to be generated (e.g. "com.acme.coyote.tools")
-  * @param properties   the optional Spark configuration properties
-  * @param scalaVersion the Scala version the generated project will use (default: `"2.12.8"`)
-  * @param sparkVersion the Apache Spark API version (default: `"2.4.1"`)
-  * @param templateFile the optional template class to use in generating the Spark Job
+  * @param appName         the Spark application name (default: `"Untitled"`)
+  * @param appVersion      the version identifier of your application (default: `"1.0"`)
+  * @param className       the name of the class to generate (e.g. "CoyoteTrap")
+  * @param isClassOnly     indicates whether only a Scala class should be generated (default: `false`)
+  * @param defaultDB       the default database (default: `"global_temp"`)
+  * @param extendsClass    the optional class the generated class should extend (default: `Serializable`)
+  * @param inputPath       the path of the input .sql file
+  * @param outputPath      the path where the class files or SBT project will be generated
+  * @param packageName     the package name of the class to be generated (e.g. "com.acme.coyote.tools")
+  * @param properties      the optional user-defined configuration properties
+  * @param scalaVersion    the Scala version the generated project will use (default: `"2.12.8"`)
+  * @param sparkProperties the optional Spark configuration properties
+  * @param sparkVersion    the Apache Spark API version (default: `"2.4.1"`)
+  * @param templateFile    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
 case class ApplicationSettings(appName: String,
@@ -31,6 +32,7 @@ case class ApplicationSettings(appName: String,
                                packageName: String,
                                properties: Map[String, String],
                                scalaVersion: String,
+                               sparkProperties: Map[String, String],
                                sparkVersion: String,
                                templateFile: Option[File]) {
 
@@ -74,8 +76,9 @@ object ApplicationSettings {
       inputPath = new File(mappings.require("--input-path")),
       outputPath = new File(mappings.require("--output-path")),
       packageName = packageName,
-      properties = mappings,
+      properties = mappings.filterNot { case (key, _) => key.startsWith("-") },
       scalaVersion = mappings.getOrElse("--scala-version", defaultScalaVersion),
+      sparkProperties = mappings.filter { case (key, _) => key.startsWith("spark.") },
       sparkVersion = mappings.getOrElse("--spark-version", defaultSparkVersion),
       templateFile = mappings.get("--template-file").map(new File(_))
     )
@@ -83,19 +86,20 @@ object ApplicationSettings {
 
   /**
     * Creates a new [[ApplicationSettings]] instance
-    * @param appName      the Spark application name (default: `"Untitled"`)
-    * @param appVersion   the version identifier of your application (default: `"1.0"`)
-    * @param className    the name of the class to generate (e.g. "CoyoteTrap")
-    * @param isClassOnly  indicates whether only a Scala class should be generated (default: `false`)
-    * @param defaultDB    the default database (default: `"global_temp"`)
-    * @param extendsClass the optional class the generated class should extend (default: `Serializable`)
-    * @param inputPath    the path of the input .sql file
-    * @param outputPath   the path where the class files or SBT project will be generated
-    * @param packageName  the package name of the class to be generated (e.g. "com.acme.coyote.tools")
-    * @param properties   the optional Spark configuration properties
-    * @param scalaVersion the Scala version the generated project will use (default: `"2.12.8"`)
-    * @param sparkVersion the Apache Spark API version (default: `"2.4.1"`)
-    * @param templateFile the optional template class to use in generating the Spark Job
+    * @param appName         the Spark application name (default: `"Untitled"`)
+    * @param appVersion      the version identifier of your application (default: `"1.0"`)
+    * @param className       the name of the class to generate (e.g. "CoyoteTrap")
+    * @param isClassOnly     indicates whether only a Scala class should be generated (default: `false`)
+    * @param defaultDB       the default database (default: `"global_temp"`)
+    * @param extendsClass    the optional class the generated class should extend (default: `Serializable`)
+    * @param inputPath       the path of the input .sql file
+    * @param outputPath      the path where the class files or SBT project will be generated
+    * @param packageName     the package name of the class to be generated (e.g. "com.acme.coyote.tools")
+    * @param properties      the optional configuration properties
+    * @param scalaVersion    the Scala version the generated project will use (default: `"2.12.8"`)
+    * @param sparkProperties the optional Spark configuration properties
+    * @param sparkVersion    the Apache Spark API version (default: `"2.4.1"`)
+    * @param templateFile    the optional template class to use in generating the Spark Job
     * @return the [[ApplicationSettings]] instance
     */
   def apply(appName: Option[String],
@@ -109,6 +113,7 @@ object ApplicationSettings {
             packageName: Option[String],
             properties: Option[Map[String, String]],
             scalaVersion: Option[String],
+            sparkProperties: Option[Map[String, String]],
             sparkVersion: Option[String],
             templateFile: Option[File]): ApplicationSettings = {
     new ApplicationSettings(
@@ -123,6 +128,7 @@ object ApplicationSettings {
       packageName = packageName.getOrElse(fail("packageName")),
       properties = properties.getOrElse(Map.empty),
       scalaVersion = scalaVersion.getOrElse(defaultScalaVersion),
+      sparkProperties = sparkProperties.getOrElse(Map.empty),
       sparkVersion = sparkVersion.getOrElse(defaultSparkVersion),
       templateFile = templateFile
     )
@@ -135,7 +141,7 @@ object ApplicationSettings {
     */
   private def createArgumentsMap(args: Seq[String]): Map[String, String] = {
     Map(args.toList.sliding(2, 2).toList map {
-      case key :: value :: Nil if key.startsWith("--") => key -> value
+      case key :: value :: Nil => key -> value
       case other => throw new IllegalArgumentException(s"Invalid argument specified near '${other.mkString(" ")}'")
     }: _*)
   }
@@ -171,6 +177,7 @@ object ApplicationSettings {
     private var outputPath: Option[File] = None
     private var packageName: Option[String] = None
     private var properties: Option[Map[String, String]] = None
+    private var sparkProperties: Option[Map[String, String]] = None
     private var scalaVersion: Option[String] = None
     private var sparkVersion: Option[String] = None
     private var templateFile: Option[File] = None
@@ -187,6 +194,7 @@ object ApplicationSettings {
       packageName = packageName,
       properties = properties,
       scalaVersion = scalaVersion,
+      sparkProperties = sparkProperties,
       sparkVersion = sparkVersion,
       templateFile = templateFile
     )
@@ -283,7 +291,7 @@ object ApplicationSettings {
 
     def withProperties(properties: Properties): this.type = {
       import scala.collection.JavaConverters._
-      this.properties = Option(properties.asScala.toMap)
+      this.properties = Option(properties).map(_.asScala.toMap)
       this
     }
 
@@ -300,6 +308,18 @@ object ApplicationSettings {
 
     def withScalaVersion(scalaVersion: Option[String]): this.type = {
       this.scalaVersion = scalaVersion
+      this
+    }
+
+    def withSparkProperties(properties: Properties): this.type = {
+      import scala.collection.JavaConverters._
+      this.sparkProperties = Option(properties).map(_.asScala.toMap)
+      this
+    }
+
+    def withSparkProperties(properties: Option[Properties]): this.type = {
+      import scala.collection.JavaConverters._
+      this.sparkProperties = properties.map(_.asScala.toMap)
       this
     }
 

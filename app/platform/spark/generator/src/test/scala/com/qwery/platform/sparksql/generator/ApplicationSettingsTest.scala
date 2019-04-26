@@ -38,24 +38,6 @@ class ApplicationSettingsTest extends FunSpec {
       assert(settings.templateFile.contains(new File("./src/main/resources/Template.scala.txt")))
     }
 
-    it("should failed to parse improperly formatted arguments") {
-      assertThrows[IllegalArgumentException] {
-        ApplicationSettings.fromArgs(
-          "--input-path", "./scripts/daily-report.sql",
-          "--output-path", "./src/main/scala/",
-          "--class-name", "com.acme.spark.RoadRunnerDetector",
-          "--app-name", "Hello World",
-          "--app-version", "1.0.1",
-          "--class-only", "N",
-          "--default-db", "dev_test",
-          "--scala-version", "2.11.11",
-          "--spark-version", "2.3.2",
-          "--template-file", "./src/main/scala/Test.scala",
-          "X", "Y"
-        )
-      }
-    }
-
   }
 
 }

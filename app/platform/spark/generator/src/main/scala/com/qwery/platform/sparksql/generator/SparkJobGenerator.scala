@@ -25,7 +25,7 @@ class SparkJobGenerator() {
     */
   def generate(invokable: Invokable)(implicit settings: ApplicationSettings, ctx: CompileContext): File = {
     // add global imports
-    ctx.addImports(
+    ctx.addImports(classNames =
       "org.apache.spark.SparkConf",
       "org.apache.spark.sql.DataFrame",
       "org.apache.spark.sql.SaveMode",
@@ -101,6 +101,7 @@ class SparkJobGenerator() {
       .getOrElse(createSparkJob(defaultTemplate, invokable))
 
     logger.info(s"[*] Process completed in $elapsedTime msec(s)")
+    logger.info("")
     file
   }
 
@@ -190,7 +191,7 @@ class SparkJobGenerator() {
         |    * @return the [[SparkSession Spark session]]
         |    */
         |   def createSparkSession(): SparkSession = {
-        |     val sparkConf = new SparkConf()
+        |     val sparkConf = {{ sparkConf }}
         |     val builder = SparkSession.builder()
         |       .appName("{{ appName }}")
         |       .config(sparkConf)

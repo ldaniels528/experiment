@@ -24,6 +24,12 @@ import scala.collection.JavaConverters._
   *         <templateFile>./apps/spark_poc/src/main/resources/WtmSparkJobTemplate.txt</templateFile>
   *         <properties>
   *             <property>
+  *                 <name>s3Path</name>
+  *                 <value>s3://shocktrade/financial/csv/</value>
+  *             </property>
+  *         </properties>
+  *         <sparkProperties>
+  *             <property>
   *                 <name>spark.debug.maxToStringFields</name>
   *                 <value>2048</value>
   *             </property>
@@ -31,7 +37,7 @@ import scala.collection.JavaConverters._
   *                 <name>spark.executor.memory</name>
   *                 <value>10g</value>
   *             </property>
-  *         </properties>
+  *          </sparkProperties>
   *     </application>
   * </applications>
   * }}}
@@ -93,6 +99,7 @@ object QweryMavenPlugin {
           .withPackageName(packageName)
           .withProperties(app.properties)
           .withScalaVersion(app.scalaVersion)
+          .withSparkProperties(app.sparkProperties)
           .withSparkVersion(app.sparkVersion)
           .withTemplateFile(app.templateFile)
           .build

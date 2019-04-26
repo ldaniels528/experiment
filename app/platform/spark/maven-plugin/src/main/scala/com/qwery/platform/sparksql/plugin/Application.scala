@@ -4,7 +4,6 @@ import scala.beans.BeanProperty
 
 /**
   * Represents the configuration of a Spark application that is to be generated
-  * @author lawrence.daniels@gmail.com
   * @example
   * {{{
   *   <application>
@@ -21,6 +20,12 @@ import scala.beans.BeanProperty
   *       <templateFile>./temp/WtmSparkJobTemplate.txt</templateFile>
   *       <properties>
   *           <property>
+  *               <name>s3Path</name>
+  *               <value>s3://shocktrade/financial/csv/</value>
+  *           </property>
+  *       </properties>
+  *       <sparkProperties>
+  *           <property>
   *               <name>spark.debug.maxToStringFields</name>
   *               <value>2048</value>
   *           </property>
@@ -28,9 +33,10 @@ import scala.beans.BeanProperty
   *               <name>spark.executor.memory</name>
   *               <value>10g</value>
   *           </property>
-  *       </properties>
+  *       </sparkProperties>
   *   </application>
   * }}}
+  * @author lawrence.daniels@gmail.com
   */
 case class Application() {
   @BeanProperty var appName: String = _
@@ -43,6 +49,7 @@ case class Application() {
   @BeanProperty var outputPath: String = _
   @BeanProperty var properties: java.util.Properties = _
   @BeanProperty var scalaVersion: String = _
+  @BeanProperty var sparkProperties: java.util.Properties = _
   @BeanProperty var sparkVersion: String = _
   @BeanProperty var templateFile: String = _
 
