@@ -7,14 +7,28 @@ package com.qwery.language
 class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) extends Iterator[T] {
   private var marks: List[Int] = Nil
 
+  /**
+    * Returns an option of the token at the given offset
+    * @param offset the given offset
+    * @return an option of a [[Token token]]
+    */
   def apply(offset: Int): Option[T] = peekAhead(offset)
 
+  /**
+    * Discards the last mark
+    * @return true, if a mark was discarded
+    */
   def discard(): Boolean = marks.headOption exists { _ =>
     marks = marks.tail
     true
   }
 
-  def indexOf(f: T => Boolean): Option[Int] = {
+  /**
+    * Returns the option of the index where the given function is satisfied from the current position
+    * @param f the given function to satisfy
+    * @return the option of the index where the given function is satisfied
+    */
+  def indexWhereOpt(f: T => Boolean): Option[Int] = {
     (for {
       pos <- position until length
       value = values(pos)

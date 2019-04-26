@@ -1,7 +1,5 @@
 package com.qwery.language
 
-import org.slf4j.LoggerFactory
-
 /**
   * Token Stream Helpers
   * @author lawrence.daniels@gmail.com

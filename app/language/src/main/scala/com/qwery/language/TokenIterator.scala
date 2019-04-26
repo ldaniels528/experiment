@@ -11,8 +11,7 @@ class TokenIterator(input: String) extends Iterator[Token] {
   private val ca = input.toCharArray
   private val operators = "=*-+/|&><".toCharArray
   private val compoundOperators = Seq("!=", ">=", "<=", "<>", "||", "**")
-
-  private def parsers = List(
+  private val parsers = List(
     parseNumeric _, parseAlphaNumeric _, parseQuotesBackticks _, parseQuotesDouble _,
     parseQuotesSingle _, parseCompoundOperators _, parseOperators _, parseSymbols _)
 

@@ -8,7 +8,6 @@ import com.qwery.models.expressions.Over.DataAccessTypes.DataAccessType
 import com.qwery.models.expressions.Over.{DataAccessTypes, Unbounded, WindowBetween}
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
-import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
 
@@ -17,7 +16,6 @@ import scala.util.{Failure, Success, Try}
   * @author lawrence.daniels@gmail.com
   */
 class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLanguageParser {
-  private val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * Indicates whether the given stream matches the given template

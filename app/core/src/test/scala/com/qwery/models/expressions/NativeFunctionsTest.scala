@@ -1,8 +1,7 @@
-package com.qwery.language
+package com.qwery.models.expressions
 
 import java.io.{File, PrintWriter}
 
-import com.qwery.models.expressions.{NativeFunction, NativeFunctions}
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import com.qwery.util.StringHelper._
