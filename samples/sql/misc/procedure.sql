@@ -29,12 +29,12 @@ begin
     ----------------------------------------------------------------
 
     info 'Performing the transformation...';
-    set @dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
+    set #dataSet = ( call lookupIndustry('Oil/Gas Transmission') );
 
     insert overwrite table OilGasSecurities (Symbol, `Name`, LastSale, MarketCap, IPOyear, Sector, Industry)
-    values @dataSet;
+    values #dataSet;
 
     -- show the first 5 rows
-    show @dataSet limit 20;
+    show #dataSet limit 20;
 
 end;

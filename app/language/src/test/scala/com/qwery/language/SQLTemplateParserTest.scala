@@ -96,8 +96,8 @@ class SQLTemplateParserTest extends FunSpec {
         "query" -> Select(fields = List('firstName, 'lastName), from = Table("AddressBook"))
       )))
       verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Expected keyword CALL, FILESYSTEM or SELECT near 'AddressBook'")
-      verify(text = "@addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> @@("addressBook")
+      verify(text = "#addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
+        "variable" -> @#("addressBook")
       )))
     }
 
@@ -108,8 +108,8 @@ class SQLTemplateParserTest extends FunSpec {
       verify(text = "AddressBook", template = "%q:table")(SQLTemplateParams(sources = Map(
         "table" -> Table("AddressBook")
       )))
-      verify(text = "@addressBook", template = "%q:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> @@("addressBook")
+      verify(text = "#addressBook", template = "%q:variable")(SQLTemplateParams(sources = Map(
+        "variable" -> @#("addressBook")
       )))
     }
 
@@ -143,14 +143,14 @@ class SQLTemplateParserTest extends FunSpec {
       verify(text = "VALUES (1, 2, 3)", template = "%V:values")(SQLTemplateParams(sources = Map(
         "values" -> Insert.Values(List(List(1d, 2d, 3d)))
       )))
-      verify(text = "@addressBook", template = "%V:variable")(SQLTemplateParams(sources = Map(
-        "variable" -> @@("addressBook")
+      verify(text = "#addressBook", template = "%V:variable")(SQLTemplateParams(sources = Map(
+        "variable" -> @#("addressBook")
       )))
     }
 
     it("should parse variable reference tags (%v)") {
-      verify(text = "@variable", template = "%v:variable")(SQLTemplateParams(variables = Map(
-        "variable" -> @@("variable")
+      verify(text = "#variable", template = "%v:variable")(SQLTemplateParams(variables = Map(
+        "variable" -> @#("variable")
       )))
     }
 

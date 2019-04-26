@@ -310,9 +310,9 @@ trait SQLLanguageParser {
     // indirect query?
     case ts if ts is "(" => parseIndirectQuery(ts)(parseNextQueryOrVariable)
     // row variable (e.g. "@results")?
-    case ts if ts nextIf "@" => parseNextAlias(@@(ts.next().text), ts)
+    case ts if ts nextIf "#" => parseNextAlias(@#(ts.next().text), ts)
     // field variable (e.g. "$name")?
-    case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
+    case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
     // sub-query?
     case ts => parseNextSubQuery(ts)
   }

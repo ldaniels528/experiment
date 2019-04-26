@@ -220,16 +220,16 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       // VALUES clause?
       case ts if ts nextIf "VALUES" =>
         ts match {
-          case ts1 if ts1 nextIf "@" => @@(ts1.next().text)
-          case ts1 if ts1 nextIf "$" => ts1.die("Local variable references are not compatible with row sets")
+          case ts1 if ts1 nextIf "#" => @#(ts1.next().text)
+          case ts1 if ts1 nextIf "@" => ts1.die("Local variable references are not compatible with row sets")
           case ts1 =>
             var values: List[DataRow] = Nil
             do values = SQLTemplateParams(ts1, "( %E:values )").expressions("values") :: values while (ts1 nextIf ",")
             Insert.Values(values.reverse)
         }
       // variable?
-      case ts if ts nextIf "@" => @@(ts.next().text)
-      case ts if ts nextIf "$" => ts.die("Local variable references are not compatible with row sets")
+      case ts if ts nextIf "#" => @#(ts.next().text)
+      case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
       // any supported query ...
       case ts => parseNextQueryOrVariable(ts)
     }
@@ -665,8 +665,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     */
   private def extractVariableReference(name: String) = Try {
     val reference = stream match {
+      case ts if ts nextIf "#" => @#(ts.next().text)
       case ts if ts nextIf "@" => @@(ts.next().text)
-      case ts if ts nextIf "$" => $(ts.next().text)
       case ts => ts.die("Variable expected")
     }
     SQLTemplateParams(variables = Map(name -> reference))

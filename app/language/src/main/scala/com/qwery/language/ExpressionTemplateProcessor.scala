@@ -141,8 +141,8 @@ trait ExpressionTemplateProcessor {
     */
   private def extractVariable(name: String, stream: TokenStream): ExpressionTemplate = {
     val variable = stream match {
+      case ts if ts nextIf "#" => @#(ts.next().text)
       case ts if ts nextIf "@" => @@(ts.next().text)
-      case ts if ts nextIf "$" => $(ts.next().text)
       case ts => ts.die("Variable expected")
     }
     ExpressionTemplate(variables = Map(name -> variable))

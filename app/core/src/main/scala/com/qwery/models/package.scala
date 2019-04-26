@@ -13,14 +13,14 @@ package object models {
     * @param name the name of the variable
     * @return a new [[LocalVariableRef local variable reference]]
     */
-  def $(name: String) = LocalVariableRef(name)
+  def @@(name: String) = LocalVariableRef(name)
 
   /**
     * Shortcut for creating a row-set variable reference
     * @param name the name of the variable
     * @return a new [[RowSetVariableRef row-set variable reference]]
     */
-  def @@(name: String) = RowSetVariableRef(name)
+  def @#(name: String) = RowSetVariableRef(name)
 
   /**
     * Invokable Conversions

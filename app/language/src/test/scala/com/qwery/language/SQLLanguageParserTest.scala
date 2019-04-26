@@ -64,7 +64,7 @@ class SQLLanguageParserTest extends FunSpec {
            |  RETURN (
            |    SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |    FROM Customers
-           |    WHERE Industry = $industry
+           |    WHERE Industry = @industry
            |  )
            |""".stripMargin)
       assert(results == Create(Procedure(name = "testInserts",
@@ -72,7 +72,7 @@ class SQLLanguageParserTest extends FunSpec {
         code = Return(Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === $(name = "industry")
+          where = Field('Industry) === @@(name = "industry")
         ))
       )))
     }
@@ -219,12 +219,12 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support FOR statements") {
       val results = SQLLanguageParser.parse(
-        """|FOR @item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
+        """|FOR #item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |}
            |""".stripMargin)
       assert(results == ForEach(
-        variable = @@("item"),
+        variable = @#("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
@@ -235,13 +235,13 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support FOR ... LOOP statements") {
       val results = SQLLanguageParser.parse(
-        """|FOR @item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
+        """|FOR #item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
            |LOOP
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |END LOOP;
            |""".stripMargin)
       assert(results == ForEach(
-        variable = @@("item"),
+        variable = @#("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
@@ -792,13 +792,13 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SET local variable statements") {
-      val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
-      assert(results == SetLocalVariable(name = "customers", $("customers") + 1))
+      val results = SQLLanguageParser.parse("SET @customers = @customers + 1")
+      assert(results == SetLocalVariable(name = "customers", @@("customers") + 1))
     }
 
     it("should support SET row variable statements") {
       val results = SQLLanguageParser.parse(
-        """|SET @securities = (
+        """|SET #securities = (
            |  SELECT Symbol, Name, Sector, Industry, `Summary Quote`
            |  FROM Securities
            |  WHERE Industry = 'Oil/Gas Transmission'
@@ -815,8 +815,8 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support SHOW statements") {
-      val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
-      assert(results == Show(rows = @@("theResults"), limit = 5))
+      val results = SQLLanguageParser.parse("SHOW #theResults LIMIT 5")
+      assert(results == Show(rows = @#("theResults"), limit = 5))
     }
 
     it("should support UPDATE statements") {
@@ -837,13 +837,13 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support WHILE statements") {
       val results = SQLLanguageParser.parse(
-        """|WHILE $cnt < 10
+        """|WHILE @cnt < 10
            |BEGIN
            |   PRINT 'Hello World';
-           |   SET $cnt = $cnt + 1;
+           |   SET @cnt = @cnt + 1;
            |END;
            |""".stripMargin)
-      val cnt = $("cnt")
+      val cnt = @@("cnt")
       assert(results == While(
         condition = cnt < 10,
         invokable = SQL(

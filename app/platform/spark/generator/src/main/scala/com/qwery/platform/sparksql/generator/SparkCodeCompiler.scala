@@ -311,6 +311,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case BasicField(name) => name.wrap
           case c: Case => generateSQL(c)
           case Cast(value, toType) => s"cast(${value.toSQL} as ${toType.toSQL})"
+          case CurrentRow => "current row"
           case Distinct(expressions) => s"distinct(${expressions.map(_.toSQL).mkString(", ")})"
           case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
           case JoinField(name, tableAlias) => tableAlias.map(alias => s"${alias.wrap}.${name.wrap}") getOrElse name.wrap
@@ -421,7 +422,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param joinType the given [[JoinType join type]]
       */
     final implicit class JoinTypeCompilerExtension(val joinType: JoinType) extends AnyVal {
-      @inline def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String =
+      @inline def toSQL: String =
         joinType.toString.replaceAllLiterally("_", " ").toLowerCase
     }
 

@@ -153,8 +153,8 @@ class ExpressionParserTest extends FunSpec {
       verify("Sum(LastSale)", f.sum('LastSale))
     }
 
-    it("should parse local variables: \"$total\"") {
-      verify("$total", $("total"))
+    it("should parse local variables: \"@total\"") {
+      verify("@total", @@("total"))
     }
 
   }
