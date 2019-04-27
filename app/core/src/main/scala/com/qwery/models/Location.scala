@@ -1,5 +1,7 @@
 package com.qwery.models
 
+import com.qwery.models.expressions.LocalVariableRef
+
 /**
   * Represents a location of a data set (e.g. table or file)
   * @author lawrence.daniels@gmail.com
@@ -22,4 +24,12 @@ case class LocationRef(path: String) extends Location {
   */
 case class TableRef(name: String) extends Location {
   override val description = s"Table $name"
+}
+
+/**
+  * Represents the variable location path (e.g. '@s3Path')
+  * @param variable the given [[LocalVariableRef local variable]]
+  */
+case class VariableLocationRef(variable: LocalVariableRef) extends Location {
+  override val description = s"Location $variable"
 }

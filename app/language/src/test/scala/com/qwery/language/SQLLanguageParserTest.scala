@@ -90,7 +90,7 @@ class SQLLanguageParserTest extends FunSpec {
         partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.PARQUET,
         outputFormat = StorageFormats.PARQUET,
-        location = "./dataSets/customers/parquet/"
+        location = LocationRef("./dataSets/customers/parquet/")
       )))
 
       // CREATE TABLE
@@ -105,7 +105,7 @@ class SQLLanguageParserTest extends FunSpec {
         partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.JSON,
         outputFormat = StorageFormats.JSON,
-        location = "./dataSets/customers/json/"
+        location = LocationRef("./dataSets/customers/json/")
       )))
     }
 
@@ -137,7 +137,7 @@ class SQLLanguageParserTest extends FunSpec {
         nullValue = Some("n/a"),
         inputFormat = StorageFormats.CSV,
         outputFormat = None,
-        location = "./dataSets/customers/csv/"
+        location = LocationRef("./dataSets/customers/csv/")
       )))
     }
 
@@ -161,7 +161,7 @@ class SQLLanguageParserTest extends FunSpec {
         nullValue = Some("n/a"),
         inputFormat = StorageFormats.CSV,
         outputFormat = None,
-        location = "./dataSets/customers/csv/"
+        location = LocationRef("./dataSets/customers/csv/")
       )))
     }
 
@@ -190,6 +190,20 @@ class SQLLanguageParserTest extends FunSpec {
           from = Table("Customers"),
           where = Field('Industry) === "Oil/Gas Transmission"
         ))))
+    }
+
+    it("should support DECLARE statements") {
+      val results = SQLLanguageParser.parse(
+        """|DECLARE @customerId INTEGER
+           |""".stripMargin)
+      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = false))
+    }
+
+    it("should support DECLARE EXTERNAL statements") {
+      val results = SQLLanguageParser.parse(
+        """|DECLARE EXTERNAL @customerId INTEGER
+           |""".stripMargin)
+      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = true))
     }
 
     it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN statements") {

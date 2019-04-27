@@ -61,6 +61,15 @@ trait SparkCodeCompiler {
   def generateCode(columns: List[Column]): String = s"toDF(${columns.map(_.name.toCode).mkString(",")})"
 
   /**
+    * Generates a Declare expression
+    * @param model the given [[Declare model]]
+    * @return the Scala Code string
+    */
+  def generateCode(model: Declare): String = {
+    if(model.isExternal) "" else s"var ${model.variable.name}: ${model.`type`.capitalize} = _"
+  }
+
+  /**
     * Generates a Procedure expression
     * @param model the given [[Procedure model]]
     * @return the Scala Code string
@@ -103,6 +112,14 @@ trait SparkCodeCompiler {
         |""".stripMargin
   }
 
+  def generatePath(location: Location): String = location match {
+    case LocationRef(path) => s""""$path""""
+    case VariableLocationRef(variable) => variable.name
+    case other => die(s"Variable '$other' is not supported in this context")
+  }
+
+  def generatePath(table: Table): String = generatePath(table.location)
+
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
       case InlineTable(name, columns, source) =>
@@ -117,7 +134,7 @@ trait SparkCodeCompiler {
             CodeBuilder(prepend = ".")
               .append(s"spark.read")
               .append(generateTableOptions(table))
-              .append(s"""$format("${table.location}")""")
+              .append(s"""$format(${generatePath(table)})""")
               .append(generateCode(table.columns))
               .append(withGlobalTempView(table.name))
               .build()
@@ -211,7 +228,7 @@ trait SparkCodeCompiler {
           .append("write")
           .append(generateTableOptions(table))
           .append(s"""mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})""")
-          .append(s"""$writer("${table.location}")""")
+          .append(s"""$writer(${generatePath(table)})""")
           .build()
       case view: View => die(s"View '${view.name}' is read-only")
     }
@@ -344,6 +361,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Create(procedure: Procedure) => generateCode(procedure)
           case Create(tableOrView: TableLike) => generateReader(tableOrView)
           case Create(udf: UserDefinedFunction) => generateCode(udf)
+          case d: Declare => generateCode(d)
           case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
           case i: Insert => generateWriter(i)

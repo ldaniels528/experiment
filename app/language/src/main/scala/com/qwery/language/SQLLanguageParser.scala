@@ -44,6 +44,7 @@ trait SQLLanguageParser {
     "BEGIN" -> (ts => parseSequence(ts, startElem = "BEGIN", endElem = "END")),
     "CALL" -> parseCall,
     "CREATE" -> parseCreate,
+    "DECLARE" -> parseDeclare,
     "DEBUG" -> parseConsoleDebug,
     "ERROR" -> parseConsoleError,
     "FILESYSTEM" -> parseFileSystem,
@@ -175,13 +176,24 @@ trait SQLLanguageParser {
     */
   def parseCreateTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE %t:name ( %P:columns ) %w:props")
+
+    def getLocation: Location = {
+      if (params.atoms.contains("path")) LocationRef(params.atoms("path"))
+      else if (params.variables.contains("path"))
+        params.variables("path") match {
+          case v: LocalVariableRef => VariableLocationRef(v)
+          case _ => ts.die("Only scalar variables can be used")
+        }
+      else ts.die("No location specified")
+    }
+
     Create(Table(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
       fieldDelimiter = params.atoms.get("delimiter"),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
       inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
-      location = params.atoms.getOrElse("path", ts.die("No location specified")),
+      location = getLocation,
       nullValue = params.atoms.get("props.nullValue"),
       outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
       partitionColumns = params.columns.getOrElse("partitions", Nil),
@@ -200,11 +212,25 @@ trait SQLLanguageParser {
     * WHERE Industry = 'Oil/Gas Transmission'
     * }}}
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[View executable]]
+    * @return an [[Invokable invokable]]
     */
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY VIEW %t:name ?AS %Q:query")
     Create(View(name = params.atoms("name"), query = params.sources("query")))
+  }
+
+  /**
+    * Parses a DECLARE statement
+    * @param ts the given [[TokenStream token stream]]
+    * @example DECLARE EXTERNAL @firstnames STRING
+    * @return an [[Invokable invokable]]
+    */
+  def parseDeclare(ts: TokenStream): Invokable = {
+    val params = SQLTemplateParams(ts, "DECLARE ?%C(mode|EXTERNAL) %v:variable %a:type")
+    val `type` = params.atoms("type")
+    val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
+    if (!Expression.isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
+    Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
   }
 
   /**

@@ -448,8 +448,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractLocationOrTable(name: String) = Try {
     val location: Location = stream match {
       case ts if ts nextIf "LOCATION" =>
-        if (!ts.isQuoted) ts.die("expected a string literal representing a location path")
-        LocationRef(ts.next().text)
+        ts match {
+          case _ts if _ts nextIf "@" => VariableLocationRef(@@(_ts.next().text))
+          case _ts if _ts.isQuoted => LocationRef(_ts.next().text)
+          case _ts => _ts.die("expected a variable or string literal representing a location path")
+        }
       case ts if ts nextIf "TABLE" =>
         if (!ts.isBackticks && !ts.isText) ts.die("expected a string literal representing a table name")
         Table(ts.next().text)
@@ -685,7 +688,12 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     while (isHiveOrAthena) {
       stream match {
         case ts if ts nextIf "FIELDS TERMINATED BY" => template += SQLTemplateParams(ts, "%a:delimiter")
-        case ts if ts nextIf "LOCATION" => template += SQLTemplateParams(ts, "%a:path")
+        case ts if ts nextIf "LOCATION" =>
+          ts match {
+            case _ts if _ts is "@" => template += SQLTemplateParams(ts, "%v:path")
+            case _ts if _ts.isQuoted => template += SQLTemplateParams(ts, "%a:path")
+            case _ts => _ts.die("expected a variable or string literal representing a location path")
+          }
         case ts if ts nextIf "PARTITIONED BY" => template += SQLTemplateParams(ts, "( %P:partitions )")
         case ts if ts nextIf "ROW FORMAT DELIMITED" => template
         case ts if ts nextIf "ROW FORMAT SERDE" => template += SQLTemplateParams(ts, s"%a:serde.row")
