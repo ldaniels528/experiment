@@ -193,16 +193,12 @@ class SQLLanguageParserTest extends FunSpec {
     }
 
     it("should support DECLARE statements") {
-      val results = SQLLanguageParser.parse(
-        """|DECLARE @customerId INTEGER
-           |""".stripMargin)
+      val results = SQLLanguageParser.parse("DECLARE @customerId INTEGER")
       assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = false))
     }
 
     it("should support DECLARE EXTERNAL statements") {
-      val results = SQLLanguageParser.parse(
-        """|DECLARE EXTERNAL @customerId INTEGER
-           |""".stripMargin)
+      val results = SQLLanguageParser.parse("DECLARE EXTERNAL @customerId INTEGER")
       assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = true))
     }
 
@@ -222,8 +218,7 @@ class SQLLanguageParserTest extends FunSpec {
 
     it("should support function call statements") {
       val results = SQLLanguageParser.parse(
-        """|SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'
-           |""".stripMargin)
+        "SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'")
       assert(results == Select(
         fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
         from = Table("Securities"),
@@ -688,6 +683,19 @@ class SQLLanguageParserTest extends FunSpec {
         fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
         from = Table("Customers"),
         where = IN('IPOYear)("2000", "2001", "2003", "2008", "2019")
+      ))
+    }
+
+    it("should support SELECT ... WHERE IN (SELECT ...) statements") {
+      val results = SQLLanguageParser.parse(
+        """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |FROM Customers AS C
+           |WHERE IPOYear IN (SELECT `Year` FROM EligibleYears)
+           |""".stripMargin)
+      assert(results == Select(
+        fields = Seq('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+        from = Table("Customers"),
+        where = IN('IPOYear, Select(fields = Seq('Year), from = Table("EligibleYears")))
       ))
     }
 

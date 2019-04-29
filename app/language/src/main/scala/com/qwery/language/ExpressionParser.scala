@@ -5,13 +5,15 @@ import com.qwery.language.TokenStreamHelpers._
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{NativeFunctions => f, _}
 
+import scala.language.postfixOps
+
 /**
   * Expression Parser
   * @author lawrence.daniels@gmail.com
   */
 trait ExpressionParser {
   private val processor = new ExpressionTemplateProcessor {}
-  private val sqlLanguageParser = new SQLLanguageParser {}
+  private val slp = new SQLLanguageParser {}
 
   /**
     * Parses a conditional expression from the given stream
@@ -108,7 +110,7 @@ trait ExpressionParser {
     * @return the option of a new [[Condition]]
     */
   protected def parseExists(stream: TokenStream): Option[Condition] = {
-    Option(Exists(sqlLanguageParser.parseNextQueryOrVariable(stream)))
+    Option(Exists(slp.parseNextQueryOrVariable(stream)))
   }
 
   /**
@@ -165,14 +167,22 @@ trait ExpressionParser {
   /**
     * Parses a SQL IN clause
     * @param expression the given [[Expression expression]]
-    * @param ts         the given [[TokenStream token stream]]
+    * @param stream     the given [[TokenStream token stream]]
     * @return the option of a new [[Condition condition]]
     */
-  protected def parseIn(expression: Option[Expression], ts: TokenStream): Option[Condition] = {
+  protected def parseIn(expression: Option[Expression], stream: TokenStream): Option[Condition] = {
+    val prefixes = Seq("CALL", "FILESYSTEM", "SELECT", "#")
+
+    def isSubQuery(ts: TokenStream): Boolean = (ts is "(") && ts(1).exists(ts1 => prefixes.exists(ts1 is))
+
     expression map { expr =>
-      processor.processOpt("( %E:args )", ts)(this) match {
-        case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)
-        case None => IN(expr, sqlLanguageParser.parseNextQueryOrVariable(ts))
+      stream match {
+        case ts if isSubQuery(ts) => IN(expr, slp.parseIndirectQuery(stream)(slp.parseNextQueryOrVariable))
+        case ts =>
+          processor.processOpt("( %E:args )", ts)(this) match {
+            case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)
+            case None => IN(expr, slp.parseNextQueryOrVariable(stream))
+          }
       }
     }
   }
