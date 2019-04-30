@@ -5,8 +5,6 @@ import com.qwery.language.TokenStreamHelpers._
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{NativeFunctions => f, _}
 
-import scala.language.postfixOps
-
 /**
   * Expression Parser
   * @author lawrence.daniels@gmail.com
@@ -171,13 +169,9 @@ trait ExpressionParser {
     * @return the option of a new [[Condition condition]]
     */
   protected def parseIn(expression: Option[Expression], stream: TokenStream): Option[Condition] = {
-    val prefixes = Seq("CALL", "FILESYSTEM", "SELECT", "#")
-
-    def isSubQuery(ts: TokenStream): Boolean = (ts is "(") && ts(1).exists(ts1 => prefixes.exists(ts1 is))
-
     expression map { expr =>
       stream match {
-        case ts if isSubQuery(ts) => IN(expr, slp.parseIndirectQuery(stream)(slp.parseNextQueryOrVariable))
+        case ts if ts.isSubQuery => IN(expr, slp.parseIndirectQuery(stream)(slp.parseNextQueryOrVariable))
         case ts =>
           processor.processOpt("( %E:args )", ts)(this) match {
             case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)

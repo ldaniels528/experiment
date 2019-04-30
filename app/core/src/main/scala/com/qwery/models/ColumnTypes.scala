@@ -6,7 +6,7 @@ package com.qwery.models
   */
 object ColumnTypes extends Enumeration {
   type ColumnType = Value
-  val ARRAY, BIGINT, BINARY, BOOLEAN, DATE, DATETIME, DOUBLE, INT, INTEGER, LONG, STRING, TIMESTAMP, UUID: ColumnType = Value
+  val ARRAY, BINARY, BOOLEAN, BYTE, CHAR, DATE, DOUBLE, FLOAT, INTEGER, LONG, SHORT, STRING, TIMESTAMP, UUID: ColumnType = Value
 
 }
 

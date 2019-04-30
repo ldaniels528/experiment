@@ -34,4 +34,12 @@ object Column {
     case unknown => die(s"Invalid column descriptor '$unknown'")
   }
 
+  /**
+    * Column Enriched
+    * @param column the given [[Column]]
+    */
+  final implicit class ColumnEnriched(val column: Column) extends AnyRef {
+    @inline def withComment(text: String): Column = column.copy(comment = Option(text))
+  }
+
 }

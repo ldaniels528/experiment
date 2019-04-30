@@ -1,6 +1,7 @@
 package com.qwery.language
 
 import com.qwery.language.SQLTemplateParser._
+import com.qwery.language.SQLTypesHelper._
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
@@ -124,6 +125,9 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
 
     // table tag? (e.g. "Customers")
     case tag if tag.startsWith("%t:") => extractTable(tag drop 3)
+
+    // type tag? (e.g. "Decimal(20,2)")
+    case tag if tag.startsWith("%T:") => extractType(tag drop 3)
 
     // update field assignments
     case tag if tag.startsWith("%U:") => extractFieldAssignmentExpressions(tag drop 3)
@@ -428,13 +432,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfParameters(name: String) = Try {
     var columns: List[Column] = Nil
     do {
-      val params = SQLTemplateParams(stream, template = "%a:name %a:type ?COMMENT +?%z:comment")
+      val params = SQLTemplateParams(stream, template = "%a:name %T:type ?COMMENT +?%z:comment")
       val colName = params.atoms.getOrElse("name", stream.die("Column name not provided"))
       val comment = params.atoms.get("comment").flatMap(_.noneIfBlank)
-      val typeName = params.atoms.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
-      if (!Expression.isValidType(typeName)) stream.die(s"Invalid data type '$typeName' for column $colName")
-      val column = Column(name = colName, `type` = ColumnTypes.withName(typeName.toUpperCase), comment = comment)
-      columns = column :: columns
+      val `type` = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
+      columns = Column(name = colName, `type` = `type`, comment = comment) :: columns
     } while (stream nextIf ",")
 
     SQLTemplateParams(columns = Map(name -> columns.reverse))
@@ -662,6 +664,30 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   }
 
   /**
+    * Parses a type definition (e.g. "DECIMAL(10,2)")
+    * @param name the name of the property to set
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractType(name: String) = Try {
+    // verify the type name
+    val typeName = stream match {
+      case ts if ts.hasNext => ts.next().text
+      case ts => ts.die("Data type identifier expected")
+    }
+
+    // is there a size or precision? (e.g. "VARCHAR(20)" or "DECIMAL(10,2)")
+    val precision = stream.captureIf("(", ")", delimiter = Some(",")) { ts =>
+      if (!ts.isNumeric) ts.die("Numeric value expected") else ts.next().text.toDouble.toInt
+    }
+
+    // build the type definition
+    val typeDef = if (precision.isEmpty) typeName else s"$typeName(${precision.mkString(",")})"
+    val sqlType = determineType(typeName).getOrElse(stream.die(s"Invalid type reference '$typeDef'"))
+
+    SQLTemplateParams(types = Map(name -> sqlType))
+  }
+
+  /**
     * Parses a variable reference (e.g. "@args" or "$industry")
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
@@ -697,6 +723,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
         case ts if ts nextIf "PARTITIONED BY" => template += SQLTemplateParams(ts, "( %P:partitions )")
         case ts if ts nextIf "ROW FORMAT DELIMITED" => template
         case ts if ts nextIf "ROW FORMAT SERDE" => template += SQLTemplateParams(ts, s"%a:serde.row")
+        case ts if ts nextIf "TBLPROPERTIES" => template += SQLTemplateParams(ts, s"%p:$name.table")
 
         // input/output formats?
         case ts if ts nextIf "STORED AS" =>
@@ -716,7 +743,6 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
               case _ts if _ts nextIf "HEADERS" => template += SQLTemplateParams(_ts, s"%C($name.headers|ON|OFF)")
               case _ts if _ts nextIf "NULL" => template += SQLTemplateParams(_ts, s"VALUES AS %a:$name.nullValue")
               case _ts if _ts nextIf "SERDEPROPERTIES" => template += SQLTemplateParams(_ts, s"%p:$name.serde")
-              case _ts if _ts nextIf "TBLPROPERTIES" => template += SQLTemplateParams(_ts, s"%p:$name.table")
               case _ =>
             }
           }

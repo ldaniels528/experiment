@@ -77,8 +77,7 @@ class SQLLanguageParserTest extends FunSpec {
       )))
     }
 
-    it("should support CREATE TABLE statements") {
-      // CREATE EXTERNAL TABLE
+    it("should support CREATE EXTERNAL TABLE statements") {
       val results1 = SQLLanguageParser.parse(
         """|CREATE EXTERNAL TABLE Customers (customer_id STRING, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
@@ -87,13 +86,14 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results1 == Create(Table(name = "Customers",
         columns = List("customer_id STRING", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
-        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
+        partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.PARQUET,
         outputFormat = StorageFormats.PARQUET,
         location = LocationRef("./dataSets/customers/parquet/")
       )))
+    }
 
-      // CREATE TABLE
+    it("should support CREATE TABLE statements") {
       val results2 = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
@@ -102,7 +102,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results2 == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
-        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
+        partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.JSON,
         outputFormat = StorageFormats.JSON,
         location = LocationRef("./dataSets/customers/json/")
@@ -127,10 +127,10 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results == Create(Table(name = "Customers",
         columns = List(
-          Column("customer_uid UUID").copy(comment = "Unique Customer ID"),
+          Column("customer_uid UUID").withComment("Unique Customer ID"),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
         ),
-        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
+        partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldDelimiter = ",",
         fieldTerminator = None,
         headersIncluded = true,
@@ -154,7 +154,7 @@ class SQLLanguageParserTest extends FunSpec {
            |""".stripMargin)
       assert(results == Create(Table(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
-        partitionColumns = List("year STRING", "month STRING", "day STRING").map(Column.apply),
+        partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldDelimiter = ",",
         fieldTerminator = None,
         headersIncluded = true,
@@ -162,6 +162,50 @@ class SQLLanguageParserTest extends FunSpec {
         inputFormat = StorageFormats.CSV,
         outputFormat = None,
         location = LocationRef("./dataSets/customers/csv/")
+      )))
+    }
+
+    it("should support complex CREATE TABLE statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE EXTERNAL TABLE `kbb_mart.kbb_rev_per_page`(
+           |  `rank` string COMMENT 'from deserializer',
+           |  `section` string COMMENT 'from deserializer',
+           |  `super_section` string COMMENT 'from deserializer',
+           |  `page_name` string COMMENT 'from deserializer',
+           |  `rev` string COMMENT 'from deserializer',
+           |  `last_processed_ts_est` string COMMENT 'from deserializer')
+           |PARTITIONED BY (
+           |  `hit_dt_est` string,
+           |  `site_experience_desc` string)
+           |ROW FORMAT SERDE
+           |  'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+           |WITH SERDEPROPERTIES (
+           |  'quoteChar'='\"',
+           |  'separatorChar'=',')
+           |STORED AS INPUTFORMAT
+           |  'org.apache.hadoop.mapred.TextInputFormat'
+           |OUTPUTFORMAT
+           |  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+           |LOCATION
+           |  's3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page'
+           |TBLPROPERTIES (
+           |  'transient_lastDdlTime'='1555400098')
+           |""".stripMargin)
+      assert(results == Create(Table(name = "kbb_mart.kbb_rev_per_page",
+        columns = List(
+          Column("rank string"),
+          Column("section string"),
+          Column("super_section string"),
+          Column("page_name string"),
+          Column("rev string"),
+          Column("last_processed_ts_est string")
+        ).map(_.withComment("from deserializer")),
+        partitionBy = List(Column("hit_dt_est string"), Column("site_experience_desc string")),
+        inputFormat = StorageFormats.CSV,
+        outputFormat = StorageFormats.CSV,
+        location = LocationRef("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),
+        serdeProperties = Map("quoteChar" -> "\\\"", "separatorChar" -> ","),
+        tableProperties = Map("transient_lastDdlTime" -> "1555400098")
       )))
     }
 

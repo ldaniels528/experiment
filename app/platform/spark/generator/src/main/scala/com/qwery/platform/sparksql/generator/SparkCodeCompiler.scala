@@ -207,7 +207,7 @@ trait SparkCodeCompiler {
       .append(table.fieldDelimiter.map(delimiter => s"""option("delimiter", "$delimiter")"""))
       .append(table.headersIncluded.map(enabled => s"""option("header", "$enabled")"""))
       .append(table.nullValue.map(value => s"""option("nullValue", "$value")"""))
-      .append((table.properties ++ table.serdeProperties).map { case (key, value) => s"""option("$key", "$value")""" })
+      .append((table.tableProperties ++ table.serdeProperties).map { case (key, value) => s"""option("$key", "$value")""" })
   }
 
   /**

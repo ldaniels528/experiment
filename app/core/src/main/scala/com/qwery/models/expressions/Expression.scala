@@ -10,18 +10,6 @@ import com.qwery.models.ColumnTypes.ColumnType
 trait Expression extends Aliasable
 
 /**
-  * Expression Companion
-  * @author lawrence.daniels@gmail.com
-  */
-object Expression {
-  val validTypes: Seq[String] =
-    Seq("Boolean", "Byte", "Char", "Date", "Double", "Float", "Int", "Integer", "Long", "Short", "String", "Timestamp", "UUID")
-
-  def isValidType(typeName: String): Boolean = validTypes.exists(_ equalsIgnoreCase typeName)
-
-}
-
-/**
   * Casts the value expr to the target data type type.
   * @example cast(expr AS type)
   */

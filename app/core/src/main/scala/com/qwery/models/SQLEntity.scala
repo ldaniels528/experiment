@@ -88,9 +88,9 @@ case class Table(name: String,
                  nullValue: Option[String] = None,
                  inputFormat: Option[StorageFormat] = None,
                  outputFormat: Option[StorageFormat] = None,
-                 partitionColumns: List[Column] = Nil,
-                 properties: Map[String, String] = Map.empty,
-                 serdeProperties: Map[String, String] = Map.empty) extends TableLike
+                 partitionBy: List[Column] = Nil,
+                 serdeProperties: Map[String, String] = Map.empty,
+                 tableProperties: Map[String, String] = Map.empty) extends TableLike
 
 /**
   * Table Companion

@@ -4,6 +4,7 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 import com.qwery.language.SQLTemplateParams.MappedParameters
+import com.qwery.language.SQLTypesHelper._
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
@@ -196,9 +197,9 @@ trait SQLLanguageParser {
       location = getLocation,
       nullValue = params.atoms.get("props.nullValue"),
       outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
-      partitionColumns = params.columns.getOrElse("partitions", Nil),
-      properties = params.properties.getOrElse("props.table", Map.empty),
-      serdeProperties = params.properties.getOrElse("props.serde", Map.empty)
+      partitionBy = params.columns.getOrElse("partitions", Nil),
+      serdeProperties = params.properties.getOrElse("props.serde", Map.empty),
+      tableProperties = params.properties.getOrElse("props.table", Map.empty)
     ))
   }
 
@@ -229,7 +230,7 @@ trait SQLLanguageParser {
     val params = SQLTemplateParams(ts, "DECLARE ?%C(mode|EXTERNAL) %v:variable %a:type")
     val `type` = params.atoms("type")
     val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
-    if (!Expression.isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
+    if (!isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
     Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
   }
 

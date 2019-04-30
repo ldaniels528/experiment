@@ -56,17 +56,6 @@ class SparkJobGeneratorTest extends FunSpec {
       ))
     }
 
-    it("should compile and execute: names.sql") {
-      SparkJobGenerator.main(Array(
-        "--app-name", "Names Demo",
-        "--input-path", "./samples/sql/misc/names.sql",
-        "--output-path", "../temp/projects/names_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Names",
-        "spark.debug.maxToStringFields", "2048",
-        "spark.executor.memory", "10g"
-      ))
-    }
-
     it("should compile and execute: procedure.sql") {
       SparkJobGenerator.main(Array(
         "--app-name", "Procedure Demo",
