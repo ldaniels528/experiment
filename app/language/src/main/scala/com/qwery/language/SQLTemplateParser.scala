@@ -741,7 +741,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
           while (stream nextIf "WITH") {
             stream match {
               case _ts if _ts nextIf "HEADERS" => template += SQLTemplateParams(_ts, s"%C($name.headers|ON|OFF)")
-              case _ts if _ts nextIf "NULL" => template += SQLTemplateParams(_ts, s"VALUES AS %a:$name.nullValue")
+              case _ts if _ts nextIf "NULL VALUES" => template += SQLTemplateParams(_ts, s"AS %a:$name.nullValue")
               case _ts if _ts nextIf "SERDEPROPERTIES" => template += SQLTemplateParams(_ts, s"%p:$name.serde")
               case _ =>
             }

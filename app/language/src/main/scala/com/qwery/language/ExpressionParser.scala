@@ -302,24 +302,38 @@ trait ExpressionParser {
         var condition: Option[Condition] = None
         var expression: Option[Expression] = None
         var done: Boolean = false
+        var isNot: Boolean = false
 
         do {
           if (expression.isEmpty) expression = parseExpression(ts)
-          else if (ts nextIf "BETWEEN") condition = parseBetween(expression, ts)
-          else if (ts nextIf "IN") condition = parseIn(expression, ts)
-          else if (ts nextIf "IS") {
-            if (condition.nonEmpty) ts.die("Illegal start of expression")
-            val isNot = ts nextIf "NOT"
-            ts expect "NULL"
-            condition = if (isNot) expression map IsNotNull else expression map IsNull
-          }
           else {
-            val result = for {
-              a <- expression
-              (_, op) <- conditionalOps.find { case (symbol, _) => ts nextIf symbol }
-              b <- parseExpression(ts)
-            } yield op(a, b)
-            if (result.nonEmpty) condition = result else done = true
+            // special handling for NOT
+            while (ts nextIf "NOT") isNot = !isNot
+
+            // check all other conditions
+            if (ts nextIf "BETWEEN") condition = parseBetween(expression, ts)
+            else if (ts nextIf "IN") condition = parseIn(expression, ts)
+            else if (ts nextIf "IS") {
+              if (condition.nonEmpty) ts.die("Illegal start of expression")
+              val isNot = ts nextIf "NOT"
+              ts expect "NULL"
+              condition = if (isNot) expression map IsNotNull else expression map IsNull
+            }
+            // handle conditional operators
+            else {
+              val result = for {
+                a <- expression
+                (_, op) <- conditionalOps.find { case (symbol, _) => ts nextIf symbol }
+                b <- parseExpression(ts)
+              } yield op(a, b)
+              if (result.nonEmpty) condition = result else done = true
+            }
+
+            // was a negative result indicated?
+            if(isNot) {
+              condition = condition.map(NOT.apply)
+              isNot = false
+            }
           }
         } while (!done && expression.nonEmpty && ts.hasNext)
         condition

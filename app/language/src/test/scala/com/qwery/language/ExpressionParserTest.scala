@@ -1,6 +1,7 @@
 package com.qwery.language
 
 import com.qwery.models._
+import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions.{NativeFunctions => f, _}
 import org.scalatest.FunSpec
 
@@ -14,12 +15,9 @@ class ExpressionParserTest extends FunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("""should parse "INTERVAL 7 DAYS" (expression)""") {
-      verify("INTERVAL 7 DAYS", Interval(7, IntervalTypes.DAY))
-    }
-
-    it("""should parse "A.Symbol" (expression)""") {
-      verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
+    it("""it should parse "CASE WHEN field NOT LIKE '%.%' THEN 'Yes' ELSE 'No' END" """) {
+      verify("CASE WHEN field NOT LIKE '%.%' THEN 'Yes' ELSE 'No' END",
+        Case(When(NOT(LIKE('field, "%.%")), "Yes"))(otherwise = Some("No": Literal)))
     }
 
     it("""should parse "DISTINCT(PROPERTY_VAL)" """) {
@@ -28,6 +26,14 @@ class ExpressionParserTest extends FunSpec {
 
     it("""should parse "DISTINCT A.Symbol, A.Exchange" """) {
       verify("DISTINCT A.Symbol, A.Exchange", Distinct(JoinField("Symbol", tableAlias = "A"), JoinField("Exchange", tableAlias = "A")))
+    }
+
+    it("""should parse "INTERVAL 7 DAYS" (expression)""") {
+      verify("INTERVAL 7 DAYS", Interval(7, IntervalTypes.DAY))
+    }
+
+    it("""should parse "A.Symbol" (expression)""") {
+      verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
     }
 
     it("""should parse "A.Symbol IN ('AAPL', 'AMZN', 'AMD')" """) {
