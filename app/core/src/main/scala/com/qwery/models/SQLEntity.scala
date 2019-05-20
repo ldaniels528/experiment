@@ -54,8 +54,7 @@ object StorageFormats extends Enumeration {
   * Represents a Hive-compatible table definition
   * @param name            the name of the table
   * @param columns         the table columns
-  * @param fieldDelimiter  the optional field delimiter (e.g. ",")
-  * @param fieldTerminator the optional field terminator (e.g. ",")
+  * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
   * @param inputFormat     the [[StorageFormat input format]]
   * @param outputFormat    the [[StorageFormat output format]]
   * @param location        the physical location of the data files
@@ -82,8 +81,8 @@ object StorageFormats extends Enumeration {
 case class Table(name: String,
                  columns: List[Column],
                  location: Location,
-                 fieldDelimiter: Option[String] = None,
                  fieldTerminator: Option[String] = None,
+                 lineTerminator: Option[String] = None,
                  headersIncluded: Option[Boolean] = None,
                  nullValue: Option[String] = None,
                  inputFormat: Option[StorageFormat] = None,

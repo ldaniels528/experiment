@@ -66,7 +66,7 @@ trait SparkCodeCompiler {
     * @return the Scala Code string
     */
   def generateCode(model: Declare): String = {
-    if(model.isExternal) "" else s"var ${model.variable.name}: ${model.`type`.capitalize} = _"
+    if (model.isExternal) "" else s"var ${model.variable.name}: ${model.`type`.capitalize} = _"
   }
 
   /**
@@ -202,10 +202,18 @@ trait SparkCodeCompiler {
       .build()
   }
 
+  /**
+    * Generates Spark table options
+    * @see [[https://docs.databricks.com/spark/latest/data-sources/read-csv.html]]
+    */
   def generateTableOptions(table: Table): CodeBuilder = {
     CodeBuilder(prepend = ".")
-      .append(table.fieldDelimiter.map(delimiter => s"""option("delimiter", "$delimiter")"""))
-      .append(table.headersIncluded.map(enabled => s"""option("header", "$enabled")"""))
+      .append(table.fieldTerminator.map(delimiter => s"""option("delimiter", "$delimiter")"""))
+      .append(table.headersIncluded.map(enabled => s"""option("header", value = $enabled)"""))
+      .append(table.lineTerminator.toSeq.flatMap(delimiter => Seq(
+        //s"""option("multiline", value = true)""",
+        s"""option("sep", "$delimiter")""")
+      ): _*)
       .append(table.nullValue.map(value => s"""option("nullValue", "$value")"""))
       .append((table.tableProperties ++ table.serdeProperties).map { case (key, value) => s"""option("$key", "$value")""" })
   }

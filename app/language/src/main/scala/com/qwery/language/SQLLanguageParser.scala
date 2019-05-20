@@ -178,6 +178,13 @@ trait SQLLanguageParser {
   def parseCreateTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE %t:name ( %P:columns ) %w:props")
 
+    def escapeChars(string: String): String = {
+      /*
+      val chars = Seq("\\n" -> "\n", "\\r" -> "\r", "\\t" -> "\t") // TODO \u0000
+      chars.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }*/
+      string
+    }
+
     def getLocation: Location = {
       if (params.atoms.contains("path")) LocationRef(params.atoms("path"))
       else if (params.variables.contains("path"))
@@ -191,9 +198,10 @@ trait SQLLanguageParser {
     Create(Table(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
-      fieldDelimiter = params.atoms.get("delimiter"),
+      fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
       inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
+      lineTerminator = params.atoms.get("line.delimiter").map(escapeChars),
       location = getLocation,
       nullValue = params.atoms.get("props.nullValue"),
       outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),

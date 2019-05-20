@@ -124,7 +124,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     case tag if tag.startsWith("%R:") => extractRepeatedSequence(name = tag drop 3, params, tags)
 
     // table tag? (e.g. "Customers")
-    case tag if tag.startsWith("%t:") => extractTable(tag drop 3)
+    case tag if tag.startsWith("%t:") => extractTableName(tag drop 3)
 
     // type tag? (e.g. "Decimal(20,2)")
     case tag if tag.startsWith("%T:") => extractType(tag drop 3)
@@ -139,7 +139,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     case tag if tag.startsWith("%V:") => extractInsertSource(tag drop 3)
 
     // TABLE ... WITH clause
-    case tag if tag.startsWith("%w:") => extractWithForTableClause(tag drop 3)
+    case tag if tag.startsWith("%w:") => extractTableClause(tag drop 3)
 
     // quoted text values (e.g. "%z:comment" => "'This is a comment'"
     case tag if tag.startsWith("%z:") => extractQuotedText(tag drop 3)
@@ -655,7 +655,12 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     params
   }
 
-  private def extractTable(name: String) = Try {
+  /**
+    * Parses a table name
+    * @param name the name of the property to set
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractTableName(name: String) = Try {
     val tableName = stream match {
       case ts if ts.isBackticks | ts.isText | ts.isQuoted => ts.next().text
       case ts => ts.die("Table or view expected")
@@ -664,56 +669,19 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   }
 
   /**
-    * Parses a type definition (e.g. "DECIMAL(10,2)")
-    * @param name the name of the property to set
-    * @return the [[SQLTemplateParams SQL template parameters]]
-    */
-  private def extractType(name: String) = Try {
-    // verify the type name
-    val typeName = stream match {
-      case ts if ts.hasNext => ts.next().text
-      case ts => ts.die("Data type identifier expected")
-    }
-
-    // is there a size or precision? (e.g. "VARCHAR(20)" or "DECIMAL(10,2)")
-    val precision = stream.captureIf("(", ")", delimiter = Some(",")) { ts =>
-      if (!ts.isNumeric) ts.die("Numeric value expected") else ts.next().text.toDouble.toInt
-    }
-
-    // build the type definition
-    val typeDef = if (precision.isEmpty) typeName else s"$typeName(${precision.mkString(",")})"
-    val sqlType = determineType(typeName).getOrElse(stream.die(s"Invalid type reference '$typeDef'"))
-
-    SQLTemplateParams(types = Map(name -> sqlType))
-  }
-
-  /**
-    * Parses a variable reference (e.g. "@args" or "$industry")
-    * @param name the named identifier
-    * @return the [[SQLTemplateParams SQL template parameters]]
-    */
-  private def extractVariableReference(name: String) = Try {
-    val reference = stream match {
-      case ts if ts nextIf "#" => @#(ts.next().text)
-      case ts if ts nextIf "@" => @@(ts.next().text)
-      case ts => ts.die("Variable expected")
-    }
-    SQLTemplateParams(variables = Map(name -> reference))
-  }
-
-  /**
     * Parses a [TABLE ...] WITH clauses (e.g. "WITH HEADERS ON")
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractWithForTableClause(name: String) = Try {
+  private def extractTableClause(name: String) = Try {
     var template = SQLTemplateParams()
 
     // collect the Hive/Athena style configuration properties
     var isHiveOrAthena = true
     while (isHiveOrAthena) {
       stream match {
-        case ts if ts nextIf "FIELDS TERMINATED BY" => template += SQLTemplateParams(ts, "%a:delimiter")
+        case ts if ts nextIf "FIELDS TERMINATED BY" => template += SQLTemplateParams(ts, "%a:field.delimiter")
+        case ts if ts nextIf "LINES TERMINATED BY" => template += SQLTemplateParams(ts, "%a:line.delimiter")
         case ts if ts nextIf "LOCATION" =>
           ts match {
             case _ts if _ts is "@" => template += SQLTemplateParams(ts, "%v:path")
@@ -752,6 +720,44 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     }
 
     template
+  }
+
+  /**
+    * Parses a type definition (e.g. "DECIMAL(10,2)")
+    * @param name the name of the property to set
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractType(name: String) = Try {
+    // verify the type name
+    val typeName = stream match {
+      case ts if ts.hasNext => ts.next().text
+      case ts => ts.die("Data type identifier expected")
+    }
+
+    // is there a size or precision? (e.g. "VARCHAR(20)" or "DECIMAL(10,2)")
+    val precision = stream.captureIf("(", ")", delimiter = Some(",")) { ts =>
+      if (!ts.isNumeric) ts.die("Numeric value expected") else ts.next().text.toDouble.toInt
+    }
+
+    // build the type definition
+    val typeDef = if (precision.isEmpty) typeName else s"$typeName(${precision.mkString(",")})"
+    val sqlType = determineType(typeName).getOrElse(stream.die(s"Invalid type reference '$typeDef'"))
+
+    SQLTemplateParams(types = Map(name -> sqlType))
+  }
+
+  /**
+    * Parses a variable reference (e.g. "@args" or "$industry")
+    * @param name the named identifier
+    * @return the [[SQLTemplateParams SQL template parameters]]
+    */
+  private def extractVariableReference(name: String) = Try {
+    val reference = stream match {
+      case ts if ts nextIf "#" => @#(ts.next().text)
+      case ts if ts nextIf "@" => @@(ts.next().text)
+      case ts => ts.die("Variable expected")
+    }
+    SQLTemplateParams(variables = Map(name -> reference))
   }
 
 }

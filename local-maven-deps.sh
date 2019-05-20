@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Installs the Qwery dependencies locally
 
+echo "Removing old jars..."
+rm -rf ~/.ivy2/local/com.qwery/
+rm -rf ~/.m2/repository/com/qwery/
+
+sbt publishLocal
+
 mvn install:install-file \
    -Dfile=./app/core/target/scala-2.11/core_2.11-0.4.0.jar \
    -DgroupId=com.qwery \
