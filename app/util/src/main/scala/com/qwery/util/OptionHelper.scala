@@ -44,20 +44,6 @@ object OptionHelper {
   }
 
   /**
-    * Boolean Option Enrichment
-    * @param option the given [[Option option]]
-    */
-  final implicit class BooleanOptionEnrichment[A <: Boolean](val option: Option[A]) extends AnyVal {
-
-    @inline
-    def isTrue: Boolean = option.contains(true)
-
-    @inline
-    def isFalse: Boolean = option.contains(false)
-
-  }
-
-  /**
     * Option Enrichment
     * @param optionA the given [[Option option]]
     */
@@ -78,7 +64,7 @@ object OptionHelper {
   }
 
   final implicit class SequenceEnrichment[T](val values: Seq[T]) extends AnyVal {
-    @inline def toOption: Option[Seq[T]] = if(values.isEmpty) None else Some(values)
+    @inline def toOption: Option[Seq[T]] = if (values.isEmpty) None else Some(values)
   }
 
 }

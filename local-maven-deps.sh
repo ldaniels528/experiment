@@ -5,7 +5,9 @@ echo "Removing old jars..."
 rm -rf ~/.ivy2/local/com.qwery/
 rm -rf ~/.m2/repository/com/qwery/
 
-sbt publishLocal
+sbt clean publishLocal
+
+sbt "project spark_tools_2_3_x" publishLocal
 
 mvn install:install-file \
    -Dfile=./app/core/target/scala-2.11/core_2.11-0.4.0.jar \
@@ -40,9 +42,17 @@ mvn install:install-file \
    -DgeneratePom=true
 
 mvn install:install-file \
-   -Dfile=./app/platform/spark/tools/target/scala-2.11/spark-tools_2.11-0.4.0.jar \
+   -Dfile=./app/platform/spark/tools/2.3.x/target/scala-2.11/spark-tools-v2_3_2.11-0.4.0.jar \
    -DgroupId=com.qwery \
-   -DartifactId=spark-tools_2.11 \
+   -DartifactId=spark-tools-v2_3_2.11 \
+   -Dversion=0.4.0 \
+   -Dpackaging=jar \
+   -DgeneratePom=true
+   
+mvn install:install-file \
+   -Dfile=./app/platform/spark/tools/2.4.x/target/scala-2.11/spark-tools-v2_4_2.11-0.4.0.jar \
+   -DgroupId=com.qwery \
+   -DartifactId=spark-tools-v2_4_2.11 \
    -Dversion=0.4.0 \
    -Dpackaging=jar \
    -DgeneratePom=true

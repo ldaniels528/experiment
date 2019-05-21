@@ -6,7 +6,9 @@ import java.io.{File, PrintWriter}
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models._
+import com.qwery.util.MonadicHelper._
 import com.qwery.util.ResourceHelper._
+import com.qwery.util.StringHelper._
 import org.slf4j.LoggerFactory
 
 /**
@@ -48,6 +50,15 @@ class SparkJobGenerator() {
     */
   private def createBuildScript()(implicit settings: ApplicationSettings): File = {
     import settings._
+
+    /**
+      * the Spark version prefix (e.g. "2.3.3" ~> "v2_3")
+      */
+    val sparkPrefix: String = sparkVersion.split('.').toList match {
+      case a :: b :: _ if a.toSafeInt === 2 & b.toSafeInt.exists(v => v >= 3 && v <= 4) => s"v${a}_$b"
+      case _ => throw new IllegalArgumentException(s"Unsupported Spark version '$sparkVersion'")
+    }
+
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {
       s"""|name := "$appName"
           |
@@ -72,7 +83,7 @@ class SparkJobGenerator() {
           |   "org.apache.spark" %% "spark-core" % "$sparkVersion",
           |   "org.apache.spark" %% "spark-hive" % "$sparkVersion",
           |   "org.apache.spark" %% "spark-sql" % "$sparkVersion",
-          |   "com.qwery" %% "spark-tools" % "0.4.0"
+          |   "com.qwery" %% "spark-tools-$sparkPrefix" % "${AppConstants.version}"
           |)
           |""".stripMargin('|')
     }

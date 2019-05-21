@@ -1,6 +1,7 @@
 package com.qwery.util
 
 import scala.language.reflectiveCalls
+import scala.util.Try
 
 /**
   * String Helper
@@ -85,6 +86,18 @@ object StringHelper {
 
     @inline def substringOpt(start: Int, end: Int): Option[String] =
       if (start >= 0 && start <= end && end < string.length) Option(string.substring(start, end)) else None
+
+    @inline def toSafeByte: Try[Byte] = Try(string.toByte)
+
+    @inline def toSafeDouble: Try[Double] = Try(string.toDouble)
+
+    @inline def toSafeFloat: Try[Float] = Try(string.toFloat)
+
+    @inline def toSafeInt: Try[Int] = Try(string.toInt)
+
+    @inline def toSafeLong: Try[Long] = Try(string.toLong)
+
+    @inline def toSafeShort: Try[Short] = Try(string.toShort)
 
   }
 
