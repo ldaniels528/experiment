@@ -15,9 +15,9 @@ import java.util.Properties
   * @param outputPath      the path where the class files or SBT project will be generated
   * @param packageName     the package name of the class to be generated (e.g. "com.acme.coyote.tools")
   * @param properties      the optional user-defined configuration properties
-  * @param scalaVersion    the Scala version the generated project will use (default: `"2.12.8"`)
+  * @param scalaVersion    the Scala version the generated project will use (default: `"2.12.10"`)
   * @param sparkProperties the optional Spark configuration properties
-  * @param sparkVersion    the Apache Spark API version (default: `"2.4.1"`)
+  * @param sparkVersion    the Apache Spark API version (default: `"2.4.4"`)
   * @param templateFile    the optional template class to use in generating the Spark Job
   * @author lawrence.daniels@gmail.com
   */
@@ -49,8 +49,8 @@ object ApplicationSettings {
   val defaultAppVersion = "1.0"
   val defaultDatabase = "global_temp"
   val defaultParentClass = "Serializable"
-  val defaultScalaVersion = "2.12.8"
-  val defaultSparkVersion = "2.4.1"
+  val defaultScalaVersion = "2.12.10"
+  val defaultSparkVersion = "2.4.4"
 
   /**
     * Creates a new application Settings instance using the given command line arguments

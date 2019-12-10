@@ -3,16 +3,18 @@ import sbt._
 
 import scala.language.postfixOps
 
+val scalaVersion_2_11 = "2.11.12"
+val scalaVersion_2_12 = "2.12.10"
+val scalaVersion_2_13 = "2.13.1"
+
 val appVersion = "0.4.0"
 val pluginVersion = "1.0.0"
-val scalaVersion_2_11 = "2.11.12"
-val scalaVersion_2_12 = "2.12.8"
 val scalaAppVersion = scalaVersion_2_12
 
-val scalaTestVersion = "3.0.1"
+val scalaTestVersion = "3.1.0-SNAP13"
 val slf4jVersion = "1.7.25"
-val sparkVersion_2_3_x = "2.3.3"
-val sparkVersion_2_4_x = "2.4.3"
+val sparkVersion_2_3_x = "2.3.4"
+val sparkVersion_2_4_x = "2.4.4"
 
 lazy val testDependencies = Seq(
   libraryDependencies ++= Seq(
