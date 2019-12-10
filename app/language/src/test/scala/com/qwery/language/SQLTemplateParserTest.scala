@@ -2,7 +2,8 @@ package com.qwery.language
 
 import com.qwery.models._
 import com.qwery.models.expressions._
-import org.scalatest.{Assertion, FunSpec}
+import org.scalatest.Assertion
+import org.scalatest.funspec.AnyFunSpec
 
 import scala.util.{Failure, Success, Try}
 
@@ -10,7 +11,7 @@ import scala.util.{Failure, Success, Try}
   * SQL Template Parser Test
   * @author lawrence.daniels@gmail.com
   */
-class SQLTemplateParserTest extends FunSpec {
+class SQLTemplateParserTest extends AnyFunSpec {
 
   describe(classOf[SQLTemplateParser].getSimpleName) {
     import com.qwery.models.expressions.implicits._

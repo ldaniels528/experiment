@@ -1,12 +1,12 @@
 package com.qwery.language
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Token Iterator Test
   * @author lawrence.daniels@gmail.com
   */
-class TokenIteratorTest extends FunSpec {
+class TokenIteratorTest extends AnyFunSpec {
 
   describe(classOf[TokenIterator].getSimpleName) {
 

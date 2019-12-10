@@ -4,7 +4,7 @@ import com.qwery.models.Console.Print
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
 import com.qwery.models.expressions._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 import scala.language.postfixOps
 
@@ -12,7 +12,7 @@ import scala.language.postfixOps
   * SQL Language Parser Test
   * @author lawrence.daniels@gmail.com
   */
-class SQLLanguageParserTest extends FunSpec {
+class SQLLanguageParserTest extends AnyFunSpec {
 
   describe(classOf[SQLLanguageParser].getSimpleName) {
     import com.qwery.models.expressions.implicits._

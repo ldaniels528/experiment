@@ -3,13 +3,13 @@ package com.qwery.language
 import com.qwery.models.ColumnTypes
 import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions.{NativeFunctions => f, _}
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Native Function Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class NativeFunctionTest extends FunSpec {
+class NativeFunctionTest extends AnyFunSpec {
 
   describe(classOf[NativeFunction].getSimpleName) {
     import com.qwery.models.expressions.implicits._

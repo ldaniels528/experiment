@@ -11,7 +11,7 @@ val appVersion = "0.4.0"
 val pluginVersion = "1.0.0"
 val scalaAppVersion = scalaVersion_2_12
 
-val scalaTestVersion = "3.1.0-SNAP13"
+val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
 val sparkVersion_2_3_x = "2.3.4"
 val sparkVersion_2_4_x = "2.4.4"

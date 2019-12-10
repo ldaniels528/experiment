@@ -3,13 +3,13 @@ package com.qwery.language
 import com.qwery.models._
 import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions.{NativeFunctions => f, _}
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Expression Parser Test
   * @author lawrence.daniels@gmail.com
   */
-class ExpressionParserTest extends FunSpec {
+class ExpressionParserTest extends AnyFunSpec {
 
   describe(classOf[ExpressionParser].getSimpleName) {
     import com.qwery.models.expressions.implicits._

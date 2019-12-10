@@ -3,13 +3,13 @@ package com.qwery.language
 import com.qwery.models._
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{Field, Literal}
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Expression Template Processor Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class ExpressionTemplateProcessorTest extends FunSpec {
+class ExpressionTemplateProcessorTest extends AnyFunSpec {
   private implicit val parser: ExpressionParser = new ExpressionParser {}
   private val processor = new ExpressionTemplateProcessor {}
 

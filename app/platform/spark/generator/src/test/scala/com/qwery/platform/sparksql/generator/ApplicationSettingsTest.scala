@@ -2,13 +2,13 @@ package com.qwery.platform.sparksql.generator
 
 import java.io.File
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Application Settings Test
   * @author lawrence.daniels@gmail.com
   */
-class ApplicationSettingsTest extends FunSpec {
+class ApplicationSettingsTest extends AnyFunSpec {
 
   describe(classOf[ApplicationSettings].getSimpleName) {
 

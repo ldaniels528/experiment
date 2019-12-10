@@ -5,7 +5,7 @@ import java.io.{File, PrintWriter}
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import com.qwery.util.StringHelper._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 import scala.io.Source
 
@@ -14,7 +14,7 @@ import scala.io.Source
   * @author lawrence.daniels@gmail.com
   * @see [[NativeFunctions]]
   */
-class NativeFunctionsTest extends FunSpec {
+class NativeFunctionsTest extends AnyFunSpec {
 
   import NativeFunction._
 

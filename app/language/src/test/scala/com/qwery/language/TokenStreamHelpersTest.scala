@@ -2,13 +2,13 @@ package com.qwery.language
 
 import com.qwery.language.TokenStreamHelpers._
 import com.qwery.util.StringHelper._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Token Stream Helpers Tests
   * @author lawrence.daniels@gmail.com
   */
-class TokenStreamHelpersTest extends FunSpec {
+class TokenStreamHelpersTest extends AnyFunSpec {
 
   describe(TokenStreamHelpers.getObjectSimpleName) {
 

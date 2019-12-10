@@ -1,13 +1,13 @@
 package com.qwery.platform.sparksql.generator
 
 import com.qwery.language.SQLLanguageParser
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Spark Job Generator Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class SparkJobGeneratorTest extends FunSpec {
+class SparkJobGeneratorTest extends AnyFunSpec {
 
   describe(classOf[SparkJobGenerator].getSimpleName) {
 

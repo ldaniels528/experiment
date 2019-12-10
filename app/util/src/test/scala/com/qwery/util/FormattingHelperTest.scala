@@ -1,13 +1,13 @@
 package com.qwery.util
 
 import FormattingHelper._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Formatting Helper Test
   * @author lawrence.daniels@gmail.com
   */
-class FormattingHelperTest extends FunSpec {
+class FormattingHelperTest extends AnyFunSpec {
 
   describe(FormattingHelper.getClass.getSimpleName) {
 

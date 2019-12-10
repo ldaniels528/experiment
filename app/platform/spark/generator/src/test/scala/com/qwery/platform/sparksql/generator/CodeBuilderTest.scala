@@ -1,12 +1,12 @@
 package com.qwery.platform.sparksql.generator
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Code Builder Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class CodeBuilderTest extends FunSpec {
+class CodeBuilderTest extends AnyFunSpec {
 
   describe(classOf[CodeBuilder].getSimpleName) {
 

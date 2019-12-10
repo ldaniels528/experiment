@@ -2,13 +2,13 @@ package com.qwery.platform.sparksql.generator
 
 import com.qwery.language.SQLLanguageParser
 import com.qwery.util.StringHelper._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Spark Code Compiler Test
   * @author lawrence.daniels@gmail.com
   */
-class SparkCodeCompilerTest extends FunSpec {
+class SparkCodeCompilerTest extends AnyFunSpec {
 
   describe(SparkCodeCompiler.getObjectSimpleName) {
 

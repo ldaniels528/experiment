@@ -1,13 +1,13 @@
 package com.qwery.platform.sparksql.generator
 
 import com.qwery.language.SQLLanguageParser
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Code Template Test Suite
   * @author lawrence.daniels@gmail.com
   */
-class CodeTemplateTest extends FunSpec {
+class CodeTemplateTest extends AnyFunSpec {
 
   describe(classOf[CodeTemplate].getSimpleName) {
 
