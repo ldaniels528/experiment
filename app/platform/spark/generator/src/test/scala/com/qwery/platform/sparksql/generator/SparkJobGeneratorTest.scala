@@ -78,17 +78,6 @@ class SparkJobGeneratorTest extends FunSpec {
       ))
     }
 
-    it("should compile and execute: adunit.sql") {
-      SparkJobGenerator.main(Array(
-        "--app-name", "AdUnit Demo",
-        "--input-path", "./samples/sql/misc/adunit.sql",
-        "--output-path", "../temp/projects/adunit_demo",
-        "--class-name", "com.github.ldaniels528.qwery.AdUnit",
-        "spark.debug.maxToStringFields", "2048",
-        "spark.executor.memory", "10g"
-      ))
-    }
-
     it("should generate the OilGasSecurities Spark job main class-only") {
       implicit val settings: ApplicationSettings = ApplicationSettings.fromArgs(args =
         "--app-name", "Securities Demo",
