@@ -13,6 +13,7 @@ import com.qwery.platform.sparksql.generator.SparkCodeCompiler.Implicits._
 import com.qwery.util.OptionHelper._
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.annotation.tailrec
 import scala.io.Source
 
 /**
@@ -189,10 +190,20 @@ trait SparkCodeCompiler {
       .build()
   }
 
+  /**
+    * Generates the SQL IN clause
+    * @param model the given [[IN.Values model]]
+    * @return the SQL string
+    */
   def generateSQL(model: IN.Values)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     s"( ${model.items.map(_.toSQL).mkString(", ")} )"
   }
 
+  /**
+    * Generates the SQL While statement
+    * @param model the given [[While model]]
+    * @return the SQL string
+    */
   def generateSQL(model: While)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     CodeBuilder()
       .append(s"while ${model.condition.toSQL}")
@@ -534,7 +545,8 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       */
     final implicit class ValueCompilerExtensions(val value: Any) extends AnyVal {
 
-      @inline def asCode: String = value match {
+      @tailrec
+      def asCode: String = value match {
         case null => "null"
         case Null => "null"
         case s: String => s""""$s""""
@@ -548,7 +560,8 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
       @inline def asInt: Int = asDouble.toInt
 
-      @inline def asSQL: String = value match {
+      @tailrec
+      def asSQL: String = value match {
         case null => "null"
         case Null => "null"
         case Literal(_value) => _value.asSQL

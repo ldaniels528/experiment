@@ -145,13 +145,13 @@ class NativeFunctionTest extends AnyFunSpec {
 
   }
 
-  private def verify(expr: String, expect: Condition): Unit = {
+  def verify(expr: String, expect: Condition): Unit = {
     val actual = new ExpressionParser {}.parseCondition(TokenStream(expr))
     info(s"$expr => $actual")
     assert(actual.contains(expect), s"$expr : failed")
   }
 
-  private def verify(expr: String, expect: Expression): Unit = {
+  def verify(expr: String, expect: Expression): Unit = {
     val actual = new ExpressionParser {}.parseExpression(TokenStream(expr))
     info(s"$expr => $actual")
     assert(actual.contains(expect), s"$expr : failed")

@@ -122,6 +122,7 @@ trait ExpressionParser {
       case ts if ts nextIf "*" => AllFields
       case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse ts.die("Invalid field alias")
       case ts if ts.isField => Field(ts.next().text)
+      case ts if ts.isNumeric => Field(ts.next().text)
       case ts => ts.die(s"Token is not valid (type: ${ts.peek.map(_.getClass.getName).orNull})")
     }
   }

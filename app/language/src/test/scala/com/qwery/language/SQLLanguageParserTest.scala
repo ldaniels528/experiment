@@ -470,7 +470,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Select(Seq('*), from = FileSystem("models/"), where = LIKE('name, "%.csv"), orderBy = Seq('name desc)))
     }
 
-    it("should support SELECT ... GROUP BY statements") {
+    it("should support SELECT ... GROUP BY fields statements") {
       import NativeFunctions._
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
@@ -482,6 +482,21 @@ class SQLLanguageParserTest extends AnyFunSpec {
           count('*).as('total), count(Distinct('*)).as('distinctTotal)),
         from = Table("Customers"),
         groupBy = List('Sector, 'Industry)
+      ))
+    }
+
+    it("should support SELECT ... GROUP BY indices statements") {
+      import NativeFunctions._
+      val results = SQLLanguageParser.parse(
+        """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
+           |FROM Customers
+           |GROUP BY 1, 2
+           |""".stripMargin)
+      assert(results == Select(
+        fields = List('Sector, 'Industry, avg('LastSale).as('LastSale),
+          count('*).as('total), count(Distinct('*)).as('distinctTotal)),
+        from = Table("Customers"),
+        groupBy = List(Field("1"), Field("2"))
       ))
     }
 

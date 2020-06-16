@@ -74,7 +74,6 @@ class SparkJobGenerator() {
           |  case PathList("META-INF", "MANIFEST.MF", _*) => MergeStrategy.discard
           |  case PathList("META-INF", _*) => MergeStrategy.filterDistinctLines
           |  case PathList("org", "datanucleus", _*) => MergeStrategy.rename
-          |  case PathList("com", "scoverage", _*) => MergeStrategy.discard
           |  case _ => MergeStrategy.first
           |}
           |
@@ -278,12 +277,9 @@ object SparkJobGenerator {
     * @param settings the implicit [[ApplicationSettings]]
     */
   def generate()(implicit settings: ApplicationSettings): Unit = {
-    import settings._
-
-    // generate the sbt project
-    val model = SQLLanguageParser.parse(inputPath)
-    val ctx = CompileContext(model)
-    new SparkJobGenerator().generate(model)(settings, ctx)
+    val model = SQLLanguageParser.parse(settings.inputPath)
+    implicit val ctx: CompileContext = CompileContext(model)
+    new SparkJobGenerator().generate(model)
   }
 
 }

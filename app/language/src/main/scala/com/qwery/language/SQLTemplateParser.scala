@@ -10,6 +10,7 @@ import com.qwery.models.expressions.Over.{DataAccessTypes, Unbounded, WindowBetw
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 
+import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -53,6 +54,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param tags the [[PeekableIterator iteration]] of tags
     * @return the option of the resultant [[SQLTemplateParams template parameters]]
     */
+  @tailrec
   private def processNextTag(aTag: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = aTag match {
     // optionally required tag? (e.g. "?LIMIT +?%n:limit" => "LIMIT 100")
     case tag if tag.startsWith("?") => extractOptional(tag drop 1, params, tags)
@@ -206,7 +208,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "source")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractIdentifier(name: String) = Try {
+  private def extractIdentifier(name: String): Try[SQLTemplateParams] = Try {
     val value = stream.peek.map(_.text).getOrElse(stream.die(s"'$name' identifier expected"))
     stream.next()
     SQLTemplateParams(atoms = Map(name -> value))
@@ -219,7 +221,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given named identifier
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractInsertSource(name: String) = Try {
+  private def extractInsertSource(name: String): Try[SQLTemplateParams] = Try {
     val source = stream match {
       // VALUES clause?
       case ts if ts nextIf "VALUES" =>
@@ -247,7 +249,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given named identifier
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractJoins(name: String, aggParams: SQLTemplateParams) = Try {
+  private def extractJoins(name: String, aggParams: SQLTemplateParams): Try[SQLTemplateParams] = Try {
     val predicates = Seq("CROSS", "FULL", "JOIN", "INNER", "LEFT", "RIGHT", "OUTER")
     var joins: List[Join] = Nil
 
@@ -307,7 +309,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "(customerId, 192, 'A')")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractListOfArguments(name: String) = Try {
+  private def extractListOfArguments(name: String): Try[SQLTemplateParams] = Try {
     var expressions: List[Expression] = Nil
     stream.capture(begin = "(", end = ")", delimiter = Some(",")) { ts =>
       expressions = parseExpression(ts).getOrElse(ts.die("Expression expected")) :: expressions
@@ -320,7 +322,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "fields")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractListOfFields(name: String) = Try {
+  private def extractListOfFields(name: String): Try[SQLTemplateParams] = Try {
     var fields: List[Field] = Nil
     do fields = parseField(stream) :: fields while (stream nextIf ",")
     SQLTemplateParams(fields = Map(name -> fields.reverse))
@@ -331,7 +333,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "customerId, COUNT(*)")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractListOfExpressions(name: String) = Try {
+  private def extractListOfExpressions(name: String): Try[SQLTemplateParams] = Try {
 
     def fetchNext(ts: TokenStream): Expression = {
       var expression: Option[Expression] = parseExpression(ts)
@@ -552,7 +554,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "serdeProperties")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractProperties(name: String) = Try {
+  private def extractProperties(name: String): Try[SQLTemplateParams] = Try {
 
     def extractKeyOrValue(ts: TokenStream): String = {
       if (!ts.hasNext || !ts.isQuoted) ts.die("Properties: quoted value expected") else ts.next().text
