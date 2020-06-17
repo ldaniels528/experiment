@@ -4,7 +4,7 @@ package com.qwery.language
   * Peekable Iterator
   * @author lawrence.daniels@gmail.com
   */
-class PeekableIterator[T](values: Seq[T], protected var position: Int = 0) extends Iterator[T] {
+class PeekableIterator[+T](values: Seq[T], protected var position: Int = 0) extends Iterator[T] {
   private var marks: List[Int] = Nil
 
   /**

@@ -9,7 +9,7 @@ import org.scalatest.funspec.AnyFunSpec
   */
 class FormattingHelperTest extends AnyFunSpec {
 
-  describe(FormattingHelper.getClass.getSimpleName) {
+  describe(FormattingHelper.getClass.getSimpleName.replaceAllLiterally("$", "")) {
 
     it("should create human readable lists with 'and'") {
       val strings = Seq("apple", "orange", "grape").and()

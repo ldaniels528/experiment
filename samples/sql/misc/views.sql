@@ -19,7 +19,7 @@ begin
         location './samples/companylist/csv/';
 
     -- process the data
-    create view  OilGasSecurities as
+    create view OilGasSecurities as
     select symbol, name, lastsale, marketcap, ipoyear, sector, industry
     from Securities
     where industry = 'Oil/Gas Transmission';
