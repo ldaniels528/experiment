@@ -15,6 +15,7 @@ val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
 val sparkVersion_2_3_x = "2.3.4"
 val sparkVersion_2_4_x = "2.4.6"
+val sparkVersion_3_0_x = "3.0.0"
 
 lazy val testDependencies = Seq(
   libraryDependencies ++= Seq(
@@ -153,6 +154,24 @@ lazy val spark_tools_2_4_x = (project in file("./app/platform/spark/tools/2.4.x"
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-core" % sparkVersion_2_4_x,
       "org.apache.spark" %% "spark-sql" % sparkVersion_2_4_x
+    ))
+
+lazy val spark_tools_3_0_x = (project in file("./app/platform/spark/tools/3.0.x")).
+  dependsOn(util).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "spark-tools-v3_0",
+    organization := "com.qwery",
+    description := "Qwery Runtime Tools for Spark 3.0.x",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-core" % sparkVersion_3_0_x,
+      "org.apache.spark" %% "spark-sql" % sparkVersion_3_0_x
     ))
 
 lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).
