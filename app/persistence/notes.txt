@@ -8,6 +8,15 @@ re-imagine storage:
 
 database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
 
+3 types - items (T), blocks (ByteBuffer), bytes (Array[Byte])
+
+
+
+
+
+
+
+
 network protocol
 -----------------
 00 = GET

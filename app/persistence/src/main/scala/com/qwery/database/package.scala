@@ -1,6 +1,9 @@
 package com.qwery
 
+import java.nio.ByteBuffer
+
 package object database {
+  type Block = (URID, ByteBuffer)
   type KeyValue = (String, Option[Any])
   type URID = Int
 

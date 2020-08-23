@@ -17,7 +17,8 @@ class PersistentSeqTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val expectedCount: Int = 50000
   //private val coll = PersistentSeq[StockQuote]()
-  private val coll = new HybridPersistentSeq[StockQuote](expectedCount)
+  //private val coll = PersistentSeq[StockQuote](expectedCount / 2)
+  private val coll = new PartitionedPersistentSeq[StockQuote](partitionSize = 5000)
 
   private val stocks: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
   private val bonjourStock = randomQuote.copy(symbol = "BONJOUR")
@@ -187,9 +188,11 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should extract a slice of items from the collection") {
-      val size = coll.length / 2
-      val fromPos = new Random().nextInt(coll.length - size)
-      eval(f"coll.slice($fromPos, ${fromPos + size})", coll.slice(fromPos, fromPos + size))
+      if (coll.nonEmpty) {
+        val size = coll.length / 2
+        val fromPos = new Random().nextInt(coll.length - size)
+        eval(f"coll.slice($fromPos, ${fromPos + size})", coll.slice(fromPos, fromPos + size))
+      }
     }
 
     it("should sort the collection") {
@@ -202,11 +205,13 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should swap the position of two rows") {
-      val offset1: URID = randomURID(coll)
-      val offset2: URID = randomURID(coll)
-      Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"BEFORE: $item"))
-      eval(s"coll.swap($offset1, $offset2)", coll.swap(offset1, offset2))
-      Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"AFTER: $item"))
+      if (coll.nonEmpty) {
+        val offset1: URID = randomURID(coll)
+        val offset2: URID = randomURID(coll)
+        Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"BEFORE: $item"))
+        eval(s"coll.swap($offset1, $offset2)", coll.swap(offset1, offset2))
+        Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"AFTER: $item"))
+      }
     }
 
     it("should tail a collection") {

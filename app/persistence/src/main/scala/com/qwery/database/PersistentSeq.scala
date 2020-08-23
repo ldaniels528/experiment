@@ -26,13 +26,13 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     traversable match {
       case that: Seq[T] =>
         this.copyTo(out, fromPos = 0, toPos = this.length)
-        writeBlocks(length, toBytes(that))
+        writeBlocks(toBlocks(length, that))
       case that: PersistentSeq[T] =>
         this.copyTo(out, fromPos = 0, toPos = this.length)
         that.copyTo(out, fromPos = 0, toPos = that.length)
       case that =>
         this.copyTo(out, fromPos = 0, toPos = this.length)
-        writeBlocks(out.length, toBytes(that))
+        writeBlocks(toBlocks(out.length, that))
     }
     out
   }
@@ -54,14 +54,14 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
    * @param item the [[T item]] to append
    * @return [[PersistentSeq self]]
    */
-  def append(item: T): PersistentSeq[T] = writeBlocks(length, toBytes(item))
+  def append(item: T): PersistentSeq[T] = writeBytes(length, toBytes(item))
 
   /**
    * Appends the collection of items to the end of the file
    * @param items the collection of [[T item]] to append
    * @return [[PersistentSeq self]]
    */
-  def append(items: Traversable[T]): PersistentSeq[T] = writeBlocks(length, toBytes(items))
+  def append(items: Traversable[T]): PersistentSeq[T] = writeBlocks(toBlocks(length, items))
 
   /**
    * Retrieves the item corresponding to the record offset
@@ -69,7 +69,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
    * @return the [[T item]]
    */
   def apply(offset: URID): T = {
-    toItem(offset, buf = readBlocks(offset), evenDeletes = true)
+    toItem(offset, buf = readBlock(offset), evenDeletes = true)
       .getOrElse(throw new IllegalStateException("No record found"))
   }
 
@@ -112,8 +112,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     var offset: URID = 0
     while (offset < eof) {
       if (getRowMetaData(offset).isDeleted) {
-        val block = readBlocks(eof)
-        writeBlocks(offset, block)
+        writeBytes(offset, readBytes(eof))
         setRowMetaData(eof, RowMetaData(isActive = false))
         eof -= 1
       }
@@ -125,11 +124,11 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   def contains(elem: T): Boolean = indexOfOpt(elem).nonEmpty
 
   def copyTo(that: PersistentSeq[T], fromPos: URID, toPos: URID): Unit = {
-    that.writeBlocks(that.length, readBlocks(fromPos, numberOfBlocks = toPos - fromPos))
+    that.writeBytes(that.length, readBytes(fromPos, numberOfBlocks = toPos - fromPos))
   }
 
   override def copyToArray[B >: T](array: Array[B], start: URID, len: URID): Unit = {
-    val bytes = readBlocks(start, len).array()
+    val bytes = readBytes(start, len)
     for {
       n <- (0 until len).toArray
       index = n * recordSize
@@ -190,19 +189,14 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def foreach[U](callback: T => U): Unit = _traverse(() => false) { item => callback(item) }
 
-  def get(_id: URID): Option[T] = toItem(_id, readBlocks(_id))
+  def get(_id: URID): Option[T] = toItem(_id, readBlock(_id))
 
   def getBatch(offset: URID, numberOfBlocks: Int): Seq[T] = {
-    val blocks = readBlocks(offset, numberOfBlocks)
-    (0 until numberOfBlocks) flatMap { n =>
-      val bytes = new Array[Byte](recordSize)
-      blocks.get(bytes)
-      toItem(offset + n, wrap(bytes))
-    }
+    readBlocks(offset, numberOfBlocks) flatMap { case (_id, buf) => toItem(_id, buf)}
   }
 
   def getRow(_id: URID): RowWithMetadata = {
-    val buf = readBlocks(_id)
+    val buf = readBlock(_id)
     val rmd = buf.getRowMetaData
     RowWithMetadata(_id, rmd, fields = toFields(buf))
   }
@@ -294,9 +288,17 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def push(item: T): PersistentSeq[T] = append(item)
 
-  def readBlocks(offset: URID, numberOfBlocks: Int = 1): ByteBuffer
+  def readBlock(offset: URID): ByteBuffer
+
+  def readBlocks(offset: URID, numberOfBlocks: Int = 1): Seq[(URID, ByteBuffer)] = {
+    for {
+      _id <- offset to offset + numberOfBlocks
+    } yield _id -> readBlock(_id)
+  }
 
   def readByte(offset: URID): Byte
+
+  def readBytes(offset: URID, numberOfBlocks: Int = 1): Array[Byte]
 
   /**
    * Remove an item from the collection via its record offset
@@ -322,7 +324,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     val that = newDocument[T]()
     var (top, bottom) = (0, length - 1)
     while (bottom >= 0) {
-      that.writeBlocks(top, readBlocks(bottom))
+      that.writeBytes(top, readBytes(bottom))
       bottom -= 1
       top += 1
     }
@@ -367,9 +369,9 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   }
 
   def swap(offset0: URID, offset1: URID): Unit = {
-    val (block0, block1) = (readBlocks(offset0), readBlocks(offset1))
-    writeBlocks(offset0, block1)
-    writeBlocks(offset1, block0)
+    val (block0, block1) = (readBytes(offset0), readBytes(offset1))
+    writeBytes(offset0, block1)
+    writeBytes(offset1, block0)
   }
 
   override def tail: PersistentSeq[T] = {
@@ -380,7 +382,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def take(start: URID, end: URID): Seq[T] = {
     val blockCount = 1 + (end - start).toURID
-    val block = readBlocks(start, numberOfBlocks = blockCount).array()
+    val block = readBytes(start, numberOfBlocks = blockCount)
 
     // transform the block into records
     for {
@@ -423,11 +425,13 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     override def foreach[U](f: T => U): Unit = PersistentSeq.this.foreach(f)
   }
 
-  def update(_id: URID, item: T): PersistentSeq[T] = writeBlocks(_id, toBytes(item))
+  def update(_id: URID, item: T): PersistentSeq[T] = writeBytes(_id, toBytes(item))
 
-  def writeBlocks(offset: URID, buf: ByteBuffer): PersistentSeq[T] = writeBlocks(offset, buf.array())
+  def writeBlock(offset: URID, buf: ByteBuffer): PersistentSeq[T] = writeBytes(offset, buf.array())
 
-  def writeBlocks(offset: URID, bytes: Array[Byte]): PersistentSeq[T]
+  def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T]
+
+  def writeBytes(offset: URID, bytes: Array[Byte]): PersistentSeq[T]
 
   def writeByte(offset: URID, byte: Int): PersistentSeq[T]
 

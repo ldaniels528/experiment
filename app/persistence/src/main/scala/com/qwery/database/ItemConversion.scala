@@ -70,14 +70,17 @@ abstract class ItemConversion[T <: Product : ClassTag] {
     buf.array()
   }
 
-  def toBytes(items: Seq[T]): ByteBuffer = {
-    items.zipWithIndex.foldLeft(allocate(items.length * recordSize)) { case (buf, (item, offset)) =>
-      buf.position(offset * recordSize)
-      buf.put(toBytes(item))
-    }
+  def toBlocks(offset: URID, items: Seq[T]): Seq[(URID, ByteBuffer)] = {
+    items.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
   }
 
-  def toBytes(items: Traversable[T]): ByteBuffer = wrap(items.toArray.flatMap(toBytes(_)))
+  def toBlocks(offset: URID, items: Traversable[T]): Stream[(URID, ByteBuffer)] = {
+    items.toStream.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
+  }
+
+  def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(item => wrap(toBytes(item)))
+
+  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.map(item => wrap(toBytes(item))).toStream
 
   def toColumns: List[Column] = {
     val defaultMaxLen = 128
