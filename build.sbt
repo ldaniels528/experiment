@@ -4,8 +4,8 @@ import sbt._
 import scala.language.postfixOps
 
 val scalaVersion_2_11 = "2.11.12"
-val scalaVersion_2_12 = "2.12.11"
-val scalaVersion_2_13 = "2.13.2"
+val scalaVersion_2_12 = "2.12.12"
+val scalaVersion_2_13 = "2.13.3"
 
 val appVersion = "0.4.0"
 val pluginVersion = "1.0.0"
@@ -25,13 +25,15 @@ lazy val testDependencies = Seq(
     "org.scalatest" %% "scalatest" % scalaTestVersion % Test
   ))
 
+crossScalaVersions := Seq(scalaVersion_2_11, scalaVersion_2_12)
+
 /////////////////////////////////////////////////////////////////////////////////
 //      Root Project - builds all artifacts
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, util, language, spark_generator, spark_tools_2_4_x).
-  dependsOn(core, util, language, spark_generator, spark_tools_2_4_x).
+  aggregate(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x).
+  dependsOn(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -99,6 +101,27 @@ lazy val language = (project in file("./app/language")).
 
     ))
 
+/**
+ * @example sbt "project persistence" test
+ */
+lazy val persistence = (project in file("./app/persistence")).
+  dependsOn(core, util).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "persistent-collections",
+    organization := "com.qwery",
+    description := "Qwery Persistent Collections",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "commons-io" % "commons-io" % "2.6"
+    ))
+
 /////////////////////////////////////////////////////////////////////////////////
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////
@@ -120,6 +143,7 @@ lazy val spark_generator = (project in file("./app/platform/spark/generator")).
 
     ))
 
+/*
 lazy val spark_tools_2_3_x = (project in file("./app/platform/spark/tools/2.3.x")).
   dependsOn(util).
   //settings(publishingSettings: _*).
@@ -136,7 +160,7 @@ lazy val spark_tools_2_3_x = (project in file("./app/platform/spark/tools/2.3.x"
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-core" % sparkVersion_2_3_x,
       "org.apache.spark" %% "spark-sql" % sparkVersion_2_3_x
-    ))
+    ))*/
 
 lazy val spark_tools_2_4_x = (project in file("./app/platform/spark/tools/2.4.x")).
   dependsOn(util).
