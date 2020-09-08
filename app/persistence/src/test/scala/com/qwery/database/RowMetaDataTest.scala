@@ -4,8 +4,6 @@ import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
-import scala.util.Random
-
 /**
  * Row Metadata Test Suite
  */

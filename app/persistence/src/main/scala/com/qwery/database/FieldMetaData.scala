@@ -1,16 +1,17 @@
 package com.qwery.database
 
 import com.qwery.database.FieldMetaData._
+import com.qwery.database.PersistentSeq.Field
 
 /**
  * Represents the metadata of a field stored in the database.
  * <pre>
- * --------------------------------------
+ * ----------------------------------------
  * c - compressed bit .. [1000.0000 ~ 0x80]
  * e - encrypted bit ... [0100.0000 ~ 0x40]
  * n - nullable bit .... [0010.0000 ~ 0x20]
  * t - type bits (x5) .. [0001.1111 ~ 0x1f]
- * --------------------------------------
+ * ----------------------------------------
  * </pre>
  * @param isCompressed indicates whether the data is compressed
  * @param isEncrypted  indicates whether the data is encrypted
@@ -57,16 +58,6 @@ object FieldMetaData {
   val TYPE_BITS = 0x1f
 
   /**
-   * A metadata field for "_id"
-   */
-  val _idMetaData: FieldMetaData = FieldMetaData(
-    isCompressed = false,
-    isEncrypted = false,
-    isNotNull = true,
-    `type` = ColumnTypes.LongType
-  )
-
-  /**
    * Creates new field meta data based on the column
    * @param column the [[Column column]]
    * @return new [[FieldMetaData field meta data]]
@@ -77,6 +68,16 @@ object FieldMetaData {
     isNotNull = true,
     `type` = column.`type`
   )
+
+  /**
+   * A template for generating read-only row "_id" fields
+   */
+  def _idField(offset: URID): Field = Field(name = "_id", value = Some(offset), metadata = FieldMetaData(
+    isCompressed = false,
+    isEncrypted = false,
+    isNotNull = true,
+    `type` = ColumnTypes.LongType
+  ))
 
   /**
    * Decodes the metadata byte into a [[FieldMetaData metadata]]

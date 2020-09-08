@@ -1,7 +1,6 @@
 package com.qwery.database
 
 import java.nio.ByteBuffer
-import java.nio.ByteBuffer.wrap
 
 import scala.reflect.ClassTag
 
@@ -10,24 +9,19 @@ import scala.reflect.ClassTag
  * @param partitionSize the size of each partition
  * @tparam T the product type
  */
-class PartitionedPersistentSeq[T <: Product : ClassTag](partitionSize: Int) extends PersistentSeq[T]() {
-  private var partitions: List[PersistentSeq[T]] = Nil
+class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) extends PersistentSeq[T]() {
+  protected var partitions: List[PersistentSeq[T]] = Nil
   assert(partitionSize > 0, "Partition size must be greater than zero")
-  ensurePartitions(index = 1)
+  //ensurePartitions(index = 1)
+
+  def addPartition(partition: PersistentSeq[T]): this.type = {
+    partitions = partition :: partitions
+    this
+  }
 
   override def close(): Unit = partitions.foreach(_.close())
 
   override def length: URID = partitions.map(_.length).sum
-
-  override def shrinkTo(newSize: URID): PersistentSeq[T] = {
-    partitions.foldLeft(newSize) { (size, partition) =>
-      val remainder = Math.max(size - partition.length, 0)
-      val myNewSize = Math.max(partition.length - size, 0)
-      partition.shrinkTo(myNewSize)
-      remainder
-    }
-    this
-  }
 
   override def readBlock(offset: URID): ByteBuffer = {
     val index = toPartitionIndex(offset)
@@ -40,8 +34,19 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](partitionSize: Int) exte
       globalOffset <- offset to offset + numberOfBlocks
       index = toPartitionIndex(globalOffset)
       partition = partitions(index)
-      (_id, buf) <- partition.readBlocks(toLocalOffset(globalOffset, index))
-    } yield (toGlobalOffset(_id, index), buf)
+      blocks <- partition.readBlocks(toLocalOffset(globalOffset, index))
+        .map { case (_id, buf) => toGlobalOffset(_id, index) -> buf }
+    } yield blocks
+  }
+
+  override def shrinkTo(newSize: URID): PersistentSeq[T] = {
+    partitions.foldLeft(newSize) { (size, partition) =>
+      val remainder = Math.max(size - partition.length, 0)
+      val myNewSize = Math.max(partition.length - size, 0)
+      partition.shrinkTo(myNewSize)
+      remainder
+    }
+    this
   }
 
   override def readByte(offset: URID): Byte = {
@@ -89,20 +94,11 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](partitionSize: Int) exte
     while (partitions.size <= index) partitions = partitions ::: PersistentSeq[T]() :: Nil
   }
 
-  private def intoBlocks(offset: URID, src: Array[Byte]): Seq[(URID, ByteBuffer)] = {
-    val count = src.length / recordSize
-    for (index <- 0 to count) yield {
-      val buf = new Array[Byte](recordSize)
-      System.arraycopy(src, index * recordSize, buf, 0, Math.min(buf.length, src.length - index * recordSize))
-      (offset + index) -> wrap(buf)
-    }
-  }
+  protected def toGlobalOffset(offset: URID, index: Int): URID = offset + index * partitionSize
 
-  private def toGlobalOffset(offset: URID, index: Int): URID = offset + index * partitionSize
+  protected def toLocalOffset(offset: URID, index: Int): URID = Math.min(offset - index * partitionSize, partitionSize)
 
-  private def toLocalOffset(offset: URID, index: Int): URID = Math.min(offset - index * partitionSize, partitionSize)
-
-  private def toPartitionIndex(offset: Int, isLimit: Boolean = false): Int = {
+  protected def toPartitionIndex(offset: Int, isLimit: Boolean = false): Int = {
     val index = offset / partitionSize
     val normalizedIndex = if (isLimit && offset == partitionSize) Math.min(0, index - 1) else index
     ensurePartitions(normalizedIndex)

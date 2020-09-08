@@ -10,7 +10,6 @@ import scala.util.Random
 
 case class StockQuote(@(ColumnInfo@field)(maxSize = 12) symbol: String,
                       @(ColumnInfo@field)(maxSize = 12) exchange: String,
-                      @(ColumnInfo@field)(maxSize = 250, isCompressed = false) summary: String,
                       lastSale: Double,
                       lastSaleTime: Long)
 
@@ -29,7 +28,7 @@ object StockQuote {
     exchanges(random.nextInt(exchanges.size))
   }
 
-  def randomQuote: StockQuote = StockQuote(randomSymbol, randomExchange, randomSummary, randomPrice, randomDate)
+  def randomQuote: StockQuote = StockQuote(randomSymbol, randomExchange, randomPrice, randomDate)
 
   def randomDate: Long = sdf.parse("2020-08-01 14:33:11").getTime + random.nextInt(20).days.toMillis
 

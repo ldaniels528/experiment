@@ -2,12 +2,13 @@ package com.qwery.database
 
 import java.io.File
 
-import com.qwery.database.PersistentSeqTest.StockQuoteWithID
 import com.qwery.database.StockQuote._
+import com.qwery.util.ServicingTools._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
-import scala.annotation.meta.field
+import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 import scala.util.Random
 
 /**
@@ -15,17 +16,26 @@ import scala.util.Random
  */
 class PersistentSeqTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val expectedCount: Int = 50000
-  //private val coll = PersistentSeq[StockQuote]()
-  //private val coll = PersistentSeq[StockQuote](expectedCount / 2)
-  private val coll = new PartitionedPersistentSeq[StockQuote](partitionSize = 5000)
+  private val expectedCount: Int = 1e+5.toInt
 
+  def newCollection[A <: Product : ClassTag]: PersistentSeq[A] = {
+    // 50K: 4.098s(m), 7.686s(hp), 15.765s(pd), 11.235s(d)
+    PersistentSeq.builder[A]
+      //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
+      .withParallelism(ExecutionContext.global)
+      .withPartitions(partitionSize = 2500)
+      .build
+  }
+
+  private val coll = newCollection[StockQuote]
   private val stocks: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
-  private val bonjourStock = randomQuote.copy(symbol = "BONJOUR")
+  private val bonjourStock = randomQuote.copy(symbol = "BELLE")
 
   describe(classOf[PersistentSeq[_]].getSimpleName) {
 
     it("should start with an empty collection") {
+      logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
+
       val items = eval("coll.clear()", coll.clear())
       assert(items.isEmpty)
     }
@@ -50,40 +60,48 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should count all items") {
-      eval("coll.count()", coll.count())
+      val total = eval("coll.count()", coll.count())
+      assert(total == expectedCount + 1)
     }
 
     it("should count the items where: lastSale <= 500") {
       eval("coll.count(_.lastSale <= 500))", coll.count(_.lastSale <= 500))
     }
 
-    it("should count the rows where: isEncrypted is true") {
-      eval("coll.countRows(_.isEncrypted)", coll.countRows(_.isEncrypted))
+    it("should count the rows where: isCompressed is true") {
+      val count = eval("coll.countRows(_.isCompressed)", coll.countRows(_.isCompressed))
+      assert(count == 0)
     }
 
     it("should test existence where: lastSale >= 500") {
-      eval("coll.exists(_.lastSale >= 500)", coll.exists(_.lastSale >= 500))
+      val lastSale_lt_500 = eval("coll.exists(_.lastSale >= 500)", coll.exists(_.lastSale >= 500))
+      assert(lastSale_lt_500)
     }
 
     it("should filter for items where: lastSale <= 5") {
-      eval("coll.filter(_.lastSale <= 5)", coll.filter(_.lastSale <= 5))
+      val items = eval("coll.filter(_.lastSale <= 5)", coll.filter(_.lastSale <= 5))
+      assert(items.nonEmpty)
     }
 
     it("should filter for items where not: lastSale <= 5") {
-      eval("coll.filterNot(_.lastSale <= 5)", coll.filterNot(_.lastSale <= 5))
+      val items = eval("coll.filterNot(_.lastSale <= 5)", coll.filterNot(_.lastSale <= 5))
+      assert(items.nonEmpty)
     }
 
     it("should find one item where: lastSale > 500") {
-      eval("coll.find(_.lastSale > 500)", coll.find(_.lastSale > 500))
+      val items = eval("coll.find(_.lastSale > 500)", coll.find(_.lastSale > 500))
+      assert(items.nonEmpty)
     }
 
     it("should indicate whether all items satisfy: lastSale < 1000") {
-      eval("coll.forall(_.lastSale < 1000))", coll.forall(_.lastSale < 1000))
+      val result = eval("coll.forall(_.lastSale < 1000))", coll.forall(_.lastSale < 1000))
+      assert(result)
     }
 
     it("should retrieve one item by its offset (_id)") {
       val _id = randomURID(coll)
-      eval(f"coll.get(${_id})", coll.get(_id))
+      val item_? = eval(f"coll.get(${_id})", coll.get(_id))
+      assert(item_?.nonEmpty)
     }
 
     it("should retrieve one row by its offset (_id)") {
@@ -99,32 +117,46 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should retrieve one row metadata by its offset (_id)") {
       val _id = randomURID(coll)
-      eval(f"coll.getRowMetaData(${_id})", coll.getRowMetaData(_id))
+      val rmd = eval(f"coll.getRowMetaData(${_id})", coll.getRowMetaData(_id))
+      logger.info(s"rmd => $rmd")
     }
 
     it("should retrieve the first item (sequentially) from the collection") {
-      eval("coll.headOption", coll.headOption)
+      val item_? = eval("coll.headOption", coll.headOption)
+      assert(item_?.nonEmpty)
     }
 
-    it("""should find index where: symbol == "BONJOUR"""") {
-      eval("""coll.indexWhere(_.symbol == "BONJOUR")""", coll.indexWhere(_.symbol == "BONJOUR"))
+    it("""should find index where: symbol == "XXX"""") {
+      coll.append(bonjourStock.copy(symbol = "XXX"))
+      val index = eval("""coll.indexWhere(_.symbol == "XXX")""", coll.indexWhere(_.symbol == "XXX"))
+      assert(index != -1)
     }
 
     it(s"""should find index of $bonjourStock""") {
-      eval(s"""coll.indexOf($bonjourStock)""", coll.indexOf(bonjourStock))
+      coll.append(bonjourStock)
+      logger.info(s"coll.lastOption => ${coll.lastOption}")
+      val index = eval(s"""coll.indexOf($bonjourStock)""", coll.indexOf(bonjourStock))
+      assert(index != -1)
+    }
+
+    it("should produce an iterator") {
+      val it = eval("coll.iterator", coll.iterator)
+      assert(it.nonEmpty)
     }
 
     it("should retrieve the last item (sequentially) from the collection") {
-      eval("coll.lastOption", coll.lastOption)
+      val item_? = eval("coll.lastOption", coll.lastOption)
+      assert(item_?.nonEmpty)
     }
 
     it("should retrieve the file length") {
-      eval("coll.length", coll.length)
+      val length = eval("coll.length", coll.length)
+      assert(length >= coll.count())
     }
 
     it("loads items from text files") {
       def doIt(): PersistentSeq[StockQuoteWithID] = {
-        PersistentSeq[StockQuoteWithID]().loadTextFile(new File("./stocks.csv")) {
+        newCollection[StockQuoteWithID].loadTextFile(new File("./stocks.csv")) {
           _.split("[,]") match {
             case Array(symbol, exchange, price, date) =>
               Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
@@ -138,49 +170,65 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should compute max(lastSale)") {
-      eval("coll.max(_.lastSale)", coll.max(_.lastSale))
+      val value = eval("coll.max(_.lastSale)", coll.max(_.lastSale))
+      assert(value > 0)
     }
 
     it("should compute min(lastSale)") {
-      eval("coll.min(_.lastSale)", coll.min(_.lastSale))
+      val value = eval("coll.min(_.lastSale)", coll.min(_.lastSale))
+      assert(value == 0)
     }
 
     it("should compute the 95th percentile for lastSale") {
-      eval("coll.percentile(0.95)(_.lastSale)", coll.percentile(0.95)(_.lastSale))
+      val value = eval("coll.percentile(0.95)(_.lastSale)", coll.percentile(0.95)(_.lastSale))
+      assert(value > 0)
     }
 
     it("should push items like a stack") {
       val stock = randomQuote
+      val before = coll.count()
       eval(s"coll.push($stock)", coll.push(stock))
+      val after = coll.count()
+      assert(after - before == 1)
     }
 
     it("should pop items like a stack") {
+      val before = coll.count()
       eval("coll.pop", coll.pop)
+      val after = coll.count()
+      assert(before - after == 1)
     }
 
     it("should retrieve the record size") {
-      eval("coll.recordSize", coll.recordSize)
+      val recordSize = eval("coll.recordSize", coll.recordSize)
+      assert(recordSize == 65)
     }
 
     it("should remove records by its offset (_id)") {
       val _id = randomURID(coll)
+      val before = coll.count()
       eval(f"coll.remove(${_id})", coll.remove(_id))
+      val after = coll.count()
+      assert(before - after == 1)
     }
 
     it("should remove records where: lastSale > 500") {
-      eval("coll.remove(_.lastSale > 500)", coll.remove(_.lastSale > 500))
+      val count = eval("coll.remove(_.lastSale > 500)", coll.remove(_.lastSale > 500))
+      assert(count > 0)
     }
 
     it("should show that length and count() can be inconsistent") {
       info(s"coll.count() ~> ${coll.count()} but coll.length ~> ${coll.length}")
     }
 
-    it("should compact the database to eliminate deleted rows") {
-      eval("coll.compact()", coll.compact())
+    it("should reverse the collection") {
+      val items = eval("coll.reverse", coll.reverse)
+      assert(items.headOption == coll.lastOption)
     }
 
-    it("should reverse the collection") {
-      eval("coll.reverse", coll.reverse)
+    it("should produce a reverse iterator") {
+      val it = eval("coll.reverseIterator", coll.reverseIterator)
+      assert(it.nonEmpty)
     }
 
     it("should reverse the collection (in place)") {
@@ -214,17 +262,14 @@ class PersistentSeqTest extends AnyFunSpec {
       }
     }
 
+    it("should shrink the collection by 20%") {
+      val newSize = (coll.count() * 0.80).toInt
+      eval(f"coll.shrinkTo($newSize)", coll.shrinkTo(newSize))
+      assert(coll.length <= newSize)
+    }
+
     it("should tail a collection") {
       eval("coll.tail", coll.tail)
-    }
-
-    it("should shrink the collection by 20%") {
-      val newSize = (coll.length * 0.80).toInt
-      eval(f"coll.shrinkTo($newSize)", coll.shrinkTo(newSize))
-    }
-
-    it("should produce an iterator") {
-      eval("coll.toIterator", coll.toIterator)
     }
 
     it("should trim dead entries from of the collection") {
@@ -238,39 +283,13 @@ class PersistentSeqTest extends AnyFunSpec {
     val (results, runTime) = time(f)
     val output = results match {
       case items: PersistentSeq[_] => f"(${items.length} items)"
-      case value: Double => f"$value%.2f"
+      case value: Double => f"${value.toDouble}%.2f"
       case items: Seq[_] => f"(${items.length} items)"
       case it: Iterator[_] => if (it.hasNext) s"<${it.next()}, ...>" else "<empty>"
       case x => x.toString
     }
-    logger.info(f"$label ~> $output [$runTime%.1f msec]")
+    logger.info(f"$label ~> $output [$runTime%.2f msec]")
     results
   }
-
-  /**
-   * Executes the block capturing the execution time
-   * @param block the block to execute
-   * @tparam T the result type
-   * @return a tuple containing the result and execution time in milliseconds
-   */
-  def time[T](block: => T): (T, Double) = {
-    val startTime = System.nanoTime()
-    val result = block
-    val elapsedTime = (System.nanoTime() - startTime).toDouble / 1e+6
-    (result, elapsedTime)
-  }
-
-}
-
-/**
- * Persistent Sequence Test Companion
- */
-object PersistentSeqTest {
-
-  case class StockQuoteWithID(@(ColumnInfo@field)(maxSize = 12) symbol: String,
-                              @(ColumnInfo@field)(maxSize = 12) exchange: String,
-                              lastSale: Double,
-                              lastSaleTime: Long,
-                              _id: URID = 0)
 
 }

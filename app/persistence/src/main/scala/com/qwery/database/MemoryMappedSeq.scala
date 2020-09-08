@@ -7,7 +7,7 @@ import scala.reflect.ClassTag
 
 /**
  * Represents a memory-mapped collection implementation
- * @param capacity the collection's storage capacity
+ * @param capacity the maximum number of item the collection may contain
  */
 class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends PersistentSeq[T] {
   private val _capacity = capacity * recordSize
@@ -61,6 +61,11 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
     }
   }
 
-  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = ???
+  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = {
+    blocks foreach { case (offset, buf) =>
+      writeBlock(offset, buf)
+    }
+    this
+  }
 
 }

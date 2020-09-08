@@ -78,7 +78,7 @@ object Column {
             isEncrypted: Boolean,
             isNullable: Boolean,
             isPrimary: Boolean): Column = {
-    val maxLength: Int = (`type`.getFixedLength ?? maxSize).map(_ + STATUS_BYTE)
+    val maxLength: Int = (`type`.getFixedLength ?? maxSize.map(_ + SHORT_BYTES)).map(_ + STATUS_BYTE)
       .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${`type`}"))
     DefaultColumn(name, `type`, maxLength, isCompressed, isEncrypted, isNullable, isPrimary)
   }

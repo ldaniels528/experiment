@@ -1,6 +1,8 @@
 package com.qwery.database
 
+import com.qwery.database.ColumnTypes._
 import com.qwery.database.ItemConversionTest.PixAllData
+import com.qwery.database.PersistentSeq.Field
 import org.scalatest.funspec.AnyFunSpec
 
 /**
@@ -23,17 +25,17 @@ class ItemConversionTest extends AnyFunSpec {
       ))
     }
 
-    /*
     it("should populate a product class with vales") {
+      val fmd = FieldMetaData(isCompressed = false, isEncrypted = false, isNotNull = true, `type` = StringType)
       val data = productConversion.createItem(Seq(
-        "_id" -> Some(1087L),
-        "idValue" -> Some("Hello"),
-        "idType" -> Some("World"),
-        "responseTime" -> Some(307),
-        "reportDate" -> Some(java.sql.Date.valueOf("2020-06-15").getTime)
+        Field(name = "_id", fmd.copy(`type` = LongType), value = Some(1087L)),
+        Field(name = "idValue", fmd, Some("Hello")),
+        Field(name = "idType", fmd, Some("World")),
+        Field(name = "responseTime", fmd.copy(`type` = IntType), Some(307)),
+        Field(name = "reportDate", fmd.copy(`type` = LongType), Some(java.sql.Date.valueOf("2020-06-15").getTime))
       ))
       assert(data == PixAllData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
-    }*/
+    }
 
   }
 
