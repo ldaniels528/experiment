@@ -22,7 +22,7 @@ class PersistentSeqTest extends AnyFunSpec {
   def newCollection[A <: Product : ClassTag](partitionSize: Int): PersistentSeq[A] = {
     PersistentSeq.builder[A]
       //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
-      //.withParallelism(ExecutionContext.global)
+      .withParallelism(ExecutionContext.global)
       .withPartitions(partitionSize = partitionSize)
       .build
   }

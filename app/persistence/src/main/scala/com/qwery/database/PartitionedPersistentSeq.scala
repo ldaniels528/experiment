@@ -45,7 +45,7 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
     val remainder = newSize % partitionSize
 
     // adjust the size of the cut-off partition
-    partitions(cutOffIndex).shrinkTo(remainder)
+    if (cutOffIndex < partitions.length) partitions(cutOffIndex).shrinkTo(remainder)
 
     // truncate the rest
     for {
