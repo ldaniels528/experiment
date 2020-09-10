@@ -1,6 +1,5 @@
 package com.qwery.database
 
-import java.lang.reflect.{Constructor, Field => JField}
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
@@ -8,13 +7,11 @@ import java.util.UUID
 
 import com.qwery.database.ColumnTypes._
 import com.qwery.database.Compression._
-import com.qwery.database.FieldMetaData._idField
 import com.qwery.database.ItemConversion._
 import com.qwery.database.PersistentSeq.Field
 import com.qwery.util.OptionHelper._
 import org.slf4j.LoggerFactory
 
-import scala.collection.concurrent.TrieMap
 import scala.reflect.{ClassTag, classTag}
 
 /**
@@ -22,17 +19,31 @@ import scala.reflect.{ClassTag, classTag}
  */
 abstract class ItemConversion[T <: Product : ClassTag] {
   private lazy val logger = LoggerFactory.getLogger(getClass)
-  private val constructors = TrieMap[Unit, (Constructor[_], Array[Class[_]])]()
-  private val `class` = classTag[T].runtimeClass
-  private val declaredFields: List[JField] = `class`.getDeclaredFields.toList
-  private val declaredFieldNames: List[String] = declaredFields.map(_.getName)
-  private val columns: List[Column] = toColumns(declaredFields)
-  private val mappings: Map[String, Column] = Map(columns.map(c => c.name -> c): _*)
 
-  // compute the column offsets
-  private val columnOffsets: List[URID] = {
-    case class Accum(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
-    columns.reverse.map(_.maxLength).foldLeft(Accum()) { (acc, maxLength) =>
+  // cache the class information for type T
+  private val `class` = classTag[T].runtimeClass
+  private val declaredFields = `class`.getDeclaredFields.toList
+  private val declaredFieldNames = declaredFields.map(_.getName)
+  private val constructor = `class`.getConstructors.find(_.getParameterCount == declaredFields.length)
+    .getOrElse(throw new IllegalArgumentException(s"No suitable constructor found for class ${`class`.getName}"))
+  private val parameterTypes = constructor.getParameterTypes
+
+  // determine the columns for type T
+  protected val columns: List[Column] = toColumns
+  private val physicalColumns: List[Column] = columns.filterNot(_.isRowID)
+  private val nameToColumnMap: Map[String, Column] = Map(columns.map(c => c.name -> c): _*)
+
+  // define a closure to dynamically create the optional rowID field for type T
+  private val toRowIdField: ROWID => Option[Field] = {
+    val rowIdColumn_? = columns.find(_.isRowID)
+    val fmd = FieldMetaData(isCompressed = false, isEncrypted = false, isNotNull = false, `type` = ColumnTypes.LongType)
+    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, fmd, value = Some(rowID)))
+  }
+
+  // compute the column offsets for type T
+  protected val columnOffsets: List[ROWID] = {
+    case class Accumulator(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
+    physicalColumns.reverse.map(_.maxLength).foldLeft(Accumulator()) { (acc, maxLength) =>
       val index = acc.agg + acc.last
       acc.last = maxLength + index
       acc.list = index :: acc.list
@@ -46,15 +57,10 @@ abstract class ItemConversion[T <: Product : ClassTag] {
    * @return a new [[T item]]
    */
   def createItem(items: Seq[Field]): T = {
-    val nameToValueMap = Map(items flatMap { case Field(name, _, value_?) => value_?.map(value => name -> value) }: _*)
-    val rawValues = declaredFieldNames.map(nameToValueMap.get)
-    val (constructor, parameterTypes) = constructors.getOrElseUpdate((), {
-      val constructor = `class`.getConstructors.find(_.getParameterCount == rawValues.length)
-        .getOrElse(throw new IllegalArgumentException(s"No suitable constructor found for ${`class`.getName}"))
-      (constructor, constructor.getParameterTypes)
-    })
-    val normalizedValues = (parameterTypes zip rawValues).map {
-      case (param, value) => if (param == classOf[Option[_]]) value else value.map(_.asInstanceOf[AnyRef]).orNull
+    val nameToValueMap: Map[String, Option[Any]] = Map(items.collect { case f if f.value.nonEmpty => f.name -> f.value }: _*)
+    val rawValues = declaredFieldNames.flatMap(nameToValueMap.get)
+    val normalizedValues = (parameterTypes zip rawValues) map { case (param, value) =>
+      if (param == classOf[Option[_]]) value else value.map(_.asInstanceOf[AnyRef]).orNull
     }
     constructor.newInstance(normalizedValues: _*).asInstanceOf[T]
   }
@@ -62,39 +68,21 @@ abstract class ItemConversion[T <: Product : ClassTag] {
   /**
    * @return the record length in bytes
    */
-  val recordSize: Int = STATUS_BYTE + columns.map(_.maxLength).sum + 2 * LONG_BYTES
+  val recordSize: Int = STATUS_BYTE + physicalColumns.map(_.maxLength).sum + 2 * LONG_BYTES
 
-  private def toColumns(declaredFields: List[JField]): List[Column] = {
-    val defaultMaxLen = 128
-    declaredFields map { field =>
-      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
-      val `type` = ColumnTypes.determineType(field.getType)
-      val maxSize = ci.map(_.maxSize)
-      if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
-        logger.warn(
-          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
-              |
-              |case class PixAllData(@(ColumnInfo@field)(maxSize = 36, isPrimary = true) idValue: String,
-              |                      @(ColumnInfo@field)(maxSize = 10) idType: String,
-              |                      responseTime: Int,
-              |                      reportDate: Long,
-              |                      _id: Long = 0L)
-              |""".stripMargin)
-      }
-      Column(name = field.getName, `type` = `type`,
-        maxSize = maxSize ?? Some(defaultMaxLen),
-        isCompressed = ci.exists(_.isCompressed),
-        isEncrypted = ci.exists(_.isEncrypted),
-        isNullable = ci.exists(_.isNullable),
-        isPrimary = ci.exists(_.isPrimary))
-    } collect { case c if c.name != "_id" => c }
+  def toBlocks(offset: ROWID, items: Seq[T]): Seq[(ROWID, ByteBuffer)] = {
+    items.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
+  }
+
+  def toBlocks(offset: ROWID, items: Traversable[T]): Stream[(ROWID, ByteBuffer)] = {
+    items.toStream.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
   }
 
   def toBytes(item: T): Array[Byte] = {
     val payloads = for {
-      (name, value) <- toKeyValues(item)
-      column <- mappings.get(name).toArray
-    } yield encode(column, value)
+      (name, value_?) <- toKeyValues(item)
+      column <- nameToColumnMap.get(name).toArray if !column.isRowID
+    } yield encode(column, value_?)
 
     // convert the row to binary
     val buf = allocate(recordSize).putRowMetaData(RowMetaData())
@@ -105,28 +93,47 @@ abstract class ItemConversion[T <: Product : ClassTag] {
     buf.array()
   }
 
-  def toBlocks(offset: URID, items: Seq[T]): Seq[(URID, ByteBuffer)] = {
-    items.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
-  }
-
-  def toBlocks(offset: URID, items: Traversable[T]): Stream[(URID, ByteBuffer)] = {
-    items.toStream.zipWithIndex.map { case (item, index) => (offset + index) -> wrap(toBytes(item)) }
-  }
-
   def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(item => wrap(toBytes(item)))
 
   def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.map(item => wrap(toBytes(item))).toStream
 
+  def toColumns: List[Column] = {
+    val defaultMaxLen = 128
+    declaredFields map { field =>
+      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
+      val `type` = ColumnTypes.determineType(field.getType)
+      val maxSize = ci.map(_.maxSize)
+      if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
+        logger.warn(
+          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
+              |
+              |case class StockQuote(@(ColumnInfo@field)(maxSize = 36)   idValue: String,
+              |                      @(ColumnInfo@field)(maxSize = 10)   idType: String,
+              |                                                          responseTime: Int,
+              |                                                          reportDate: Long,
+              |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
+              |""".stripMargin)
+      }
+      Column(name = field.getName, `type` = `type`,
+        maxSize = maxSize ?? Some(defaultMaxLen),
+        isCompressed = ci.exists(_.isCompressed),
+        isEncrypted = ci.exists(_.isEncrypted),
+        isNullable = ci.exists(_.isNullable),
+        isPrimary = ci.exists(_.isPrimary),
+        isRowID = ci.exists(_.isRowID))
+    }
+  }
+
   def toFields(buf: ByteBuffer): List[Field] = {
-    columns.zipWithIndex.map { case (col, index) =>
+    physicalColumns.zipWithIndex map { case (col, index) =>
       buf.position(columnOffsets(index))
       col.name -> decode(buf)
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
 
-  def toItem(id: URID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
+  def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
     val metadata = buf.getRowMetaData
-    if (metadata.isActive || evenDeletes) Some(createItem(items = _idField(id) :: toFields(buf))) else None
+    if (metadata.isActive || evenDeletes) Some(createItem(items = toRowIdField(id).toList ::: toFields(buf))) else None
   }
 
   def toKeyValues(product: T): Seq[KeyValue] = declaredFieldNames zip product.productIterator.toSeq map {
@@ -146,10 +153,25 @@ object ItemConversion extends Compression {
     (fmd, decodeValue(fmd, buf))
   }
 
+  def decodeSeq(buf: ByteBuffer)(implicit fmd: FieldMetaData): Seq[Option[Any]] = {
+    // read the collection as a block
+    val blockSize = buf.getInt
+    val count = buf.getInt
+    val bytes = new Array[Byte](blockSize)
+    buf.get(bytes)
+
+    // decode the items
+    val block = wrap(bytes.decompressOrNah)
+    for {
+      _ <- 0 to count
+      (_, value) = decode(block)
+    } yield value
+  }
+
   def decodeValue(fmd: FieldMetaData, buf: ByteBuffer): Option[Any] = {
     if (fmd.isNull) None else {
       fmd.`type` match {
-        case ArrayType => Some(buf.getArray)
+        case ArrayType => Some(decodeSeq(buf)(fmd))
         case BigDecimalType => Some(buf.getBigDecimal)
         case BigIntType => Some(buf.getBigInteger)
         case BlobType => Some(buf)
@@ -182,11 +204,28 @@ object ItemConversion extends Compression {
     }
   }
 
+  def encodeSeq(items: Seq[Any])(implicit fmd: FieldMetaData): ByteBuffer = {
+    // create the data block
+    val compressedBytes = (for {
+      value_? <- items.toArray map {
+        case o: Option[_] => o
+        case v => Option(v)
+      }
+      buf <- encodeValue(fmd, value_?).toArray
+      bytes <- buf.array()
+    } yield bytes).compressOrNah
+
+    // encode the items as a block
+    val block = allocate(2 * INT_BYTES + compressedBytes.length)
+    block.putInt(compressedBytes.length)
+    block.putInt(items.length)
+    block.put(compressedBytes)
+    block
+  }
+
   def encodeValue(fmd: FieldMetaData, value_? : Option[Any]): Option[ByteBuffer] = {
     value_? map {
-      case a: Array[_] =>
-        val bytes = a.flatMap(v => encodeValue(fmd, Option(v))).flatMap(_.array())
-        allocate(INT_BYTES + bytes.length).putInt(bytes.length).put(bytes)
+      case a: Array[_] => encodeSeq(a)(fmd)
       case b: java.math.BigDecimal =>
         val bytes = b.unscaledValue().toByteArray
         allocate(SHORT_BYTES * 2 + bytes.length).putShort(b.scale.toShort).putShort(bytes.length.toShort).put(bytes)
@@ -216,8 +255,6 @@ object ItemConversion extends Compression {
    * @param buf the given [[ByteBuffer]]
    */
   final implicit class CodecByteBufferExtensions(val buf: ByteBuffer) extends AnyVal {
-
-    @inline def getArray: Array[_] = ???
 
     @inline def getDate: java.util.Date = new java.util.Date(buf.getLong)
 

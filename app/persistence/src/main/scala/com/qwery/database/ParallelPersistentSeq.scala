@@ -87,7 +87,7 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     if(values.nonEmpty) values.max else Double.NaN
   }
 
-  override def readBlocks(offset: URID, numberOfBlocks: URID): Seq[(URID, ByteBuffer)] = {
+  override def readBlocks(offset: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {
     // determine the partitions we need to read from
     val mappings = getReadPartitionMappings(offset, numberOfBlocks)
 
@@ -98,7 +98,7 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     Await.result(outcome, Duration.Inf)
   }
 
-  override def readBytes(offset: URID, numberOfBlocks: URID): Array[Byte] = {
+  override def readBytes(offset: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
     // determine the partitions we need to read from
     val mappings = getReadPartitionMappings(offset, numberOfBlocks)
 
@@ -127,8 +127,8 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     }), Duration.Inf))
   }
 
-  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = {
-    case class Datum(partition: PersistentSeq[T], offset: URID, buf: ByteBuffer)
+  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
+    case class Datum(partition: PersistentSeq[T], offset: ROWID, buf: ByteBuffer)
 
     // determine the partitions we need to write to
     val results =
@@ -147,7 +147,7 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     this
   }
 
-  override def writeBytes(offset: URID, bytes: Array[Byte]): PersistentSeq[T] = writeBlocks(intoBlocks(offset, bytes))
+  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = writeBlocks(intoBlocks(offset, bytes))
 
   private def combine(files: Seq[PersistentSeq[T]]): PartitionedPersistentSeq[T] = {
     val that = new PartitionedPersistentSeq[T](partitionSize)
@@ -155,9 +155,9 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     that
   }
 
-  private def getReadPartitionMappings(offset: URID, numberOfBlocks: URID): Seq[(PersistentSeq[T], Seq[URID])] = {
+  private def getReadPartitionMappings(offset: ROWID, numberOfBlocks: ROWID): Seq[(PersistentSeq[T], Seq[ROWID])] = {
     // determine the partitions we need to read from
-    case class PartitionAndOffset(partition: PersistentSeq[T], offset: URID)
+    case class PartitionAndOffset(partition: PersistentSeq[T], offset: ROWID)
 
     (for {
       globalOffset <- offset to offset + numberOfBlocks

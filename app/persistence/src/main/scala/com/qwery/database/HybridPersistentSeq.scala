@@ -20,9 +20,9 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
     disk.close()
   }
 
-  override def length: URID = mem.length + disk.length
+  override def length: ROWID = mem.length + disk.length
 
-  override def shrinkTo(newSize: URID): PersistentSeq[T] = {
+  override def shrinkTo(newSize: ROWID): PersistentSeq[T] = {
     if (newSize < capacity) {
       mem.shrinkTo(newSize)
       disk.shrinkTo(0)
@@ -33,15 +33,15 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
 
   override protected def newDocument[A <: Product : ClassTag](): PersistentSeq[A] = new HybridPersistentSeq[A](capacity)
 
-  override def readBlock(offset: URID): ByteBuffer = {
+  override def readBlock(offset: ROWID): ByteBuffer = {
     if (offset < capacity) mem.readBlock(offset) else disk.readBlock(offset - capacity)
   }
 
-  override def readByte(offset: URID): Byte = {
+  override def readByte(offset: ROWID): Byte = {
     if (offset < capacity) mem.readByte(offset) else disk.readByte(offset - capacity)
   }
 
-  override def readBytes(offset: URID, numberOfBlocks: URID): Array[Byte] = {
+  override def readBytes(offset: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
     val _p0 = offset * recordSize
     val _p1 = _p0 + numberOfBlocks * recordSize
 
@@ -65,19 +65,24 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
     }
   }
 
-  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = {
+  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+    if (rowID < capacity) mem.readFragment(rowID, numberOfBytes, offset)
+    else disk.readFragment(rowID - capacity, numberOfBytes, offset)
+  }
+
+  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
     blocks foreach { case (offset, buf) =>
       writeBlock(offset, buf)
     }
     this
   }
 
-  override def writeByte(offset: URID, byte: URID): PersistentSeq[T] = {
+  override def writeByte(offset: ROWID, byte: ROWID): PersistentSeq[T] = {
     if (offset < capacity) mem.writeByte(offset, byte) else disk.writeByte(offset - capacity, byte)
     this
   }
 
-  override def writeBytes(offset: URID, bytes: Array[Byte]): PersistentSeq[T] = {
+  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
     val _p0 = offset * recordSize
     val _p1 = _p0 + bytes.length
 

@@ -6,4 +6,4 @@ case class StockQuoteWithID(@(ColumnInfo@field)(maxSize = 12) symbol: String,
                             @(ColumnInfo@field)(maxSize = 12) exchange: String,
                             lastSale: Double,
                             lastSaleTime: Long,
-                            _id: URID = 0)
+                            @(ColumnInfo@field)(isRowID = true) _id: ROWID = 0)

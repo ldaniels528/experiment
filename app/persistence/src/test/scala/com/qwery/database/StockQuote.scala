@@ -18,8 +18,8 @@ object StockQuote {
   private val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   @tailrec
-  def randomURID[A <: Product : ClassTag](coll: PersistentSeq[A]): URID = {
-    val offset: URID = random.nextInt(coll.length)
+  def randomURID[A <: Product : ClassTag](coll: PersistentSeq[A]): ROWID = {
+    val offset: ROWID = random.nextInt(coll.length)
     if (coll.getRowMetaData(offset).isDeleted) randomURID(coll) else offset
   }
 

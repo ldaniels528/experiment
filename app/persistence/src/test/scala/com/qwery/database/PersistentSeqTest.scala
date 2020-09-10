@@ -2,6 +2,7 @@ package com.qwery.database
 
 import java.io.File
 
+import com.qwery.database.ColumnTypes.{DoubleType, StringType}
 import com.qwery.database.StockQuote._
 import com.qwery.util.ServicingTools._
 import org.scalatest.funspec.AnyFunSpec
@@ -23,7 +24,7 @@ class PersistentSeqTest extends AnyFunSpec {
     PersistentSeq.builder[A]
       //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
       .withParallelism(ExecutionContext.global)
-      .withPartitions(partitionSize = 2500)
+      .withPartitions(partitionSize = 10001)
       .build
   }
 
@@ -50,9 +51,9 @@ class PersistentSeqTest extends AnyFunSpec {
       assert(items.count() == 1 + expectedCount)
     }
 
-    it("should retrieve one record with row metadata by its offset (_id)") {
-      val _id = randomURID(coll)
-      eval(f"coll.apply(${_id})", coll(_id))
+    it("should retrieve one record with row metadata by its offset (rowID)") {
+      val rowID = randomURID(coll)
+      eval(f"coll.apply($rowID)", coll(rowID))
     }
 
     it("should compute avg(lastSale)") {
@@ -73,18 +74,18 @@ class PersistentSeqTest extends AnyFunSpec {
       assert(count == 0)
     }
 
-    it("should test existence where: lastSale >= 500") {
-      val lastSale_lt_500 = eval("coll.exists(_.lastSale >= 500)", coll.exists(_.lastSale >= 500))
+    it("should test existence where: lastSale >= 950") {
+      val lastSale_lt_500 = eval("coll.exists(_.lastSale >= 950)", coll.exists(_.lastSale >= 950))
       assert(lastSale_lt_500)
     }
 
-    it("should filter for items where: lastSale <= 5") {
-      val items = eval("coll.filter(_.lastSale <= 5)", coll.filter(_.lastSale <= 5))
+    it("should filter for items where: lastSale < 100") {
+      val items = eval("coll.filter(_.lastSale < 100)", coll.filter(_.lastSale < 100))
       assert(items.nonEmpty)
     }
 
-    it("should filter for items where not: lastSale <= 5") {
-      val items = eval("coll.filterNot(_.lastSale <= 5)", coll.filterNot(_.lastSale <= 5))
+    it("should filter for items where not: lastSale < 100") {
+      val items = eval("coll.filterNot(_.lastSale < 100)", coll.filterNot(_.lastSale < 100))
       assert(items.nonEmpty)
     }
 
@@ -98,26 +99,36 @@ class PersistentSeqTest extends AnyFunSpec {
       assert(result)
     }
 
-    it("should retrieve one item by its offset (_id)") {
-      val _id = randomURID(coll)
-      val item_? = eval(f"coll.get(${_id})", coll.get(_id))
+    it("should retrieve one item by its offset (rowID)") {
+      val rowID = randomURID(coll)
+      val item_? = eval(f"coll.get($rowID)", coll.get(rowID))
       assert(item_?.nonEmpty)
     }
 
-    it("should retrieve one row by its offset (_id)") {
-      val _id = randomURID(coll)
-      val row = eval(f"coll.getRow(${_id})", coll.getRow(_id))
+    it("should read an individual field value (via column index)") {
+      val field = eval(f"coll.getField(rowID = 0, columnIndex = 0)", coll.getField(rowID = 0, columnIndex = 0))
+      assert(field.metadata.`type` == StringType)
+    }
 
-      logger.info(s"_id: \t ${row._id}")
+    it("should read an individual field value (via column name)") {
+      val field = eval(f"coll.getField(rowID = 0, column = 'lastSale)", coll.getField(rowID = 0, column = 'lastSale))
+      assert(field.metadata.`type` == DoubleType)
+    }
+
+    it("should retrieve one row by its offset (rowID)") {
+      val rowID = randomURID(coll)
+      val row = eval(f"coll.getRow($rowID)", coll.getRow(rowID))
+
+      logger.info(s"rowID: \t ${row.rowID}")
       logger.info(s"metadata: \t ${row.metadata}")
       row.fields.zipWithIndex foreach { case (field, index) =>
         logger.info(f"[$index%02d]: \t ${field.name} - ${field.metadata}")
       }
     }
 
-    it("should retrieve one row metadata by its offset (_id)") {
-      val _id = randomURID(coll)
-      val rmd = eval(f"coll.getRowMetaData(${_id})", coll.getRowMetaData(_id))
+    it("should retrieve one row metadata by its offset (rowID)") {
+      val rowID = randomURID(coll)
+      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.getRowMetaData(rowID))
       logger.info(s"rmd => $rmd")
     }
 
@@ -166,7 +177,7 @@ class PersistentSeqTest extends AnyFunSpec {
       }
 
       val items = eval("""ps.loadTextFile(new File("./responses.csv")) { ... }""", doIt())
-      items.zipWithIndex({ (item, _) => item }).take(5).foreach(item => logger.info(f"[${item._id}%04d] $item"))
+      items.zipWithIndex.take(5).foreach { case (item, index) => logger.info(f"[${index + 1}%04d] $item") }
     }
 
     it("should compute max(lastSale)") {
@@ -204,10 +215,10 @@ class PersistentSeqTest extends AnyFunSpec {
       assert(recordSize == 65)
     }
 
-    it("should remove records by its offset (_id)") {
-      val _id = randomURID(coll)
+    it("should remove records by its offset (rowID)") {
+      val rowID = randomURID(coll)
       val before = coll.count()
-      eval(f"coll.remove(${_id})", coll.remove(_id))
+      eval(f"coll.remove($rowID)", coll.remove(rowID))
       val after = coll.count()
       assert(before - after == 1)
     }
@@ -254,8 +265,8 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should swap the position of two rows") {
       if (coll.nonEmpty) {
-        val offset1: URID = randomURID(coll)
-        val offset2: URID = randomURID(coll)
+        val offset1: ROWID = randomURID(coll)
+        val offset2: ROWID = randomURID(coll)
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"BEFORE: $item"))
         eval(s"coll.swap($offset1, $offset2)", coll.swap(offset1, offset2))
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"AFTER: $item"))

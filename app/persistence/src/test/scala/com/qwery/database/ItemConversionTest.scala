@@ -1,7 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.ColumnTypes._
-import com.qwery.database.ItemConversionTest.PixAllData
+import com.qwery.database.ItemConversionTest.GenericData
 import com.qwery.database.PersistentSeq.Field
 import org.scalatest.funspec.AnyFunSpec
 
@@ -9,12 +9,12 @@ import org.scalatest.funspec.AnyFunSpec
  * Product Helper Test Suite
  */
 class ItemConversionTest extends AnyFunSpec {
-  private val productConversion = PersistentSeq[PixAllData]()
+  private val productConversion = PersistentSeq[GenericData]()
 
-  describe(classOf[ItemConversion[PixAllData]].getSimpleName) {
+  describe(classOf[ItemConversion[GenericData]].getSimpleName) {
 
     it("should extract values from a product class") {
-      val data = PixAllData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087L)
+      val data = GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087L)
       val values = productConversion.toKeyValues(data)
       assert(values == Seq(
         "idValue" -> Some("Hello"),
@@ -34,7 +34,7 @@ class ItemConversionTest extends AnyFunSpec {
         Field(name = "responseTime", fmd.copy(`type` = IntType), Some(307)),
         Field(name = "reportDate", fmd.copy(`type` = LongType), Some(java.sql.Date.valueOf("2020-06-15").getTime))
       ))
-      assert(data == PixAllData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
+      assert(data == GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
     }
 
   }
@@ -48,10 +48,10 @@ object ItemConversionTest {
 
   import scala.annotation.meta.field
 
-  case class PixAllData(@(ColumnInfo@field)(maxSize = 5) idValue: String,
-                        @(ColumnInfo@field)(maxSize = 5) idType: String,
-                        responseTime: Int,
-                        reportDate: Long,
-                        _id: Long = 0L)
+  case class GenericData(@(ColumnInfo@field)(maxSize = 5) idValue: String,
+                         @(ColumnInfo@field)(maxSize = 5) idType: String,
+                         responseTime: Int,
+                         reportDate: Long,
+                         _id: Long = 0L)
 
 }

@@ -3,9 +3,9 @@ package com.qwery
 import java.nio.ByteBuffer
 
 package object database {
-  type Block = (URID, ByteBuffer)
+  type Block = (ROWID, ByteBuffer)
   type KeyValue = (String, Option[Any])
-  type URID = Int
+  type ROWID = Int
 
   // byte quantities
   val ONE_BYTE = 1
@@ -56,7 +56,7 @@ package object database {
 
   final implicit class MathUtilsLong(val number: Long) extends AnyVal {
 
-    def toURID: URID = number.toInt
+    def toURID: ROWID = number.toInt
 
     def isPrime: Boolean = number match {
       case n if n < 2 => false

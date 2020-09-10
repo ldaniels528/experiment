@@ -23,24 +23,29 @@ trait Column {
   def maxLength: Int
 
   /**
-   * @return indicates whether this column is to be automatically compressed
+   * @return true if the column is to be automatically compressed
    */
   def isCompressed: Boolean
 
   /**
-   * @return indicates whether column is to be automatically encrypted
+   * @return true if the column is to be automatically encrypted
    */
   def isEncrypted: Boolean
 
   /**
-   * @return indicates whether column may contain nulls
+   * @return true if the column may contain nulls
    */
   def isNullable: Boolean
 
   /**
-   * @return indicates whether this column is a primary key
+   * @return true if the column is a primary key
    */
   def isPrimary: Boolean
+
+  /**
+   * @return true if the column is an offset/row identifier
+   */
+  def isRowID: Boolean
 
   override def toString: String =
     f"""|${getClass.getSimpleName}(
@@ -49,6 +54,7 @@ trait Column {
         |isEncrypted=$isEncrypted,
         |isNullable=$isNullable,
         |isPrimary=$isPrimary,
+        |isRowID=$isRowID,
         |maxLength=$maxLength,
         |type=${`type`}
         |)""".stripMargin.split("\n").mkString
@@ -65,10 +71,11 @@ object Column {
    * @param name         the name of the column
    * @param `type`       the [[ColumnTypes.ColumnType type]] of the column
    * @param maxSize      the optional maximum length of the column
-   * @param isCompressed indicates whether this column is to be automatically compressed
-   * @param isEncrypted  indicates whether this column is to be automatically encrypted
-   * @param isNullable   indicates whether column may contain nulls
-   * @param isPrimary    indicates whether this column is a primary key
+   * @param isCompressed true if the column is to be automatically compressed
+   * @param isEncrypted  true if the column is to be automatically encrypted
+   * @param isNullable   true if the column may contain nulls
+   * @param isPrimary    true if the column is a primary key
+   * @param isRowID      true if the column is an offset/row identifier
    * @return a new [[Column]]
    */
   def apply(name: String,
@@ -77,19 +84,20 @@ object Column {
             isCompressed: Boolean,
             isEncrypted: Boolean,
             isNullable: Boolean,
-            isPrimary: Boolean): Column = {
+            isPrimary: Boolean,
+            isRowID: Boolean): Column = {
     val maxLength: Int = (`type`.getFixedLength ?? maxSize.map(_ + SHORT_BYTES)).map(_ + STATUS_BYTE)
       .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${`type`}"))
-    DefaultColumn(name, `type`, maxLength, isCompressed, isEncrypted, isNullable, isPrimary)
+    DefaultColumn(name, `type`, maxLength, isCompressed, isEncrypted, isNullable, isPrimary, isRowID)
   }
 
   /**
    * Unwraps the column
-   * @param column the [[Column]]
+   * @param col the [[Column column]]
    * @return the option of the extracted values
    */
-  def unapply(column: Column): Option[(String, ColumnTypes.ColumnType, Int, Boolean, Boolean, Boolean)] = {
-    Some((column.name, column.`type`, column.maxLength, column.isCompressed, column.isEncrypted, column.isPrimary))
+  def unapply(col: Column): Option[(String, ColumnTypes.ColumnType, Int, Boolean, Boolean, Boolean, Boolean)] = {
+    Some((col.name, col.`type`, col.maxLength, col.isCompressed, col.isEncrypted, col.isPrimary, col.isRowID))
   }
 
   /**
@@ -97,10 +105,11 @@ object Column {
    * @param name         the name of the column
    * @param `type`       the [[ColumnTypes.ColumnType type]] of the column
    * @param maxLength    the maximum length of the column
-   * @param isCompressed indicates whether this column is to be automatically compressed
-   * @param isEncrypted  indicates whether this column is to be automatically encrypted
-   * @param isNullable   indicates whether column may contain nulls
-   * @param isPrimary    indicates whether this column is a primary key
+   * @param isCompressed true if the column is to be automatically compressed
+   * @param isEncrypted  true if the column is to be automatically encrypted
+   * @param isNullable   true if the column may contain nulls
+   * @param isPrimary    true if the column is a primary key
+   * @param isRowID      true if the column is an offset/row identifier
    */
   case class DefaultColumn(name: String,
                            `type`: ColumnTypes.ColumnType,
@@ -108,6 +117,7 @@ object Column {
                            isCompressed: Boolean,
                            isEncrypted: Boolean,
                            isNullable: Boolean,
-                           isPrimary: Boolean) extends Column
+                           isPrimary: Boolean,
+                           isRowID: Boolean) extends Column
 
 }

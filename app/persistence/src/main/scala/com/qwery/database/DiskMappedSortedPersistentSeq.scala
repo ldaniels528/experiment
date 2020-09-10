@@ -43,7 +43,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
   override def descending: Stream[T] = if (nonEmpty) sortDescending() else Stream.empty
 
   override def foreach[U](f: T => U): Unit = {
-    def recurse(offset: URID, f: T => U): Unit = {
+    def recurse(offset: ROWID, f: T => U): Unit = {
       val node_? = readNode(offset)
       if (node_?.nonEmpty) {
         node_?.foreach(node => recurse(node.left, f))
@@ -58,7 +58,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
 
   override def lastOption: Option[T] = max(offset = 0)
 
-  def length: URID = {
+  def length: ROWID = {
     val eof = raf.length()
     ((eof / recordSize) + Math.min(1, eof % recordSize)).toURID
   }
@@ -75,14 +75,14 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     if (list.size < nth) None else list.lastOption
   }
 
-  private def sortAscending(offset: URID = 0): Stream[T] = {
+  private def sortAscending(offset: ROWID = 0): Stream[T] = {
     if (offset == Null) Stream.empty else {
       val node = getNode(offset)
       sortAscending(node.left) #::: node.item #:: sortAscending(node.right)
     }
   }
 
-  private def sortDescending(offset: URID = 0): Stream[T] = {
+  private def sortDescending(offset: ROWID = 0): Stream[T] = {
     if (offset == Null) Stream.empty else {
       val node = getNode(offset)
       sortAscending(node.right) #::: node.item #:: sortAscending(node.left)
@@ -99,7 +99,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     }
   }
 
-  private def getNode(offset: URID): BSTNode[T] = {
+  private def getNode(offset: ROWID): BSTNode[T] = {
     val bytes = new Array[Byte](recordSize)
     raf.seek(offset * recordSize)
     raf.read(bytes)
@@ -110,30 +110,30 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     writeNode(node.offset, node = if (isLeft) node.copy(left = createNode(item)) else node.copy(right = createNode(item)))
   }
 
-  private def createNode(item: T): URID = {
+  private def createNode(item: T): ROWID = {
     val offset = length
     writeNode(offset, BSTNode[T](offset, item))
     offset
   }
 
-  private def max(offset: URID): Option[T] = {
+  private def max(offset: ROWID): Option[T] = {
     val node_? = readNode(offset)
     if (node_?.isEmpty) None else node_?.flatMap(node => max(node.right)) ?? node_?.map(_.item) ?? node_?.flatMap(node => max(node.left))
   }
 
-  private def min(offset: URID): Option[T] = {
+  private def min(offset: ROWID): Option[T] = {
     val node_? = readNode(offset)
     if (node_?.isEmpty) None else node_?.flatMap(node => max(node.left)) ?? node_?.map(_.item) ?? node_?.flatMap(node => max(node.right))
   }
 
-  private def readNode(offset: URID): Option[BSTNode[T]] = {
+  private def readNode(offset: ROWID): Option[BSTNode[T]] = {
     val bytes = new Array[Byte](recordSize)
     raf.seek(offset * recordSize)
     raf.read(bytes)
     toNode(offset, bytes)
   }
 
-  private def writeNode(offset: URID, node: BSTNode[T]): Unit = {
+  private def writeNode(offset: ROWID, node: BSTNode[T]): Unit = {
     raf.seek(offset * recordSize)
     raf.write(toBytes(node))
   }
@@ -147,7 +147,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     buf.array()
   }
 
-  private def toNode(offset: URID, bytes: Array[Byte], evenDeletes: Boolean = false): Option[BSTNode[T]] = {
+  private def toNode(offset: ROWID, bytes: Array[Byte], evenDeletes: Boolean = false): Option[BSTNode[T]] = {
     val buf = wrap(bytes)
     val rmd = buf.getRowMetaData
     if (rmd.isDeleted && !evenDeletes) None
@@ -166,6 +166,6 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
 object DiskMappedSortedPersistentSeq {
   private val Null = -1
 
-  case class BSTNode[T](offset: URID, item: T, left: URID = Null, right: URID = Null)
+  case class BSTNode[T](offset: ROWID, item: T, left: ROWID = Null, right: ROWID = Null)
 
 }

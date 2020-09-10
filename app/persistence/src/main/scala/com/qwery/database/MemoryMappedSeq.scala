@@ -12,36 +12,43 @@ import scala.reflect.ClassTag
 class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends PersistentSeq[T] {
   private val _capacity = capacity * recordSize
   private val raf = new Array[Byte](_capacity)
-  private var limit: URID = 0
+  private var limit: ROWID = 0
 
   override def close(): Unit = ()
 
-  override def length: URID = ((limit / recordSize) + Math.min(1, limit % recordSize)).toURID
+  override def length: ROWID = ((limit / recordSize) + Math.min(1, limit % recordSize)).toURID
 
   override protected def newDocument[A <: Product : ClassTag](): PersistentSeq[A] = new MemoryMappedSeq[A](capacity)
 
-  override def shrinkTo(newSize: URID): PersistentSeq[T] = {
+  override def shrinkTo(newSize: ROWID): PersistentSeq[T] = {
     if (newSize >= 0 && newSize < limit) limit = newSize * recordSize
     this
   }
 
-  override def readBlock(offset: URID): ByteBuffer = {
+  override def readBlock(offset: ROWID): ByteBuffer = {
     val p0 = offset * recordSize
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(raf, p0, bytes, 0,  bytes.length)
     wrap(bytes)
   }
 
-  override def readByte(offset: URID): Byte = raf(offset * recordSize)
+  override def readByte(offset: ROWID): Byte = raf(offset * recordSize)
 
-  override def readBytes(offset: URID, numberOfBlocks: URID): Array[Byte] = {
+  override def readBytes(offset: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
     val p0 = offset * recordSize
     val bytes = new Array[Byte](numberOfBlocks * recordSize)
     System.arraycopy(raf, p0, bytes, 0,  bytes.length)
     bytes
   }
 
-  override def writeBytes(offset: URID, bytes: Array[Byte]): PersistentSeq[T] = {
+  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+    val p0 = rowID * recordSize + offset
+    val bytes = new Array[Byte](numberOfBytes)
+    System.arraycopy(raf, p0, bytes, 0,  bytes.length)
+    bytes
+  }
+
+  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
     val required = offset * recordSize + bytes.length
     if (required > _capacity) throw new IllegalStateException(s"Maximum capacity exceeded ($required > ${_capacity}) [capacity: $capacity, recordSize: $recordSize]")
     else {
@@ -51,7 +58,7 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
     }
   }
 
-  override def writeByte(offset: URID, byte: Int): PersistentSeq[T] = {
+  override def writeByte(offset: ROWID, byte: Int): PersistentSeq[T] = {
     val required = offset * recordSize + 1
     if (required > _capacity) throw new IllegalStateException(s"Maximum capacity exceeded ($required > $capacity)")
     else {
@@ -61,7 +68,7 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
     }
   }
 
-  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = {
+  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
     blocks foreach { case (offset, buf) =>
       writeBlock(offset, buf)
     }

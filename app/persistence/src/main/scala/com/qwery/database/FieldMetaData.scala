@@ -1,7 +1,6 @@
 package com.qwery.database
 
 import com.qwery.database.FieldMetaData._
-import com.qwery.database.PersistentSeq.Field
 
 /**
  * Represents the metadata of a field stored in the database.
@@ -68,16 +67,6 @@ object FieldMetaData {
     isNotNull = true,
     `type` = column.`type`
   )
-
-  /**
-   * A template for generating read-only row "_id" fields
-   */
-  def _idField(offset: URID): Field = Field(name = "_id", value = Some(offset), metadata = FieldMetaData(
-    isCompressed = false,
-    isEncrypted = false,
-    isNotNull = true,
-    `type` = ColumnTypes.LongType
-  ))
 
   /**
    * Decodes the metadata byte into a [[FieldMetaData metadata]]

@@ -33,7 +33,8 @@ object ColumnTypes extends Enumeration {
       case c if c == classOf[Option[_]] =>
         typeOf[A] match {
           case t if t =:= typeOf[Option[Int]] => IntType
-          case t if t =:= typeOf[Option[Long]] => LongType
+          case t if t =:= typeOf[Option[Long]] | t =:= typeOf[Option[java.lang.Long]] => LongType
+          case t if t =:= typeOf[Option[String]] => StringType
           case t => throw new IllegalArgumentException(s"Unrecognized type '${c.getName}:${t.erasure}'")
         }
       case c if c.isArray => ArrayType

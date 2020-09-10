@@ -22,36 +22,43 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
 
   override def close(): Unit = raf.close()
 
-  override def length: URID = {
+  override def length: ROWID = {
     val eof = raf.length()
     ((eof / recordSize) + Math.min(1, eof % recordSize)).toURID
   }
 
-  override def shrinkTo(newSize: URID): PersistentSeq[T] = {
+  override def shrinkTo(newSize: ROWID): PersistentSeq[T] = {
     if (newSize >= 0 && newSize < raf.length()) raf.setLength(newSize * recordSize)
     this
   }
 
-  override def readBlock(offset: URID): ByteBuffer = {
+  override def readBlock(offset: ROWID): ByteBuffer = {
     val payload = new Array[Byte](recordSize)
     raf.seek(offset * recordSize)
     raf.read(payload)
     wrap(payload)
   }
 
-  override def readByte(offset: URID): Byte = {
+  override def readByte(offset: ROWID): Byte = {
     raf.seek(offset * recordSize)
     raf.read().toByte
   }
 
-  override  def readBytes(offset: URID, numberOfBlocks: Int = 1): Array[Byte] = {
+  override def readBytes(offset: ROWID, numberOfBlocks: Int = 1): Array[Byte] = {
     val payload = new Array[Byte](recordSize * numberOfBlocks)
     raf.seek(offset * recordSize)
     raf.read(payload)
     payload
   }
 
-  override def writeBlocks(blocks: Seq[(URID, ByteBuffer)]): PersistentSeq[T] = {
+  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+    val bytes = new Array[Byte](numberOfBytes)
+    raf.seek(rowID * recordSize + offset)
+    raf.read(bytes)
+    bytes
+  }
+
+  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
     blocks foreach { case (offset, buf) =>
       raf.seek(offset * recordSize)
       raf.write(buf.array())
@@ -59,13 +66,13 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     this
   }
 
-  override def writeByte(offset: URID, byte: Int): PersistentSeq[T] = {
+  override def writeByte(offset: ROWID, byte: Int): PersistentSeq[T] = {
     raf.seek(offset * recordSize)
     raf.write(byte)
     this
   }
 
-  override def writeBytes(offset: URID, bytes: Array[Byte]): PersistentSeq[T] = {
+  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
     raf.seek(offset * recordSize)
     raf.write(bytes)
     this

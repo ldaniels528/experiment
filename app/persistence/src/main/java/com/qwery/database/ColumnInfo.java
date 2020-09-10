@@ -12,8 +12,13 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.PARAMETER, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface ColumnInfo {
 
+    boolean isRowID() default false;
+
     boolean isNullable() default true;
 
+    /**
+     * For future-use
+     */
     boolean isPrimary() default false;
 
     boolean isCompressed() default false;
