@@ -4,7 +4,6 @@ import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer.{allocate, wrap}
 
 import com.qwery.database.DiskMappedSortedPersistentSeq.BSTNode
-import com.qwery.database.ItemConversion.CodecByteBufferExtensions
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 import scala.annotation.tailrec

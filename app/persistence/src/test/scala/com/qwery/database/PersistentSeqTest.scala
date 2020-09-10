@@ -19,30 +19,34 @@ class PersistentSeqTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val expectedCount: Int = 1e+5.toInt
 
-  def newCollection[A <: Product : ClassTag]: PersistentSeq[A] = {
-    // 50K: 4.098s(m), 7.686s(hp), 15.765s(pd), 11.235s(d)
+  def newCollection[A <: Product : ClassTag](partitionSize: Int): PersistentSeq[A] = {
     PersistentSeq.builder[A]
       //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
-      .withParallelism(ExecutionContext.global)
-      .withPartitions(partitionSize = 10001)
+      //.withParallelism(ExecutionContext.global)
+      .withPartitions(partitionSize = partitionSize)
       .build
   }
 
-  private val coll = newCollection[StockQuote]
-  private val stocks: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
+  private val coll = newCollection[StockQuote](partitionSize = expectedCount / 25)
+  private val stockList: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
   private val bonjourStock = randomQuote.copy(symbol = "BELLE")
+  private val stocks4 = Array(
+    StockQuote(symbol = "BXXG", exchange = "NASDAQ", lastSale = 147.63, lastSaleTime = 1596317591000L),
+    StockQuote(symbol = "KFFQ", exchange = "NYSE", lastSale = 22.92, lastSaleTime = 1597181591000L),
+    StockQuote(symbol = "GTKK", exchange = "NASDAQ", lastSale = 240.14, lastSaleTime = 1596835991000L),
+    StockQuote(symbol = "KNOW", exchange = "OTCBB", lastSale = 357.21, lastSaleTime = 1597872791000L)
+  )
 
   describe(classOf[PersistentSeq[_]].getSimpleName) {
+    logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
 
     it("should start with an empty collection") {
-      logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
-
       val items = eval("coll.clear()", coll.clear())
       assert(items.isEmpty)
     }
 
     it("should append a collection of items to the collection") {
-     val items = eval("coll.append(Seq(..))", coll.append(stocks))
+     val items = eval("coll.append(Seq(..))", coll.append(stockList))
       assert(items.count() == expectedCount)
     }
 
@@ -133,8 +137,10 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should retrieve the first item (sequentially) from the collection") {
+      val coll = newCollection[StockQuote](partitionSize = 1)
+      coll ++= stocks4
       val item_? = eval("coll.headOption", coll.headOption)
-      assert(item_?.nonEmpty)
+      assert(item_?.contains(stocks4.head))
     }
 
     it("""should find index where: symbol == "XXX"""") {
@@ -156,8 +162,10 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should retrieve the last item (sequentially) from the collection") {
+      val coll = newCollection[StockQuote](partitionSize = 1)
+      coll ++= stocks4
       val item_? = eval("coll.lastOption", coll.lastOption)
-      assert(item_?.nonEmpty)
+      assert(item_?.contains(stocks4.last))
     }
 
     it("should retrieve the file length") {
@@ -167,7 +175,7 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("loads items from text files") {
       def doIt(): PersistentSeq[StockQuoteWithID] = {
-        newCollection[StockQuoteWithID].loadTextFile(new File("./stocks.csv")) {
+        newCollection[StockQuoteWithID](partitionSize = 10).loadTextFile(new File("./stocks.csv")) {
           _.split("[,]") match {
             case Array(symbol, exchange, price, date) =>
               Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
@@ -177,7 +185,7 @@ class PersistentSeqTest extends AnyFunSpec {
       }
 
       val items = eval("""ps.loadTextFile(new File("./responses.csv")) { ... }""", doIt())
-      items.zipWithIndex.take(5).foreach { case (item, index) => logger.info(f"[${index + 1}%04d] $item") }
+      items.filter(_.lastSale > 500).zipWithIndex.take(5).foreach { case (item, index) => logger.info(f"[${index + 1}%04d] $item") }
     }
 
     it("should compute max(lastSale)") {
@@ -234,12 +242,13 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should reverse the collection") {
       val items = eval("coll.reverse", coll.reverse)
+      assert(items.lastOption == coll.headOption)
       assert(items.headOption == coll.lastOption)
     }
 
     it("should produce a reverse iterator") {
       val it = eval("coll.reverseIterator", coll.reverseIterator)
-      assert(it.nonEmpty)
+      assert(it.hasNext)
     }
 
     it("should reverse the collection (in place)") {
@@ -256,7 +265,7 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should sort the collection") {
       val items = eval("coll.sortBy(_.symbol)", coll.sortBy(_.symbol))
-      for (item <- items.take(0, 5)) info(item.toString)
+      for (item <- items.slice(0, 5)) info(item.toString)
     }
 
     it("should compute sum(lastSale)") {

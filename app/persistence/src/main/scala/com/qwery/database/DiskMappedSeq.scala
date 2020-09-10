@@ -32,21 +32,21 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     this
   }
 
-  override def readBlock(offset: ROWID): ByteBuffer = {
+  override def readBlock(rowID: ROWID): ByteBuffer = {
     val payload = new Array[Byte](recordSize)
-    raf.seek(offset * recordSize)
+    raf.seek(rowID * recordSize)
     raf.read(payload)
     wrap(payload)
   }
 
-  override def readByte(offset: ROWID): Byte = {
-    raf.seek(offset * recordSize)
+  override def readByte(rowID: ROWID): Byte = {
+    raf.seek(rowID * recordSize)
     raf.read().toByte
   }
 
-  override def readBytes(offset: ROWID, numberOfBlocks: Int = 1): Array[Byte] = {
+  override def readBytes(rowID: ROWID, numberOfBlocks: Int = 1): Array[Byte] = {
     val payload = new Array[Byte](recordSize * numberOfBlocks)
-    raf.seek(offset * recordSize)
+    raf.seek(rowID * recordSize)
     raf.read(payload)
     payload
   }
@@ -66,14 +66,14 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     this
   }
 
-  override def writeByte(offset: ROWID, byte: Int): PersistentSeq[T] = {
-    raf.seek(offset * recordSize)
+  override def writeByte(rowID: ROWID, byte: Int): PersistentSeq[T] = {
+    raf.seek(rowID * recordSize)
     raf.write(byte)
     this
   }
 
-  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
-    raf.seek(offset * recordSize)
+  override def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
+    raf.seek(rowID * recordSize)
     raf.write(bytes)
     this
   }

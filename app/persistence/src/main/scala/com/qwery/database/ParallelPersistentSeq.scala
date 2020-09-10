@@ -22,8 +22,6 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
    if (values.nonEmpty) values.sum / values.length else Double.NaN
   }
 
-  override def count(): Int = countRows(_.isActive)
-
   override def count(predicate: T => Boolean): Int = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.count(predicate))
@@ -36,14 +34,14 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     }).map(_.sum), Duration.Inf)
   }
 
-  override def filter(predicate: T => Boolean): PersistentSeq[T] = {
+  override def filter(predicate: T => Boolean): Stream[T] = {
     combine(Await.result(Future.sequence(partitions map { partition =>
       Future(partition.filter(predicate))
     }), Duration.Inf))
   }
 
-  override def filterNot(predicate: T => Boolean): PersistentSeq[T] = {
-    combine(files = Await.result(Future.sequence(partitions map { partition =>
+  override def filterNot(predicate: T => Boolean): Stream[T] = {
+    combine(Await.result(Future.sequence(partitions map { partition =>
       Future(partition.filterNot(predicate))
     }), Duration.Inf))
   }
@@ -77,19 +75,19 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     val values = Await.result(Future.sequence(partitions map { partition =>
       Future(partition.min(predicate))
     }), Duration.Inf)
-    if(values.nonEmpty) values.min else Double.NaN
+    if (values.nonEmpty) values.min else Double.NaN
   }
 
   override def max(predicate: T => Double): Double = {
     val values = Await.result(Future.sequence(partitions map { partition =>
       Future(partition.max(predicate))
     }), Duration.Inf)
-    if(values.nonEmpty) values.max else Double.NaN
+    if (values.nonEmpty) values.max else Double.NaN
   }
 
-  override def readBlocks(offset: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {
+  override def readBlocks(rowID: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {
     // determine the partitions we need to read from
-    val mappings = getReadPartitionMappings(offset, numberOfBlocks)
+    val mappings = getReadPartitionMappings(rowID, numberOfBlocks)
 
     // asynchronously read the blocks
     val outcome = Future.sequence(mappings map { case (partition, offsets) =>
@@ -98,9 +96,9 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     Await.result(outcome, Duration.Inf)
   }
 
-  override def readBytes(offset: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
+  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
     // determine the partitions we need to read from
-    val mappings = getReadPartitionMappings(offset, numberOfBlocks)
+    val mappings = getReadPartitionMappings(rowID, numberOfBlocks)
 
     // asynchronously read the bytes
     val outcome = Future.sequence(mappings map { case (partition, offsets) =>
@@ -115,16 +113,17 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     }).map(_.sum), Duration.Inf)
   }
 
-  override def reverse: PersistentSeq[T] = {
-    combine(files = Await.result(Future.sequence(partitions map { partition =>
+  override def reverse: Stream[T] = {
+    combine(Await.result(Future.sequence(partitions map { partition =>
       Future(partition.reverse)
     }), Duration.Inf))
   }
 
   override def reverseInPlace(): PersistentSeq[T] = {
-    combine(files = Await.result(Future.sequence(partitions map { partition =>
+    Await.result(Future.sequence(partitions map { partition =>
       Future(partition.reverseInPlace())
-    }), Duration.Inf))
+    }), Duration.Inf)
+    this
   }
 
   override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
@@ -147,12 +146,13 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     this
   }
 
-  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = writeBlocks(intoBlocks(offset, bytes))
+  override def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T] = writeBlocks(intoBlocks(rowID, bytes))
 
-  private def combine(files: Seq[PersistentSeq[T]]): PartitionedPersistentSeq[T] = {
-    val that = new PartitionedPersistentSeq[T](partitionSize)
-    files.filter(_.nonEmpty).foreach(that.addPartition)
-    that
+
+  private def combine(list: List[Stream[T]]): Stream[T] = {
+    list.foldLeft(Stream.empty[T]){ (combined, stream) =>
+      stream #::: combined
+    }
   }
 
   private def getReadPartitionMappings(offset: ROWID, numberOfBlocks: ROWID): Seq[(PersistentSeq[T], Seq[ROWID])] = {

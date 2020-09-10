@@ -25,17 +25,17 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
     this
   }
 
-  override def readBlock(offset: ROWID): ByteBuffer = {
-    val p0 = offset * recordSize
+  override def readBlock(rowID: ROWID): ByteBuffer = {
+    val p0 = rowID * recordSize
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(raf, p0, bytes, 0,  bytes.length)
     wrap(bytes)
   }
 
-  override def readByte(offset: ROWID): Byte = raf(offset * recordSize)
+  override def readByte(rowID: ROWID): Byte = raf(rowID * recordSize)
 
-  override def readBytes(offset: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
-    val p0 = offset * recordSize
+  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
+    val p0 = rowID * recordSize
     val bytes = new Array[Byte](numberOfBlocks * recordSize)
     System.arraycopy(raf, p0, bytes, 0,  bytes.length)
     bytes
@@ -48,22 +48,22 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
     bytes
   }
 
-  override def writeBytes(offset: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
-    val required = offset * recordSize + bytes.length
+  override def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
+    val required = rowID * recordSize + bytes.length
     if (required > _capacity) throw new IllegalStateException(s"Maximum capacity exceeded ($required > ${_capacity}) [capacity: $capacity, recordSize: $recordSize]")
     else {
-      System.arraycopy(bytes, 0, raf, offset * recordSize, bytes.length)
+      System.arraycopy(bytes, 0, raf, rowID * recordSize, bytes.length)
       limit = Math.max(limit, required)
       this
     }
   }
 
-  override def writeByte(offset: ROWID, byte: Int): PersistentSeq[T] = {
-    val required = offset * recordSize + 1
+  override def writeByte(rowID: ROWID, byte: Int): PersistentSeq[T] = {
+    val required = rowID * recordSize + 1
     if (required > _capacity) throw new IllegalStateException(s"Maximum capacity exceeded ($required > $capacity)")
     else {
-      raf(offset * recordSize) = byte.toByte
-      limit = Math.max(limit, offset * recordSize + 1)
+      raf(rowID * recordSize) = byte.toByte
+      limit = Math.max(limit, rowID * recordSize + 1)
       this
     }
   }

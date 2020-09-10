@@ -1,6 +1,5 @@
 package com.qwery.database
 
-import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 import java.util.UUID
@@ -248,53 +247,6 @@ object ItemConversion extends Compression {
       case u: UUID => allocate(LONG_BYTES * 2).putLong(u.getMostSignificantBits).putLong(u.getLeastSignificantBits)
       case v => throw new IllegalArgumentException(s"Unrecognized type '${v.getClass.getSimpleName}' ($v)")
     }
-  }
-
-  /**
-   * Codec ByteBuffer Extensions
-   * @param buf the given [[ByteBuffer]]
-   */
-  final implicit class CodecByteBufferExtensions(val buf: ByteBuffer) extends AnyVal {
-
-    @inline def getDate: java.util.Date = new java.util.Date(buf.getLong)
-
-    @inline def putDate(date: java.util.Date): ByteBuffer = buf.putLong(date.getTime)
-
-    @inline def getFieldMetaData: FieldMetaData = FieldMetaData.decode(buf.get)
-
-    @inline def putFieldMetaData(fmd: FieldMetaData): ByteBuffer = buf.put(fmd.encode.toByte)
-
-    @inline def getRowMetaData: RowMetaData = RowMetaData.decode(buf.get)
-
-    @inline def putRowMetaData(rmd: RowMetaData): ByteBuffer = buf.put(rmd.encode.toByte)
-
-    def getBigDecimal: java.math.BigDecimal = {
-      val (scale, length) = (buf.getShort, buf.getShort)
-      val bytes = new Array[Byte](length)
-      buf.get(bytes)
-      new java.math.BigDecimal(new BigInteger(bytes), scale)
-    }
-
-    def getBigInteger: BigInteger = {
-      val length = buf.getShort
-      val bytes = new Array[Byte](length)
-      buf.get(bytes)
-      new BigInteger(bytes)
-    }
-
-    def getString(implicit fmd: FieldMetaData): String = {
-      val length = buf.getShort
-      val bytes = new Array[Byte](length)
-      buf.get(bytes)
-      new String(bytes.decompressOrNah(fmd))
-    }
-
-    def getUUID: UUID = {
-      val bytes = new Array[Byte](16)
-      buf.get(bytes)
-      UUID.nameUUIDFromBytes(bytes)
-    }
-
   }
 
 }
