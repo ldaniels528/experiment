@@ -41,33 +41,9 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
     if (rowID < capacity) mem.readByte(rowID) else disk.readByte(rowID - capacity)
   }
 
-  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
-    val _p0 = rowID * recordSize
-    val _p1 = _p0 + numberOfBlocks * recordSize
-
-    // should it all come from memory? | p0 < p1 < _capacity |
-    if (_p1 <= _capacity) mem.readBytes(rowID, numberOfBlocks)
-
-    // should it all come from disk? | _capacity < p0 < p1 |
-    else if (_p0 >= _capacity) disk.readBytes(rowID - capacity, numberOfBlocks)
-
-    // it's complicated... | p0 < _capacity < p1 |
-    else {
-      // compute the distribution
-      val (m0, m1) = (rowID, capacity)
-      val (d0, d1) = (capacity, m0 + numberOfBlocks)
-      val (mLen, dLen) = (m1 - m0, d1 - d0)
-
-      // copy the data
-      val buf0 = if (mLen > 0) mem.readBytes(m0, mLen) else emptyArray
-      val buf1 = if (dLen > 0) disk.readBytes(d0 - capacity, dLen) else emptyArray
-      ByteBuffer.allocate(buf0.length + buf1.length).put(buf0).put(buf1).array()
-    }
-  }
-
-  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
-    if (rowID < capacity) mem.readFragment(rowID, numberOfBytes, offset)
-    else disk.readFragment(rowID - capacity, numberOfBytes, offset)
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+    if (rowID < capacity) mem.readBytes(rowID, numberOfBytes, offset)
+    else disk.readBytes(rowID - capacity, numberOfBytes, offset)
   }
 
   override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {

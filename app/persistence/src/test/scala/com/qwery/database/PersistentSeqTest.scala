@@ -78,8 +78,8 @@ class PersistentSeqTest extends AnyFunSpec {
       assert(count == 0)
     }
 
-    it("should test existence where: lastSale >= 950") {
-      val lastSale_lt_500 = eval("coll.exists(_.lastSale >= 950)", coll.exists(_.lastSale >= 950))
+    it("should test existence where: lastSale >= 100") {
+      val lastSale_lt_500 = eval("coll.exists(_.lastSale >= 950)", coll.exists(_.lastSale >= 100))
       assert(lastSale_lt_500)
     }
 
@@ -189,13 +189,17 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should compute max(lastSale)") {
+      val coll = newCollection[StockQuote](partitionSize = 5)
+      coll ++= stocks4
       val value = eval("coll.max(_.lastSale)", coll.max(_.lastSale))
-      assert(value > 0)
+      assert(value == 357.21)
     }
 
     it("should compute min(lastSale)") {
+      val coll = newCollection[StockQuote](partitionSize = 5)
+      coll ++= stocks4
       val value = eval("coll.min(_.lastSale)", coll.min(_.lastSale))
-      assert(value == 0)
+      assert(value == 22.92)
     }
 
     it("should compute the 95th percentile for lastSale") {
@@ -259,13 +263,19 @@ class PersistentSeqTest extends AnyFunSpec {
       if (coll.nonEmpty) {
         val size = coll.length / 2
         val fromPos = new Random().nextInt(coll.length - size)
-        eval(f"coll.slice($fromPos, ${fromPos + size})", coll.slice(fromPos, fromPos + size))
+        val items = eval(f"coll.slice($fromPos, ${fromPos + size})", coll.slice(fromPos, fromPos + size))
+        items.take(5).foreach(item => println(item.toString))
       }
     }
 
     it("should sort the collection") {
-      val items = eval("coll.sortBy(_.symbol)", coll.sortBy(_.symbol))
-      for (item <- items.slice(0, 5)) info(item.toString)
+      val items = eval("coll.sortBy(_.symbol)", coll.sortByInPlace(_.symbol))
+      items.take(5).foreach(item => println(item.toString))
+    }
+
+    it("should sort the collection (in place)") {
+      val items = eval("coll.sortByInPlace(_.symbol)", coll.sortByInPlace(_.symbol))
+      items.take(5).foreach(item => println(item.toString))
     }
 
     it("should compute sum(lastSale)") {

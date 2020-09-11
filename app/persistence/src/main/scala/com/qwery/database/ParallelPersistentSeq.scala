@@ -2,7 +2,6 @@ package com.qwery.database
 
 import java.nio.ByteBuffer
 
-import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -53,23 +52,7 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     values.forall(_ => true)
   }
 
-  override def toIterator: Iterator[T] = new Iterator[T] {
-    private val iterators = partitions.map(_.toIterator)
-    private var index = 0
-
-    @tailrec
-    override def hasNext: Boolean = {
-      val isActive = iterators(index).hasNext
-      if (isActive) isActive
-      else if (index < iterators.length) {
-        index += 1
-        hasNext
-      }
-      else false
-    }
-
-    override def next(): T = iterators(index).next()
-  }
+  override def iterator: Iterator[T] = partitions.toIterator.flatMap(_.iterator)
 
   override def min(predicate: T => Double): Double = {
     val values = Await.result(Future.sequence(partitions map { partition =>
@@ -96,17 +79,6 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     Await.result(outcome, Duration.Inf)
   }
 
-  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
-    // determine the partitions we need to read from
-    val mappings = getReadPartitionMappings(rowID, numberOfBlocks)
-
-    // asynchronously read the bytes
-    val outcome = Future.sequence(mappings map { case (partition, offsets) =>
-      Future(partition.readBytes(offsets.head, numberOfBlocks = offsets.size))
-    }) map (_.toArray.flatten)
-    Await.result(outcome, Duration.Inf)
-  }
-
   override def remove(predicate: T => Boolean): Int = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.remove(predicate))
@@ -122,6 +94,20 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
   override def reverseInPlace(): PersistentSeq[T] = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.reverseInPlace())
+    }), Duration.Inf)
+    this
+  }
+
+  override def sortBy[B <: Comparable[B]](predicate: T => B): Stream[T] = {
+    combine(Await.result(Future.sequence(partitions map { partition =>
+      Future(partition.sortBy(predicate))
+    }), Duration.Inf)).sortBy(predicate)
+  }
+
+  override def sortByInPlace[B <: Comparable[B]](predicate: T => B): PersistentSeq[T] = {
+    // TODO add a secondary sort across all partitions
+    Await.result(Future.sequence(partitions map { partition =>
+      Future(partition.sortByInPlace(predicate))
     }), Duration.Inf)
     this
   }

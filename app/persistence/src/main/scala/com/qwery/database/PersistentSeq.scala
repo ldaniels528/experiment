@@ -8,7 +8,7 @@ import com.qwery.database.DiskMappedSeq.newTempFile
 import com.qwery.database.PersistentSeq.{Field, Row}
 import com.qwery.util.ResourceHelper._
 
-import scala.collection.GenIterable
+import scala.collection.{GenIterable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.reflect.ClassTag
@@ -85,17 +85,16 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def contains(elem: T): Boolean = indexOfOpt(elem).nonEmpty
 
-  def copyTo(that: PersistentSeq[T], fromPos: ROWID, toPos: ROWID): Unit = {
-    that.writeBytes(that.length, readBytes(fromPos, numberOfBlocks = toPos - fromPos))
-  }
-
   override def copyToArray[B >: T](array: Array[B], start: ROWID, len: ROWID): Unit = {
-    val bytes = readBytes(start, len)
+    var n: Int = 0
     for {
-      n <- (0 until len).toArray
-      index = n * recordSize
-      item <- toItem(id = start + n, buf = wrap(bytes, index, recordSize))
-    } array(n) = item
+      (rowID, buf) <- readBlocks(start, len)
+      index = rowID * recordSize
+      item <- toItem(rowID, buf)
+    } {
+      array(n) = item
+      n += 1
+    }
   }
 
   /**
@@ -161,7 +160,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   def getField(rowID: ROWID, columnIndex: Int): Field = {
     assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = wrap(readFragment(rowID, numberOfBytes = column.maxLength, offset = columnOffset))
+    val buf = wrap(readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset))
     val (fmd, value_?) = ItemConversion.decode(buf)
     Field(name = column.name, fmd, value = value_?)
   }
@@ -300,9 +299,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def readByte(rowID: ROWID): Byte
 
-  def readBytes(rowID: ROWID, numberOfBlocks: Int = 1): Array[Byte]
-
-  def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte]
+  def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte]
 
   /**
    * Remove an item from the collection via its record offset
@@ -343,18 +340,63 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   def shrinkTo(newSize: ROWID): PersistentSeq[T]
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    val blockCount = 1 + (end - start).toURID
-    val block = readBytes(start, numberOfBlocks = blockCount)
+    val blockCount = (end - start) + 1
+    val blocks = readBlocks(start, numberOfBlocks = blockCount)
 
     // transform the block into records
     (for {
-      index <- (0 until blockCount).toIterator
-      offset = index * recordSize
-      item <- toItem(id = start + index, buf = wrap(block, offset, recordSize))
+      (rowID, buf) <- blocks
+      item <- toItem(rowID, buf)
     } yield item).toStream
   }
 
-  def sortBy[B <: Comparable[B]](predicate: T => B): Stream[T] = iterator.toStream.sortBy(predicate)
+  /**
+   * Performs an in-memory sorting of the items
+   * @param predicate the sort predicate
+   */
+  def sortBy[B <: Comparable[B]](predicate: T => B): Stream[T] = toStream.sortBy(predicate)
+
+  /**
+   * Performs an in-place sorting of the items
+   * @param predicate the sort predicate
+   */
+  def sortByInPlace[B <: Comparable[B]](predicate: T => B): PersistentSeq[T] = {
+    val cache = mutable.Map[ROWID, Option[B]]()
+
+    def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID).map(predicate))
+
+    def partition(low: ROWID, high: ROWID): ROWID = {
+      var i = low - 1 // index of lesser item
+      for {
+        pivot <- fetch(high)
+        j <- low until high
+        value <- fetch(j)
+      } {
+        if (value.compareTo(pivot) < 0) {
+          i += 1 // increment the index of lesser item
+          swap(i, j)
+        }
+      }
+      swap(i + 1, high)
+      i + 1
+    }
+
+    def sort(low: ROWID, high: ROWID): Unit = if (low < high) {
+      val pi = partition(low, high)
+      sort(low, pi - 1)
+      sort(pi + 1, high)
+    }
+
+    def swap(offset0: ROWID, offset1: ROWID): Unit = {
+      val (elem0, elem1) = (cache.remove(offset0), cache.remove(offset1))
+      PersistentSeq.this.swap(offset0, offset1)
+      elem0.foreach(v => cache(offset1) = v)
+      elem1.foreach(v => cache(offset0) = v)
+    }
+
+    sort(low = 0, high = length - 1)
+    this
+  }
 
   /**
    * Computes the sum of a column
@@ -368,17 +410,12 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   }
 
   def swap(offset0: ROWID, offset1: ROWID): Unit = {
-    val (block0, block1) = (readBytes(offset0), readBytes(offset1))
-    writeBytes(offset0, block1)
-    writeBytes(offset1, block0)
+    val (block0, block1) = (readBlock(offset0), readBlock(offset1))
+    writeBlock(offset0, block1)
+    writeBlock(offset1, block0)
   }
 
-  override def tail: PersistentSeq[T] = {
-    val p0 = firstIndexOption.getOrElse(0: ROWID) + 1
-    val that = newDocument[T]()
-    copyTo(that, fromPos = p0, toPos = length)
-    that
-  }
+  override def tail: Stream[T] = toStream.tail
 
   /**
    * Trims dead entries from of the collection
@@ -406,6 +443,8 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     }
     array
   }
+
+  override def toIterator: Iterator[T] = iterator
 
   override def toTraversable: Traversable[T] = this
 

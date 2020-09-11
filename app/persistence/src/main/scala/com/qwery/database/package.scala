@@ -70,44 +70,10 @@ package object database {
 
   }
 
-  final implicit class PersistentSeqArrayExtensions[T](val array: Array[T]) extends AnyVal {
-
-    def quickSort[B <: Comparable[B]](predicate: T => B): array.type = {
-
-      def partition(low: Int, high: Int)(f: T => B): Int = {
-        val pivot = array(high)
-        var i = low - 1 // index of lesser item
-        for (j <- low until high) {
-          val item = array(j)
-          if (f(item).compareTo(f(pivot)) < 0) {
-            i += 1 // increment the index of lesser item
-            swap(i, j)
-          }
-        }
-        swap(i + 1, high)
-        i + 1
-      }
-
-      def doSorting(low: Int, high: Int)(f: T => B): Unit = {
-        if (low < high) {
-          val pi = partition(low, high)(f)
-          doSorting(low, pi - 1)(f)
-          doSorting(pi + 1, high)(f)
-        }
-      }
-
-      def swap(i: Int, j: Int): Unit = {
-        val temp = array(i)
-        array(i) = array(j)
-        array(j) = temp
-      }
-
-      doSorting(low = 0, high = array.length - 1)(predicate)
-      array
-    }
-
-  }
-
+  /**
+   * Math Utilities for Long integers
+   * @param number the long integer
+   */
   final implicit class MathUtilsLong(val number: Long) extends AnyVal {
 
     def toURID: ROWID = number.toInt

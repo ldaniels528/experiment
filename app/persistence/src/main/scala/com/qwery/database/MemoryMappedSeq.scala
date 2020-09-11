@@ -28,23 +28,16 @@ class MemoryMappedSeq[T <: Product : ClassTag](val capacity: Int) extends Persis
   override def readBlock(rowID: ROWID): ByteBuffer = {
     val p0 = rowID * recordSize
     val bytes = new Array[Byte](recordSize)
-    System.arraycopy(raf, p0, bytes, 0,  bytes.length)
+    System.arraycopy(raf, p0, bytes, 0, bytes.length)
     wrap(bytes)
   }
 
   override def readByte(rowID: ROWID): Byte = raf(rowID * recordSize)
 
-  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
-    val p0 = rowID * recordSize
-    val bytes = new Array[Byte](numberOfBlocks * recordSize)
-    System.arraycopy(raf, p0, bytes, 0,  bytes.length)
-    bytes
-  }
-
-  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
     val p0 = rowID * recordSize + offset
     val bytes = new Array[Byte](numberOfBytes)
-    System.arraycopy(raf, p0, bytes, 0,  bytes.length)
+    System.arraycopy(raf, p0, bytes, 0, bytes.length)
     bytes
   }
 

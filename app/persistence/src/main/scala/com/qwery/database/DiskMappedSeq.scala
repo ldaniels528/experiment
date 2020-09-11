@@ -44,14 +44,7 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     raf.read().toByte
   }
 
-  override def readBytes(rowID: ROWID, numberOfBlocks: Int = 1): Array[Byte] = {
-    val payload = new Array[Byte](recordSize * numberOfBlocks)
-    raf.seek(rowID * recordSize)
-    raf.read(payload)
-    payload
-  }
-
-  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
     val bytes = new Array[Byte](numberOfBytes)
     raf.seek(rowID * recordSize + offset)
     raf.read(bytes)

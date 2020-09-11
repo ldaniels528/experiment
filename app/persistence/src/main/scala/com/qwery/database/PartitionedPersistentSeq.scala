@@ -59,19 +59,10 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
     partitions(index).readByte(toLocalOffset(rowID, index))
   }
 
-  override def readBytes(rowID: ROWID, numberOfBlocks: ROWID): Array[Byte] = {
-    (for {
-      globalOffset <- rowID to rowID + numberOfBlocks
-      index = toPartitionIndex(globalOffset)
-      partition = partitions(index)
-      (_, buf) <- partition.readBlocks(toLocalOffset(globalOffset, index))
-    } yield buf.array()).toArray.flatten
-  }
-
-  override def readFragment(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.readFragment(toLocalOffset(rowID, index), numberOfBytes, offset)
+    partition.readBytes(toLocalOffset(rowID, index), numberOfBytes, offset)
   }
 
   override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
