@@ -1,22 +1,20 @@
 package com.qwery.database
 
 import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteBuffer.wrap
 
 import com.qwery.database.DiskMappedSeq.newTempFile
-import com.qwery.database.PersistentSeq.{Field, Row}
 import com.qwery.util.ResourceHelper._
 
 import scala.collection.{GenIterable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
+import scala.language.postfixOps
 import scala.reflect.ClassTag
 
 /**
  * Represents a persistent sequential collection
  */
-abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T] with Traversable[T] {
+abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] with Traversable[T] {
 
   /**
    * Appends a collection of items to the end of this collection
@@ -35,14 +33,20 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
    * @param item the [[T item]] to append
    * @return [[PersistentSeq self]]
    */
-  def append(item: T): PersistentSeq[T] = writeBytes(length, toBytes(item))
+  def append(item: T): PersistentSeq[T] = {
+    writeBlock(length, toBytes(item))
+    this
+  }
 
   /**
    * Appends the collection of items to the end of the file
    * @param items the collection of [[T item]] to append
    * @return [[PersistentSeq self]]
    */
-  def append(items: Traversable[T]): PersistentSeq[T] = writeBlocks(toBlocks(length, items))
+  def append(items: Traversable[T]): PersistentSeq[T] = {
+    writeBlocks(toBlocks(length, items))
+    this
+  }
 
   /**
    * Retrieves the item corresponding to the record offset
@@ -65,16 +69,6 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     if (count != 0) total / count else Double.NaN
   }
 
-  /**
-   * Truncates the collection; removing all items
-   */
-  def clear(): PersistentSeq[T] = shrinkTo(newSize = 0)
-
-  /**
-   * Closes the underlying file handle
-   */
-  def close(): Unit
-
   def collect[U](predicate: PartialFunction[T, U]): Stream[U] = iterator.toStream.collect(predicate)
 
   override def collectFirst[U](predicate: PartialFunction[T, U]): Option[U] = {
@@ -89,7 +83,6 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     var n: Int = 0
     for {
       (rowID, buf) <- readBlocks(start, len)
-      index = rowID * recordSize
       item <- toItem(rowID, buf)
     } {
       array(n) = item
@@ -115,67 +108,21 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     counted
   }
 
-  /**
-   * Counts the number of rows matching the predicate
-   * @param predicate the function defining which items should be included
-   * @return the number of rows matching the predicate
-   */
-  def countRows(predicate: RowMetaData => Boolean): Int = {
-    val eof = length
-    var (offset, total) = (0, 0)
-    while (offset < eof) {
-      if (predicate(getRowMetaData(offset))) total += 1
-      offset += 1
-    }
-    total
-  }
-
   override def exists(predicate: T => Boolean): Boolean = {
     var isFound = false
     _traverse(() => isFound) { item => if (predicate(item)) isFound = true }
     isFound
   }
 
-  override def filter(predicate: T => Boolean): Stream[T] = iterator.toStream.filter(predicate)
+  override def filter(predicate: T => Boolean): Stream[T] = toStream.filter(predicate)
 
-  override def filterNot(predicate: T => Boolean): Stream[T] = iterator.toStream.filterNot(predicate)
+  override def filterNot(predicate: T => Boolean): Stream[T] = toStream.filterNot(predicate)
 
-  def firstIndexOption: Option[ROWID] = {
-    var rowID: ROWID = 0
-    val eof: ROWID = length
-    while (rowID < eof && getRowMetaData(rowID).isDeleted) rowID += 1
-    if (rowID < eof) Some(rowID) else None
-  }
-
-  def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = iterator.toStream.flatMap(predicate)
+  def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = toStream.flatMap(predicate)
 
   override def foreach[U](callback: T => U): Unit = _gather() { callback }
 
   def get(rowID: ROWID): Option[T] = toItem(rowID, readBlock(rowID))
-
-  def getField(rowID: ROWID, column: Symbol): Field = {
-    getField(rowID, columnIndex = columns.indexWhere(_.name == column.name))
-  }
-
-  def getField(rowID: ROWID, columnIndex: Int): Field = {
-    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex) is out of range")
-    val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = wrap(readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset))
-    val (fmd, value_?) = ItemConversion.decode(buf)
-    Field(name = column.name, fmd, value = value_?)
-  }
-
-  def getItems(rowID: ROWID, numberOfItems: Int): Seq[T] = {
-    readBlocks(rowID, numberOfItems) flatMap { case (rowID, buf) => toItem(rowID, buf) }
-  }
-
-  def getRow(rowID: ROWID): Row = {
-    val buf = readBlock(rowID)
-    val rmd = buf.getRowMetaData
-    Row(rowID, rmd, fields = toFields(buf))
-  }
-
-  def getRowMetaData(rowID: ROWID): RowMetaData = RowMetaData.decode(readByte(rowID))
 
   override def headOption: Option[T] = firstIndexOption.flatMap(get)
 
@@ -195,22 +142,13 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     index_?
   }
 
-  protected def intoBlocks(rowID: ROWID, src: Array[Byte]): Seq[(ROWID, ByteBuffer)] = {
-    val count = src.length / recordSize
-    for (index <- 0 to count) yield {
-      val buf = new Array[Byte](recordSize)
-      System.arraycopy(src, index * recordSize, buf, 0, Math.min(buf.length, src.length - index * recordSize))
-      (rowID + index) -> wrap(buf)
-    }
-  }
-
   def iterator: Iterator[T] = new Iterator[T] {
     private var item_? : Option[T] = None
     private var offset: ROWID = 0
     private val eof = PersistentSeq.this.length
 
     override def hasNext: Boolean = {
-      offset = _findNext(fromPos = offset)(_.isActive).getOrElse(eof)
+      offset = findRow(fromPos = offset)(_.isActive).getOrElse(eof)
       item_? = if (offset < eof) get(offset) else None
       offset += 1
       item_?.nonEmpty
@@ -223,27 +161,14 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     }
   }
 
-  def lastIndexOption: Option[ROWID] = {
-    var rowID: ROWID = length - 1
-    while (rowID >= 0 && getRowMetaData(rowID).isDeleted) rowID -= 1
-    if (rowID >= 0) Some(rowID) else None
-  }
-
   override def lastOption: Option[T] = lastIndexOption.flatMap(get)
-
-  /**
-   * @return the number of records in the file, including the deleted ones.
-   *         [[count]] is probably the method you really want.
-   * @see [[count]]
-   */
-  def length: ROWID
 
   def loadTextFile(file: File)(f: String => Option[T]): PersistentSeq[T] = Source.fromFile(file) use { in =>
     val items = for {line <- in.getLines(); item <- f(line)} yield item
     append(items.toSeq)
   }
 
-  def map[U](predicate: T => U): Stream[U] = iterator.toStream.map(predicate)
+  def map[U](predicate: T => U): Stream[U] = toStream.map(predicate)
 
   /**
    * Computes the maximum value of a column
@@ -267,8 +192,6 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     minValue
   }
 
-  protected def newDocument[A <: Product : ClassTag](): PersistentSeq[A] = PersistentSeq[A]()
-
   /**
    * Computes the percentile of a column
    * @param predicate the search function
@@ -289,24 +212,6 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def push(item: T): PersistentSeq[T] = append(item)
 
-  def readBlock(rowID: ROWID): ByteBuffer
-
-  def readBlocks(rowID: ROWID, numberOfBlocks: Int = 1): Seq[(ROWID, ByteBuffer)] = {
-    for {
-      rowID <- rowID to rowID + numberOfBlocks
-    } yield rowID -> readBlock(rowID)
-  }
-
-  def readByte(rowID: ROWID): Byte
-
-  def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte]
-
-  /**
-   * Remove an item from the collection via its record offset
-   * @param rowID the record offset
-   */
-  def remove(rowID: ROWID): PersistentSeq[T] = setRowMetaData(rowID, RowMetaData(isActive = false))
-
   /**
    * Remove an item from the collection via its record offset
    * @param predicate the search predicate
@@ -323,31 +228,10 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   def reverse: Stream[T] = reverseIterator.toStream
 
-  def reverseIterator: Iterator[T] = _reverseIterator.flatMap(t => toItem(t._1, t._2))
-
-  def reverseInPlace(): PersistentSeq[T] = {
-    var (top, bottom) = (0, length - 1)
-    while (bottom >= 0) {
-      if (top != bottom) swap(top, bottom)
-      bottom -= 1
-      top += 1
-    }
-    this
-  }
-
-  def setRowMetaData(rowID: ROWID, metaData: RowMetaData): PersistentSeq[T] = writeByte(rowID, metaData.encode)
-
-  def shrinkTo(newSize: ROWID): PersistentSeq[T]
+  def reverseIterator: Iterator[T] = reverseIteration.flatMap(t => toItem(t._1, t._2))
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    val blockCount = (end - start) + 1
-    val blocks = readBlocks(start, numberOfBlocks = blockCount)
-
-    // transform the block into records
-    (for {
-      (rowID, buf) <- blocks
-      item <- toItem(rowID, buf)
-    } yield item).toStream
+    readBlocks(start, numberOfBlocks = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
   }
 
   /**
@@ -360,7 +244,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
    * Performs an in-place sorting of the items
    * @param predicate the sort predicate
    */
-  def sortByInPlace[B <: Comparable[B]](predicate: T => B): PersistentSeq[T] = {
+  def sortByInPlace[B <: Comparable[B]](predicate: T => B): Unit = {
     val cache = mutable.Map[ROWID, Option[B]]()
 
     def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID).map(predicate))
@@ -395,7 +279,6 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     }
 
     sort(low = 0, high = length - 1)
-    this
   }
 
   /**
@@ -409,25 +292,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
     total
   }
 
-  def swap(offset0: ROWID, offset1: ROWID): Unit = {
-    val (block0, block1) = (readBlock(offset0), readBlock(offset1))
-    writeBlock(offset0, block1)
-    writeBlock(offset1, block0)
-  }
-
   override def tail: Stream[T] = toStream.tail
-
-  /**
-   * Trims dead entries from of the collection
-   * @return the new size of the file
-   */
-  def trim(): ROWID = {
-    var rowID = length - 1
-    while (rowID >= 0 && getRowMetaData(rowID).isDeleted) rowID -= 1
-    val newLength = rowID + 1
-    shrinkTo(newLength)
-    newLength
-  }
 
   def toArray: Array[T] = {
     val eof = length
@@ -448,15 +313,7 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
 
   override def toTraversable: Traversable[T] = this
 
-  def update(rowID: ROWID, item: T): PersistentSeq[T] = writeBytes(rowID, toBytes(item))
-
-  def writeBlock(rowID: ROWID, buf: ByteBuffer): PersistentSeq[T] = writeBytes(rowID, buf.array())
-
-  def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T]
-
-  def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T]
-
-  def writeByte(rowID: ROWID, byte: Int): PersistentSeq[T]
+  def update(rowID: ROWID, item: T): Unit = writeBlock(rowID, toBytes(item))
 
   def zip[U](that: GenIterable[U]): Iterator[(T, U)] = this.iterator zip that.iterator
 
@@ -466,67 +323,28 @@ abstract class PersistentSeq[T <: Product : ClassTag]() extends ItemConversion[T
   //    Utility Methods
   ///////////////////////////////////////////////////////////////
 
-  private def _findNext(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetaData => Boolean): Option[ROWID] = {
-    var rowID = fromPos
-    if (forward) {
-      while (rowID < length && !f(getRowMetaData(rowID))) rowID += 1
-      if (rowID < length) Some(rowID) else None
-    }
-    else {
-      while (rowID >= 0 && !f(getRowMetaData(rowID))) rowID -= 1
-      if (rowID >= 0) Some(rowID) else None
-    }
-  }
-
-  private def _gather[U](fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): PersistentSeq[T] = {
-    val batchSize = 1
+  private def _gather[U](fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos) {
-      //getBatch(offset, numberOfBlocks = batchSize).foreach(f)
       get(rowID).foreach(f)
-      rowID += batchSize
+      rowID += 1
     }
-    this
   }
 
-  private def _indexOf[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: (ROWID, T) => U): PersistentSeq[T] = {
-    val batchSize = 1
+  private def _indexOf[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: (ROWID, T) => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos && !isDone()) {
-      //getBatch(offset, numberOfBlocks = batchSize).zipWithIndex.foreach { case (item, index) => f(offset + index, item) }
       get(rowID).foreach { item => f(rowID, item) }
-      rowID += batchSize
-    }
-    this
-  }
-
-  private def _reverseIterator: Iterator[(ROWID, ByteBuffer)] = new Iterator[(ROWID, ByteBuffer)] {
-    private var item_? : Option[(ROWID, ByteBuffer)] = None
-    private var offset: ROWID = PersistentSeq.this.length - 1
-
-    override def hasNext: Boolean = {
-      offset = _findNext(fromPos = offset, forward = false)(_.isActive).getOrElse(-1)
-      item_? = if (offset > -1) Some(offset -> readBlock(offset)) else None
-      offset -= 1
-      item_?.nonEmpty
-    }
-
-    override def next: (ROWID, ByteBuffer) = item_? match {
-      case Some(item) => item_? = None; item
-      case None =>
-        throw new IllegalStateException("Iterator is empty")
+      rowID += 1
     }
   }
 
-  private def _traverse[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): PersistentSeq[T] = {
-    val batchSize = 1
+  private def _traverse[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos && !isDone()) {
-      //getBatch(offset, numberOfBlocks = batchSize).foreach(f)
       get(rowID).foreach(f)
-      rowID += batchSize
+      rowID += 1
     }
-    this
   }
 
 }

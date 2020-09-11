@@ -41,8 +41,8 @@ class PersistentSeqTest extends AnyFunSpec {
     logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
 
     it("should start with an empty collection") {
-      val items = eval("coll.clear()", coll.clear())
-      assert(items.isEmpty)
+      eval("coll.truncate()", coll.truncate())
+      assert(coll.count() == 0)
     }
 
     it("should append a collection of items to the collection") {
@@ -132,7 +132,7 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should retrieve one row metadata by its offset (rowID)") {
       val rowID = randomURID(coll)
-      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.getRowMetaData(rowID))
+      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.readRowMetaData(rowID))
       logger.info(s"rmd => $rmd")
     }
 
@@ -269,13 +269,13 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should sort the collection") {
-      val items = eval("coll.sortBy(_.symbol)", coll.sortByInPlace(_.symbol))
+      val items = eval("coll.sortBy(_.symbol)", coll.sortBy(_.symbol))
       items.take(5).foreach(item => println(item.toString))
     }
 
     it("should sort the collection (in place)") {
-      val items = eval("coll.sortByInPlace(_.symbol)", coll.sortByInPlace(_.symbol))
-      items.take(5).foreach(item => println(item.toString))
+      eval("coll.sortByInPlace(_.symbol)", coll.sortByInPlace(_.symbol))
+      coll.take(5).foreach(item => println(item.toString))
     }
 
     it("should compute sum(lastSale)") {

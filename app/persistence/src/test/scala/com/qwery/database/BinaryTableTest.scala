@@ -1,17 +1,17 @@
 package com.qwery.database
 
 import com.qwery.database.ColumnTypes._
-import com.qwery.database.ItemConversionTest.GenericData
+import com.qwery.database.BinaryTableTest.GenericData
 import com.qwery.database.PersistentSeq.Field
 import org.scalatest.funspec.AnyFunSpec
 
 /**
  * Product Helper Test Suite
  */
-class ItemConversionTest extends AnyFunSpec {
+class BinaryTableTest extends AnyFunSpec {
   private val productConversion = PersistentSeq[GenericData]()
 
-  describe(classOf[ItemConversion[GenericData]].getSimpleName) {
+  describe(classOf[BinaryTable[GenericData]].getSimpleName) {
 
     it("should extract values from a product class") {
       val data = GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087L)
@@ -44,7 +44,7 @@ class ItemConversionTest extends AnyFunSpec {
 /**
  * Product Helper Test Companion
  */
-object ItemConversionTest {
+object BinaryTableTest {
 
   import scala.annotation.meta.field
 

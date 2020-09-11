@@ -8,7 +8,7 @@ import scala.reflect.ClassTag
  * @tparam T the item/product type
  * @tparam V the value type
  */
-abstract class SortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: T => V) extends ItemConversion[T] with Traversable[T] {
+abstract class SortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: T => V) extends BinaryTable[T] with Traversable[T] {
 
   def +=(item: T): Unit = add(item)
 

@@ -33,6 +33,11 @@ trait Column {
   def isEncrypted: Boolean
 
   /**
+   * @return true if the column is a logic column
+   */
+  def isLogical: Boolean = isRowID
+
+  /**
    * @return true if the column may contain nulls
    */
   def isNullable: Boolean

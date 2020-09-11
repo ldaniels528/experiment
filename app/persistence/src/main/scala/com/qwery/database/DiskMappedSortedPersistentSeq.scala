@@ -1,6 +1,7 @@
 package com.qwery.database
 
 import java.io.{File, RandomAccessFile}
+import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 
 import com.qwery.database.DiskMappedSortedPersistentSeq.BSTNode
@@ -157,6 +158,22 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     }
   }
 
+  /**
+   * Closes the underlying file handle
+   */
+  override def close(): Unit = ???
+
+  override def readBlock(rowID: ROWID): ByteBuffer = ???
+
+  override def readByte(rowID: ROWID): Byte = ???
+
+  override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = ???
+
+  override def shrinkTo(newSize: ROWID): Unit = ???
+
+  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = ???
+
+  override def writeByte(rowID: ROWID, byte: ROWID): Unit = ???
 }
 
 /**

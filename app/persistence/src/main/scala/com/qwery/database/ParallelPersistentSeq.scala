@@ -91,11 +91,10 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     }), Duration.Inf))
   }
 
-  override def reverseInPlace(): PersistentSeq[T] = {
+  override def reverseInPlace(): Unit = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.reverseInPlace())
     }), Duration.Inf)
-    this
   }
 
   override def sortBy[B <: Comparable[B]](predicate: T => B): Stream[T] = {
@@ -104,15 +103,20 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
     }), Duration.Inf)).sortBy(predicate)
   }
 
-  override def sortByInPlace[B <: Comparable[B]](predicate: T => B): PersistentSeq[T] = {
+  override def sortByInPlace[B <: Comparable[B]](predicate: T => B): Unit = {
     // TODO add a secondary sort across all partitions
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.sortByInPlace(predicate))
     }), Duration.Inf)
-    this
   }
 
-  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
+  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.writeBlock(toLocalOffset(rowID, index), buf)
+  }
+
+  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = {
     case class Datum(partition: PersistentSeq[T], offset: ROWID, buf: ByteBuffer)
 
     // determine the partitions we need to write to
@@ -129,11 +133,7 @@ class ParallelPersistentSeq[T <: Product : ClassTag](partitionSize: Int)(implici
       Future(partition.writeBlocks(datum.map { case Datum(_, offset, buf) => (offset, buf) }))
     })
     Await.ready(outcome, Duration.Inf)
-    this
   }
-
-  override def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T] = writeBlocks(intoBlocks(rowID, bytes))
-
 
   private def combine(list: List[Stream[T]]): Stream[T] = {
     list.foldLeft(Stream.empty[T]){ (combined, stream) =>

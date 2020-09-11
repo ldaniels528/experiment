@@ -1,5 +1,7 @@
 package com.qwery.database
 
+import java.nio.ByteBuffer
+
 import com.qwery.database.MemorySortedPersistentSeq.BSTNode
 import com.qwery.util.OptionHelper.OptionEnrichment
 
@@ -98,6 +100,29 @@ class MemorySortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: 
     if (node == null) None else min(node.left) ?? Option(node.item) ?? min(node.right)
   }
 
+  /**
+   * Closes the underlying file handle
+   */
+  override def close(): Unit = ???
+
+  /**
+   * @return the number of records in the file, including the deleted ones.
+   *         The [[PersistentSeq.count count()]] method is probably the method you truly want.
+   * @see [[PersistentSeq.count]]
+   */
+  override def length: ROWID = ???
+
+  override def readBlock(rowID: ROWID): ByteBuffer = ???
+
+  override def readByte(rowID: ROWID): Byte = ???
+
+  override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = ???
+
+  override def shrinkTo(newSize: ROWID): Unit = ???
+
+  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = ???
+
+  override def writeByte(rowID: ROWID, byte: ROWID): Unit = ???
 }
 
 /**

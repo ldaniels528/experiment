@@ -39,7 +39,18 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
     } yield blocks
   }
 
-  override def shrinkTo(newSize: ROWID): PersistentSeq[T] = {
+  override def readByte(rowID: ROWID): Byte = {
+    val index = toPartitionIndex(rowID)
+    partitions(index).readByte(toLocalOffset(rowID, index))
+  }
+
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.readBytes(toLocalOffset(rowID, index), numberOfBytes, offset)
+  }
+
+  override def shrinkTo(newSize: ROWID): Unit = {
     // determine the cut-off partition and overrun (remainder)
     val cutOffIndex = newSize / partitionSize
     val remainder = newSize % partitionSize
@@ -51,49 +62,21 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
     for {
       partition <- (cutOffIndex + 1) until partitions.length map partitions.apply
     } partition.shrinkTo(0)
-    this
   }
 
-  override def readByte(rowID: ROWID): Byte = {
-    val index = toPartitionIndex(rowID)
-    partitions(index).readByte(toLocalOffset(rowID, index))
-  }
-
-  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): Array[Byte] = {
+  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.readBytes(toLocalOffset(rowID, index), numberOfBytes, offset)
+    partition.writeBlock(toLocalOffset(rowID, index), buf)
   }
 
-  override def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): PersistentSeq[T] = {
-    for  {
-      (globalOffset, buf) <- blocks
-      index = toPartitionIndex(globalOffset)
-      partition = partitions(index)
-      localOffset = toLocalOffset(globalOffset, index)
-    } {
-      partition.writeBlock(localOffset, buf)
-    }
-    this
-  }
-
-  override def writeBytes(rowID: ROWID, bytes: Array[Byte]): PersistentSeq[T] = {
-    for {
-      (globalOffset, buf) <- intoBlocks(rowID, bytes)
-      index = toPartitionIndex(globalOffset)
-      partition = partitions(index)
-      localOffset = toLocalOffset(globalOffset, index)
-    } partition.writeBlock(localOffset, buf)
-    this
-  }
-
-  override def writeByte(rowID: ROWID, byte: ROWID): PersistentSeq[T] = {
+  override def writeByte(rowID: ROWID, byte: Int): Unit = {
     val index = toPartitionIndex(rowID)
     partitions(index).writeByte(toLocalOffset(rowID, index), byte)
   }
 
   private def ensurePartitions(index: Int): Unit = {
-    while (partitions.size <= index) partitions = partitions ::: PersistentSeq[T]() :: Nil
+    while (partitions.size <= index) partitions = partitions ::: DiskMappedSeq[T]() :: Nil
   }
 
   protected def toGlobalOffset(offset: ROWID, index: Int): ROWID = offset + index * partitionSize
