@@ -20,7 +20,7 @@ object StockQuote {
   @tailrec
   def randomURID[A <: Product : ClassTag](coll: PersistentSeq[A]): ROWID = {
     val offset: ROWID = random.nextInt(coll.length)
-    if (coll.readRowMetaData(offset).isDeleted) randomURID(coll) else offset
+    if (coll.device.readRowMetaData(offset).isDeleted) randomURID(coll) else offset
   }
 
   def randomExchange: String = {

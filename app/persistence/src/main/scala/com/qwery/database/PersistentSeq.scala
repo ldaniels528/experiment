@@ -1,20 +1,31 @@
 package com.qwery.database
 
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteBuffer.allocate
 
-import com.qwery.database.DiskMappedSeq.newTempFile
+import com.qwery.database.Codec.encode
+import com.qwery.database.PersistentSeq.Field
+import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
+import org.slf4j.LoggerFactory
 
 import scala.collection.{GenIterable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.language.postfixOps
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 
 /**
  * Represents a persistent sequential collection
  */
-abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] with Traversable[T] {
+class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) extends Traversable[T] {
+  // cache the class information for type T
+  private val declaredFields = `class`.getDeclaredFields.toList
+  private val declaredFieldNames = declaredFields.map(_.getName)
+  private val constructor = `class`.getConstructors.find(_.getParameterCount == declaredFields.length)
+    .getOrElse(throw new IllegalArgumentException(s"No suitable constructor found for class ${`class`.getName}"))
+  private val parameterTypes = constructor.getParameterTypes
 
   /**
    * Appends a collection of items to the end of this collection
@@ -34,7 +45,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
    * @return [[PersistentSeq self]]
    */
   def append(item: T): PersistentSeq[T] = {
-    writeBlock(length, toBytes(item))
+    device.writeBlock(device.length, toBytes(item))
     this
   }
 
@@ -44,7 +55,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
    * @return [[PersistentSeq self]]
    */
   def append(items: Traversable[T]): PersistentSeq[T] = {
-    writeBlocks(toBlocks(length, items))
+    device.writeBlocks(toBlocks(device.length, items))
     this
   }
 
@@ -54,7 +65,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
    * @return the [[T item]]
    */
   def apply(rowID: ROWID): T = {
-    toItem(rowID, buf = readBlock(rowID), evenDeletes = true)
+    toItem(rowID, buf = device.readBlock(rowID), evenDeletes = true)
       .getOrElse(throw new IllegalStateException("No record found"))
   }
 
@@ -82,7 +93,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
   override def copyToArray[B >: T](array: Array[B], start: ROWID, len: ROWID): Unit = {
     var n: Int = 0
     for {
-      (rowID, buf) <- readBlocks(start, len)
+      (rowID, buf) <- device.readBlocks(start, len)
       item <- toItem(rowID, buf)
     } {
       array(n) = item
@@ -93,9 +104,8 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
   /**
    * Counts all active rows
    * @return the number of active rows
-   * @see [[countRows]]
    */
-  def count(): Int = countRows(_.isActive)
+  def count(): Int = device.countRows(_.isActive)
 
   /**
    * Counts the number of items matching the predicate
@@ -106,6 +116,20 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     var counted: Int = 0
     _traverse(() => false) { item => if (predicate(item)) counted += 1 }
     counted
+  }
+
+  /**
+   * Creates an item from a collection of fields
+   * @param items the collection of [[Field fields]]
+   * @return a new [[T item]]
+   */
+  def createItem(items: Seq[Field]): T = {
+    val nameToValueMap: Map[String, Option[Any]] = Map(items.collect { case f if f.value.nonEmpty => f.name -> f.value }: _*)
+    val rawValues = declaredFieldNames.flatMap(nameToValueMap.get)
+    val normalizedValues = (parameterTypes zip rawValues) map { case (param, value) =>
+      if (param == classOf[Option[_]]) value else value.map(_.asInstanceOf[AnyRef]).orNull
+    }
+    constructor.newInstance(normalizedValues: _*).asInstanceOf[T]
   }
 
   override def exists(predicate: T => Boolean): Boolean = {
@@ -120,11 +144,13 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
 
   def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = toStream.flatMap(predicate)
 
-  override def foreach[U](callback: T => U): Unit = _gather() { callback }
+  override def foreach[U](callback: T => U): Unit = {
+    device.foreach { case (rowID, buf) => toItem(rowID, buf).foreach(callback) }
+  }
 
-  def get(rowID: ROWID): Option[T] = toItem(rowID, readBlock(rowID))
+  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readBlock(rowID))
 
-  override def headOption: Option[T] = firstIndexOption.flatMap(get)
+  override def headOption: Option[T] = device.firstIndexOption.flatMap(get)
 
   def indexOf(elem: T, fromPos: ROWID = 0): Int = indexOfOpt(elem, fromPos).getOrElse(-1)
 
@@ -145,10 +171,10 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
   def iterator: Iterator[T] = new Iterator[T] {
     private var item_? : Option[T] = None
     private var offset: ROWID = 0
-    private val eof = PersistentSeq.this.length
+    private val eof = device.length
 
     override def hasNext: Boolean = {
-      offset = findRow(fromPos = offset)(_.isActive).getOrElse(eof)
+      offset = device.findRow(fromPos = offset)(_.isActive).getOrElse(eof)
       item_? = if (offset < eof) get(offset) else None
       offset += 1
       item_?.nonEmpty
@@ -161,7 +187,9 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     }
   }
 
-  override def lastOption: Option[T] = lastIndexOption.flatMap(get)
+  override def lastOption: Option[T] = device.lastIndexOption.flatMap(get)
+
+  def length: ROWID = device.length
 
   def loadTextFile(file: File)(f: String => Option[T]): PersistentSeq[T] = Source.fromFile(file) use { in =>
     val items = for {line <- in.getLines(); item <- f(line)} yield item
@@ -204,9 +232,9 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     sample.sorted.apply(index)
   }
 
-  def pop: Option[T] = lastIndexOption flatMap { rowID =>
+  def pop: Option[T] = device.lastIndexOption flatMap { rowID =>
     val item = get(rowID)
-    remove(rowID)
+    device.remove(rowID)
     item
   }
 
@@ -220,7 +248,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
   def remove(predicate: T => Boolean): Int = {
     var deleted = 0
     _indexOf(() => false) {
-      case (rowID, item) if predicate(item) => remove(rowID); deleted += 1
+      case (rowID, item) if predicate(item) => device.remove(rowID); deleted += 1
       case _ =>
     }
     deleted
@@ -228,10 +256,10 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
 
   def reverse: Stream[T] = reverseIterator.toStream
 
-  def reverseIterator: Iterator[T] = reverseIteration.flatMap(t => toItem(t._1, t._2))
+  def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2))
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    readBlocks(start, numberOfBlocks = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
+    device.readBlocks(start, numberOfBlocks = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
   }
 
   /**
@@ -273,12 +301,12 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
 
     def swap(offset0: ROWID, offset1: ROWID): Unit = {
       val (elem0, elem1) = (cache.remove(offset0), cache.remove(offset1))
-      PersistentSeq.this.swap(offset0, offset1)
+      device.swap(offset0, offset1)
       elem0.foreach(v => cache(offset1) = v)
       elem1.foreach(v => cache(offset0) = v)
     }
 
-    sort(low = 0, high = length - 1)
+    sort(low = 0, high = device.length - 1)
   }
 
   /**
@@ -294,11 +322,11 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
 
   override def tail: Stream[T] = toStream.tail
 
-  def toArray: Array[T] = {
-    val eof = length
+  override def toArray[B >: T : ClassTag]: Array[B] = {
+    val eof: ROWID = device.length
     var n: ROWID = 0
     var m: Int = 0
-    val array: Array[T] = new Array[T](count())
+    val array: Array[B] = new Array[B](count())
     while (n < eof) {
       get(n).foreach { item =>
         array(m) = item
@@ -309,11 +337,48 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     array
   }
 
+  def toBlocks(offset: ROWID, items: Seq[T]): Seq[(ROWID, ByteBuffer)] = {
+    items.zipWithIndex.map { case (item, index) => (offset + index) -> toBytes(item) }
+  }
+
+  def toBlocks(offset: ROWID, items: Traversable[T]): Stream[(ROWID, ByteBuffer)] = {
+    items.toStream.zipWithIndex.map { case (item, index) => (offset + index) -> toBytes(item) }
+  }
+
+  def toBytes(item: T): ByteBuffer = {
+    val payloads = for {
+      (name, value_?) <- toKeyValues(item)
+      column <- device.nameToColumnMap.get(name).toArray if !column.isLogical
+    } yield encode(column, value_?)
+
+    // convert the row to binary
+    val buf = allocate(device.recordSize).putRowMetaData(RowMetaData())
+    payloads.zipWithIndex foreach { case (bytes, index) =>
+      buf.position(device.columnOffsets(index))
+      buf.put(bytes)
+    }
+    buf
+  }
+
+  def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(item => toBytes(item))
+
+  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.map(item => toBytes(item)).toStream
+
+  def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
+    val metadata = buf.getRowMetaData
+    if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf))) else None
+  }
+
   override def toIterator: Iterator[T] = iterator
+
+  def toKeyValues(product: T): Seq[KeyValue] = declaredFieldNames zip product.productIterator.toSeq map {
+    case (name, value: Option[_]) => name -> value
+    case (name, value) => name -> Option(value)
+  }
 
   override def toTraversable: Traversable[T] = this
 
-  def update(rowID: ROWID, item: T): Unit = writeBlock(rowID, toBytes(item))
+  def update(rowID: ROWID, item: T): Unit = device.writeBlock(rowID, toBytes(item))
 
   def zip[U](that: GenIterable[U]): Iterator[(T, U)] = this.iterator zip that.iterator
 
@@ -323,7 +388,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
   //    Utility Methods
   ///////////////////////////////////////////////////////////////
 
-  private def _gather[U](fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): Unit = {
+  private def _gather[U](fromPos: ROWID = 0, toPos: ROWID = device.length)(f: T => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos) {
       get(rowID).foreach(f)
@@ -331,7 +396,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     }
   }
 
-  private def _indexOf[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: (ROWID, T) => U): Unit = {
+  private def _indexOf[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = device.length)(f: (ROWID, T) => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos && !isDone()) {
       get(rowID).foreach { item => f(rowID, item) }
@@ -339,7 +404,7 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
     }
   }
 
-  private def _traverse[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = length)(f: T => U): Unit = {
+  private def _traverse[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = device.length)(f: T => U): Unit = {
     var rowID = fromPos
     while (rowID < toPos && !isDone()) {
       get(rowID).foreach(f)
@@ -353,83 +418,95 @@ abstract class PersistentSeq[T <: Product : ClassTag] extends BinaryTable[T] wit
  * PersistentSeq Companion
  */
 object PersistentSeq {
+  private[this] lazy val logger = LoggerFactory.getLogger(getClass)
 
   /**
    * Creates a new persistent sequence implementation
    * @tparam A the product class
    * @return a new [[PersistentSeq persistent sequence]]
    */
-  def apply[A <: Product : ClassTag](): PersistentSeq[A] = new DiskMappedSeq()
-
-  def builder[A <: Product : ClassTag]: Builder[A] = new PersistentSeq.Builder[A]()
+  def apply[A <: Product : ClassTag](): PersistentSeq[A] = builder[A].build
 
   /**
    * Creates a new disk-based sequence implementation
-   * @param file the persistence [[File file]]
+   * @param persistenceFile the persistence [[File file]]
    * @tparam A the product class
    * @return a new [[PersistentSeq persistent sequence]]
    */
-  def disk[A <: Product : ClassTag](file: File = newTempFile()): PersistentSeq[A] = new DiskMappedSeq[A](file)
+  def apply[A <: Product : ClassTag](persistenceFile: File): PersistentSeq[A] = {
+    builder[A].withPersistenceFile(persistenceFile).build
+  }
 
-  /**
-   * Creates a new mixed memory and disk-mapped sequence implementation
-   * @param capacity the collection's storage capacity
-   * @tparam A the product class
-   * @return a new [[PersistentSeq persistent sequence]]
-   */
-  def hybrid[A <: Product : ClassTag](capacity: Int): PersistentSeq[A] = new HybridPersistentSeq[A](capacity)
+  def builder[A <: Product : ClassTag]: Builder[A] = new PersistentSeq.Builder[A]()
 
-  /**
-   * Creates a new memory-mapped sequence implementation
-   * @param capacity the collection's storage capacity
-   * @tparam A the product class
-   * @return a new [[PersistentSeq persistent sequence]]
-   */
-  def memory[A <: Product : ClassTag](capacity: Int): PersistentSeq[A] = new MemoryMappedSeq[A](capacity)
+  def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
+    val `class` = classTag[T].runtimeClass
+    val declaredFields = `class`.getDeclaredFields.toList
+    val defaultMaxLen = 128
+    val columns = declaredFields map { field =>
+      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
+      val `type` = ColumnTypes.determineType(field.getType)
+      val maxSize = ci.map(_.maxSize)
+      if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
+        logger.warn(
+          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
+              |
+              |case class StockQuote(@(ColumnInfo@field)(maxSize = 8)    symbol: String,
+              |                      @(ColumnInfo@field)(maxSize = 8)    exchange: String,
+              |                                                          lastSale: Double,
+              |                                                          tradeTime: Long,
+              |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
+              |""".stripMargin)
+      }
+      Column(name = field.getName, `type` = `type`,
+        maxSize = maxSize ?? Some(defaultMaxLen),
+        isCompressed = ci.exists(_.isCompressed),
+        isEncrypted = ci.exists(_.isEncrypted),
+        isNullable = ci.exists(_.isNullable),
+        isPrimary = ci.exists(_.isPrimary),
+        isRowID = ci.exists(_.isRowID))
+    }
+    (columns, `class`.asInstanceOf[Class[T]])
+  }
 
-  /**
-   * Creates a new high-performance partitioned sequence implementation
-   * @param partitionSize the partition size (e.g. maximum number of items)
-   * @tparam A the product class
-   * @return a new [[PersistentSeq persistent sequence]]
-   */
-  def parallel[A <: Product : ClassTag](partitionSize: Int)(implicit ec: ExecutionContext) = new ParallelPersistentSeq[A](partitionSize)
-
-  /**
-   * Creates a new partitioned sequence implementation
-   * @param partitionSize the partition size (e.g. maximum number of items)
-   * @tparam A the product class
-   * @return a new [[PersistentSeq persistent sequence]]
-   */
-  def partitioned[A <: Product : ClassTag](partitionSize: Int) = new PartitionedPersistentSeq[A](partitionSize)
+  protected[database] def newTempFile(): File = {
+    val file = File.createTempFile("persistent", ".lldb")
+    file.deleteOnExit()
+    file
+  }
 
   /**
    * PersistentSeq Builder
    * @tparam A the product type
    */
   class Builder[A <: Product : ClassTag]() {
+    private val (columns, theClass) = toColumns[A]
     private var capacity: Int = 0
     private var executionContext: ExecutionContext = _
     private var partitionSize: Int = 0
     private var persistenceFile: File = _
 
     def build: PersistentSeq[A] = {
-      // is it in memory?
-      if (capacity > 0) {
-        if (persistenceFile != null) hybrid(capacity) else memory(capacity)
+      // is it partitioned?
+      if (partitionSize > 0) {
+        new PersistentSeq(`class` = theClass, device = if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize) else {
+          implicit val ec: ExecutionContext = executionContext
+          new ParallelPartitionedBlockDevice(columns, partitionSize)
+        })
       }
 
-      // is it partitioned?
-      else if (partitionSize > 0) {
-        if (executionContext != null) {
-          implicit val ec: ExecutionContext = executionContext
-          parallel[A](partitionSize)
-        }
-        else partitioned[A](partitionSize)
+      // is it in memory?
+      else if (capacity > 0) {
+        new PersistentSeq(`class` = theClass, device =
+          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, persistenceFile)
+          else new ByteArrayBlockDevice(columns, capacity))
       }
 
       // just use ole faithful
-      else disk(Option(persistenceFile).getOrElse(newTempFile()))
+      else {
+        val file = if (persistenceFile != null) persistenceFile else newTempFile()
+        new PersistentSeq(new FileBlockDevice(columns, file), theClass)
+      }
     }
 
     def withMemoryCapacity(capacity: Int): this.type = {
@@ -456,37 +533,5 @@ object PersistentSeq {
   case class Field(name: String, metadata: FieldMetaData, value: Option[Any])
 
   case class Row(rowID: ROWID, metadata: RowMetaData, fields: Seq[Field])
-
-  /**
-   * Persistence Iterator
-   * @param device the [[PersistentSeq]]
-   * @tparam T the product type
-   */
-  class PersistenceForwardIterator[T <: Product : ClassTag](device: PersistentSeq[T]) extends Iterator[T] {
-    private var item_? : Option[T] = None
-    private var pos: ROWID = 0
-
-    override def hasNext: Boolean = {
-      item_? = seekNext()
-      item_?.nonEmpty
-    }
-
-    override def next: T = item_? match {
-      case Some(item) => item_? = None; item
-      case None =>
-        throw new IllegalStateException("Iterator is empty")
-    }
-
-    private def seekNext(): Option[T] = {
-      if (pos >= device.length) None else {
-        var item_? : Option[T] = None
-        do {
-          item_? = device.get(pos)
-          pos += 1
-        } while (pos < device.length && item_?.isEmpty)
-        item_?
-      }
-    }
-  }
 
 }

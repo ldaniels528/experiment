@@ -1,18 +1,17 @@
 package com.qwery.database
 
+import java.io.File
 import java.nio.ByteBuffer
 
-import scala.reflect.ClassTag
-
 /**
- * Hybrid Persistent Sequence
- * @param capacity the internal memory capacity
- * @tparam T the product type
+ * Hybrid (Byte Array and Random Access File) Block Device
+ * @param columns  the collection of [[Column columns]]
+ * @param capacity the maximum number of item the collection may contain
+ * @param persistenceFile the persistence [[File file]]
  */
-class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extends PersistentSeq[T]() {
-  private val disk = new DiskMappedSeq[T]()
-  private val mem = new MemoryMappedSeq[T](capacity)
-  private val _capacity = capacity * recordSize
+class HybridBlockDevice(val columns: List[Column], val capacity: Int, persistenceFile: File) extends BlockDevice {
+  private val disk = new FileBlockDevice(columns, persistenceFile)
+  private val mem = new ByteArrayBlockDevice(columns, capacity)
 
   override def close(): Unit = {
     mem.close()
@@ -20,14 +19,6 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
   }
 
   override def length: ROWID = mem.length + disk.length
-
-  override def shrinkTo(newSize: ROWID): Unit = {
-    if (newSize < capacity) {
-      mem.shrinkTo(newSize)
-      disk.shrinkTo(0)
-    }
-    else disk.shrinkTo(newSize - capacity)
-  }
 
   override def readBlock(rowID: ROWID): ByteBuffer = {
     if (rowID < capacity) mem.readBlock(rowID) else disk.readBlock(rowID - capacity)
@@ -39,6 +30,14 @@ class HybridPersistentSeq[T <: Product : ClassTag](capacity: Int = 50000) extend
 
   override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
     if (rowID < capacity) mem.readBytes(rowID, numberOfBytes, offset) else disk.readBytes(rowID - capacity, numberOfBytes, offset)
+  }
+
+  override def shrinkTo(newSize: ROWID): Unit = {
+    if (newSize < capacity) {
+      mem.shrinkTo(newSize)
+      disk.shrinkTo(0)
+    }
+    else disk.shrinkTo(newSize - capacity)
   }
 
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {

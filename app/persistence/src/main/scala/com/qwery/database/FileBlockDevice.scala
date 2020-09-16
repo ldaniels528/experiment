@@ -4,31 +4,19 @@ import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 
-import com.qwery.database.DiskMappedSeq.newTempFile
-
-import scala.reflect.ClassTag
-
 /**
- * Represents a random-access disk-mapped collection implementation
- * @param persistenceFile the [[File persistence file]]
+ * File Block Device
+ * @param columns         the collection of [[Column columns]]
+ * @param persistenceFile the persistence [[File file]]
  */
-class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends PersistentSeq[T] {
+class FileBlockDevice(val columns: List[Column], persistenceFile: File) extends BlockDevice {
   private val raf = new RandomAccessFile(persistenceFile, "rw")
-
-  /**
-   * Default constructor
-   */
-  def this() = this(newTempFile())
 
   override def close(): Unit = raf.close()
 
   override def length: ROWID = {
     val eof = raf.length()
     ((eof / recordSize) + Math.min(1, eof % recordSize)).toURID
-  }
-
-  override def shrinkTo(newSize: ROWID): Unit = {
-    if (newSize >= 0 && newSize < raf.length()) raf.setLength(newSize * recordSize)
   }
 
   override def readBlock(rowID: ROWID): ByteBuffer = {
@@ -50,6 +38,10 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     wrap(bytes)
   }
 
+  override def shrinkTo(newSize: ROWID): Unit = {
+    if (newSize >= 0 && newSize < raf.length()) raf.setLength(newSize * recordSize)
+  }
+
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     raf.seek(rowID * recordSize)
     raf.write(buf.array())
@@ -59,20 +51,4 @@ class DiskMappedSeq[T <: Product : ClassTag](val persistenceFile: File) extends 
     raf.seek(rowID * recordSize)
     raf.write(byte)
   }
-
-}
-
-/**
- * RandomAccessFileSeq Companion
- */
-object DiskMappedSeq {
-
-  def apply[T <: Product : ClassTag](): DiskMappedSeq[T] = new DiskMappedSeq[T]()
-
-  def newTempFile(): File = {
-    val file = File.createTempFile("persistent", ".lldb")
-    file.deleteOnExit()
-    file
-  }
-
 }

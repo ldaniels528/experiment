@@ -2,7 +2,8 @@ package com.qwery.database
 
 import java.io.File
 
-import com.qwery.database.ColumnTypes.{DoubleType, StringType}
+import com.qwery.database.ColumnTypes.{DoubleType, IntType, LongType, StringType}
+import com.qwery.database.PersistentSeq.Field
 import com.qwery.database.StockQuote._
 import com.qwery.util.ServicingTools._
 import org.scalatest.funspec.AnyFunSpec
@@ -38,10 +39,36 @@ class PersistentSeqTest extends AnyFunSpec {
   )
 
   describe(classOf[PersistentSeq[_]].getSimpleName) {
-    logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
+    logger.info(s"coll is a ${coll.getClass.getSimpleName}(${coll.device.getClass.getSimpleName}); sample size is $expectedCount")
+
+    it("should extract values from a product class") {
+      val ps = PersistentSeq[GenericData]()
+      val data = GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087L)
+      val values = ps.toKeyValues(data)
+      assert(values == Seq(
+        "idValue" -> Some("Hello"),
+        "idType" -> Some("World"),
+        "responseTime" -> Some(307),
+        "reportDate" -> Some(1592204400000L),
+        "_id" -> Some(1087L)
+      ))
+    }
+
+    it("should populate a product class with vales") {
+      val ps = PersistentSeq[GenericData]()
+      val fmd = FieldMetaData(isCompressed = false, isEncrypted = false, isNotNull = true, `type` = StringType)
+      val data = ps.createItem(Seq(
+        Field(name = "_id", fmd.copy(`type` = LongType), value = Some(1087L)),
+        Field(name = "idValue", fmd, Some("Hello")),
+        Field(name = "idType", fmd, Some("World")),
+        Field(name = "responseTime", fmd.copy(`type` = IntType), Some(307)),
+        Field(name = "reportDate", fmd.copy(`type` = LongType), Some(java.sql.Date.valueOf("2020-06-15").getTime))
+      ))
+      assert(data == GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
+    }
 
     it("should start with an empty collection") {
-      eval("coll.truncate()", coll.truncate())
+      eval("coll.truncate()", coll.device.truncate())
       assert(coll.count() == 0)
     }
 
@@ -74,7 +101,7 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should count the rows where: isCompressed is true") {
-      val count = eval("coll.countRows(_.isCompressed)", coll.countRows(_.isCompressed))
+      val count = eval("coll.countRows(_.isCompressed)", coll.device.countRows(_.isCompressed))
       assert(count == 0)
     }
 
@@ -110,18 +137,18 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should read an individual field value (via column index)") {
-      val field = eval(f"coll.getField(rowID = 0, columnIndex = 0)", coll.getField(rowID = 0, columnIndex = 0))
+      val field = eval(f"coll.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
       assert(field.metadata.`type` == StringType)
     }
 
     it("should read an individual field value (via column name)") {
-      val field = eval(f"coll.getField(rowID = 0, column = 'lastSale)", coll.getField(rowID = 0, column = 'lastSale))
+      val field = eval(f"coll.getField(rowID = 0, column = 'lastSale)", coll.device.getField(rowID = 0, column = 'lastSale))
       assert(field.metadata.`type` == DoubleType)
     }
 
     it("should retrieve one row by its offset (rowID)") {
       val rowID = randomURID(coll)
-      val row = eval(f"coll.getRow($rowID)", coll.getRow(rowID))
+      val row = eval(f"coll.getRow($rowID)", coll.device.getRow(rowID))
 
       logger.info(s"rowID: \t ${row.rowID}")
       logger.info(s"metadata: \t ${row.metadata}")
@@ -132,7 +159,7 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should retrieve one row metadata by its offset (rowID)") {
       val rowID = randomURID(coll)
-      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.readRowMetaData(rowID))
+      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.device.readRowMetaData(rowID))
       logger.info(s"rmd => $rmd")
     }
 
@@ -223,14 +250,14 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should retrieve the record size") {
-      val recordSize = eval("coll.recordSize", coll.recordSize)
-      assert(recordSize == 65)
+      val recordSize = eval("coll.recordSize", coll.device.recordSize)
+      assert(recordSize == 49)
     }
 
     it("should remove records by its offset (rowID)") {
       val rowID = randomURID(coll)
       val before = coll.count()
-      eval(f"coll.remove($rowID)", coll.remove(rowID))
+      eval(f"coll.remove($rowID)", coll.device.remove(rowID))
       val after = coll.count()
       assert(before - after == 1)
     }
@@ -253,10 +280,14 @@ class PersistentSeqTest extends AnyFunSpec {
     it("should produce a reverse iterator") {
       val it = eval("coll.reverseIterator", coll.reverseIterator)
       assert(it.hasNext)
+      assert(it.toList.lastOption == coll.headOption)
     }
 
     it("should reverse the collection (in place)") {
-      eval("coll.reverseInPlace()", coll.reverseInPlace())
+      val coll = newCollection[StockQuote](partitionSize = 5)
+      coll ++= stocks4
+      eval("coll.reverseInPlace()", coll.device.reverseInPlace())
+      assert(coll.toArray sameElements stocks4.reverse)
     }
 
     it("should extract a slice of items from the collection") {
@@ -287,14 +318,14 @@ class PersistentSeqTest extends AnyFunSpec {
         val offset1: ROWID = randomURID(coll)
         val offset2: ROWID = randomURID(coll)
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"BEFORE: $item"))
-        eval(s"coll.swap($offset1, $offset2)", coll.swap(offset1, offset2))
+        eval(s"coll.swap($offset1, $offset2)", coll.device.swap(offset1, offset2))
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"AFTER: $item"))
       }
     }
 
     it("should shrink the collection by 20%") {
       val newSize = (coll.count() * 0.80).toInt
-      eval(f"coll.shrinkTo($newSize)", coll.shrinkTo(newSize))
+      eval(f"coll.shrinkTo($newSize)", coll.device.shrinkTo(newSize))
       assert(coll.length <= newSize)
     }
 
@@ -303,8 +334,8 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should trim dead entries from of the collection") {
-      eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.remove))
-      eval("coll.trim()", coll.trim())
+      eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.device.remove))
+      eval("coll.trim()", coll.device.trim())
     }
 
   }

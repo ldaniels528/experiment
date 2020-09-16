@@ -1,10 +1,11 @@
-package com.qwery.database
+package com.qwery.database.wip
 
 import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 
-import com.qwery.database.DiskMappedSortedPersistentSeq.BSTNode
+import com.qwery.database.wip.DiskMappedSortedPersistentSeq.BSTNode
+import com.qwery.database._
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 import scala.annotation.tailrec
@@ -20,6 +21,8 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
   extends SortedPersistentSeq[T, V](f) {
   import DiskMappedSortedPersistentSeq.Null
   private val raf = new RandomAccessFile(persistenceFile, "rw")
+
+  val (columns, _) = PersistentSeq.toColumns[T]
 
   override def add(item: T): Unit = {
     if (length != 0) attach(item, getNode(offset = 0)) else writeNode(length, BSTNode[T](offset = 0, item))
@@ -54,9 +57,9 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     recurse(offset = 0, f)
   }
 
-  override def headOption: Option[T] = min(offset = 0)
+  override def headOption: Option[T] = min(rowID = 0)
 
-  override def lastOption: Option[T] = max(offset = 0)
+  override def lastOption: Option[T] = max(rowID = 0)
 
   def length: ROWID = {
     val eof = raf.length()
@@ -116,64 +119,88 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
     offset
   }
 
-  private def max(offset: ROWID): Option[T] = {
-    val node_? = readNode(offset)
+  private def max(rowID: ROWID): Option[T] = {
+    val node_? = readNode(rowID)
     if (node_?.isEmpty) None else node_?.flatMap(node => max(node.right)) ?? node_?.map(_.item) ?? node_?.flatMap(node => max(node.left))
   }
 
-  private def min(offset: ROWID): Option[T] = {
-    val node_? = readNode(offset)
+  private def min(rowID: ROWID): Option[T] = {
+    val node_? = readNode(rowID)
     if (node_?.isEmpty) None else node_?.flatMap(node => max(node.left)) ?? node_?.map(_.item) ?? node_?.flatMap(node => max(node.right))
   }
 
-  private def readNode(offset: ROWID): Option[BSTNode[T]] = {
+  private def readNode(rowID: ROWID): Option[BSTNode[T]] = {
     val bytes = new Array[Byte](recordSize)
-    raf.seek(offset * recordSize)
+    raf.seek(rowID * recordSize)
     raf.read(bytes)
-    toNode(offset, bytes)
+    toNode(rowID, bytes)
   }
 
-  private def writeNode(offset: ROWID, node: BSTNode[T]): Unit = {
-    raf.seek(offset * recordSize)
+  private def writeNode(rowID: ROWID, node: BSTNode[T]): Unit = {
+    raf.seek(rowID * recordSize)
     raf.write(toBytes(node))
   }
 
   private def toBytes(node: BSTNode[T]): Array[Byte] = {
     val buf = allocate(recordSize)
-    buf.put(toBytes(node.item))
+    //buf.put(toBytes(node.item))
     buf.position(buf.capacity() - 2 * LONG_BYTES)
     buf.putLong(node.left)
     buf.putLong(node.right)
     buf.array()
   }
 
-  private def toNode(offset: ROWID, bytes: Array[Byte], evenDeletes: Boolean = false): Option[BSTNode[T]] = {
+  private def toNode(rowID: ROWID, bytes: Array[Byte], evenDeletes: Boolean = false): Option[BSTNode[T]] = {
     val buf = wrap(bytes)
     val rmd = buf.getRowMetaData
     if (rmd.isDeleted && !evenDeletes) None
     else {
       val left = buf.getLong().toURID
       val right = buf.getLong().toURID
-      toItem(offset, buf).map(item => BSTNode(offset, item, left = left, right = right))
+      toItem(rowID, buf).map(item => BSTNode(rowID, item, left = left, right = right))
     }
   }
+
+  def toItem(rowID: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = ???
 
   /**
    * Closes the underlying file handle
    */
-  override def close(): Unit = ???
+  override def close(): Unit = raf.close()
 
-  override def readBlock(rowID: ROWID): ByteBuffer = ???
+  override def readBlock(rowID: ROWID): ByteBuffer = {
+    val payload = new Array[Byte](recordSize)
+    raf.seek(rowID * recordSize)
+    raf.read(payload)
+    wrap(payload)
+  }
 
-  override def readByte(rowID: ROWID): Byte = ???
+  override def readByte(rowID: ROWID): Byte = {
+    raf.seek(rowID * recordSize)
+    raf.read().toByte
+  }
 
-  override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = ???
+  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
+    val bytes = new Array[Byte](numberOfBytes)
+    raf.seek(rowID * recordSize + offset)
+    raf.read(bytes)
+    wrap(bytes)
+  }
 
-  override def shrinkTo(newSize: ROWID): Unit = ???
+  override def shrinkTo(newSize: ROWID): Unit = {
+    if (newSize >= 0 && newSize < raf.length()) raf.setLength(newSize * recordSize)
+  }
 
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = ???
+  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+    raf.seek(rowID * recordSize)
+    raf.write(buf.array())
+  }
 
-  override def writeByte(rowID: ROWID, byte: ROWID): Unit = ???
+  override def writeByte(rowID: ROWID, byte: Int): Unit = {
+    raf.seek(rowID * recordSize)
+    raf.write(byte)
+  }
+
 }
 
 /**

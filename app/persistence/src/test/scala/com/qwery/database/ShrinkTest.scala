@@ -25,7 +25,7 @@ class ShrinkTest extends AnyFunSpec {
 
     it("should shrink the collection by 20%") {
       val newSize = (coll.count() * 0.80).toInt
-      eval(f"coll.shrinkTo($newSize)", coll.shrinkTo(newSize))
+      eval(f"coll.shrinkTo($newSize)", coll.device.shrinkTo(newSize))
       assert(coll.length <= newSize)
     }
 

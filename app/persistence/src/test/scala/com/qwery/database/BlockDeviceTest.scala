@@ -1,25 +1,20 @@
 package com.qwery.database
 
-import com.qwery.database.PersistentSeq.Field
+import com.qwery.database.PersistentSeq.{Field, newTempFile, toColumns}
 import org.scalatest.funspec.AnyFunSpec
 
-/**
- * Column Test
- */
-class ColumnTest extends AnyFunSpec {
+class BlockDeviceTest extends AnyFunSpec {
   private val stocks = Array(
     StockQuote(symbol = "BXXG", exchange = "NASDAQ", lastSale = 147.63, lastSaleTime = 1596317591000L),
     StockQuote(symbol = "KFFQ", exchange = "NYSE", lastSale = 22.92, lastSaleTime = 1597181591000L),
     StockQuote(symbol = "GTKK", exchange = "NASDAQ", lastSale = 240.14, lastSaleTime = 1596835991000L),
     StockQuote(symbol = "KNOW", exchange = "OTCBB", lastSale = 357.21, lastSaleTime = 1597872791000L)
   )
-  private val coll = PersistentSeq.builder[StockQuote]
-    //.withMemoryCapacity(capacity = 5)
-    //.withParallelism(ExecutionContext.global)
-    //.withPartitions(partitionSize = 5)
-    .build
+  val (columns, _) = toColumns[StockQuote]
+  private val persistenceFile = newTempFile()
+  private val coll = PersistentSeq.builder[StockQuote].withPersistenceFile(persistenceFile).build
 
-  describe(classOf[Column].getSimpleName) {
+  describe(classOf[BlockDevice].getSimpleName) {
 
     it("test reading a column") {
       coll ++= stocks
@@ -43,13 +38,13 @@ class ColumnTest extends AnyFunSpec {
   }
 
   def grabField(rowID: ROWID, columnIndex: Int): Field = {
-    val field@Field(name, fmd, value_?) = coll.getField(rowID, columnIndex)
+    val field@Field(name, fmd, value_?) = coll.device.getField(rowID, columnIndex)
     println(s"$name: ${value_?} -> $fmd")
     field
   }
 
   def grabField(rowID: ROWID, column: Symbol): Field = {
-    val field@Field(name, fmd, value_?) = coll.getField(rowID, column)
+    val field@Field(name, fmd, value_?) = coll.device.getField(rowID, column)
     println(s"$name: ${value_?} -> $fmd")
     field
   }

@@ -12,31 +12,31 @@ class PartitionedPersistentSeqTest extends AnyFunSpec {
   private val quotes2 = (0 to 1).map(_ => randomQuote)
   private val quotes10 = (0 to 10).map(_ => randomQuote)
 
-  describe(classOf[PartitionedPersistentSeq[StockQuote]].getSimpleName) {
+  describe(classOf[PersistentSeq[StockQuote]].getSimpleName) {
 
     it("should read/write data into a single partition") {
-      val coll = new PartitionedPersistentSeq[StockQuote](3)
+      val coll = PersistentSeq.builder[StockQuote].withPartitions(partitionSize = 3).build
       coll ++= quotes2
       coll.toList.zipWithIndex.foreach { case (q, index) => logger.info(s"[${index+1}] $q") }
       assert(coll.length == 2)
     }
 
     it("should read/write data into a single partition on the edge of a second partition") {
-      val coll = new PartitionedPersistentSeq[StockQuote](2)
+      val coll = PersistentSeq.builder[StockQuote].withPartitions(partitionSize = 2).build
       coll ++= quotes2
       coll.toList.zipWithIndex.foreach { case (q, index) => logger.info(s"[${index+1}] $q") }
       assert(coll.length == 2)
     }
 
     it("should read/write data into two partitions") {
-      val coll = new PartitionedPersistentSeq[StockQuote](1)
+      val coll = PersistentSeq.builder[StockQuote].withPartitions(partitionSize = 1).build
       coll ++= quotes2
       coll.toList.zipWithIndex.foreach { case (q, index) => logger.info(s"[${index+1}] $q") }
       assert(coll.length == 2)
     }
 
     it("should read/write data into multiple partitions") {
-      val coll = new PartitionedPersistentSeq[StockQuote](2)
+      val coll = PersistentSeq.builder[StockQuote].withPartitions(partitionSize = 2).build
       coll ++= quotes10
       coll.toList.zipWithIndex.foreach { case (q, index) => logger.info(s"[${index+1}] $q") }
       assert(coll.length == 11)

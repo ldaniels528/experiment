@@ -1,8 +1,9 @@
-package com.qwery.database
+package com.qwery.database.wip
 
 import java.nio.ByteBuffer
 
-import com.qwery.database.MemorySortedPersistentSeq.BSTNode
+import com.qwery.database.wip.MemorySortedPersistentSeq.BSTNode
+import com.qwery.database.{PersistentSeq, ROWID}
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 import scala.annotation.tailrec
@@ -16,6 +17,8 @@ import scala.reflect.ClassTag
  */
 class MemorySortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: T => V) extends SortedPersistentSeq[T, V](f) {
   private var root: BSTNode[T] = _
+
+  val (columns, _) = PersistentSeq.toColumns[T]
 
   override def add(item: T): Unit = {
     if (root == null) root = BSTNode(item) else attach(item, root)
@@ -123,6 +126,7 @@ class MemorySortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: 
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = ???
 
   override def writeByte(rowID: ROWID, byte: ROWID): Unit = ???
+
 }
 
 /**

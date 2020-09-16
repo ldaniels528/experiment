@@ -2,19 +2,19 @@ package com.qwery.database
 
 import java.nio.ByteBuffer
 
-import scala.reflect.ClassTag
+import com.qwery.database.PersistentSeq.newTempFile
 
 /**
- * Represents a partitioned persistent sequence
+ * Represents a partitioned block device
+ * @param columns       the collection of [[Column columns]]
  * @param partitionSize the size of each partition
- * @tparam T the product type
  */
-class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) extends PersistentSeq[T]() {
-  protected var partitions: List[PersistentSeq[T]] = Nil
+class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int) extends BlockDevice {
+  protected var partitions: List[BlockDevice] = Nil
   assert(partitionSize > 0, "Partition size must be greater than zero")
   //ensurePartitions(index = 1)
 
-  def addPartition(partition: PersistentSeq[T]): this.type = {
+  def addPartition(partition: BlockDevice): this.type = {
     partitions = partition :: partitions
     this
   }
@@ -31,7 +31,7 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
 
   override def readBlocks(rowID: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {
     for {
-      globalOffset <- rowID to rowID + numberOfBlocks
+      globalOffset <- rowID until rowID + numberOfBlocks
       index = toPartitionIndex(globalOffset)
       partition = partitions(index)
       blocks <- partition.readBlocks(toLocalOffset(globalOffset, index))
@@ -76,7 +76,7 @@ class PartitionedPersistentSeq[T <: Product : ClassTag](val partitionSize: Int) 
   }
 
   private def ensurePartitions(index: Int): Unit = {
-    while (partitions.size <= index) partitions = partitions ::: DiskMappedSeq[T]() :: Nil
+    while (partitions.size <= index) partitions = partitions ::: new FileBlockDevice(columns, newTempFile()) :: Nil
   }
 
   protected def toGlobalOffset(offset: ROWID, index: Int): ROWID = offset + index * partitionSize
