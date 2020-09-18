@@ -1,16 +1,14 @@
 package com.qwery.database
 
-import java.io.File
 import java.nio.ByteBuffer
 
 /**
- * Hybrid (Byte Array and Random Access File) Block Device
+ * Hybrid Block Device
  * @param columns  the collection of [[Column columns]]
  * @param capacity the maximum number of item the collection may contain
- * @param persistenceFile the persistence [[File file]]
+ * @param disk     the overflow [[BlockDevice device]]
  */
-class HybridBlockDevice(val columns: List[Column], val capacity: Int, persistenceFile: File) extends BlockDevice {
-  private val disk = new FileBlockDevice(columns, persistenceFile)
+class HybridBlockDevice(val columns: List[Column], val capacity: Int, disk: BlockDevice) extends BlockDevice {
   private val mem = new ByteArrayBlockDevice(columns, capacity)
 
   override def close(): Unit = {

@@ -17,10 +17,6 @@ class ByteArrayBlockDevice(val columns: List[Column], val capacity: Int) extends
 
   override def length: ROWID = ((limit / recordSize) + Math.min(1, limit % recordSize)).toURID
 
-  override def shrinkTo(newSize: ROWID): Unit = {
-    if (newSize >= 0 && newSize < limit) limit = newSize * recordSize
-  }
-
   override def readBlock(rowID: ROWID): ByteBuffer = {
     val p0 = rowID * recordSize
     val bytes = new Array[Byte](recordSize)
@@ -35,6 +31,10 @@ class ByteArrayBlockDevice(val columns: List[Column], val capacity: Int) extends
     val bytes = new Array[Byte](numberOfBytes)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     wrap(bytes)
+  }
+
+  override def shrinkTo(newSize: ROWID): Unit = {
+    if (newSize >= 0 && newSize < limit) limit = newSize * recordSize
   }
 
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {

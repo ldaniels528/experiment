@@ -5,7 +5,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec.encode
-import com.qwery.database.PersistentSeq.Field
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -19,7 +18,9 @@ import scala.reflect.{ClassTag, classTag}
 /**
  * Represents a persistent sequential collection
  */
-class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) extends Traversable[T] {
+class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) extends Traversable[T] {
+  val device: BlockDevice = new CachingBlockDevice(blockDevice)
+
   // cache the class information for type T
   private val declaredFields = `class`.getDeclaredFields.toList
   private val declaredFieldNames = declaredFields.map(_.getName)
@@ -263,16 +264,16 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
   }
 
   /**
-   * Performs an in-memory sorting of the items
+   * Performs an in-memory sorting of the collection
    * @param predicate the sort predicate
    */
   def sortBy[B <: Comparable[B]](predicate: T => B): Stream[T] = toStream.sortBy(predicate)
 
   /**
-   * Performs an in-place sorting of the items
+   * Performs an in-place sorting of the collection
    * @param predicate the sort predicate
    */
-  def sortByInPlace[B <: Comparable[B]](predicate: T => B): Unit = {
+  def sortInPlace[B <: Comparable[B]](predicate: T => B): Unit = {
     val cache = mutable.Map[ROWID, Option[B]]()
 
     def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID).map(predicate))
@@ -489,20 +490,22 @@ object PersistentSeq {
     def build: PersistentSeq[A] = {
       // is it partitioned?
       if (partitionSize > 0) {
-        new PersistentSeq(`class` = theClass, device = if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize) else {
-          implicit val ec: ExecutionContext = executionContext
-          new ParallelPartitionedBlockDevice(columns, partitionSize)
-        })
+        new PersistentSeq(`class` = theClass, blockDevice =
+          if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
+          else {
+            implicit val ec: ExecutionContext = executionContext
+            new ParallelPartitionedBlockDevice(columns, partitionSize)
+          })
       }
 
       // is it in memory?
       else if (capacity > 0) {
-        new PersistentSeq(`class` = theClass, device =
-          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, persistenceFile)
+        new PersistentSeq(`class` = theClass, blockDevice =
+          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new FileBlockDevice(columns, persistenceFile))
           else new ByteArrayBlockDevice(columns, capacity))
       }
 
-      // just use ole faithful
+      // must be a simple disk-based collection
       else {
         val file = if (persistenceFile != null) persistenceFile else newTempFile()
         new PersistentSeq(new FileBlockDevice(columns, file), theClass)
@@ -529,9 +532,5 @@ object PersistentSeq {
       this
     }
   }
-
-  case class Field(name: String, metadata: FieldMetaData, value: Option[Any])
-
-  case class Row(rowID: ROWID, metadata: RowMetaData, fields: Seq[Field])
 
 }

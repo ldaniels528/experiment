@@ -1,11 +1,15 @@
 package com.qwery.database
 
 import java.io.File
+import java.lang
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
+import java.util.UUID
 
 import com.qwery.database.Codec.decode
-import com.qwery.database.PersistentSeq.{Field, Row}
+import com.qwery.database.ColumnTypes._
+
+import scala.language.existentials
 
 /**
  * Represents a raw block device
@@ -57,29 +61,65 @@ trait BlockDevice {
     total
   }
 
-  def createIndex(indexFile: File, indexColumn: Column): BlockDevice = {
-    val rowIDColumn = Column(name = "rowID", ColumnTypes.IntType, maxSize = None, isCompressed = false, isEncrypted = false, isNullable = true, isPrimary = false, isRowID = false)
-    val indexAllColumns = List(rowIDColumn, indexColumn)
-    val indexDevice = new FileBlockDevice(indexAllColumns, indexFile)
-    val columnIndex = columns.indexOf(indexColumn)
+  /**
+   * Creates a new binary search index
+   * @param indexFile the index [[File file]]
+   * @param indexColumn the index [[Column column]]
+   * @return a new binary search index [[BlockDevice device]]
+   */
+  def createIndex(indexFile: File, indexColumn: Column): BlockDevice with BinarySearch = {
 
+    def convert(indexField: Field): Option[_] = {
+      (indexField.metadata.`type`, indexField.value) match {
+        case (DoubleType, value_?) => value_?.map(_.asInstanceOf[lang.Double])
+        case (IntType, value_?) => value_?.map(_.asInstanceOf[Integer])
+        case (LongType, value_?) => value_?.map(_.asInstanceOf[lang.Long])
+        case (StringType, value_?) => value_?.map(_.asInstanceOf[String])
+        case (UUIDType, value_?) => value_?.map(_.asInstanceOf[UUID])
+        case (unknown, value_?) => throw new IllegalArgumentException(s"Unhandled type '$unknown' (${value_?})")
+      }
+    }
+
+    def makeColumn(name: String, `type`: ColumnType): Column = {
+      Column(name = name, `type` = `type`, maxSize = None, isCompressed = false, isEncrypted = false, isNullable = true, isPrimary = false, isRowID = false)
+    }
+
+    // define the columns
+    val rowIDColumn = makeColumn(name = "rowID", `type` = IntType)
+    val indexAllColumns = List(rowIDColumn, indexColumn)
+    val sourceIndex = columns.indexOf(indexColumn)
+
+    // create the index device
+    val out = new FileBlockDevice(indexAllColumns, indexFile) with BinarySearch
+
+    // iterate the source file/table
     val eof: ROWID = length
     var rowID: ROWID = 0
     while (rowID < eof) {
-      val indexField = getField(rowID, columnIndex)
-      val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value).map(t => Codec.encode(t._1, t._2))
+      // build the data payload
+      val (indexField, indexFieldBuf) = getFieldWithBinary(rowID, sourceIndex)
+      val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value) map(t => Codec.encode(t._1, t._2))
 
       // convert the payloads to binary
-      val buf = allocate(indexDevice.recordSize).putRowMetaData(RowMetaData())
+      val buf = allocate(out.recordSize).putRowMetaData(RowMetaData())
       payloads.zipWithIndex foreach { case (bytes, idx) =>
-        buf.position(indexDevice.columnOffsets(idx))
+        buf.position(out.columnOffsets(idx))
         buf.put(bytes)
       }
 
-      indexDevice.writeBlock(rowID, buf)
+      // write the index data to disk
+      out.writeBlock(rowID, buf)
       rowID += 1
     }
-    indexDevice
+
+    // sort the contents of the device
+    val targetIndex = indexAllColumns.indexOf(indexColumn)
+    out.sortInPlace { rowID =>
+      val indexField = out.getField(rowID, targetIndex)
+      indexField.value.map(_.asInstanceOf[String])
+      //convert(indexField).asInstanceOf[Comparable[_]]
+    }
+    out
   }
 
   def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetaData => Boolean): Option[ROWID] = {
@@ -114,11 +154,19 @@ trait BlockDevice {
   }
 
   def getField(rowID: ROWID, columnIndex: Int): Field = {
-    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex) is out of range")
+    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset)
     val (fmd, value_?) = Codec.decode(buf)
     Field(name = column.name, fmd, value = value_?)
+  }
+
+  def getFieldWithBinary(rowID: ROWID, columnIndex: Int): (Field, ByteBuffer) = {
+    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
+    val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
+    val buf = readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset)
+    val (fmd, value_?) = Codec.decode(buf)
+    Field(name = column.name, fmd, value = value_?) -> buf
   }
 
   def getRow(rowID: ROWID): Row = {
@@ -169,7 +217,7 @@ trait BlockDevice {
   def reverseInPlace(): Unit = {
     var (top: ROWID, bottom: ROWID) = (0, length - 1)
     while (top < bottom) {
-      if (top != bottom) swap(top, bottom)
+      swap(top, bottom)
       bottom -= 1
       top += 1
     }
@@ -194,6 +242,37 @@ trait BlockDevice {
   }
 
   def shrinkTo(newSize: ROWID): Unit
+
+  /**
+   * Performs an in-place sorting of the collection
+   * @param fetch the row ID to value extraction function
+   */
+  def sortInPlace[B <: Comparable[B]](fetch: ROWID => Option[B]): Unit = {
+
+    def partition(low: ROWID, high: ROWID): ROWID = {
+      var i = low - 1 // index of lesser item
+      for {
+        pivot <- fetch(high)
+        j <- low until high
+        value <- fetch(j)
+      } {
+        if (value.compareTo(pivot) < 0) {
+          i += 1 // increment the index of lesser item
+          swap(i, j)
+        }
+      }
+      swap(i + 1, high)
+      i + 1
+    }
+
+    def sort(low: ROWID, high: ROWID): Unit = if (low < high) {
+      val pi = partition(low, high)
+      sort(low, pi - 1)
+      sort(pi + 1, high)
+    }
+
+    sort(low = 0, high = BlockDevice.this.length - 1)
+  }
 
   def swap(offset0: ROWID, offset1: ROWID): Unit = {
     val (block0, block1) = (readBlock(offset0), readBlock(offset1))

@@ -9,7 +9,7 @@ import com.qwery.database.PersistentSeq.newTempFile
  * @param columns       the collection of [[Column columns]]
  * @param partitionSize the size of each partition
  */
-class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int) extends BlockDevice {
+class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int, isInMemory: Boolean = false) extends BlockDevice {
   protected var partitions: List[BlockDevice] = Nil
   assert(partitionSize > 0, "Partition size must be greater than zero")
   //ensurePartitions(index = 1)
@@ -75,8 +75,12 @@ class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int) 
     partitions(index).writeByte(toLocalOffset(rowID, index), byte)
   }
 
-  private def ensurePartitions(index: Int): Unit = {
-    while (partitions.size <= index) partitions = partitions ::: new FileBlockDevice(columns, newTempFile()) :: Nil
+  protected def ensurePartitions(index: Int): Unit = {
+    while (partitions.size <= index) partitions = partitions ::: newPartition :: Nil
+  }
+
+  protected def newPartition: BlockDevice = {
+    if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else new FileBlockDevice(columns, newTempFile())
   }
 
   protected def toGlobalOffset(offset: ROWID, index: Int): ROWID = offset + index * partitionSize

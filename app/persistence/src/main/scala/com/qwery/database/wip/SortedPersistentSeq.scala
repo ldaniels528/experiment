@@ -1,7 +1,5 @@
 package com.qwery.database.wip
 
-import com.qwery.database.BlockDevice
-
 import scala.reflect.ClassTag
 
 /**
@@ -10,7 +8,7 @@ import scala.reflect.ClassTag
  * @tparam T the item/product type
  * @tparam V the value type
  */
-abstract class SortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: T => V) extends BlockDevice with Traversable[T] {
+abstract class SortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](f: T => V) extends Traversable[T] {
 
   def +=(item: T): Unit = add(item)
 

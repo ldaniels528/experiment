@@ -1,11 +1,11 @@
 package com.qwery.database.wip
 
-import java.io.{File, RandomAccessFile}
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 
-import com.qwery.database.wip.DiskMappedSortedPersistentSeq.BSTNode
 import com.qwery.database._
+import com.qwery.database.wip.DiskMappedSortedPersistentSeq.BSTNode
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 import scala.annotation.tailrec
@@ -20,7 +20,7 @@ import scala.reflect.ClassTag
 class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]](persistenceFile: File)(f: T => V)
   extends SortedPersistentSeq[T, V](f) {
   import DiskMappedSortedPersistentSeq.Null
-  private val raf = new RandomAccessFile(persistenceFile, "rw")
+  private val device = new FileBlockDevice(columns = Nil, persistenceFile)
 
   val (columns, _) = PersistentSeq.toColumns[T]
 
@@ -61,10 +61,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
 
   override def lastOption: Option[T] = max(rowID = 0)
 
-  def length: ROWID = {
-    val eof = raf.length()
-    ((eof / recordSize) + Math.min(1, eof % recordSize)).toURID
-  }
+  def length: ROWID = device.length
 
   override def map[U](f: T => U): Seq[U] = sortAscending().map(f)
 
@@ -103,9 +100,7 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
   }
 
   private def getNode(offset: ROWID): BSTNode[T] = {
-    val bytes = new Array[Byte](recordSize)
-    raf.seek(offset * recordSize)
-    raf.read(bytes)
+    val bytes = device.readBlock(offset).array()
     toNode(offset, bytes, evenDeletes = true).getOrElse(throw new IllegalStateException(s"Node $offset not found"))
   }
 
@@ -130,19 +125,16 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
   }
 
   private def readNode(rowID: ROWID): Option[BSTNode[T]] = {
-    val bytes = new Array[Byte](recordSize)
-    raf.seek(rowID * recordSize)
-    raf.read(bytes)
+    val bytes = device.readBlock(rowID).array()
     toNode(rowID, bytes)
   }
 
   private def writeNode(rowID: ROWID, node: BSTNode[T]): Unit = {
-    raf.seek(rowID * recordSize)
-    raf.write(toBytes(node))
+    device.writeBlock(rowID, wrap(toBytes(node)))
   }
 
   private def toBytes(node: BSTNode[T]): Array[Byte] = {
-    val buf = allocate(recordSize)
+    val buf = allocate(device.recordSize)
     //buf.put(toBytes(node.item))
     buf.position(buf.capacity() - 2 * LONG_BYTES)
     buf.putLong(node.left)
@@ -162,44 +154,6 @@ class DiskMappedSortedPersistentSeq[T <: Product : ClassTag, V <: Comparable[V]]
   }
 
   def toItem(rowID: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = ???
-
-  /**
-   * Closes the underlying file handle
-   */
-  override def close(): Unit = raf.close()
-
-  override def readBlock(rowID: ROWID): ByteBuffer = {
-    val payload = new Array[Byte](recordSize)
-    raf.seek(rowID * recordSize)
-    raf.read(payload)
-    wrap(payload)
-  }
-
-  override def readByte(rowID: ROWID): Byte = {
-    raf.seek(rowID * recordSize)
-    raf.read().toByte
-  }
-
-  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
-    val bytes = new Array[Byte](numberOfBytes)
-    raf.seek(rowID * recordSize + offset)
-    raf.read(bytes)
-    wrap(bytes)
-  }
-
-  override def shrinkTo(newSize: ROWID): Unit = {
-    if (newSize >= 0 && newSize < raf.length()) raf.setLength(newSize * recordSize)
-  }
-
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
-    raf.seek(rowID * recordSize)
-    raf.write(buf.array())
-  }
-
-  override def writeByte(rowID: ROWID, byte: Int): Unit = {
-    raf.seek(rowID * recordSize)
-    raf.write(byte)
-  }
 
 }
 
