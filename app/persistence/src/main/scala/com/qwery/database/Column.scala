@@ -86,11 +86,11 @@ object Column {
   def apply(name: String,
             `type`: ColumnTypes.ColumnType,
             maxSize: Option[Int],
-            isCompressed: Boolean,
-            isEncrypted: Boolean,
-            isNullable: Boolean,
-            isPrimary: Boolean,
-            isRowID: Boolean): Column = {
+            isCompressed: Boolean = false,
+            isEncrypted: Boolean = false,
+            isNullable: Boolean = true,
+            isPrimary: Boolean = false,
+            isRowID: Boolean = false): Column = {
     val maxLength: Int = (`type`.getFixedLength ?? maxSize.map(_ + SHORT_BYTES)).map(_ + STATUS_BYTE)
       .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${`type`}"))
     DefaultColumn(name, `type`, maxLength, isCompressed, isEncrypted, isNullable, isPrimary, isRowID)

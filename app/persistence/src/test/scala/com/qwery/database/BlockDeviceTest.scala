@@ -27,7 +27,7 @@ class BlockDeviceTest extends AnyFunSpec {
   describe(classOf[BlockDevice].getSimpleName) {
 
     it("should count the rows where: isCompressed is true") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val count = eval("device.countRows(_.isCompressed)", device.countRows(_.isCompressed))
@@ -35,7 +35,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should read an individual field value (via column index)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val field = eval(f"coll.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
@@ -43,7 +43,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should read an individual field value (via column name)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val field = eval(f"coll.getField(rowID = 0, column = 'lastSale)", coll.device.getField(rowID = 0, column = 'lastSale))
@@ -51,7 +51,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should retrieve one row by its offset (rowID)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val rowID = randomURID(coll)
@@ -65,7 +65,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should retrieve one row metadata by its offset (rowID)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val rowID = randomURID(coll)
@@ -74,7 +74,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should retrieve the record size") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val recordSize = eval("coll.recordSize", coll.device.recordSize)
@@ -82,7 +82,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should remove records by its offset (rowID)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val rowID = randomURID(coll)
@@ -93,7 +93,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should reverse the collection (in place)") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       eval("coll.reverseInPlace()", coll.device.reverseInPlace())
@@ -101,7 +101,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should swap the position of two rows") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       if (coll.nonEmpty) {
         val offset1: ROWID = randomURID(coll)
@@ -113,7 +113,7 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should shrink the collection by 20%") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       val newSize = (coll.count() * 0.80).toInt
       eval(f"coll.shrinkTo($newSize)", coll.device.shrinkTo(newSize))
@@ -121,21 +121,21 @@ class BlockDeviceTest extends AnyFunSpec {
     }
 
     it("should trim dead entries from of the collection") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.device.remove))
       eval("coll.trim()", coll.device.trim())
     }
 
     it("should start with an empty collection") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       eval("device.truncate()", device.truncate())
       assert(coll.count() == 0)
     }
 
     it("should read a single field") {
-      val coll = PersistentSeq.builder[StockQuote].build
+      val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       println(s"coll contains ${coll.length} items")
@@ -160,7 +160,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val (_, processedTime) = time {
         // create a persistent collection
         val stocks: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
-        val coll = PersistentSeq.builder[StockQuote].build
+        val coll = PersistentSeq[StockQuote]()
         coll ++= stocks
 
         // create the index

@@ -233,7 +233,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     sample.sorted.apply(index)
   }
 
-  def pop: Option[T] = device.lastIndexOption flatMap { rowID =>
+  def pop(): Option[T] = device.lastIndexOption flatMap { rowID =>
     val item = get(rowID)
     device.remove(rowID)
     item
@@ -279,19 +279,17 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID).map(predicate))
 
     def partition(low: ROWID, high: ROWID): ROWID = {
-      var i = low - 1 // index of lesser item
+      var m = low - 1 // index of lesser item
       for {
         pivot <- fetch(high)
-        j <- low until high
-        value <- fetch(j)
+        n <- low until high
+        value <- fetch(n) if value.compareTo(pivot) < 0
       } {
-        if (value.compareTo(pivot) < 0) {
-          i += 1 // increment the index of lesser item
-          swap(i, j)
-        }
+        m += 1 // increment the index of lesser item
+        swap(m, n)
       }
-      swap(i + 1, high)
-      i + 1
+      swap(m + 1, high)
+      m + 1
     }
 
     def sort(low: ROWID, high: ROWID): Unit = if (low < high) {
@@ -390,7 +388,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   ///////////////////////////////////////////////////////////////
 
   private def _gather[U](fromPos: ROWID = 0, toPos: ROWID = device.length)(f: T => U): Unit = {
-    var rowID = fromPos
+    var rowID: ROWID = fromPos
     while (rowID < toPos) {
       get(rowID).foreach(f)
       rowID += 1
@@ -398,15 +396,15 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   }
 
   private def _indexOf[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = device.length)(f: (ROWID, T) => U): Unit = {
-    var rowID = fromPos
+    var rowID: ROWID = fromPos
     while (rowID < toPos && !isDone()) {
-      get(rowID).foreach { item => f(rowID, item) }
+      get(rowID).foreach(f(rowID, _))
       rowID += 1
     }
   }
 
   private def _traverse[U](isDone: () => Boolean, fromPos: ROWID = 0, toPos: ROWID = device.length)(f: T => U): Unit = {
-    var rowID = fromPos
+    var rowID: ROWID = fromPos
     while (rowID < toPos && !isDone()) {
       get(rowID).foreach(f)
       rowID += 1

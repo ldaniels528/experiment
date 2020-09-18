@@ -14,13 +14,13 @@ trait BinarySearch { device: BlockDevice =>
    * @return an option of a row ID
    */
   def search(column: Symbol, value: Option[Any]): Option[ROWID] = {
-    // create a closure to lookup a field by row ID
+    // create a closure to lookup a field value by row ID
     val valueAt: ROWID => Option[Any] = {
       val columnIndex = columns.indexWhere(_.name == column.name)
       (rowID: ROWID) => getField(rowID, columnIndex).value
     }
 
-    // search for a matching field
+    // search for a matching field value
     var (p0: ROWID, p1: ROWID, changed: Boolean) = (0, length - 1, true)
     while (p0 != p1 && valueAt(p0) < value && valueAt(p1) > value && changed) {
       val (mp, z0, z1) = ((p0 + p1) / 2, p0, p1)

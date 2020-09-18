@@ -3,7 +3,6 @@ package com.qwery.database
 import java.io.File
 
 import com.qwery.database.ColumnTypes.{IntType, LongType, StringType}
-import com.qwery.database.Field
 import com.qwery.database.StockQuote._
 import com.qwery.util.ServicingTools._
 import org.scalatest.funspec.AnyFunSpec
@@ -207,7 +206,7 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should pop items like a stack") {
       val before = coll.count()
-      eval("coll.pop", coll.pop)
+      eval("coll.pop()", coll.pop())
       val after = coll.count()
       assert(before - after == 1)
     }
