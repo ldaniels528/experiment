@@ -33,13 +33,13 @@ package object database {
 
     @inline def putDate(date: java.util.Date): ByteBuffer = buf.putLong(date.getTime)
 
-    @inline def getFieldMetaData: FieldMetaData = FieldMetaData.decode(buf.get)
+    @inline def getFieldMetaData: FieldMetadata = FieldMetadata.decode(buf.get)
 
-    @inline def putFieldMetaData(fmd: FieldMetaData): ByteBuffer = buf.put(fmd.encode.toByte)
+    @inline def putFieldMetaData(fmd: FieldMetadata): ByteBuffer = buf.put(fmd.encode.toByte)
 
-    @inline def getRowMetaData: RowMetaData = RowMetaData.decode(buf.get)
+    @inline def getRowMetaData: RowMetadata = RowMetadata.decode(buf.get)
 
-    @inline def putRowMetaData(rmd: RowMetaData): ByteBuffer = buf.put(rmd.encode.toByte)
+    @inline def putRowMetaData(rmd: RowMetadata): ByteBuffer = buf.put(rmd.encode.toByte)
 
     def getBigDecimal: java.math.BigDecimal = {
       val (scale, length) = (buf.getShort, buf.getShort)
@@ -55,7 +55,7 @@ package object database {
       new BigInteger(bytes)
     }
 
-    def getString(implicit fmd: FieldMetaData): String = {
+    def getString(implicit fmd: FieldMetadata): String = {
       val length = buf.getShort
       val bytes = new Array[Byte](length)
       buf.get(bytes)

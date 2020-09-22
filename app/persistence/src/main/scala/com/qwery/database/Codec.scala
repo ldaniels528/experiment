@@ -12,12 +12,12 @@ import com.qwery.database.Compression.CompressionByteArrayExtensions
  */
 object Codec extends Compression {
 
-  def decode(buf: ByteBuffer): (FieldMetaData, Option[Any]) = {
+  def decode(buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
     val fmd = buf.getFieldMetaData
     (fmd, decodeValue(fmd, buf))
   }
 
-  def decodeSeq(buf: ByteBuffer)(implicit fmd: FieldMetaData): Seq[Option[Any]] = {
+  def decodeSeq(buf: ByteBuffer)(implicit fmd: FieldMetadata): Seq[Option[Any]] = {
     // read the collection as a block
     val blockSize = buf.getInt
     val count = buf.getInt
@@ -32,7 +32,7 @@ object Codec extends Compression {
     } yield value
   }
 
-  def decodeValue(fmd: FieldMetaData, buf: ByteBuffer): Option[Any] = {
+  def decodeValue(fmd: FieldMetadata, buf: ByteBuffer): Option[Any] = {
     if (fmd.isNull) None else {
       fmd.`type` match {
         case ArrayType => Some(decodeSeq(buf)(fmd))
@@ -56,7 +56,7 @@ object Codec extends Compression {
   }
 
   def encode(column: Column, value_? : Option[Any]): Array[Byte] = {
-    val fmd = FieldMetaData(column)
+    val fmd = FieldMetadata(column.metadata)
     encodeValue(fmd, value_?) match {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
@@ -68,7 +68,7 @@ object Codec extends Compression {
     }
   }
 
-  def encodeSeq(items: Seq[Any])(implicit fmd: FieldMetaData): ByteBuffer = {
+  def encodeSeq(items: Seq[Any])(implicit fmd: FieldMetadata): ByteBuffer = {
     // create the data block
     val compressedBytes = (for {
       value_? <- items.toArray map {
@@ -87,7 +87,7 @@ object Codec extends Compression {
     block
   }
 
-  def encodeValue(fmd: FieldMetaData, value_? : Option[Any]): Option[ByteBuffer] = {
+  def encodeValue(fmd: FieldMetadata, value_? : Option[Any]): Option[ByteBuffer] = {
     value_? map {
       case a: Array[_] => encodeSeq(a)(fmd)
       case b: java.math.BigDecimal =>

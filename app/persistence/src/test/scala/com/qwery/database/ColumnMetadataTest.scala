@@ -5,33 +5,37 @@ import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
 /**
- * Field Metadata Test Suite
+ * Column Metadata Test Suite
  */
-class FieldMetadataTest extends AnyFunSpec {
+class ColumnMetadataTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
 
-  describe(classOf[FieldMetadata].getSimpleName) {
+  describe(classOf[ColumnMetadata].getSimpleName) {
 
     it("should encode/decode every permutation of metadata") {
       for {
         c <- Seq(true, false)
         e <- Seq(true, false)
         n <- Seq(true, false)
+        p <- Seq(true, false)
+        r <- Seq(true, false)
         t <- ColumnTypes.values
       } yield {
-        verify(FieldMetadata(
+        verify(ColumnMetadata(
           isCompressed = c,
           isEncrypted = e,
-          isNotNull = n,
+          isNullable = n,
+          isPrimary = p,
+          isRowID = r,
           `type` = t))
       }
     }
   }
 
-  private def verify(md: FieldMetadata): Assertion = {
+  private def verify(md: ColumnMetadata): Assertion = {
     val code = md.encode
-    logger.info(f"$md ~> [$code%02x] ${code.toBinaryString}")
-    assert(FieldMetadata.decode(code) == md)
+    logger.info(f"$md ~> [$code%04x] ${code.toBinaryString}")
+    assert(ColumnMetadata.decode(code) == md)
   }
 
 }

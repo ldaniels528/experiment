@@ -351,7 +351,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     } yield encode(column, value_?)
 
     // convert the row to binary
-    val buf = allocate(device.recordSize).putRowMetaData(RowMetaData())
+    val buf = allocate(device.recordSize).putRowMetaData(RowMetadata())
     payloads.zipWithIndex foreach { case (bytes, index) =>
       buf.position(device.columnOffsets(index))
       buf.put(bytes)
@@ -457,13 +457,13 @@ object PersistentSeq {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column(name = field.getName, `type` = `type`,
-        maxSize = maxSize ?? Some(defaultMaxLen),
+      Column(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+        `type` = `type`,
         isCompressed = ci.exists(_.isCompressed),
         isEncrypted = ci.exists(_.isEncrypted),
         isNullable = ci.exists(_.isNullable),
         isPrimary = ci.exists(_.isPrimary),
-        isRowID = ci.exists(_.isRowID))
+        isRowID = ci.exists(_.isRowID)))
     }
     (columns, `class`.asInstanceOf[Class[T]])
   }

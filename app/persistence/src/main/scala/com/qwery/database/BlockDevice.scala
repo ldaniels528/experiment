@@ -41,8 +41,8 @@ trait BlockDevice {
    * defines a closure to dynamically create the optional rowID field for type T
    */
   val toRowIdField: ROWID => Option[Field] = {
-    val rowIdColumn_? = columns.find(_.isRowID)
-    val fmd = FieldMetaData(isCompressed = false, isEncrypted = false, isNotNull = false, `type` = ColumnTypes.LongType)
+    val rowIdColumn_? = columns.find(_.metadata.isRowID)
+    val fmd = FieldMetadata(isCompressed = false, isEncrypted = false, isNotNull = false, `type` = ColumnTypes.LongType)
     (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, fmd, value = Some(rowID)))
   }
 
@@ -51,7 +51,7 @@ trait BlockDevice {
    * @param predicate the function defining which items should be included
    * @return the number of rows matching the predicate
    */
-  def countRows(predicate: RowMetaData => Boolean): ROWID = {
+  def countRows(predicate: RowMetadata => Boolean): ROWID = {
     val eof: ROWID = length
     var (rowID: ROWID, total) = (0, 0)
     while (rowID < eof) {
@@ -69,7 +69,7 @@ trait BlockDevice {
    */
   def createIndex(indexFile: File, indexColumn: Column): BlockDevice with BinarySearch = {
     // define the columns
-    val rowIDColumn = Column(name = "rowID", `type` = IntType, maxSize = None)
+    val rowIDColumn = Column(name = "rowID", metadata = ColumnMetadata(`type` = IntType), maxSize = None)
     val indexAllColumns = List(rowIDColumn, indexColumn)
     val sourceIndex = columns.indexOf(indexColumn)
 
@@ -85,7 +85,7 @@ trait BlockDevice {
       val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value) map(t => Codec.encode(t._1, t._2))
 
       // convert the payloads to binary
-      val buf = allocate(out.recordSize).putRowMetaData(RowMetaData())
+      val buf = allocate(out.recordSize).putRowMetaData(RowMetadata())
       payloads.zipWithIndex foreach { case (bytes, idx) =>
         buf.position(out.columnOffsets(idx))
         buf.put(bytes)
@@ -101,7 +101,7 @@ trait BlockDevice {
     out.sortInPlace { rowID => out.getField(rowID, targetIndex).value }
   }
 
-  def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetaData => Boolean): Option[ROWID] = {
+  def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetadata => Boolean): Option[ROWID] = {
     var rowID = fromPos
     if (forward) while (rowID < length && !f(readRowMetaData(rowID))) rowID += 1
     else while (rowID >= 0 && !f(readRowMetaData(rowID))) rowID -= 1
@@ -180,7 +180,7 @@ trait BlockDevice {
 
   def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer
 
-  def readRowMetaData(rowID: ROWID): RowMetaData = RowMetaData.decode(readByte(rowID))
+  def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(readByte(rowID))
 
   /**
    * @return the record length in bytes
@@ -191,7 +191,7 @@ trait BlockDevice {
    * Remove an item from the collection via its record offset
    * @param rowID the record offset
    */
-  def remove(rowID: ROWID): Unit = writeRowMetaData(rowID, RowMetaData(isActive = false))
+  def remove(rowID: ROWID): Unit = writeRowMetaData(rowID, RowMetadata(isActive = false))
 
   def reverseInPlace(): Unit = {
     var (top: ROWID, bottom: ROWID) = (0, length - 1)
@@ -296,6 +296,6 @@ trait BlockDevice {
 
   def writeByte(rowID: ROWID, byte: Int): Unit
 
-  def writeRowMetaData(rowID: ROWID, metaData: RowMetaData): Unit = writeByte(rowID, metaData.encode)
+  def writeRowMetaData(rowID: ROWID, metaData: RowMetadata): Unit = writeByte(rowID, metaData.encode)
 
 }

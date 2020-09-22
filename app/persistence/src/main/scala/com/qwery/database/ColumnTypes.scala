@@ -14,7 +14,7 @@ object ColumnTypes extends Enumeration {
   val ArrayType: ColumnType = Value(0)
   val BigDecimalType: ColumnType = Value(1)
   val BigIntType: ColumnType = Value(2)
-  val BlobType: ColumnType = Value(3)
+  val BlobType: ColumnType = Value(3) // can be byte array or a Serializable
   val BooleanType: ColumnType = Value(4)
   val ByteType: ColumnType = Value(5)
   val CharType: ColumnType = Value(6)
@@ -26,7 +26,7 @@ object ColumnTypes extends Enumeration {
   val ShortType: ColumnType = Value(12)
   val StringType: ColumnType = Value(13)
   val UUIDType: ColumnType = Value(14)
-  val UserDefinedType: ColumnType = Value(31)
+  val UserDefinedType: ColumnType = Value(15)
 
   def determineType[A](`class`: Class[A])(implicit tt: TypeTag[A]): ColumnType = {
     `class` match {

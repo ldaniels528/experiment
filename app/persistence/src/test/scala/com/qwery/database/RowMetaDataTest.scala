@@ -7,10 +7,10 @@ import org.slf4j.LoggerFactory
 /**
  * Row Metadata Test Suite
  */
-class RowMetaDataTest extends AnyFunSpec {
+class RowMetadataTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
 
-  describe(classOf[RowMetaData].getSimpleName) {
+  describe(classOf[RowMetadata].getSimpleName) {
 
     it("should encode/decode every permutation of metadata") {
       for {
@@ -20,7 +20,7 @@ class RowMetaDataTest extends AnyFunSpec {
         l <- Seq(true, false)
         r <- 0x0 to 0x0f
       } yield {
-        verify(RowMetaData(
+        verify(RowMetadata(
           isActive = a,
           isCompressed = c,
           isEncrypted = e,
@@ -30,10 +30,10 @@ class RowMetaDataTest extends AnyFunSpec {
     }
   }
 
-  private def verify(md: RowMetaData): Assertion = {
+  private def verify(md: RowMetadata): Assertion = {
     val code = md.encode
     logger.info(f"$md ~> [$code%02x] ${code.toBinaryString}")
-    assert(RowMetaData.decode(code.toByte) == md)
+    assert(RowMetadata.decode(code) == md)
   }
 
 }

@@ -11,22 +11,64 @@ database + kafka(streaming) - easy to get data in and out (json, csv, avro, parq
 3 types - items (T), blocks (ByteBuffer), bytes (Array[Byte])
 
 
+network protocol/opCodes
+----------------------------
+
+read            0
+write           1
+
+byte            000
+bytes           001
+block           010
+columns         011
+metadata        110
+
+open/close      100
+length/shrink   101
+create/delete   111
+
+instruction set
+---------------
+0.000.0000 = 0x00 - read byte
+0.000.0001 = 0x01 - read byte <deviceUUID>
+0.000.0010 = 0x02 - read byte <offset64>
+0.000.0011 = 0x03 - read byte <deviceUUID> <offset64>
+
+0.001.0000 = 0x10 - read bytes <count32>
+0.001.0001 = 0x11 - read bytes <deviceUUID> <count32>
+0.001.0010 = 0x12 - read bytes <offset64> <count32>
+0.001.0011 = 0x13 - read bytes <deviceUUID> <offset64> <count32>
+
+0.010.0000 = 0x20 - read block <deviceUUID> <offset64>
+0.011.0000 = 0x30 - read columns <deviceUUID>
+0.100.0000 = 0x40 - open device <name> ~> <deviceUUID>
+0.101.0000 = 0x50 - read length <deviceUUID>
+0.110.0000 = 0x60 - read metadata <deviceUUID> <offset64>
+0.111.0000 = 0x70 - create device <name> <columns> ~> <deviceUUID>
+
+1.000.0000 = 0x80 - write byte <deviceUUID> <offset64>
+1.000.1000 = 0x80 - swap byte <deviceUUID> <offset64>
+1.001.0000 = 0x90 - write bytes <deviceUUID> <offset64> [... bytes]
+1.001.1001 = 0x99 - swap bytes <deviceUUID> <count32>
+1.010.0000 = 0xA0 - write block <deviceUUID> <offset64> [... bytes]
+1.010.1000 = 0xA8 - swap block <deviceUUID> <offset64>
+1.011.0000 = 0xB0 - ???? (write columns)
+1.100.0000 = 0xC0 - close device <deviceUUID>
+1.101.0000 = 0xD0 - write length <deviceUUID> <offset64> (shrink)
+1.110.0000 = 0xE0 - write metadata <deviceUUID> <offset64> <value8>
+1.111.0000 = 0xF0 - delete device <deviceUUID>
+
+1.111.1110 = 0xFE - set default device <deviceUUID>
+1.111.1111 = 0xFF - set default offset <offset64>
 
 
 
-
-
-
-network protocol
------------------
-00 = GET
-
-
-
+mnemonics
+---------
 A       AB0DE   ACE     AC1D        A1DE
 BABE    BE      BEAD    BEE         BEEF    B1B7E   BE5IDE
 CAFE    CA5E    C0DE
-DAD     DEAD    DEAF    DECEA5ED    DEC1DE  DEC1DED D1CE    D1E D0
+DAD     DEAD    DEAF    DECEA5ED    DEC1DE  DEC1DED D1CE    D1E D1ED D0
 FACADE  FACE    FADE    F00D
 1CE     1DEA
 0BESE

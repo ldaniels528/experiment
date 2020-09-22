@@ -1,6 +1,6 @@
 package com.qwery.database
 
-import com.qwery.database.RowMetaData._
+import com.qwery.database.RowMetadata._
 
 /**
  * Represents the metadata of a row in the database.
@@ -19,19 +19,23 @@ import com.qwery.database.RowMetaData._
  * @param isLocked     indicates whether the row is locked for update
  * @param reservedBits reserved for future use (4 bits)
  */
-case class RowMetaData(isActive: Boolean = true,
+case class RowMetadata(isActive: Boolean = true,
                        isCompressed: Boolean = false,
                        isEncrypted: Boolean = false,
                        isLocked: Boolean = false,
                        reservedBits: Int = 0) {
 
-  def encode: Int = {
+  /**
+   * Encodes the [[RowMetadata metadata]] into a bit sequence representing the metadata
+   * @return a short representing the metadata bits
+   */
+  def encode: Byte = {
     val a = if (isActive) ACTIVE_BIT else 0
     val c = if (isCompressed) COMPRESSED_BIT else 0
     val e = if (isEncrypted) ENCRYPTED_BIT else 0
     val l = if (isLocked) LOCKED_BIT else 0
     val r = reservedBits & RESERVED_BITS
-    a | c | e | l | r
+    (a | c | e | l | r).toByte
   }
 
   def isDeleted: Boolean = !isActive
@@ -50,7 +54,7 @@ case class RowMetaData(isActive: Boolean = true,
 /**
  * Row MetaData Companion
  */
-object RowMetaData {
+object RowMetadata {
   // bit enumerations
   val ACTIVE_BIT = 0x80
   val COMPRESSED_BIT = 0x40
@@ -59,11 +63,11 @@ object RowMetaData {
   val RESERVED_BITS = 0x0f
 
   /**
-   * Decodes the metadata byte into [[RowMetaData metadata]] instance
+   * Decodes the 8-bit metadata code into [[RowMetadata metadata]] instance
    * @param metadataBits the metadata byte
-   * @return a new [[RowMetaData metadata]]
+   * @return a new [[RowMetadata metadata]]
    */
-  def decode(metadataBits: Byte): RowMetaData = new RowMetaData(
+  def decode(metadataBits: Byte): RowMetadata = new RowMetadata(
     isActive = (metadataBits & ACTIVE_BIT) > 0,
     isCompressed = (metadataBits & COMPRESSED_BIT) > 0,
     isEncrypted = (metadataBits & ENCRYPTED_BIT) > 0,

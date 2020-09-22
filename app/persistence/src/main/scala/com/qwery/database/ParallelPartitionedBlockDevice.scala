@@ -14,7 +14,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 class ParallelPartitionedBlockDevice(columns: List[Column], partitionSize: Int)(implicit ec: ExecutionContext)
   extends PartitionedBlockDevice(columns, partitionSize) {
 
-  override def countRows(predicate: RowMetaData => Boolean): ROWID = {
+  override def countRows(predicate: RowMetadata => Boolean): ROWID = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.countRows(predicate))
     }).map(_.sum), Duration.Inf)
