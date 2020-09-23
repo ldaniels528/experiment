@@ -15,7 +15,7 @@ class ByteArrayBlockDevice(val columns: List[Column], val capacity: Int) extends
 
   override def close(): Unit = ()
 
-  override def length: ROWID = ((limit / recordSize) + Math.min(1, limit % recordSize)).toURID
+  override def length: ROWID = ((limit / recordSize) + Math.min(1, limit % recordSize)).toRowID
 
   override def readBlock(rowID: ROWID): ByteBuffer = {
     val p0 = rowID * recordSize

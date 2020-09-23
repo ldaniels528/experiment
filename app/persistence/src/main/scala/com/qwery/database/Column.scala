@@ -1,5 +1,7 @@
 package com.qwery.database
 
+import java.nio.ByteBuffer
+import ByteBuffer.allocate
 import com.qwery.util.OptionHelper._
 
 /**
@@ -13,6 +15,17 @@ trait Column {
   def name: String
 
   /**
+   * Encodes this column into a buffer
+   * @return the [[ByteBuffer buffer]]
+   */
+  def encode: ByteBuffer
+
+  /**
+   * @return true if the column is a non-persistent column
+   */
+  def isLogical: Boolean = metadata.isRowID
+
+  /**
    * @return the maximum length of the column
    */
   def maxLength: Int
@@ -21,11 +34,6 @@ trait Column {
    * @return the [[ColumnMetadata column metadata]]
    */
   def metadata: ColumnMetadata
-
-  /**
-   * @return true if the column is a logic column
-   */
-  def isLogical: Boolean = metadata.isRowID
 
   override def toString: String =
     f"""|${getClass.getSimpleName}(
@@ -57,6 +65,13 @@ object Column {
   }
 
   /**
+   * Decodes the next elements of the buffer into a column
+   * @param buf the [[ByteBuffer buffer]]
+   * @return a new [[Column]]
+   */
+  def decode(buf: ByteBuffer): Column = buf.getColumn
+
+  /**
    * Unwraps the column
    * @param col the [[Column column]]
    * @return the option of the extracted values
@@ -69,8 +84,14 @@ object Column {
    * @param metadata  the [[ColumnMetadata column metadata]]
    * @param maxLength the maximum length of the column
    */
-  case class DefaultColumn(name: String,
-                           metadata: ColumnMetadata,
-                           maxLength: Int) extends Column
+  case class DefaultColumn(name: String, metadata: ColumnMetadata, maxLength: Int) extends Column {
+
+    override def encode: ByteBuffer = {
+      allocate(SHORT_BYTES + name.length + SHORT_BYTES + INT_BYTES)
+        .putColumn(this)
+        .flip().asInstanceOf[ByteBuffer]
+    }
+
+  }
 
 }

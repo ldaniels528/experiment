@@ -69,7 +69,7 @@ object FieldMetadata {
   )
 
   /**
-   * Decodes the 8-bit metadata code into a [[FieldMetadata metadata]]
+   * Decodes the 8-bit metadata code into [[FieldMetadata metadata]]
    * @param metadataBits the metadata byte
    * @return a new [[FieldMetadata metadata]]
    */

@@ -16,7 +16,7 @@ class FileBlockDevice(val columns: List[Column], persistenceFile: File) extends 
 
   override def length: ROWID = {
     val eof = raf.length()
-    ((eof / recordSize) + Math.min(1, eof % recordSize)).toURID
+    ((eof / recordSize) + Math.min(1, eof % recordSize)).toRowID
   }
 
   override def readBlock(rowID: ROWID): ByteBuffer = {

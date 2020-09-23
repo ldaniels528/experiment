@@ -85,7 +85,7 @@ trait BlockDevice {
       val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value) map(t => Codec.encode(t._1, t._2))
 
       // convert the payloads to binary
-      val buf = allocate(out.recordSize).putRowMetaData(RowMetadata())
+      val buf = allocate(out.recordSize).putRowMetadata(RowMetadata())
       payloads.zipWithIndex foreach { case (bytes, idx) =>
         buf.position(out.columnOffsets(idx))
         buf.put(bytes)
@@ -120,7 +120,7 @@ trait BlockDevice {
     val eof: ROWID = length
     while (rowID < eof) {
       val buf = readBlock(rowID)
-      if (buf.getRowMetaData.isActive) {
+      if (buf.getRowMetadata.isActive) {
         buf.position(0)
         callback(rowID, buf)
       }
@@ -150,11 +150,11 @@ trait BlockDevice {
 
   def getRow(rowID: ROWID): Row = {
     val buf = readBlock(rowID)
-    Row(rowID, metadata = buf.getRowMetaData, fields = toFields(buf))
+    Row(rowID, metadata = buf.getRowMetadata, fields = toFields(buf))
   }
 
   def getRows(start: ROWID, numberOfRows: Int): Seq[Row] = {
-    readBlocks(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetaData, fields = toFields(buf)) }
+    readBlocks(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
   }
 
   def lastIndexOption: Option[ROWID] = {

@@ -13,7 +13,7 @@ import com.qwery.database.Compression.CompressionByteArrayExtensions
 object Codec extends Compression {
 
   def decode(buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
-    val fmd = buf.getFieldMetaData
+    val fmd = buf.getFieldMetadata
     (fmd, decodeValue(fmd, buf))
   }
 
@@ -48,7 +48,7 @@ object Codec extends Compression {
         case IntType => Some(buf.getInt)
         case LongType => Some(buf.getLong)
         case ShortType => Some(buf.getShort)
-        case StringType => Some(buf.getString(fmd))
+        case StringType => Some(buf.getText(fmd))
         case UUIDType => Some(buf.getUUID)
         case unknown => throw new IllegalArgumentException(s"Unrecognized column type '$unknown'")
       }
@@ -62,9 +62,9 @@ object Codec extends Compression {
         val bytes = fieldBuf.array()
         if(bytes.length > column.maxLength)
           throw new IllegalStateException(s"Column '${column.name}' is too long (${bytes.length} > ${column.maxLength})")
-        allocate(STATUS_BYTE + bytes.length).putFieldMetaData(fmd).put(bytes).array()
+        allocate(STATUS_BYTE + bytes.length).putFieldMetadata(fmd).put(bytes).array()
       case None =>
-        allocate(STATUS_BYTE).putFieldMetaData(fmd.copy(isNotNull = false)).array()
+        allocate(STATUS_BYTE).putFieldMetadata(fmd.copy(isNotNull = false)).array()
     }
   }
 

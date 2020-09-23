@@ -351,7 +351,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     } yield encode(column, value_?)
 
     // convert the row to binary
-    val buf = allocate(device.recordSize).putRowMetaData(RowMetadata())
+    val buf = allocate(device.recordSize).putRowMetadata(RowMetadata())
     payloads.zipWithIndex foreach { case (bytes, index) =>
       buf.position(device.columnOffsets(index))
       buf.put(bytes)
@@ -364,7 +364,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.map(item => toBytes(item)).toStream
 
   def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
-    val metadata = buf.getRowMetaData
+    val metadata = buf.getRowMetadata
     if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf))) else None
   }
 

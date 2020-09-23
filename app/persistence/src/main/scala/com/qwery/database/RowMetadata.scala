@@ -3,7 +3,7 @@ package com.qwery.database
 import com.qwery.database.RowMetadata._
 
 /**
- * Represents the metadata of a row in the database.
+ * Represents the metadata of a row stored in the database.
  * <pre>
  * ---------------------------------------
  * a - active bit ..... [1000.0000 ~ 0x80]
@@ -63,7 +63,7 @@ object RowMetadata {
   val RESERVED_BITS = 0x0f
 
   /**
-   * Decodes the 8-bit metadata code into [[RowMetadata metadata]] instance
+   * Decodes the 8-bit metadata code into [[RowMetadata metadata]]
    * @param metadataBits the metadata byte
    * @return a new [[RowMetadata metadata]]
    */

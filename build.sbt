@@ -105,7 +105,7 @@ lazy val language = (project in file("./app/language")).
  * @example sbt "project persistence" test
  */
 lazy val persistence = (project in file("./app/persistence")).
-  dependsOn(core, util).
+  dependsOn(core, util, language).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
