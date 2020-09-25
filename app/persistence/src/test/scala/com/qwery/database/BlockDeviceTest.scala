@@ -1,7 +1,9 @@
 package com.qwery.database
 
+import java.io.File
 import java.nio.ByteBuffer
 
+import com.qwery.database.BlockDevice.Header
 import com.qwery.database.ColumnTypes.{DoubleType, StringType}
 import com.qwery.database.PersistentSeq.{newTempFile, toColumns}
 import com.qwery.database.StockQuote.{randomQuote, randomURID}
@@ -25,6 +27,14 @@ class BlockDeviceTest extends AnyFunSpec {
   val (columns, _) = toColumns[StockQuote]
 
   describe(classOf[BlockDevice].getSimpleName) {
+
+    it("should write and read the device header") {
+      val header0 = Header(columns)
+      val device = new FileBlockDevice(columns, persistenceFile = new File("./temp.bin"))
+      device.writeHeader(header0)
+      val header1 = device.readHeader
+      assert(header0 == header1)
+    }
 
     it("should count the rows where: isCompressed is true") {
       val coll = PersistentSeq[StockQuote]()
@@ -125,13 +135,6 @@ class BlockDeviceTest extends AnyFunSpec {
       implicit val device: BlockDevice = coll.device
       eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.device.remove))
       eval("coll.trim()", coll.device.trim())
-    }
-
-    it("should start with an empty collection") {
-      val coll = PersistentSeq[StockQuote]()
-      implicit val device: BlockDevice = coll.device
-      eval("device.truncate()", device.truncate())
-      assert(coll.count() == 0)
     }
 
     it("should read a single field") {

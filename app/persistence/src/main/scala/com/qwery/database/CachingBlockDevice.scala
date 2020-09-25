@@ -17,13 +17,13 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
     host.close()
   }
 
-  override def columns: List[Column] = host.columns
+  override def columns: Seq[Column] = host.columns
 
   override def length: ROWID = host.length
 
   override def readBlock(rowID: ROWID): ByteBuffer = wrap(cache.getOrElseUpdate(rowID, host.readBlock(rowID).array()))
 
-  override def readByte(rowID: ROWID): Byte = host.readByte(rowID)
+  override def readRowMetaData(rowID: ROWID): RowMetadata = host.readRowMetaData(rowID)
 
   override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = {
     //cache.remove(rowID)
@@ -40,9 +40,9 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
     host.writeBlock(rowID, buf)
   }
 
-  override def writeByte(rowID: ROWID, byte: ROWID): Unit = {
+  override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
     cache.remove(rowID)
-    host.writeByte(rowID, byte)
+    host.writeRowMetaData(rowID, metadata)
   }
 
 }

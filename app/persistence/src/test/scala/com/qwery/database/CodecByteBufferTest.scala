@@ -3,6 +3,7 @@ package com.qwery.database
 import java.nio.ByteBuffer
 import java.util.{Date, UUID}
 
+import com.qwery.database.Codec.CodecByteBuffer
 import org.scalatest.funspec.AnyFunSpec
 
 /**

@@ -66,9 +66,9 @@ instruction set
 mnemonics
 ---------
 A       AB0DE   ACE     AC1D        A1DE
-BABE    BE      BEAD    BEE         BEEF    B1B7E   BE5IDE
+BABE    BE      BEAD    BED         BEE     BEEF    B1B7E   BE5IDE
 CAFE    CA5E    C0DE
-DAD     DEAD    DEAF    DECEA5ED    DEC1DE  DEC1DED D1CE    D1E D1ED D0
+DAD     DEAD    DEAF    DECEA5ED    DEC1DE  DEC1DED D1CE    D1E     D1ED D0
 FACADE  FACE    FADE    F00D
 1CE     1DEA
 0BESE

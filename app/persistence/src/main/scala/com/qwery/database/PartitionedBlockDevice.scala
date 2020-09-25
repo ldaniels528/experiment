@@ -9,7 +9,7 @@ import com.qwery.database.PersistentSeq.newTempFile
  * @param columns       the collection of [[Column columns]]
  * @param partitionSize the size of each partition
  */
-class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int, isInMemory: Boolean = false) extends BlockDevice {
+class PartitionedBlockDevice(val columns: Seq[Column], val partitionSize: Int, isInMemory: Boolean = false) extends BlockDevice {
   protected var partitions: List[BlockDevice] = Nil
   assert(partitionSize > 0, "Partition size must be greater than zero")
   //ensurePartitions(index = 1)
@@ -39,9 +39,9 @@ class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int, 
     } yield blocks
   }
 
-  override def readByte(rowID: ROWID): Byte = {
+  override def readRowMetaData(rowID: ROWID): RowMetadata = {
     val index = toPartitionIndex(rowID)
-    partitions(index).readByte(toLocalOffset(rowID, index))
+    partitions(index).readRowMetaData(toLocalOffset(rowID, index))
   }
 
   override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
@@ -70,9 +70,9 @@ class PartitionedBlockDevice(val columns: List[Column], val partitionSize: Int, 
     partition.writeBlock(toLocalOffset(rowID, index), buf)
   }
 
-  override def writeByte(rowID: ROWID, byte: Int): Unit = {
+  override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
     val index = toPartitionIndex(rowID)
-    partitions(index).writeByte(toLocalOffset(rowID, index), byte)
+    partitions(index).writeRowMetaData(toLocalOffset(rowID, index), metadata)
   }
 
   protected def ensurePartitions(index: Int): Unit = {

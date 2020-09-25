@@ -1,7 +1,9 @@
 package com.qwery.database
 
 import java.nio.ByteBuffer
-import ByteBuffer.allocate
+import java.nio.ByteBuffer.allocate
+
+import com.qwery.database.Codec._
 import com.qwery.util.OptionHelper._
 
 /**
@@ -56,9 +58,7 @@ object Column {
    * @param maxSize  the optional maximum length of the column
    * @return a new [[Column]]
    */
-  def apply(name: String,
-            metadata: ColumnMetadata,
-            maxSize: Option[Int]): Column = {
+  def apply(name: String, metadata: ColumnMetadata, maxSize: Option[Int]): Column = {
     val maxLength: Int = (metadata.`type`.getFixedLength ?? maxSize.map(_ + SHORT_BYTES)).map(_ + STATUS_BYTE)
       .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}"))
     DefaultColumn(name, metadata, maxLength)

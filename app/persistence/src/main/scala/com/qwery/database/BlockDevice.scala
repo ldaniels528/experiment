@@ -1,15 +1,14 @@
 package com.qwery.database
 
-import java.io.File
+import java.io._
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.BinarySearch.OptionComparator
-import com.qwery.database.Codec.decode
+import com.qwery.database.Codec._
 import com.qwery.database.ColumnTypes._
 
 import scala.collection.mutable
-import scala.language.existentials
 
 /**
  * Represents a raw block device
@@ -21,7 +20,7 @@ trait BlockDevice {
    */
   def close(): Unit
 
-  def columns: List[Column]
+  def columns: Seq[Column]
 
   val columnOffsets: List[ROWID] = {
     case class Accumulator(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
@@ -35,7 +34,7 @@ trait BlockDevice {
 
   val nameToColumnMap: Map[String, Column] = Map(columns.map(c => c.name -> c): _*)
 
-  val physicalColumns: List[Column] = columns.filterNot(_.isLogical)
+  val physicalColumns: Seq[Column] = columns.filterNot(_.isLogical)
 
   /**
    * defines a closure to dynamically create the optional rowID field for type T
@@ -157,6 +156,14 @@ trait BlockDevice {
     readBlocks(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
   }
 
+  /**
+   * @return the length of the header
+   */
+  lazy val headerSize: Int = 2 * INT_BYTES + encodeColumns(columns).array().length
+
+  /**
+   * @return the last active row ID or <tt>None</tt>
+   */
   def lastIndexOption: Option[ROWID] = {
     var rowID: ROWID = length - 1
     while (rowID >= 0 && readRowMetaData(rowID).isDeleted) rowID -= 1
@@ -176,11 +183,11 @@ trait BlockDevice {
     for {rowID <- rowID to rowID + numberOfBlocks} yield rowID -> readBlock(rowID)
   }
 
-  def readByte(rowID: ROWID): Byte
-
   def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer
 
-  def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(readByte(rowID))
+  def readHeader:BlockDevice.Header = ???
+
+  def readRowMetaData(rowID: ROWID): RowMetadata
 
   /**
    * @return the record length in bytes
@@ -204,12 +211,12 @@ trait BlockDevice {
 
   def reverseIterator: Iterator[(ROWID, ByteBuffer)] = new Iterator[(ROWID, ByteBuffer)] {
     private var item_? : Option[(ROWID, ByteBuffer)] = None
-    private var offset: ROWID = BlockDevice.this.length - 1
+    private var rowID: ROWID = BlockDevice.this.length - 1
 
     override def hasNext: Boolean = {
-      offset = findRow(fromPos = offset, forward = false)(_.isActive).getOrElse(-1)
-      item_? = if (offset > -1) Some(offset -> readBlock(offset)) else None
-      offset -= 1
+      rowID = findRow(fromPos = rowID, forward = false)(_.isActive).getOrElse(-1)
+      item_? = if (rowID > -1) Some(rowID -> readBlock(rowID)) else None
+      rowID -= 1
       item_?.nonEmpty
     }
 
@@ -264,12 +271,19 @@ trait BlockDevice {
     writeBlock(offset1, block0)
   }
 
-  def toFields(buf: ByteBuffer): List[Field] = {
+  def toFields(buf: ByteBuffer): Seq[Field] = {
     physicalColumns.zipWithIndex map { case (col, index) =>
       buf.position(columnOffsets(index))
       col.name -> decode(buf)
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
+
+  def fromOffset(offset: RECORD_ID): ROWID = {
+    val _offset = Math.max(0, offset - headerSize)
+    ((_offset / recordSize) + Math.min(1, _offset % recordSize)).toRowID
+  }
+
+  def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize + headerSize
 
   /**
    * Trims dead entries from of the collection
@@ -283,19 +297,32 @@ trait BlockDevice {
     newLength
   }
 
-  /**
-   * Truncates the table; removing all rows
-   */
-  def truncate(): Unit = shrinkTo(newSize = 0)
-
   def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit
 
-  def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = {
-    blocks foreach { case (offset, buf) => writeBlock(offset, buf) }
+  def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = blocks foreach { case (offset, buf) => writeBlock(offset, buf) }
+
+  def writeHeader(header: BlockDevice.Header): Unit = ???
+
+  def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit
+
+}
+
+/**
+ * Block Device Companion
+ */
+object BlockDevice {
+  val HEADER_CODE = 0xBABEFACE
+
+  case class Header(columns: Seq[Column]) {
+    def toBuffer: ByteBuffer = {
+      val columnBytes = encodeColumns(columns).array()
+      allocate(INT_BYTES + INT_BYTES + columnBytes.length)
+        .putInt(HEADER_CODE).putInt(columnBytes.length).put(columnBytes)
+    }
   }
 
-  def writeByte(rowID: ROWID, byte: Int): Unit
-
-  def writeRowMetaData(rowID: ROWID, metaData: RowMetadata): Unit = writeByte(rowID, metaData.encode)
+  object Header {
+    def fromBuffer(buf: ByteBuffer): Header = Header(columns = decodeColumns(buf))
+  }
 
 }

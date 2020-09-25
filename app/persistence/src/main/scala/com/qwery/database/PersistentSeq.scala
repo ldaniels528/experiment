@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
-import com.qwery.database.Codec.encode
+import com.qwery.database.Codec._
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -171,13 +171,13 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
 
   def iterator: Iterator[T] = new Iterator[T] {
     private var item_? : Option[T] = None
-    private var offset: ROWID = 0
+    private var rowID: ROWID = 0
     private val eof = device.length
 
     override def hasNext: Boolean = {
-      offset = device.findRow(fromPos = offset)(_.isActive).getOrElse(eof)
-      item_? = if (offset < eof) get(offset) else None
-      offset += 1
+      rowID = device.findRow(fromPos = rowID)(_.isActive).getOrElse(eof)
+      item_? = if (rowID < eof) get(rowID) else None
+      rowID += 1
       item_?.nonEmpty
     }
 
@@ -365,7 +365,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
 
   def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
     val metadata = buf.getRowMetadata
-    if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf))) else None
+    if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf).toList)) else None
   }
 
   override def toIterator: Iterator[T] = iterator

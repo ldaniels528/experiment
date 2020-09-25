@@ -119,7 +119,10 @@ lazy val persistence = (project in file("./app/persistence")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "commons-io" % "commons-io" % "2.6"
+      "commons-io" % "commons-io" % "2.6",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.9",
+      "com.typesafe.akka" %% "akka-stream" % "2.6.9",
+      "com.typesafe.akka" %% "akka-http" % "10.1.3"
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

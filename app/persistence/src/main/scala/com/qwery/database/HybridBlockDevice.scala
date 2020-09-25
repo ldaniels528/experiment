@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
  * @param capacity the maximum number of item the collection may contain
  * @param disk     the overflow [[BlockDevice device]]
  */
-class HybridBlockDevice(val columns: List[Column], val capacity: Int, disk: BlockDevice) extends BlockDevice {
+class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: BlockDevice) extends BlockDevice {
   private val mem = new ByteArrayBlockDevice(columns, capacity)
 
   override def close(): Unit = {
@@ -22,8 +22,8 @@ class HybridBlockDevice(val columns: List[Column], val capacity: Int, disk: Bloc
     if (rowID < capacity) mem.readBlock(rowID) else disk.readBlock(rowID - capacity)
   }
 
-  override def readByte(rowID: ROWID): Byte = {
-    if (rowID < capacity) mem.readByte(rowID) else disk.readByte(rowID - capacity)
+  override def readRowMetaData(rowID: ROWID): RowMetadata = {
+    if (rowID < capacity) mem.readRowMetaData(rowID) else disk.readRowMetaData(rowID - capacity)
   }
 
   override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
@@ -42,8 +42,8 @@ class HybridBlockDevice(val columns: List[Column], val capacity: Int, disk: Bloc
     if (rowID < capacity) mem.writeBlock(rowID, buf) else disk.writeBlock(rowID - capacity, buf)
   }
 
-  override def writeByte(rowID: ROWID, byte: ROWID): Unit = {
-    if (rowID < capacity) mem.writeByte(rowID, byte) else disk.writeByte(rowID - capacity, byte)
+  override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
+    if (rowID < capacity) mem.writeRowMetaData(rowID, metadata) else disk.writeRowMetaData(rowID - capacity, metadata)
   }
 
 }
