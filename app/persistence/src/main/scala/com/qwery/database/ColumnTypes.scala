@@ -63,6 +63,9 @@ object ColumnTypes extends Enumeration {
   final implicit class ColumnTypeExtensions(val `type`: ColumnType) extends AnyVal {
 
     @inline
+    def isFixedLength: Boolean = getFixedLength.nonEmpty
+
+    @inline
     def getFixedLength: Option[Int] = `type` match {
       case BooleanType => Some(ONE_BYTE)
       case ByteType => Some(ONE_BYTE)

@@ -16,6 +16,8 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
 
   override def close(): Unit = raf.close()
 
+  override def getPhysicalSize: Option[Long] = Some(raf.length())
+
   override def length: ROWID = fromOffset(raf.length().toRowID)
 
   override def readBlock(rowID: ROWID): ByteBuffer = {

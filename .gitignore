@@ -78,6 +78,6 @@ samples/informatica/wkf_BuyerConnect_Load.XML.sql
 samples/sql/cox/buyer-connect.sql
 insights.bin
 responses.csv
-temp.bin
+qwerydb/temp.bin
 stocktest.bin
 qwerydb/

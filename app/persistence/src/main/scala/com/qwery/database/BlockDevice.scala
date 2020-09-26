@@ -147,6 +147,8 @@ trait BlockDevice {
     Field(name = column.name, fmd, value = value_?) -> buf
   }
 
+  def getPhysicalSize: Option[Long]
+
   def getRow(rowID: ROWID): Row = {
     val buf = readBlock(rowID)
     Row(rowID, metadata = buf.getRowMetadata, fields = toFields(buf))

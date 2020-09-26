@@ -21,6 +21,8 @@ class PartitionedBlockDevice(val columns: Seq[Column], val partitionSize: Int, i
 
   override def close(): Unit = partitions.foreach(_.close())
 
+  override def getPhysicalSize: Option[Long] = Some(partitions.flatMap(_.getPhysicalSize).sum)
+
   override def length: ROWID = partitions.map(_.length).sum
 
   override def readBlock(rowID: ROWID): ByteBuffer = {

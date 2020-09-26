@@ -15,6 +15,8 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
 
   override def close(): Unit = ()
 
+  override def getPhysicalSize: Option[Long] = Some(limit)
+
   override def length: ROWID = fromOffset(limit)
 
   override def readBlock(rowID: ROWID): ByteBuffer = {

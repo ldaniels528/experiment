@@ -5,8 +5,12 @@ import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.FileBlockDevice.getHeader
-import com.qwery.database.server.TableQueryExecutor._
+import com.qwery.database.server.TableManager._
 import com.qwery.database.{BlockDevice, Codec, Column, FileBlockDevice, ROWID, RowMetadata}
+import com.qwery.util.ResourceHelper._
+
+import scala.io.Source
+import scala.language.postfixOps
 
 /**
  * Represents a database table
@@ -17,21 +21,51 @@ case class TableFile(name: String, device: BlockDevice) {
 
   def close(): Unit = device.close()
 
-  def delete(rowID: Int): Unit = device.writeRowMetaData(rowID, RowMetadata(isActive = false))
+  def count(): ROWID = device.countRows(_.isActive)
 
-  def get(rowID: Int): Result = {
+  def count(condition: Map[Symbol, Any], limit: Option[Int] = None): Int = {
+    _iterate(condition, limit) { (_, _) => }
+  }
+
+  def delete(rowID: ROWID): Unit = {
+    device.writeRowMetaData(rowID, RowMetadata(isActive = false))
+  }
+
+  def delete(condition: Map[Symbol, Any], limit: Option[Int] = None): Int = {
+    _iterate(condition, limit) { (rowID, _) => delete(rowID) }
+  }
+
+  def find(condition: Map[Symbol, Any], limit: Option[Int] = None): List[Result] = {
+    var results: List[Result] = Nil
+    _iterate(condition, limit) { (_, result) => results = result :: results }
+    results
+  }
+
+  def get(rowID: ROWID): Result = {
     val row = device.getRow(rowID)
     if (row.metadata.isActive) for {field <- row.fields; value <- field.value} yield field.name -> value else Nil
   }
 
-  def insert(values: (Symbol, Any)*): ROWID = {
+  def insert(values: Map[Symbol, Any]): ROWID = {
     val rowID = device.length
-    replace(rowID, values: _*)
+    replace(rowID, values)
     rowID
   }
 
-  def replace(rowID: Int, values: (Symbol, Any)*): Unit = {
-    val mapping = Map(values.map { case (k, v) => (k.name, v) }: _*)
+  def load(file: File)(transform: String => Map[Symbol, Any]): Long = {
+    var nLines: Long = 0
+    Source.fromFile(file).use(_.getLines() foreach { line =>
+      val result = transform(line)
+      if (result.nonEmpty) {
+        insert(result)
+        nLines += 1
+      }
+    })
+    nLines
+  }
+
+  def replace(rowID: ROWID, values: Map[Symbol, Any]): Unit = {
+    val mapping = values.map { case (k, v) => (k.name, v) }
     val buf = allocate(device.recordSize)
     buf.putRowMetadata(RowMetadata())
     device.columns zip device.columnOffsets foreach { case (col, offset) =>
@@ -42,17 +76,22 @@ case class TableFile(name: String, device: BlockDevice) {
     device.writeBlock(rowID, buf)
   }
 
-  def search(limit: Option[Int], conditions: (Symbol, Any)*): List[Result] = {
-    val condCached = conditions.map { case (symbol, value) => (symbol.name, value) }
-    var results: List[Result] = Nil
-    var rowID = 0
-    val eof = device.length
-    while (rowID < eof && (limit.isEmpty || limit.exists(_ > results.size))) {
-      val result = get(rowID)
-      if (isSatisfied(result, condCached) || condCached.isEmpty) results = result :: results
+  def slice(start: ROWID, length: ROWID): Seq[Result] = {
+    var rows: List[Result] = Nil
+    val limit = Math.min(device.length, start + length)
+    var rowID = start
+    while (rowID <= limit) {
+      rows = get(rowID) :: rows
       rowID += 1
     }
-    results
+    rows
+  }
+
+  def update(values: Map[Symbol, Any], condition: Map[Symbol, Any], limit: Option[Int] = None): Int = {
+    _iterate(condition, limit) { (rowID, result) =>
+      val updatedValues: Map[Symbol, Any] = Map(result.map { case (key, value) => (Symbol(key), value) }: _*) ++ values
+      replace(rowID, updatedValues)
+    }
   }
 
   /**
@@ -64,6 +103,23 @@ case class TableFile(name: String, device: BlockDevice) {
   private def isSatisfied(result: Result, condition: Result): Boolean = {
     val resultMap = Map(result: _*)
     condition.forall { case (name, value) => resultMap.get(name).contains(value) }
+  }
+
+  @inline
+  private def _iterate(condition: Map[Symbol, Any], limit: Option[Int] = None)(f: (ROWID, Result) => Unit): Int = {
+    val condCached = condition.map { case (symbol, value) => (symbol.name, value) } toSeq
+    var matches: Int = 0
+    var rowID: ROWID = 0
+    val eof = device.length
+    while (rowID < eof && !limit.exists(matches >= _)) {
+      val result = get(rowID)
+      if (isSatisfied(result, condCached) || condCached.isEmpty) {
+        f(rowID, result)
+        matches += 1
+      }
+      rowID += 1
+    }
+    matches
   }
 
 }
@@ -80,6 +136,7 @@ object TableFile {
    */
   def apply(name: String): TableFile = {
     val file = getDataFile(name)
+    if (!file.exists()) throw new IllegalArgumentException(s"Table '$name' does not exist")
     val device = new FileBlockDevice(columns = getHeader(file).columns, file)
     TableFile(name, device)
   }

@@ -19,6 +19,8 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
 
   override def columns: Seq[Column] = host.columns
 
+  override def getPhysicalSize: Option[Long] = host.getPhysicalSize
+
   override def length: ROWID = host.length
 
   override def readBlock(rowID: ROWID): ByteBuffer = wrap(cache.getOrElseUpdate(rowID, host.readBlock(rowID).array()))

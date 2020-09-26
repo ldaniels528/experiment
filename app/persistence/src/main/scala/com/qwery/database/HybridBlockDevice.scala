@@ -16,6 +16,8 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     disk.close()
   }
 
+  override def getPhysicalSize: Option[Long] = for {sizeA <- mem.getPhysicalSize; sizeB <- disk.getPhysicalSize} yield sizeA + sizeB
+
   override def length: ROWID = mem.length + disk.length
 
   override def readBlock(rowID: ROWID): ByteBuffer = {

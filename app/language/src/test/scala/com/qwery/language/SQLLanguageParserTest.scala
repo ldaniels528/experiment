@@ -898,6 +898,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Show(rows = @#("theResults"), limit = 5))
     }
 
+    it("should support TRUNCATE statements") {
+      val results = SQLLanguageParser.parse("TRUNCATE stocks")
+      assert(results == Truncate(table = TableRef("stocks")))
+    }
+
     it("should support UPDATE statements") {
       val results = SQLLanguageParser.parse(
         """|UPDATE Companies

@@ -58,6 +58,7 @@ trait SQLLanguageParser {
     "SELECT" -> parseSelect,
     "SET" -> parseSet,
     "SHOW" -> parseShow,
+    "TRUNCATE" -> parseTruncate,
     "UPDATE" -> parseUpdate,
     "WARN" -> parseConsoleWarn,
     "WHILE" -> parseWhile
@@ -491,6 +492,20 @@ trait SQLLanguageParser {
   def parseShow(ts: TokenStream): Show = {
     val params = SQLTemplateParams(ts, "SHOW %V:rows ?LIMIT +?%n:limit")
     Show(rows = params.sources("rows"), limit = params.numerics.get("limit").map(_.toInt))
+  }
+
+  /**
+   * Parses a TRUNCATE statement
+   * @example
+   * {{{
+   *   TRUNCATE Companies
+   * }}}
+   * @param ts the given [[TokenStream token stream]]
+   * @return a [[Truncate]]
+   */
+  def parseTruncate(ts: TokenStream): Truncate = {
+    val params = SQLTemplateParams(ts, "TRUNCATE %L:target")
+    Truncate(table = params.locations("target"))
   }
 
   /**

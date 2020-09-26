@@ -11,6 +11,8 @@ val appVersion = "0.4.0"
 val pluginVersion = "1.0.0"
 val scalaAppVersion = scalaVersion_2_12
 
+val akkaVersion = "2.6.9"
+val akkaHttpVersion = "10.1.3"
 val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
 val sparkVersion_2_3_x = "2.3.4"
@@ -120,9 +122,11 @@ lazy val persistence = (project in file("./app/persistence")).
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-actor" % "2.6.9",
-      "com.typesafe.akka" %% "akka-stream" % "2.6.9",
-      "com.typesafe.akka" %% "akka-http" % "10.1.3"
+      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
+      "io.spray" %% "spray-httpx" % "1.3.4"
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
