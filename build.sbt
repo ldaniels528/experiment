@@ -126,7 +126,7 @@ lazy val persistence = (project in file("./app/persistence")).
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "io.spray" %% "spray-httpx" % "1.3.4"
+      "net.liftweb" %% "lift-json" % "3.3.0"
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

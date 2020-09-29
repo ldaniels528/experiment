@@ -1,31 +1,8 @@
-network I/O variant of collection
-"connected" collections - that can just read/write data to/from the storage layer
-memory mapped data - mem, net, disk - filesystem? beyond filesystems?
-
-kinesis + database
-
-re-imagine storage:
-
-database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
-
-3 types - items (T), blocks (ByteBuffer), bytes (Array[Byte])
-
-
-network protocol/opCodes
-----------------------------
-
-read            0
-write           1
-
-byte            000
-bytes           001
-block           010
-columns         011
-metadata        110
-
-open/close      100
-length/shrink   101
-create/delete   111
+Database ideas
+---------------
+1. Arrays as tables.
+2. Stored Procedures can be deployed asb Spark/Flink jobs.
+3. database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
 
 instruction set
 ---------------
@@ -58,12 +35,8 @@ instruction set
 1.110.0000 = 0xE0 - write metadata <deviceUUID> <offset64> <value8>
 1.111.0000 = 0xF0 - delete device <deviceUUID>
 
-1.111.1110 = 0xFE - set default device <deviceUUID>
-1.111.1111 = 0xFF - set default offset <offset64>
 
-
-
-mnemonics
+HexaWords
 ---------
 A       AB0DE   ACE     AC1D        A1DE
 BABE    BE      BEAD    BED         BEE     BEEF    B1B7E   BE5IDE

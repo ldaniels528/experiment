@@ -34,8 +34,6 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
     wrap(bytes)
   }
 
-  override def readHeader: BlockDevice.Header = FileBlockDevice.getHeader(raf)
-
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
     raf.seek(toOffset(rowID))
     RowMetadata.decode(raf.read().toByte)
@@ -45,56 +43,22 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
     if (newSize >= 0 && newSize < raf.length()) raf.setLength(toOffset(newSize))
   }
 
+  def verifyHeaderCode(): Unit = {
+    // check for the identification code
+    raf.seek(0)
+    val headerCode = raf.readInt()
+    if (headerCode != HEADER_CODE)
+      throw new IllegalStateException(f"Device is not a valid block device (header code = $headerCode%08x")
+  }
+
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     raf.seek(toOffset(rowID))
     raf.write(buf.array())
   }
 
-  override def writeHeader(header: BlockDevice.Header): Unit = {
-    raf.seek(0)
-    raf.write(header.toBuffer.array())
-  }
-
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
     raf.seek(toOffset(rowID))
     raf.write(metadata.encode)
-  }
-
-}
-
-/**
- * File Block Device Companion
- */
-object FileBlockDevice {
-
-  def getHeader(file: File): BlockDevice.Header = {
-    val raf = new RandomAccessFile(file, "r")
-    try getHeader(raf) finally raf.close()
-  }
-
-  def getHeader(raf: RandomAccessFile): BlockDevice.Header = {
-    if (raf.length() < INT_BYTES + INT_BYTES)
-      throw new IllegalStateException(s"Device is not a valid block device (length = ${raf.length()})")
-    else {
-      // check for the identification code
-      raf.seek(0)
-      val headerCode = raf.readInt()
-      if (headerCode != HEADER_CODE)
-        throw new IllegalStateException(f"Device is not a valid block device (header code = $headerCode%08x")
-      else {
-        // read the header length
-        raf.seek(INT_BYTES)
-        val headerSize = raf.readInt()
-
-        // read the header bytes
-        raf.seek(INT_BYTES + INT_BYTES)
-        val headerBytes = new Array[Byte](headerSize)
-        raf.read(headerBytes)
-
-        // return the header
-        BlockDevice.Header.fromBuffer(wrap(headerBytes))
-      }
-    }
   }
 
 }

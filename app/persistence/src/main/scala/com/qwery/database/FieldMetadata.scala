@@ -9,7 +9,7 @@ import com.qwery.database.FieldMetadata._
  * c - compressed bit .. [1000.0000 ~ 0x80]
  * e - encrypted bit ... [0100.0000 ~ 0x40]
  * n - nullable bit .... [0010.0000 ~ 0x20]
- * t - type bits (x5) .. [0001.1111 ~ 0x1f]
+ * t - type bits (x4) .. [0000.1111 ~ 0x0f]
  * ----------------------------------------
  * </pre>
  * @param isCompressed indicates whether the data is compressed
@@ -54,7 +54,7 @@ object FieldMetadata {
   val COMPRESSED_BIT = 0x80
   val ENCRYPTED_BIT = 0x40
   val NULLABLE_BIT = 0x20
-  val TYPE_BITS = 0x1f
+  val TYPE_BITS = 0x0f
 
   /**
    * Creates new field metadata based on existing column metadata

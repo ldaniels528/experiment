@@ -1,12 +1,10 @@
 package com.qwery.database
 
-import java.io._
 import java.nio.ByteBuffer
-import java.nio.ByteBuffer.allocate
 
-import com.qwery.database.BinarySearch.OptionComparator
+import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.Codec._
-import com.qwery.database.ColumnTypes._
+import com.qwery.database.OptionComparisonHelper.OptionComparator
 
 import scala.collection.mutable
 
@@ -24,7 +22,7 @@ trait BlockDevice {
 
   val columnOffsets: List[ROWID] = {
     case class Accumulator(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
-    columns.filterNot(_.isLogical).map(_.maxLength).foldLeft(Accumulator()) { (acc, maxLength) =>
+    columns.filterNot(_.isLogical).map(_.maxPhysicalSize).foldLeft(Accumulator()) { (acc, maxLength) =>
       val index = acc.agg + acc.last
       acc.last = maxLength + index
       acc.list = index :: acc.list
@@ -58,46 +56,6 @@ trait BlockDevice {
       rowID += 1
     }
     total
-  }
-
-  /**
-   * Creates a new binary search index
-   * @param indexFile the index [[File file]]
-   * @param indexColumn the index [[Column column]]
-   * @return a new binary search index [[BlockDevice device]]
-   */
-  def createIndex(indexFile: File, indexColumn: Column): BlockDevice with BinarySearch = {
-    // define the columns
-    val rowIDColumn = Column(name = "rowID", metadata = ColumnMetadata(`type` = IntType), maxSize = None)
-    val indexAllColumns = List(rowIDColumn, indexColumn)
-    val sourceIndex = columns.indexOf(indexColumn)
-
-    // create the index device
-    val out = new FileBlockDevice(indexAllColumns, indexFile) with BinarySearch
-
-    // iterate the source file/table
-    val eof: ROWID = length
-    var rowID: ROWID = 0
-    while (rowID < eof) {
-      // build the data payload
-      val indexField = getField(rowID, sourceIndex)
-      val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value) map(t => Codec.encode(t._1, t._2))
-
-      // convert the payloads to binary
-      val buf = allocate(out.recordSize).putRowMetadata(RowMetadata())
-      payloads.zipWithIndex foreach { case (bytes, idx) =>
-        buf.position(out.columnOffsets(idx))
-        buf.put(bytes)
-      }
-
-      // write the index data to disk
-      out.writeBlock(rowID, buf)
-      rowID += 1
-    }
-
-    // sort the contents of the device
-    val targetIndex = indexAllColumns.indexOf(indexColumn)
-    out.sortInPlace { rowID => out.getField(rowID, targetIndex).value }
   }
 
   def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetadata => Boolean): Option[ROWID] = {
@@ -134,7 +92,7 @@ trait BlockDevice {
   def getField(rowID: ROWID, columnIndex: Int): Field = {
     assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset)
+    val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
     val (fmd, value_?) = Codec.decode(buf)
     Field(name = column.name, fmd, value = value_?)
   }
@@ -142,7 +100,7 @@ trait BlockDevice {
   def getFieldWithBinary(rowID: ROWID, columnIndex: Int): (Field, ByteBuffer) = {
     assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = readBytes(rowID, numberOfBytes = column.maxLength, offset = columnOffset)
+    val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
     val (fmd, value_?) = Codec.decode(buf)
     Field(name = column.name, fmd, value = value_?) -> buf
   }
@@ -158,10 +116,24 @@ trait BlockDevice {
     readBlocks(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
   }
 
+  def getRowStatistics: RowStatistics = {
+    var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID) = (0, 0, 0, 0)
+    var (rowID: ROWID, eof: ROWID) = (0, length)
+    while (rowID < eof) {
+      val rmd = readRowMetaData(rowID)
+      if (rmd.isActive) active += 1
+      if (rmd.isCompressed) compressed += 1
+      if (rmd.isDeleted) deleted += 1
+      if (rmd.isEncrypted) encrypted += 1
+      rowID += 1
+    }
+    RowStatistics(active, compressed, deleted, encrypted)
+  }
+
   /**
    * @return the length of the header
    */
-  lazy val headerSize: Int = 2 * INT_BYTES + encodeColumns(columns).array().length
+  lazy val headerSize: Int = 0
 
   /**
    * @return the last active row ID or <tt>None</tt>
@@ -182,19 +154,17 @@ trait BlockDevice {
   def readBlock(rowID: ROWID): ByteBuffer
 
   def readBlocks(rowID: ROWID, numberOfBlocks: Int = 1): Seq[(ROWID, ByteBuffer)] = {
-    for {rowID <- rowID to rowID + numberOfBlocks} yield rowID -> readBlock(rowID)
+    for {rowID <- rowID until rowID + numberOfBlocks} yield rowID -> readBlock(rowID)
   }
 
   def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer
-
-  def readHeader:BlockDevice.Header = ???
 
   def readRowMetaData(rowID: ROWID): RowMetadata
 
   /**
    * @return the record length in bytes
    */
-  val recordSize: Int = STATUS_BYTE + physicalColumns.map(_.maxLength).sum
+  val recordSize: Int = STATUS_BYTE + physicalColumns.map(_.maxPhysicalSize).sum
 
   /**
    * Remove an item from the collection via its record offset
@@ -303,8 +273,6 @@ trait BlockDevice {
 
   def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = blocks foreach { case (offset, buf) => writeBlock(offset, buf) }
 
-  def writeHeader(header: BlockDevice.Header): Unit = ???
-
   def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit
 
 }
@@ -315,16 +283,13 @@ trait BlockDevice {
 object BlockDevice {
   val HEADER_CODE = 0xBABEFACE
 
-  case class Header(columns: Seq[Column]) {
-    def toBuffer: ByteBuffer = {
-      val columnBytes = encodeColumns(columns).array()
-      allocate(INT_BYTES + INT_BYTES + columnBytes.length)
-        .putInt(HEADER_CODE).putInt(columnBytes.length).put(columnBytes)
-    }
-  }
-
-  object Header {
-    def fromBuffer(buf: ByteBuffer): Header = Header(columns = decodeColumns(buf))
+  case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID) {
+    def +(that: RowStatistics): RowStatistics = that.copy(
+      active = that.active + active,
+      compressed = that.compressed + compressed,
+      deleted = that.deleted + deleted,
+      encrypted = that.encrypted + encrypted
+    )
   }
 
 }

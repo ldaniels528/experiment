@@ -46,6 +46,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Create(UserDefinedFunction(name = "myFunc", `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
     }
 
+    it("should support CREATE INDEX statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE INDEX stocks_symbol ON stocks (symbol)
+           |""".stripMargin)
+      assert(results == Create(TableIndex(name = "stocks_symbol", columns = List("symbol").map(Field.apply), table = TableRef("stocks"))))
+    }
+
     it("should support CREATE INLINE TABLE statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE INLINE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)

@@ -1,6 +1,7 @@
 package com.qwery.models
 
 import com.qwery.models.StorageFormats.StorageFormat
+import com.qwery.models.expressions.Field
 
 /**
   * Base class for all SQL entities (e.g. tables, views, functions and procedures)
@@ -104,6 +105,14 @@ object Table {
     */
   def apply(name: String): TableRef = TableRef(name)
 }
+
+/**
+ * Represents a Table Index definition
+ * @param name    the name of the index
+ * @param table   the host [[Location table reference]]
+ * @param columns the [[Field columns]] for which to build the index
+ */
+case class TableIndex(name: String, table: Location, columns: Seq[Field]) extends SQLEntity
 
 /**
   * Represents a User-defined Function (UDF)

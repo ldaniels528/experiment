@@ -1,6 +1,10 @@
 package com.qwery.database
 
+import java.io.File
 import java.nio.ByteBuffer
+
+import com.qwery.database.BlockDevice.RowStatistics
+import com.qwery.database.PersistentSeq.newTempFile
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -11,13 +15,22 @@ import scala.concurrent.{Await, ExecutionContext, Future}
  * @param partitionSize the size of each partition
  * @param ec            the implicit [[ExecutionContext]]
  */
-class ParallelPartitionedBlockDevice(columns: List[Column], partitionSize: Int)(implicit ec: ExecutionContext)
-  extends PartitionedBlockDevice(columns, partitionSize) {
+class ParallelPartitionedBlockDevice(columns: Seq[Column],
+                                     partitionSize: Int,
+                                     persistenceDirectory: File = newTempFile().getParentFile,
+                                     isInMemory: Boolean = false)(implicit ec: ExecutionContext)
+  extends PartitionedBlockDevice(columns, partitionSize, persistenceDirectory, isInMemory) {
 
   override def countRows(predicate: RowMetadata => Boolean): ROWID = {
     Await.result(Future.sequence(partitions map { partition =>
       Future(partition.countRows(predicate))
     }).map(_.sum), Duration.Inf)
+  }
+
+  override def getRowStatistics: RowStatistics = {
+    Await.result(Future.sequence(partitions map { partition =>
+      Future(partition.getRowStatistics)
+    }), Duration.Inf).reduce(_ + _)
   }
 
   override def readBlocks(rowID: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {

@@ -1,17 +1,11 @@
 package com.qwery.database
 
-import java.io.File
-import java.nio.ByteBuffer
-
-import com.qwery.database.BlockDevice.Header
 import com.qwery.database.ColumnTypes.{DoubleType, StringType}
-import com.qwery.database.PersistentSeq.{newTempFile, toColumns}
-import com.qwery.database.StockQuote.{randomQuote, randomURID}
+import com.qwery.database.PersistentSeq.toColumns
+import com.qwery.database.StockQuote.randomURID
 import com.qwery.util.ServicingTools.time
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
-
-import scala.util.Random
 
 /**
  * Block Device Test Suite
@@ -28,14 +22,6 @@ class BlockDeviceTest extends AnyFunSpec {
 
   describe(classOf[BlockDevice].getSimpleName) {
 
-    it("should write and read the device header") {
-      val header0 = Header(columns)
-      val device = new FileBlockDevice(columns, persistenceFile = new File("./temp.bin"))
-      device.writeHeader(header0)
-      val header1 = device.readHeader
-      assert(header0 == header1)
-    }
-
     it("should count the rows where: isCompressed is true") {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
@@ -48,7 +34,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
-      val field = eval(f"coll.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
+      val field = eval(f"device.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
       assert(field.metadata.`type` == StringType)
     }
 
@@ -56,7 +42,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
-      val field = eval(f"coll.getField(rowID = 0, column = 'lastSale)", coll.device.getField(rowID = 0, column = 'lastSale))
+      val field = eval(f"device.getField(rowID = 0, column = 'lastSale)", coll.device.getField(rowID = 0, column = 'lastSale))
       assert(field.metadata.`type` == DoubleType)
     }
 
@@ -65,7 +51,7 @@ class BlockDeviceTest extends AnyFunSpec {
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val rowID = randomURID(coll)
-      val row = eval(f"coll.getRow($rowID)", coll.device.getRow(rowID))
+      val row = eval(f"device.getRow($rowID)", coll.device.getRow(rowID))
 
       logger.info(s"rowID: \t ${row.rowID}")
       logger.info(s"metadata: \t ${row.metadata}")
@@ -79,7 +65,7 @@ class BlockDeviceTest extends AnyFunSpec {
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val rowID = randomURID(coll)
-      val rmd = eval(f"coll.getRowMetaData($rowID)", coll.device.readRowMetaData(rowID))
+      val rmd = eval(f"device.getRowMetaData($rowID)", coll.device.readRowMetaData(rowID))
       logger.info(s"rmd => $rmd")
     }
 
@@ -87,8 +73,8 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
-      val recordSize = eval("coll.recordSize", coll.device.recordSize)
-      assert(recordSize == 49)
+      val recordSize = eval("device.recordSize", coll.device.recordSize)
+      assert(recordSize == 41)
     }
 
     it("should remove records by its offset (rowID)") {
@@ -97,7 +83,7 @@ class BlockDeviceTest extends AnyFunSpec {
       coll ++= stocks
       val rowID = randomURID(coll)
       val before = coll.count()
-      eval(f"coll.remove($rowID)", device.remove(rowID))
+      eval(f"device.remove($rowID)", device.remove(rowID))
       val after = coll.count()
       assert(before - after == 1)
     }
@@ -106,8 +92,17 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
-      eval("coll.reverseInPlace()", coll.device.reverseInPlace())
+      eval("device.reverseInPlace()", coll.device.reverseInPlace())
       assert(coll.toArray sameElements stocks.reverse)
+    }
+
+    it("should retrieve the row statistics") {
+      val coll = PersistentSeq[StockQuote]()
+      implicit val device: BlockDevice = coll.device
+      coll ++= stocks
+      device.remove(0)
+      val stats = eval("device.getRowStatistics", device.getRowStatistics)
+      assert(stats.deleted == 1)
     }
 
     it("should swap the position of two rows") {
@@ -117,7 +112,7 @@ class BlockDeviceTest extends AnyFunSpec {
         val offset1: ROWID = randomURID(coll)
         val offset2: ROWID = randomURID(coll)
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"BEFORE: $item"))
-        eval(s"coll.swap($offset1, $offset2)", coll.device.swap(offset1, offset2))
+        eval(s"device.swap($offset1, $offset2)", coll.device.swap(offset1, offset2))
         Seq(offset1, offset2).flatMap(coll.get).foreach(item => logger.info(s"AFTER: $item"))
       }
     }
@@ -126,7 +121,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       val newSize = (coll.count() * 0.80).toInt
-      eval(f"coll.shrinkTo($newSize)", coll.device.shrinkTo(newSize))
+      eval(f"device.shrinkTo($newSize)", coll.device.shrinkTo(newSize))
       assert(coll.length <= newSize)
     }
 
@@ -134,7 +129,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.device.remove))
-      eval("coll.trim()", coll.device.trim())
+      eval("device.trim()", coll.device.trim())
     }
 
     it("should read a single field") {
@@ -158,39 +153,9 @@ class BlockDeviceTest extends AnyFunSpec {
       assert(grabField(rowID = 3, columnIndex = 3).value.contains(1597872791000L))
     }
 
-    it("should build an index") {
-      val expectedCount: Int = 25
-      val (_, processedTime) = time {
-        // create a persistent collection
-        val stocks: Seq[StockQuote] = (1 to expectedCount) map { _ => randomQuote }
-        val coll = PersistentSeq[StockQuote]()
-        coll ++= stocks
-
-        // create the index
-        val tableDevice = coll.device
-        val tableColumns = tableDevice.columns
-        val file = newTempFile()
-        val indexDevice = tableDevice.createIndex(file, indexColumn = tableColumns(tableColumns.indexWhere(_.name == "symbol")))
-
-        // display the results
-        logger.info(s"index.length is ${indexDevice.length}, recordSize is ${indexDevice.recordSize}")
-        indexDevice foreach { case (rowID, buf) =>
-          showBuffer(rowID, buf)(indexDevice)
-        }
-
-        // find a value
-        val symbol = stocks(new Random().nextInt(stocks.length)).symbol
-        logger.info(s"Looking for '$symbol'...")
-        val rowID = indexDevice.search('symbol, Some(symbol))
-        logger.info(s"rowID => $rowID")
-        assert(rowID.nonEmpty)
-      }
-      logger.info(f"Entire process took $processedTime%.2f msec")
-    }
-
   }
 
-  def eval[A](label: String, f: => A): A = {
+  private def eval[A](label: String, f: => A): A = {
     val (results, runTime) = time(f)
     val output = results match {
       case items: PersistentSeq[_] => f"(${items.length} items)"
@@ -203,25 +168,16 @@ class BlockDeviceTest extends AnyFunSpec {
     results
   }
 
-  def grabField(rowID: ROWID, columnIndex: Int)(implicit device: BlockDevice): Field = {
+  private def grabField(rowID: ROWID, columnIndex: Int)(implicit device: BlockDevice): Field = {
     val field@Field(name, fmd, value_?) = device.getField(rowID, columnIndex)
     println(s"$name: ${value_?} -> $fmd")
     field
   }
 
-  def grabField(rowID: ROWID, column: Symbol)(implicit device: BlockDevice): Field = {
+  private def grabField(rowID: ROWID, column: Symbol)(implicit device: BlockDevice): Field = {
     val field@Field(name, fmd, value_?) = device.getField(rowID, column)
     println(s"$name: ${value_?} -> $fmd")
     field
-  }
-
-  def showBuffer(rowID: ROWID, buf: ByteBuffer)(implicit indexDevice: BlockDevice): Unit = {
-    val row = Map(indexDevice.columns.zipWithIndex flatMap { case (column, idx) =>
-      buf.position(indexDevice.columnOffsets(idx))
-      val (_, value_?) = Codec.decode(buf)
-      value_?.map(value => column.name -> value)
-    }: _*)
-    logger.info(f"$rowID%d - $row")
   }
 
 }

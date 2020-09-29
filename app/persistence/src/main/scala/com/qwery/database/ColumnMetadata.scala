@@ -11,7 +11,7 @@ import com.qwery.database.ColumnMetadata._
  * n - nullable bit .... [0000.0000.1000.0000 ~ 0x0080]
  * p - primary bit ..... [0000.0000.0100.0000 ~ 0x0040]
  * r - row ID bit ...... [0000.0000.0010.0000 ~ 0x0020]
- * t - type bits (x5) .. [0000.0000.0001.1111 ~ 0x001f]
+ * t - type bits (x4) .. [0000.0000.0000.1111 ~ 0x000f]
  * ----------------------------------------------------
  * </pre>
  * @param `type`       the [[ColumnTypes.ColumnType column type]]
@@ -64,7 +64,7 @@ object ColumnMetadata {
   val NULLABLE_BIT = 0x0080
   val PRIMARY_BIT = 0x0040
   val ROW_ID_BIT = 0x0020
-  val TYPE_BITS = 0x001f
+  val TYPE_BITS = 0x000f
 
   /**
    * Decodes the 16-bit metadata code into [[ColumnMetadata metadata]]

@@ -1,5 +1,6 @@
 package com.qwery.database
 
+import java.io.File
 import java.nio.ByteBuffer
 
 import com.qwery.database.PersistentSeq.newTempFile
@@ -9,7 +10,10 @@ import com.qwery.database.PersistentSeq.newTempFile
  * @param columns       the collection of [[Column columns]]
  * @param partitionSize the size of each partition
  */
-class PartitionedBlockDevice(val columns: Seq[Column], val partitionSize: Int, isInMemory: Boolean = false) extends BlockDevice {
+class PartitionedBlockDevice(val columns: Seq[Column],
+                             val partitionSize: Int,
+                             persistenceDirectory: File = newTempFile().getParentFile,
+                             isInMemory: Boolean = false) extends BlockDevice {
   protected var partitions: List[BlockDevice] = Nil
   assert(partitionSize > 0, "Partition size must be greater than zero")
   //ensurePartitions(index = 1)

@@ -8,8 +8,8 @@ import scala.concurrent.duration._
 import scala.reflect.ClassTag
 import scala.util.Random
 
-case class StockQuote(@(ColumnInfo@field)(maxSize = 12) symbol: String,
-                      @(ColumnInfo@field)(maxSize = 12) exchange: String,
+case class StockQuote(@(ColumnInfo@field)(maxSize = 8) symbol: String,
+                      @(ColumnInfo@field)(maxSize = 8) exchange: String,
                       lastSale: Double,
                       lastSaleTime: Long)
 

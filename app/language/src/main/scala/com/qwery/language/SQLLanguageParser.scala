@@ -128,6 +128,7 @@ trait SQLLanguageParser {
   def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
     "CREATE EXTERNAL TABLE" -> parseCreateTable,
     "CREATE FUNCTION" -> parseCreateFunction,
+    "CREATE INDEX" -> parseCreateTableIndex,
     "CREATE INLINE TABLE" -> parseCreateInlineTable,
     "CREATE PROCEDURE" -> parseCreateProcedure,
     "CREATE TABLE" -> parseCreateTable,
@@ -210,6 +211,19 @@ trait SQLLanguageParser {
       serdeProperties = params.properties.getOrElse("props.serde", Map.empty),
       tableProperties = params.properties.getOrElse("props.table", Map.empty)
     ))
+  }
+
+  /**
+   * Parses a CREATE INDEX statement
+   * @example {{{
+   * CREATE INDEX stocks_symbol ON stocks (name)
+   * }}}
+   * @param ts the [[TokenStream token stream]]
+   * @return an [[Create executable]]
+   */
+  def parseCreateTableIndex(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE INDEX %a:name ON %L:table ( %F:columns )")
+    Create(TableIndex(name = params.atoms("name"), columns = params.fields("columns"), table = params.locations("table")))
   }
 
   /**

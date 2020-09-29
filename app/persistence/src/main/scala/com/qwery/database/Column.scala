@@ -1,26 +1,16 @@
 package com.qwery.database
 
-import java.nio.ByteBuffer
-import java.nio.ByteBuffer.allocate
-
-import com.qwery.database.Codec._
-import com.qwery.util.OptionHelper._
+import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, StringType}
+import com.qwery.util.OptionHelper.OptionEnrichment
 
 /**
  * Represents a Column
+ * @param name        the name of the column
+ * @param comment     the column's optional comment/documentation
+ * @param metadata    the [[ColumnMetadata column metadata]]
+ * @param sizeInBytes the maximum size (in bytes) of the column
  */
-trait Column {
-
-  /**
-   * @return the name of the column
-   */
-  def name: String
-
-  /**
-   * Encodes this column into a buffer
-   * @return the [[ByteBuffer buffer]]
-   */
-  def encode: ByteBuffer
+case class Column(name: String, comment: String, metadata: ColumnMetadata, sizeInBytes: Int) {
 
   /**
    * @return true if the column is a non-persistent column
@@ -28,19 +18,23 @@ trait Column {
   def isLogical: Boolean = metadata.isRowID
 
   /**
-   * @return the maximum length of the column
+   * Returns the maximum physical size of the column
    */
-  def maxLength: Int
-
-  /**
-   * @return the [[ColumnMetadata column metadata]]
-   */
-  def metadata: ColumnMetadata
+  val maxPhysicalSize: Int = {
+    val size = metadata.`type` match {
+      case ArrayType => sizeInBytes + SHORT_BYTES
+      case BlobType => sizeInBytes + INT_BYTES
+      case BigDecimalType => sizeInBytes + 2 * SHORT_BYTES
+      case StringType => sizeInBytes + SHORT_BYTES
+      case _ => sizeInBytes
+    }
+    size + STATUS_BYTE
+  }
 
   override def toString: String =
     f"""|${getClass.getSimpleName}(
         |name=$name,
-        |maxLength=$maxLength,
+        |sizeInBytes=$sizeInBytes,
         |metadata=$metadata
         |)""".stripMargin.split("\n").mkString
 
@@ -54,44 +48,14 @@ object Column {
   /**
    * Creates a new Column
    * @param name     the name of the column
+   * @param comment  the column's optional comment/documentation
    * @param metadata the [[ColumnMetadata column metadata]]
    * @param maxSize  the optional maximum length of the column
    * @return a new [[Column]]
    */
-  def apply(name: String, metadata: ColumnMetadata, maxSize: Option[Int]): Column = {
-    val maxLength: Int = (metadata.`type`.getFixedLength ?? maxSize.map(_ + SHORT_BYTES)).map(_ + STATUS_BYTE)
-      .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}"))
-    DefaultColumn(name, metadata, maxLength)
-  }
-
-  /**
-   * Decodes the next elements of the buffer into a column
-   * @param buf the [[ByteBuffer buffer]]
-   * @return a new [[Column]]
-   */
-  def decode(buf: ByteBuffer): Column = buf.getColumn
-
-  /**
-   * Unwraps the column
-   * @param col the [[Column column]]
-   * @return the option of the extracted values
-   */
-  def unapply(col: Column): Option[(String, ColumnMetadata, Int)] = Some((col.name, col.metadata, col.maxLength))
-
-  /**
-   * Represents a Column
-   * @param name      the name of the column
-   * @param metadata  the [[ColumnMetadata column metadata]]
-   * @param maxLength the maximum length of the column
-   */
-  case class DefaultColumn(name: String, metadata: ColumnMetadata, maxLength: Int) extends Column {
-
-    override def encode: ByteBuffer = {
-      allocate(SHORT_BYTES + name.length + SHORT_BYTES + INT_BYTES)
-        .putColumn(this)
-        .flip().asInstanceOf[ByteBuffer]
-    }
-
+  def apply(name: String, comment: String, metadata: ColumnMetadata, maxSize: Option[Int] = None): Column = {
+    new Column(name, comment, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? maxSize)
+      .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
   }
 
 }

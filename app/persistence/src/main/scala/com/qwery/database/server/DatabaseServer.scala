@@ -2,6 +2,7 @@ package com.qwery.database.server
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
@@ -24,21 +25,20 @@ object DatabaseServer {
    */
   def main(args: Array[String]): Unit = {
     val defaultPort = 8233
-    val defaultPoolSize = 25
 
     // display the application version
     val version = 0.1
-    logger.info(f"Qwery Database Server v$version%.1f")
+      logger.info(f"QWERY Database Server v$version%.1f")
 
-    // get the bind/listen port and pool size
-    val (port, poolSize) = args match {
-      case Array(port, poolSize, _*) => (port.toInt, poolSize.toInt)
-      case Array(port, _*) => (port.toInt, defaultPoolSize)
-      case Array() => (defaultPort, defaultPoolSize)
+    // get the bind/listen port
+    val port = args match {
+      case Array(port, _*) => port.toInt
+      case Array() => defaultPort
     }
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
+    implicit val service: ServerSideTableService = new ServerSideTableService()
     import system.dispatcher
 
     // start the server
@@ -52,10 +52,8 @@ object DatabaseServer {
    * @param ec     the [[ExecutionContext]]
    * @param system the [[ActorSystem]]
    */
-  def startServer(host: String = "0.0.0.0", port: Int)(implicit ec: ExecutionContext, system: ActorSystem): Unit = {
-    implicit val tableManager: TableManager = new TableManager()
-    implicit val tableServices: TableServices = TableServices()
-
+  def startServer(host: String = "0.0.0.0", port: Int)
+                 (implicit ec: ExecutionContext, service: ServerSideTableService, system: ActorSystem): Unit = {
     // bind to the port
     val bindingFuture = Http().bindAndHandle(route(), host, port)
     bindingFuture.onComplete {
@@ -67,51 +65,69 @@ object DatabaseServer {
   }
 
   /**
-   * Define the routes
-   * @param tables   the implicit [[TableManager]]
-   * @param services the implicit [[TableServices]]
+   * Define the route
+   * @param service the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  private def route()(implicit tables: TableManager, services: TableServices): Route = {
+  private def route()(implicit service: ServerSideTableService): Route = {
     pathPrefix("tables") {
+      // routes: /tables/stocks
       path(Segment) { tableName =>
         get {
           // retrieve the table statistics (e.g. "GET /tables/stocks")
           // or query via query parameters (e.g. "GET /tables/stocks?exchange=AMEX&__limit=5")
           extract(_.request.uri.query()) { params =>
-            val limit = params.get("__limit").map(_.toInt)
-            val values = toValues(params).filterNot(_._1.name.startsWith("__"))
-            complete(if (params.isEmpty) services.getStatistics(tableName).toJson else services.find(tableName, values, limit).toJson)
+            val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
+            complete(if (params.isEmpty) service.getStatistics(tableName).toJson else service.findRows(tableName, condition, limit).toJson)
           }
         } ~
-          delete {
-            // delete rows by criteria (e.g. "DEL /tables/stocks?symbol=AAPL")
-            extract(_.request.uri.query()) { params =>
-              complete(services.deleteRows(tableName, condition = toValues(params)).toJson)
+          post {
+            // inserts a new record into a table by name
+            // (e.g. "POST /tables/stocks <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }")
+            entity(as[JsObject]) { jsObject =>
+              val record = jsObject.fields.map { case (k, js) => (k, unwrap(js)) }
+              complete(service.appendRow(tableName, record).toJson)
             }
+          } ~
+          delete {
+            // drops a table by name (e.g. "DEL /tables/stocks")
+            complete(service.dropTable(tableName).toJson)
           }
       } ~
+        // routes: /tables/stocks/187
         path(Segment / IntNumber) { (tableName, rowID) =>
           get {
             // retrieve a row by index (e.g. "GET /tables/stocks/287")
-            complete(services.getRow(tableName, rowID).toJson)
+            service.getRow(tableName, rowID) match {
+              case Some(row) => complete(row.toJson)
+              case None => complete(NotFound)
+            }
           } ~
             delete {
               // delete a row by index (e.g. "DEL /tables/stocks/129")
-              complete(services.deleteRow(tableName, rowID).toJson)
+              complete(service.deleteRow(tableName, rowID).toJson)
             }
         } ~
+        // routes: /tables/stocks/187/65
         path(Segment / IntNumber / IntNumber) { (tableName, start, length) =>
           get {
             // retrieve a range of rows (e.g. "GET /tables/stocks/287/20")
-            complete(services.getRows(tableName, start, length).toJson)
+            complete(service.getRows(tableName, start, length).toJson)
           }
         }
-    }
+    } ~
+      path("sql") {
+        post {
+          // routes: /sql <~ { sql: "SELECT ..." }
+          entity(as[String]) { sql =>
+            complete(service.executeQuery(sql))
+          }
+        }
+      }
   }
 
-  private def toValues(params: Uri.Query): Map[Symbol, String] = {
-    Map(params.map { case (k, v) => (Symbol(k), v) }: _*)
+  private def toValues(params: Uri.Query): TupleSet = {
+    Map(params.filterNot(_._1.name.startsWith("__")): _*)
   }
 
 }
