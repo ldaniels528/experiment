@@ -15,7 +15,8 @@ import com.qwery.models.ColumnTypes.ColumnType
 case class Column(name: String,
                   `type`: ColumnType = ColumnTypes.STRING,
                   isNullable: Boolean = true,
-                  comment: Option[String] = None)
+                  comment: Option[String] = None,
+                  precision: List[Int] = Nil)
 
 /**
   * Column Companion

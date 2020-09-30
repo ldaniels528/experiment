@@ -39,7 +39,7 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
                              properties: Map[String, Map[String, String]] = Map.empty,
                              repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty,
                              sources: Map[String, Invokable] = Map.empty,
-                             types: Map[String, ColumnType] = Map.empty,
+                             types: Map[String, (ColumnType, List[Int])] = Map.empty,
                              variables: Map[String, VariableRef] = Map.empty) {
 
   def +(that: SQLTemplateParams): SQLTemplateParams = {

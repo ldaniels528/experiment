@@ -6,7 +6,8 @@ import java.nio.ByteBuffer.allocate
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.server.TableFile.{TableConfig, TableIndexRef, getDataFile, rowIDColumn, writeConfig}
+import com.qwery.database.server.JSONSupport.{JSONProduct, JSONString}
+import com.qwery.database.server.TableFile.{TableConfig, TableIndexRef, getTableIndexFile, rowIDColumn, writeTableConfig}
 import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, ColumnTypes, FileBlockDevice, ROWID, RowMetadata}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -18,11 +19,12 @@ import scala.language.postfixOps
 
 /**
  * Represents a database table
- * @param tableName   the name of the table
- * @param config the [[TableConfig]]
- * @param device the [[BlockDevice]]
+ * @param databaseName the name of the database
+ * @param tableName    the name of the table
+ * @param config       the [[TableConfig table configuration]]
+ * @param device       the [[BlockDevice block device]]
  */
-case class TableFile(tableName: String, config: TableConfig, device: BlockDevice) {
+case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) {
   private val logger = LoggerFactory.getLogger(getClass)
   private val indices = TrieMap[String, TableIndexRef]()
 
@@ -57,11 +59,14 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     else None
   }
 
+  /**
+   * Closes the underlying file handle
+   */
   def close(): Unit = device.close()
 
   def count(): ROWID = device.countRows(_.isActive)
 
-  def count(condition: Map[String, Any], limit: Option[Int] = None): Int = {
+  def count(condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (_, _) => }
   }
 
@@ -77,7 +82,7 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     val sourceIndex = device.columns.indexOf(indexColumn)
 
     // create the index device
-    val out = new FileBlockDevice(indexAllColumns, getDataFile(indexName))
+    val out = new FileBlockDevice(indexAllColumns, getTableIndexFile(databaseName, tableName, indexName))
     out.shrinkTo(0)
 
     // iterate the source file/table
@@ -107,26 +112,28 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     // update the table config
     val indexRef = TableIndexRef(indexName, indexColumn.name)
     registerIndex(indexRef)
-    writeConfig(tableName, config.copy(indices = (config.indices ++ Seq(indexRef)).distinct))
-
+    writeTableConfig(databaseName, tableName, config.copy(indices = (config.indices ++ Seq(indexRef)).distinct))
     out
   }
 
-  def delete(rowID: ROWID): Unit = {
+  def delete(rowID: ROWID): Int = {
     device.writeRowMetaData(rowID, RowMetadata(isActive = false))
+    1
+  }
+
+  def deleteRange(start: ROWID, length: ROWID): Int = {
+    var total = 0
+    val limit: ROWID = Math.min(device.length, start + length)
+    var rowID: ROWID = start
+    while (rowID < limit) {
+      total += delete(rowID)
+      rowID += 1
+    }
+    total
   }
 
   def delete(condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, _) => delete(rowID) }
-  }
-
-  /**
-   * Deletes the table
-   */
-  def drop(): Boolean = {
-    // TODO add delete file logic
-    device.shrinkTo(newSize = 0)
-    true
   }
 
   def findRows(condition: TupleSet, limit: Option[Int] = None): List[TupleSet] = {
@@ -142,11 +149,11 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
         logger.info(s"Using index '$indexName' ($tableName) for column '${indexColumn.name}'...")
         val columns = device.columns
         val indexColumns = List(rowIDColumn, columns(columns.indexWhere(_.name == indexColumn.name)))
-        new FileBlockDevice(indexColumns, getDataFile(indexName)) use { indexDevice =>
+        new FileBlockDevice(indexColumns, getTableIndexFile(databaseName, tableName, indexName)) use { indexDevice =>
           for {
             indexedRowID <- binarySearch(indexDevice, indexColumn, Option(value)).toList
             indexRow = for {field <- indexDevice.getRow(indexedRowID).fields; value <- field.value} yield field.name -> value
-            rowID <- indexRow.collect { case ("rowID", rowID: ROWID) => rowID }
+            rowID <- indexRow.collectFirst { case ("rowID", rowID: ROWID) => rowID }
           } yield get(rowID)
         }
       case _ => scanForRows(condition, limit)
@@ -156,8 +163,19 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
   def get(rowID: ROWID): TupleSet = {
     val row = device.getRow(rowID)
     if (row.metadata.isActive)
-      (Map("__rowID" -> rowID) ++ Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)).asInstanceOf[TupleSet]
+      (Map(ROW_ID_NAME -> rowID) ++ Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)).asInstanceOf[TupleSet]
     else Map.empty
+  }
+
+  def getRange(start: ROWID, length: ROWID): Seq[TupleSet] = {
+    var rows: List[TupleSet] = Nil
+    val limit = Math.min(device.length, start + length)
+    var rowID: ROWID = start
+    while (rowID < limit) {
+      rows = get(rowID) :: rows
+      rowID += 1
+    }
+    rows
   }
 
   def insert(values: TupleSet): ROWID = {
@@ -178,7 +196,7 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     nLines
   }
 
-  def replace(rowID: ROWID, values: Map[String, Any]): Unit = {
+  def replace(rowID: ROWID, values: TupleSet): Unit = {
     val mapping = values.map { case (k, v) => (k.name, v) }
     val buf = allocate(device.recordSize)
     buf.putRowMetadata(RowMetadata())
@@ -190,24 +208,13 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     device.writeBlock(rowID, buf)
   }
 
-  def scanForRows(condition: Map[String, Any], limit: Option[Int] = None): List[TupleSet] = {
+  def scanForRows(condition: TupleSet, limit: Option[Int] = None): List[TupleSet] = {
     var results: List[TupleSet] = Nil
     _iterate(condition, limit) { (_, result) => if(result.nonEmpty) results = result :: results }
     results
   }
 
-  def slice(start: ROWID, length: ROWID): Seq[TupleSet] = {
-    var rows: List[TupleSet] = Nil
-    val limit = Math.min(device.length, start + length)
-    var rowID: ROWID = start
-    while (rowID < limit) {
-      rows = get(rowID) :: rows
-      rowID += 1
-    }
-    rows
-  }
-
-  def update(values: Map[String, Any], condition: Map[String, Any], limit: Option[Int] = None): Int = {
+  def update(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, result) =>
       val updatedValues = result ++ values
       replace(rowID, updatedValues)
@@ -224,18 +231,19 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
     condition.forall { case (name, value) => result.get(name).contains(value) }
   }
 
+  @inline
   private def registerIndex(indexRef: TableIndexRef): Unit = {
     indices(indexRef.indexColumn) = indexRef
   }
 
   @inline
-  private def _iterate(condition: Map[String, Any], limit: Option[Int] = None)(f: (ROWID, TupleSet) => Unit): Int = {
-    val condCached: TupleSet = (condition.map { case (symbol, value) => (symbol.name, value) }).asInstanceOf[TupleSet]
+  private def _iterate(condition: TupleSet, limit: Option[Int] = None)(f: (ROWID, TupleSet) => Unit): Int = {
+    val condCached = condition.map { case (symbol, value) => (symbol.name, value) }
     var matches: Int = 0
     var rowID: ROWID = 0
     val eof = device.length
     while (rowID < eof && !limit.exists(matches >= _)) {
-      val result = get(rowID) ++ Seq("__rowID" -> rowID)
+      val result = get(rowID) ++ Map(ROW_ID_NAME -> rowID)
       if (isSatisfied(result, condCached) || condCached.isEmpty) {
         f(rowID, result)
         matches += 1
@@ -251,55 +259,89 @@ case class TableFile(tableName: String, config: TableConfig, device: BlockDevice
  * Table File Companion
  */
 object TableFile {
-  private val rowIDColumn = Column(name = "rowID", comment = "unique row ID", metadata = ColumnMetadata(`type` = IntType), maxSize = None)
+  private val rowIDColumn = Column(name = "rowID", comment = "unique row ID", ColumnMetadata(`type` = IntType))
 
   /**
    * Retrieves a table by name
-   * @param name the name of the table
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
    * @return the [[TableFile]]
    */
-  def apply(name: String): TableFile = {
-    val (configFile, dataFile) = (getConfigFile(name), getDataFile(name))
-    if (!configFile.exists() || !dataFile.exists()) throw new IllegalArgumentException(s"Table '$name' does not exist")
-    val config = readConfig(name)
+  def apply(databaseName: String, tableName: String): TableFile = {
+    val (configFile, dataFile) = (getTableConfigFile(databaseName, tableName), getTableDataFile(databaseName, tableName))
+    assert(configFile.exists() && dataFile.exists(), s"Table '$tableName' does not exist")
+
+    val config = readTableConfig(databaseName, tableName)
     val device = new FileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
-    TableFile(name, config, device)
+    new TableFile(databaseName, tableName, config, device)
   }
 
   /**
    * Creates a new database table
-   * @param name the name of the table
-   * @param columns the table columns
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @param columns      the table columns
    * @return the new [[TableFile]]
    */
-  def create(name: String, columns: Seq[Column]): TableFile = {
-    val file = getDataFile(name)
+  def createTable(databaseName: String, tableName: String, columns: Seq[Column]): TableFile = {
+    val dataFile = getTableDataFile(databaseName, tableName)
+    assert(!dataFile.exists(), s"Table '$databaseName.$tableName' already exists")
+
+    // create the root directory
+    getTableRootDirectory(databaseName, tableName).mkdirs()
 
     // create the table configuration file
-    val config = TableConfig(columns.map(_.toTableColumn), indices = Nil)
-    writeConfig(name, config)
+    val config = TableConfig(columns = columns.map(_.toTableColumn), indices = Nil)
+    writeTableConfig(databaseName, tableName, config)
 
     // return the table
-    TableFile(name, config, new FileBlockDevice(columns, file))
+    new TableFile(databaseName, tableName, config, new FileBlockDevice(columns, dataFile))
   }
 
-  def getConfigFile(name: String): File = new File(getDataDirectory, s"$name.json")
-
-  def getDataDirectory: File = {
-    val dataDirectory = new File("qwery_db")
-    if (!dataDirectory.mkdirs() && !dataDirectory.exists())
-      throw new IllegalStateException(s"Could not create data directory - ${dataDirectory.getAbsolutePath}")
-    dataDirectory
+  /**
+   * Deletes the table
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @return true, if the table was deleted
+   */
+  def dropTable(databaseName: String, tableName: String): Boolean = {
+    val directory = getTableRootDirectory(databaseName, tableName)
+    val files = directory.listFilesRecursively
+    files.forall(_.delete())
   }
 
-  def getDataFile(name: String): File = new File(getDataDirectory, s"$name.qdb")
-
-  def readConfig(name: String): TableConfig = {
-    Source.fromFile(getConfigFile(name)).use(src => TableConfig.fromString(src.mkString))
+  def getDatabaseRootDirectory(databaseName: String): File = {
+    new File(getServerRootDirectory, databaseName)
   }
 
-  def writeConfig(name: String, config: TableConfig): Unit = {
-    new PrintWriter(getConfigFile(name)).use(_.println(config.toJSONPretty))
+  def getServerRootDirectory: File = {
+    val directory = new File(sys.env.getOrElse("QWERY_DB", "qwery_db"))
+    assert(directory.mkdirs() || directory.exists(), s"Could not create data directory - ${directory.getAbsolutePath}")
+    directory
+  }
+
+  def getTableConfigFile(databaseName: String, tableName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
+  }
+
+  def getTableRootDirectory(databaseName: String, tableName: String): File = {
+    new File(new File(getServerRootDirectory, databaseName), tableName)
+  }
+
+  def getTableDataFile(databaseName: String, tableName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.qdb")
+  }
+
+  def getTableIndexFile(databaseName: String, tableName: String, indexName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$indexName.qdb")
+  }
+
+  def readTableConfig(databaseName: String, tableName: String): TableConfig = {
+    Source.fromFile(getTableConfigFile(databaseName, tableName)).use(src => src.mkString.fromJSON[TableConfig])
+  }
+
+  def writeTableConfig(databaseName: String, tableName: String, config: TableConfig): Unit = {
+    new PrintWriter(getTableConfigFile(databaseName, tableName)).use(_.println(config.toJSONPretty))
   }
 
   final implicit class ColumnToTableColumnConversion(val column: Column) extends AnyVal {
@@ -333,6 +375,10 @@ object TableFile {
       ))
   }
 
+  case class DatabaseMetrics(databaseName: String,
+                             tables: Seq[String],
+                             responseTimeMillis: Double = 0)
+
   case class TableColumn(name: String,
                          `type`: String,
                          comment: Option[String],
@@ -343,17 +389,16 @@ object TableFile {
                          isPrimary: Boolean,
                          isRowID: Boolean)
 
-  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]) extends JSONSupport
-
-  object TableConfig extends JSONSupportCompanion[TableConfig]
+  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef])
 
   case class TableIndexRef(indexName: String, indexColumn: String)
 
-  case class TableStatistics(name: String,
-                             columns: List[TableColumn],
-                             physicalSize: Option[Long],
-                             recordSize: Int,
-                             rows: ROWID,
-                             responseTimeMillis: Double)
+  case class TableMetrics(databaseName: String,
+                          tableName: String,
+                          columns: Seq[TableColumn],
+                          physicalSize: Option[Long],
+                          recordSize: Int,
+                          rows: ROWID,
+                          responseTimeMillis: Double = 0)
 
 }

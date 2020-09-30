@@ -8,21 +8,25 @@ import com.qwery.database.server.TableService.UpdateResult
  */
 trait TableService[R] {
 
-  def appendRow(tableName: String, row: R): UpdateResult
+  def appendRow(databaseName: String, tableName: String, row: R): UpdateResult
 
-  def deleteRow(tableName: String, rowID: ROWID): UpdateResult
+  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): UpdateResult
 
-  def dropTable(tableName: String): UpdateResult
+  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): UpdateResult
 
-  def executeQuery(sql: String): Seq[R]
+  def dropTable(databaseName: String, tableName: String): UpdateResult
 
-  def findRows(tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[R]
+  def executeQuery(databaseName: String, sql: String): Seq[R]
 
-  def getRow(tableName: String, rowID: ROWID): Option[R]
+  def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[R]
 
-  def getRows(tableName: String, start: ROWID, length: ROWID): Seq[R]
+  def getDatabaseMetrics(databaseName: String): TableFile.DatabaseMetrics
 
-  def getStatistics(tableName: String): TableFile.TableStatistics
+  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[R]
+
+  def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[R]
+
+  def getTableMetrics(databaseName: String, tableName: String): TableFile.TableMetrics
 
 }
 

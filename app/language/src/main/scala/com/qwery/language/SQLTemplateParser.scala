@@ -2,6 +2,7 @@ package com.qwery.language
 
 import com.qwery.language.SQLTemplateParser._
 import com.qwery.language.SQLTypesHelper._
+import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
@@ -437,8 +438,8 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       val params = SQLTemplateParams(stream, template = "%a:name %T:type ?COMMENT +?%z:comment")
       val colName = params.atoms.getOrElse("name", stream.die("Column name not provided"))
       val comment = params.atoms.get("comment").flatMap(_.noneIfBlank)
-      val `type` = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
-      columns = Column(name = colName, `type` = `type`, comment = comment) :: columns
+      val (_type, precision) = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
+      columns = Column(name = colName, `type` = _type, precision = precision, comment = comment) :: columns
     } while (stream nextIf ",")
 
     SQLTemplateParams(columns = Map(name -> columns.reverse))
@@ -745,7 +746,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     val typeDef = if (precision.isEmpty) typeName else s"$typeName(${precision.mkString(",")})"
     val sqlType = determineType(typeName).getOrElse(stream.die(s"Invalid type reference '$typeDef'"))
 
-    SQLTemplateParams(types = Map(name -> sqlType))
+    SQLTemplateParams(types = Map(name -> (sqlType, precision)))
   }
 
   /**

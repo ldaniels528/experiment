@@ -2,7 +2,6 @@ package com.qwery.database.server
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
@@ -60,7 +59,7 @@ object DatabaseServer {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
       case Failure(e) =>
-        logger.error(s"error: ${e.getMessage}", e)
+        logger.error(s"Error: ${e.getMessage}", e)
     }
   }
 
@@ -70,57 +69,63 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   private def route()(implicit service: ServerSideTableService): Route = {
-    pathPrefix("tables") {
-      // routes: /tables/stocks
-      path(Segment) { tableName =>
-        get {
-          // retrieve the table statistics (e.g. "GET /tables/stocks")
-          // or query via query parameters (e.g. "GET /tables/stocks?exchange=AMEX&__limit=5")
-          extract(_.request.uri.query()) { params =>
-            val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
-            complete(if (params.isEmpty) service.getStatistics(tableName).toJson else service.findRows(tableName, condition, limit).toJson)
-          }
-        } ~
+    // routes: /portfolio
+    path(Segment) { databaseName =>
+      // retrieve the table metrics (e.g. "GET /portfolio")
+      complete(service.getDatabaseMetrics(databaseName).toJson)
+    } ~
+    // routes: /portfolio/stocks
+    path(Segment / Segment) { (databaseName, tableName) =>
+      get {
+        extract(_.request.uri.query()) { params =>
+          val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
+          complete(
+            // retrieve the table metrics (e.g. "GET /portfolio/stocks")
+            if (params.isEmpty) service.getTableMetrics(databaseName, tableName).toJson
+            // or query via query parameters (e.g. "GET /portfolio/stocks?exchange=AMEX&__limit=5")
+            else service.findRows(databaseName, tableName, condition, limit).toJson
+          )
+        }
+      } ~
           post {
-            // inserts a new record into a table by name
-            // (e.g. "POST /tables/stocks <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }")
+            // appends a new record into a table by name
+            // (e.g. "POST /portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
             entity(as[JsObject]) { jsObject =>
               val record = jsObject.fields.map { case (k, js) => (k, unwrap(js)) }
-              complete(service.appendRow(tableName, record).toJson)
+              complete(service.appendRow(databaseName, tableName, record).toJson)
             }
           } ~
-          delete {
-            // drops a table by name (e.g. "DEL /tables/stocks")
-            complete(service.dropTable(tableName).toJson)
-          }
-      } ~
-        // routes: /tables/stocks/187
-        path(Segment / IntNumber) { (tableName, rowID) =>
-          get {
-            // retrieve a row by index (e.g. "GET /tables/stocks/287")
-            service.getRow(tableName, rowID) match {
-              case Some(row) => complete(row.toJson)
-              case None => complete(NotFound)
-            }
-          } ~
-            delete {
-              // delete a row by index (e.g. "DEL /tables/stocks/129")
-              complete(service.deleteRow(tableName, rowID).toJson)
-            }
-        } ~
-        // routes: /tables/stocks/187/65
-        path(Segment / IntNumber / IntNumber) { (tableName, start, length) =>
-          get {
-            // retrieve a range of rows (e.g. "GET /tables/stocks/287/20")
-            complete(service.getRows(tableName, start, length).toJson)
-          }
+        delete {
+          // drops a table by name (e.g. "DEL /portfolio/stocks")
+          complete(service.dropTable(databaseName, tableName).toJson)
         }
     } ~
-      path("sql") {
+      // routes: /portfolio/stocks/187
+      path(Segment / Segment / IntNumber) { (databaseName, tableName, rowID) =>
+        get {
+          // retrieve a row by index (e.g. "GET /portfolio/stocks/287")
+          service.getRow(databaseName, tableName, rowID) match {
+            case Some(row) => complete(row.toJson)
+            case None => complete(JsObject())
+          }
+        } ~
+          delete {
+            // delete a row by index (e.g. "DEL /portfolio/stocks/129")
+            complete(service.deleteRow(databaseName, tableName, rowID).toJson)
+          }
+      } ~
+      // routes: /portfolio/stocks/187/65
+      path(Segment / Segment / IntNumber / IntNumber) { (databaseName, tableName, start, length) =>
+        get {
+          // retrieve a range of rows (e.g. "GET /portfolio/stocks/287/20")
+          complete(service.getRange(databaseName, tableName, start, length).toJson)
+        }
+      } ~
+      path(Segment / "sql") { databaseName =>
         post {
-          // routes: /sql <~ { sql: "SELECT ..." }
+          // routes: /portfolio/sql <~ { sql: "SELECT ..." }
           entity(as[String]) { sql =>
-            complete(service.executeQuery(sql))
+            complete(service.executeQuery(databaseName, sql))
           }
         }
       }

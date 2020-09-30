@@ -4,6 +4,8 @@ Database ideas
 2. Stored Procedures can be deployed asb Spark/Flink jobs.
 3. database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
 
+Chimera
+
 instruction set
 ---------------
 0.000.0000 = 0x00 - read byte

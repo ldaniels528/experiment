@@ -81,8 +81,11 @@ class SQLTemplateParserTest extends AnyFunSpec {
     }
 
     it("should parse parameter tags (%P)") {
-      verify(text = "name STRING, age INTEGER, dob DATE", template = "%P:params")(SQLTemplateParams(columns = Map(
-        "params" -> List("name STRING", "age INTEGER", "dob DATE").map(Column.apply)
+      verify(text = "name STRING(32), age INTEGER, dob DATE", template = "%P:params")(SQLTemplateParams(columns = Map(
+        "params" -> List(
+          Column(name = "name", `type` = ColumnTypes.STRING, precision = List(32)),
+          Column(name = "age", `type` = ColumnTypes.INTEGER),
+          Column(name = "dob", `type` = ColumnTypes.DATE))
       )))
     }
 
@@ -166,6 +169,8 @@ class SQLTemplateParserTest extends AnyFunSpec {
   def verify(text: String, template: String)(expected: SQLTemplateParams): Assertion = {
     info(s"'$template' <~ '$text'")
     val actual = SQLTemplateParams(TokenStream(text), template)
+    println(s"actual:   ${actual.columns}")
+    println(s"expected: ${expected.columns}")
     assert(actual == expected, s"'$text' ~> '$template' failed")
   }
 

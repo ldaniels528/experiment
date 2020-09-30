@@ -55,7 +55,7 @@ class QweryHttpClient(connectionTimeout: Duration = 1.second, readTimeout: Durat
         conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
         conn.setReadTimeout(readTimeout.toMillis.toInt)
         conn.setRequestMethod(method)
-        conn.setRequestProperty("Content-Type", "application/json")
+        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
         conn.setRequestProperty("Accept", "application/json")
         conn.setRequestProperty("User-Agent", "Mozilla/5.0")
         conn.setDoOutput(true)

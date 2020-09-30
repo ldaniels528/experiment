@@ -4,39 +4,32 @@ import net.liftweb.json.Extraction.decompose
 import net.liftweb.json.{DefaultFormats, compactRender, prettyRender}
 
 /**
- * JSON Support Trait
- * @author lawrence.daniels@coxautoinc.com
+ * JSON Support Companion
+ * @author lawrence.daniels@gmail.com
  */
-trait JSONSupport {
+object JSONSupport {
 
-  def toJSON: String = {
-    implicit val formats: DefaultFormats = DefaultFormats
-    compactRender(decompose(this))
+  final implicit class JSONString(val jsonString: String) extends AnyVal {
+    @inline
+    def fromJSON[T](implicit m: Manifest[T]): T = {
+      import net.liftweb.json.parse
+      implicit val formats: DefaultFormats = DefaultFormats
+      parse(jsonString).extract[T]
+    }
   }
 
-  def toJSONPretty: String = {
-    implicit val formats: DefaultFormats = DefaultFormats
-    prettyRender(decompose(this))
-  }
+  final implicit class JSONProduct[T <: Product](val value: T) extends AnyVal {
+    @inline
+    def toJSON: String = {
+      implicit val formats: DefaultFormats = DefaultFormats
+      compactRender(decompose(value))
+    }
 
-}
-
-/**
- * JSON Support Companion Trait
- * @author lawrence.daniels@coxautoinc.com
- */
-trait JSONSupportCompanion[T <: JSONSupport] {
-
-  def fromBytes(jsonBinary: Array[Byte])(implicit m: Manifest[T]): T = {
-    import net.liftweb.json.parse
-    implicit val formats: DefaultFormats = DefaultFormats
-    parse(new String(jsonBinary, "UTF-8")).extract[T]
-  }
-
-  def fromString(jsonString: String)(implicit m: Manifest[T]): T = {
-    import net.liftweb.json.parse
-    implicit val formats: DefaultFormats = DefaultFormats
-    parse(jsonString).extract[T]
+    @inline
+    def toJSONPretty: String = {
+      implicit val formats: DefaultFormats = DefaultFormats
+      prettyRender(decompose(value))
+    }
   }
 
 }
