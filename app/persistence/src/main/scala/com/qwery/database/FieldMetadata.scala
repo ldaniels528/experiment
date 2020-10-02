@@ -12,15 +12,15 @@ import com.qwery.database.FieldMetadata._
  * t - type bits (x4) .. [0000.1111 ~ 0x0f]
  * ----------------------------------------
  * </pre>
+ * @param `type`       the [[ColumnTypes.ColumnType column type]]
  * @param isCompressed indicates whether the data is compressed
  * @param isEncrypted  indicates whether the data is encrypted
  * @param isNotNull    indicates whether the data is available; meaning not null.
- * @param `type`       the [[ColumnTypes.ColumnType column type]]
  */
-case class FieldMetadata(isCompressed: Boolean,
-                         isEncrypted: Boolean,
-                         isNotNull: Boolean,
-                         `type`: ColumnTypes.ColumnType) {
+case class FieldMetadata(`type`: ColumnTypes.ColumnType,
+                         isCompressed: Boolean = false,
+                         isEncrypted: Boolean = false,
+                         isNotNull: Boolean = true) {
 
   /**
    * Encodes the [[FieldMetadata metadata]] into a bit sequence representing the metadata

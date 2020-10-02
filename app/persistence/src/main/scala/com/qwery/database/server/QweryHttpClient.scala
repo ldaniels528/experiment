@@ -3,6 +3,7 @@ package com.qwery.database.server
 import java.net.{HttpURLConnection, URL}
 
 import com.qwery.util.ResourceHelper._
+import net.liftweb.json.JObject
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.io.Source
@@ -23,6 +24,8 @@ class QweryHttpClient(connectionTimeout: Duration = 1.second, readTimeout: Durat
 
   def patch[T](url: String)(implicit m: Manifest[T]): T = fromJSON[T](putJSON(url))
 
+  def patch[T](url: String, content: Array[Byte])(implicit m: Manifest[T]): T = fromJSON[T](httpXXX(method = "PATCH", url, content))
+
   def patchJSON(url: String): JValue = httpXXX(method = "PATCH", url)
 
   def post[T](url: String)(implicit m: Manifest[T]): T = fromJSON[T](postJSON(url))
@@ -33,7 +36,9 @@ class QweryHttpClient(connectionTimeout: Duration = 1.second, readTimeout: Durat
 
   def postJSON(url: String, content: Array[Byte]): JValue = httpXXX(method = "POST", url, content)
 
-  def put[T](url: String)(implicit m: Manifest[T]): T = fromJSON[T](putJSON(url))
+  def put(url: String): Unit = httpXXX(method = "PUT", url)
+
+  def put(url: String, content: Array[Byte]): Unit = httpXXX(method = "PUT", url, content, doInput = false)
 
   def putJSON(url: String): JValue = httpXXX(method = "PUT", url)
 
@@ -49,7 +54,7 @@ class QweryHttpClient(connectionTimeout: Duration = 1.second, readTimeout: Durat
     }
   }
 
-  private def httpXXX(method: String, url: String, content: Array[Byte]): JValue = {
+  private def httpXXX(method: String, url: String, content: Array[Byte], doInput: Boolean = true): JValue = {
     new URL(url).openConnection() match {
       case conn: HttpURLConnection =>
         conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
@@ -59,12 +64,11 @@ class QweryHttpClient(connectionTimeout: Duration = 1.second, readTimeout: Durat
         conn.setRequestProperty("Accept", "application/json")
         conn.setRequestProperty("User-Agent", "Mozilla/5.0")
         conn.setDoOutput(true)
-        conn.setDoInput(true)
-        //conn.setFixedLengthStreamingMode(content.length)
-        //conn.connect()
+        if(doInput) conn.setDoInput(doInput)
         conn.getOutputStream.use(_.write(content))
         conn.getResponseCode match {
-          case HttpURLConnection.HTTP_OK => toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString))
+          case HttpURLConnection.HTTP_OK =>
+            if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JObject()
           case code => throw new IllegalStateException(s"Server Error HTTP/$code: ${conn.getResponseMessage}")
         }
       case conn =>

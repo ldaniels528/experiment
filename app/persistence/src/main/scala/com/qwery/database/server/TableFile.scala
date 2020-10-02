@@ -6,9 +6,9 @@ import java.nio.ByteBuffer.allocate
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.server.JSONSupport.{JSONProduct, JSONString}
-import com.qwery.database.server.TableFile.{TableConfig, TableIndexRef, getTableIndexFile, rowIDColumn, writeTableConfig}
-import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, ColumnTypes, FileBlockDevice, ROWID, RowMetadata}
+import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
+import com.qwery.database.server.TableFile.{LoadMetrics, TableConfig, TableIndexRef, getTableIndexFile, rowIDColumn, writeTableConfig}
+import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, ColumnTypes, Field, FileBlockDevice, ROWID, Row, RowMetadata}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -33,30 +33,35 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   /**
    * Performs a binary search of the column for a the specified value
-   * @param indexDevice the index [[BlockDevice device]]
-   * @param columnName  the column name
-   * @param value       the search value
-   * @return an option of a row ID
+   * @param tableIndex  the index [[TableIndexRef table index reference]]
+   * @param searchValue the search value
+   * @return an option of a [[Row row]]
    */
-  def binarySearch(indexDevice: BlockDevice, columnName: String, value: Option[Any]): Option[ROWID] = {
-    // create a closure to lookup a field value by row ID
-    val valueAt: ROWID => Option[Any] = {
-      val columnIndex = indexDevice.columns.indexWhere(_.name == columnName)
-      (rowID: ROWID) => indexDevice.getField(rowID, columnIndex).value
-    }
+  def binarySearch(tableIndex: TableIndexRef, searchValue: Option[Any]): Option[Row] = {
+    val indexColumns = List(rowIDColumn, device.columns(device.columns.indexWhere(_.name == tableIndex.indexColumn)))
+    new FileBlockDevice(indexColumns, getTableIndexFile(databaseName, tableName, tableIndex.indexName)) use { indexDevice =>
+      // create a closure to lookup a field value by row ID
+      val valueAt: ROWID => Option[Any] = {
+        val columnIndex = indexDevice.columns.indexWhere(_.name == tableIndex.indexColumn)
+        (rowID: ROWID) => indexDevice.getField(rowID, columnIndex).value
+      }
 
-    // search for a matching field value
-    var (p0: ROWID, p1: ROWID, changed: Boolean) = (0, indexDevice.length - 1, true)
-    while (p0 != p1 && valueAt(p0) < value && valueAt(p1) > value && changed) {
-      val (mp, z0, z1) = ((p0 + p1) / 2, p0, p1)
-      if (value >= valueAt(mp)) p0 = mp else p1 = mp
-      changed = z0 != p0 || z1 != p1
-    }
+      // search for a matching field value
+      var (p0: ROWID, p1: ROWID, changed: Boolean) = (0, indexDevice.length - 1, true)
+      while (p0 != p1 && valueAt(p0) < searchValue && valueAt(p1) > searchValue && changed) {
+        val (mp, z0, z1) = ((p0 + p1) >> 1, p0, p1)
+        if (searchValue >= valueAt(mp)) p0 = mp else p1 = mp
+        changed = z0 != p0 || z1 != p1
+      }
 
-    // determine whether a match was found
-    if (valueAt(p0) == value) Some(p0)
-    else if (valueAt(p1) == value) Some(p1)
-    else None
+      // determine whether a match was found
+      val rowID_? =
+        if (valueAt(p0) == searchValue) Some(p0)
+        else if (valueAt(p1) == searchValue) Some(p1)
+        else None
+
+      rowID_?.map(indexDevice.getRow)
+    }
   }
 
   /**
@@ -136,7 +141,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     _iterate(condition, limit) { (rowID, _) => delete(rowID) }
   }
 
-  def findRows(condition: TupleSet, limit: Option[Int] = None): List[TupleSet] = {
+  def findRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
     // check all available indices for the table
     val tableIndex_? = (for {
       (searchColumn, searchValue) <- condition.toList
@@ -145,37 +150,37 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
     // if an index was found use it, otherwise table scan
     tableIndex_? match {
-      case Some((TableIndexRef(indexName, indexColumn), value)) =>
-        logger.info(s"Using index '$indexName' ($tableName) for column '${indexColumn.name}'...")
-        val columns = device.columns
-        val indexColumns = List(rowIDColumn, columns(columns.indexWhere(_.name == indexColumn.name)))
-        new FileBlockDevice(indexColumns, getTableIndexFile(databaseName, tableName, indexName)) use { indexDevice =>
+      case Some((tableIndex@TableIndexRef(indexName, indexColumn), value)) =>
+        logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
           for {
-            indexedRowID <- binarySearch(indexDevice, indexColumn, Option(value)).toList
-            indexRow = for {field <- indexDevice.getRow(indexedRowID).fields; value <- field.value} yield field.name -> value
-            rowID <- indexRow.collectFirst { case ("rowID", rowID: ROWID) => rowID }
-          } yield get(rowID)
-        }
-      case _ => scanForRows(condition, limit)
+            indexedRow <- binarySearch(tableIndex, Option(value)).toList
+            rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, Some(rowID: ROWID)) => rowID }
+            row <- get(rowID)
+          } yield row
+      case _ => scanRows(condition, limit)
     }
   }
 
-  def get(rowID: ROWID): TupleSet = {
+  def get(rowID: ROWID): Option[Row] = {
     val row = device.getRow(rowID)
-    if (row.metadata.isActive)
-      (Map(ROW_ID_NAME -> rowID) ++ Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)).asInstanceOf[TupleSet]
-    else Map.empty
+    if (row.metadata.isActive) Some(row) else None
   }
 
-  def getRange(start: ROWID, length: ROWID): Seq[TupleSet] = {
-    var rows: List[TupleSet] = Nil
+  def getRange(start: ROWID, length: ROWID): Seq[Row] = {
+    var rows: List[Row] = Nil
     val limit = Math.min(device.length, start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
-      rows = get(rowID) :: rows
+      get(rowID).foreach(row => rows = row :: rows)
       rowID += 1
     }
     rows
+  }
+
+  def insert(row: Row): ROWID = {
+    val rowID = device.length
+    replace(rowID, row.toMap)
+    rowID
   }
 
   def insert(values: TupleSet): ROWID = {
@@ -184,39 +189,41 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     rowID
   }
 
-  def load(file: File)(transform: String => TupleSet): Long = {
-    var nLines: Long = 0
+  def load(file: File)(transform: String => TupleSet): LoadMetrics = {
+    var records: Long = 0
+    val startTime = System.nanoTime()
     Source.fromFile(file).use(_.getLines() foreach { line =>
-      val result = transform(line)
-      if (result.nonEmpty) {
-        insert(result)
-        nLines += 1
+      val values = transform(line)
+      if (values.nonEmpty) {
+        insert(values)
+        records += 1
       }
     })
-    nLines
+    val ingestTime = (System.nanoTime() - startTime) / 1e+6
+    val recordsPerSec = records / (ingestTime/1000)
+    LoadMetrics(records, ingestTime, recordsPerSec)
   }
 
   def replace(rowID: ROWID, values: TupleSet): Unit = {
-    val mapping = values.map { case (k, v) => (k.name, v) }
     val buf = allocate(device.recordSize)
     buf.putRowMetadata(RowMetadata())
     device.columns zip device.columnOffsets foreach { case (col, offset) =>
       buf.position(offset)
-      val value_? = mapping.get(col.name)
+      val value_? = values.get(col.name)
       buf.put(Codec.encode(col, value_?))
     }
     device.writeBlock(rowID, buf)
   }
 
-  def scanForRows(condition: TupleSet, limit: Option[Int] = None): List[TupleSet] = {
-    var results: List[TupleSet] = Nil
-    _iterate(condition, limit) { (_, result) => if(result.nonEmpty) results = result :: results }
-    results
+  def scanRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
+    var rows: List[Row] = Nil
+    _iterate(condition, limit) { (_, row) => rows = row :: rows }
+    rows
   }
 
   def update(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
-    _iterate(condition, limit) { (rowID, result) =>
-      val updatedValues = result ++ values
+    _iterate(condition, limit) { (rowID, row) =>
+      val updatedValues = row.toMap ++ values
       replace(rowID, updatedValues)
     }
   }
@@ -237,16 +244,19 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def _iterate(condition: TupleSet, limit: Option[Int] = None)(f: (ROWID, TupleSet) => Unit): Int = {
+  private def _iterate(condition: TupleSet, limit: Option[Int] = None)(f: (ROWID, Row) => Unit): Int = {
     val condCached = condition.map { case (symbol, value) => (symbol.name, value) }
     var matches: Int = 0
     var rowID: ROWID = 0
     val eof = device.length
     while (rowID < eof && !limit.exists(matches >= _)) {
-      val result = get(rowID) ++ Map(ROW_ID_NAME -> rowID)
-      if (isSatisfied(result, condCached) || condCached.isEmpty) {
-        f(rowID, result)
-        matches += 1
+      val row_? = get(rowID)
+      row_?.foreach { row =>
+        val result = Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*).asInstanceOf[TupleSet]
+        if (isSatisfied(result, condCached) || condCached.isEmpty) {
+          f(rowID, row)
+          matches += 1
+        }
       }
       rowID += 1
     }
@@ -377,7 +387,13 @@ object TableFile {
 
   case class DatabaseMetrics(databaseName: String,
                              tables: Seq[String],
-                             responseTimeMillis: Double = 0)
+                             responseTimeMillis: Double = 0) {
+    override def toString: String = this.toJSON
+  }
+
+  case class LoadMetrics(records: Long, ingestTime: Double, recordsPerSec: Double) {
+    override def toString: String = this.toJSON
+  }
 
   case class TableColumn(name: String,
                          `type`: String,
@@ -387,11 +403,17 @@ object TableFile {
                          isEncrypted: Boolean,
                          isNullable: Boolean,
                          isPrimary: Boolean,
-                         isRowID: Boolean)
+                         isRowID: Boolean){
+    override def toString: String = this.toJSON
+  }
 
-  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef])
+  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]){
+    override def toString: String = this.toJSON
+  }
 
-  case class TableIndexRef(indexName: String, indexColumn: String)
+  case class TableIndexRef(indexName: String, indexColumn: String){
+    override def toString: String = this.toJSON
+  }
 
   case class TableMetrics(databaseName: String,
                           tableName: String,
@@ -399,6 +421,8 @@ object TableFile {
                           physicalSize: Option[Long],
                           recordSize: Int,
                           rows: ROWID,
-                          responseTimeMillis: Double = 0)
+                          responseTimeMillis: Double = 0){
+    override def toString: String = this.toJSON
+  }
 
 }

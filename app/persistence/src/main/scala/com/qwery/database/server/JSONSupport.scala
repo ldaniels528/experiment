@@ -1,35 +1,27 @@
 package com.qwery.database.server
 
 import net.liftweb.json.Extraction.decompose
-import net.liftweb.json.{DefaultFormats, compactRender, prettyRender}
+import net.liftweb.json.{DefaultFormats, JValue, compactRender, parse, prettyRender}
 
 /**
- * JSON Support Companion
+ * JSON Support Capability
  * @author lawrence.daniels@gmail.com
  */
 object JSONSupport {
+  implicit val formats: DefaultFormats = DefaultFormats
 
-  final implicit class JSONString(val jsonString: String) extends AnyVal {
-    @inline
-    def fromJSON[T](implicit m: Manifest[T]): T = {
-      import net.liftweb.json.parse
-      implicit val formats: DefaultFormats = DefaultFormats
-      parse(jsonString).extract[T]
-    }
+  final implicit class JSONStringConversion(val jsonString: String) extends AnyVal {
+    @inline def fromJSON[T](implicit m: Manifest[T]): T = parse(jsonString).extract[T]
+
+    @inline def toLiftJs: JValue = parse(jsonString)
   }
 
-  final implicit class JSONProduct[T <: Product](val value: T) extends AnyVal {
-    @inline
-    def toJSON: String = {
-      implicit val formats: DefaultFormats = DefaultFormats
-      compactRender(decompose(value))
-    }
+  final implicit class JSONProductConversion[T <: Product](val value: T) extends AnyVal {
+    @inline def toJSON: String = compactRender(decompose(value))
 
-    @inline
-    def toJSONPretty: String = {
-      implicit val formats: DefaultFormats = DefaultFormats
-      prettyRender(decompose(value))
-    }
+    @inline def toJSONPretty: String = prettyRender(decompose(value))
+
+    @inline def toLiftJs: JValue = decompose(value)
   }
 
 }

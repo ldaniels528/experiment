@@ -2,7 +2,7 @@ package com.qwery.database.server
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.BlockDevice.RowStatistics
-import com.qwery.database.server.TableFile.{DatabaseMetrics, TableColumn, TableConfig, TableIndexRef, TableMetrics}
+import com.qwery.database.server.TableFile.{DatabaseMetrics, LoadMetrics, TableColumn, TableConfig, TableIndexRef, TableMetrics}
 import com.qwery.database.server.TableService.UpdateResult
 import spray.json._
 
@@ -24,6 +24,8 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat3(DatabaseMetrics.apply)
 
+  implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)
+
   implicit val rowStatisticsJsonFormat: RootJsonFormat[RowStatistics] = jsonFormat4(RowStatistics.apply)
 
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat9(TableColumn.apply)
@@ -38,7 +40,7 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit object TupleSetJsonFormat extends JsonFormat[TupleSet] {
     override def read(jsValue: JsValue): TupleSet = jsValue match {
-      case js: JsObject => js.fields map { case (name, jsValue) => name -> unwrap(jsValue) }
+      case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
       case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
     }
 
@@ -56,15 +58,6 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
         case v: Any => JsString(v.toString)
       })
     }
-  }
-
-  implicit object SeqTableConfigJsonFormat extends JsonFormat[Seq[TableConfig]] {
-    override def read(value: JsValue): Seq[TableConfig] = value match {
-      case JsArray(items) => items.map(_.convertTo[TableConfig])
-      case js => throw new RuntimeException(s"Unexpected object $js")
-    }
-
-    override def write(items: Seq[TableConfig]): JsValue = JsArray(items.map(_.toJson):_*)
   }
 
   implicit object SeqTupleSetJsonFormat extends JsonFormat[Seq[TupleSet]] {

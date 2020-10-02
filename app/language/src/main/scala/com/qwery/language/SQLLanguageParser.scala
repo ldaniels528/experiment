@@ -47,6 +47,7 @@ trait SQLLanguageParser {
     "CREATE" -> parseCreate,
     "DECLARE" -> parseDeclare,
     "DEBUG" -> parseConsoleDebug,
+    "DROP" -> parseDrop,
     "ERROR" -> parseConsoleError,
     "FILESYSTEM" -> parseFileSystem,
     "FOR" -> parseForLoop,
@@ -255,6 +256,25 @@ trait SQLLanguageParser {
     val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
     if (!isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
     Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
+  }
+
+  /**
+   * Parses a DROP statement
+   * @param ts the given [[TokenStream token stream]]
+   * @return an [[Invokable invokable]]
+   */
+  def parseDrop(ts: TokenStream): Invokable = ts.decode(tuples =
+    "DROP TABLE" -> parseDropTable,
+  )
+
+  /**
+   * Parses a DROP TABLE statement
+   * @param ts the given [[TokenStream token stream]]
+   * @return an [[Invokable invokable]]
+   */
+  def parseDropTable(ts: TokenStream): DropTable = {
+    val params = SQLTemplateParams(ts, "DROP ?EXTERNAL TABLE %t:name")
+    DropTable(Table(name = params.atoms("name")))
   }
 
   /**
