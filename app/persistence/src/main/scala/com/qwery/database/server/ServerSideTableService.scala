@@ -3,7 +3,8 @@ package com.qwery.database.server
 import com.qwery.database.server.JSONSupport.JSONProductConversion
 import com.qwery.database.server.ServerSideTableService.InvokableFacade
 import com.qwery.database.server.TableFile._
-import com.qwery.database.server.TableService.UpdateResult
+import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.server.TableService._
 import com.qwery.database.{BlockDevice, Column, ColumnMetadata, ColumnTypes, FieldMetadata, ROWID, Row, RowMetadata}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.Into
@@ -30,6 +31,11 @@ case class ServerSideTableService() extends TableService[Row] {
     UpdateResult(count = 1, responseTime, __id = Some(rowID))
   }
 
+  override def createTable(databaseName: String, ref: TableCreation): UpdateResult = {
+    val (_, responseTime) = time(TableFile.createTable(databaseName, ref.tableName, ref.columns.map(_.toColumn)))
+    UpdateResult(count = 1, responseTime)
+  }
+
   override def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): UpdateResult = {
     val (count, responseTime) = time(apply(databaseName, tableName).deleteRange(start, length))
     logger.info(f"$tableName($start..${length + start}) ~> deleted $count [in $responseTime%.1f msec]")
@@ -48,7 +54,7 @@ case class ServerSideTableService() extends TableService[Row] {
     UpdateResult(count = if(isDropped) 1 else 0, responseTime)
   }
 
-  override def executeQuery(databaseName: String, sql: String): Seq[Row] = {
+  override def executeQuery(databaseName: String, tableName: String, sql: String): Seq[Row] = {
     val (rows, responseTime) = time(SQLLanguageParser.parse(sql).invoke(this))
     logger.info(f"$sql ~> (${rows.length} items) [in $responseTime%.1f msec]")
     rows
@@ -60,7 +66,7 @@ case class ServerSideTableService() extends TableService[Row] {
     rows
   }
 
-  override def getDatabaseMetrics(databaseName: String): TableFile.DatabaseMetrics = {
+  override def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
     val (stats, responseTime) = time {
       val directory = getDatabaseRootDirectory(databaseName)
       val tableConfigs = directory.listFilesRecursively.map(_.getName) flatMap {
@@ -71,7 +77,7 @@ case class ServerSideTableService() extends TableService[Row] {
           }
         case _ => None
       }
-      TableFile.DatabaseMetrics(databaseName = databaseName, tables = tableConfigs)
+      DatabaseMetrics(databaseName = databaseName, tables = tableConfigs)
     }
     logger.info(f"$databaseName.metrics ~> ${stats.toJSON} [in $responseTime%.1f msec]")
     stats.copy(responseTimeMillis = responseTime)
@@ -94,11 +100,11 @@ case class ServerSideTableService() extends TableService[Row] {
     row
   }
 
-  override def getTableMetrics(databaseName: String, tableName: String): TableFile.TableMetrics = {
+  override def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
     val (stats, responseTime) = time {
       val table = apply(databaseName, tableName)
       val device = table.device
-      TableFile.TableMetrics(
+      TableMetrics(
         databaseName = databaseName, tableName = table.tableName, columns = device.columns.toList.map(_.toTableColumn),
         physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length)
     }
@@ -110,6 +116,21 @@ case class ServerSideTableService() extends TableService[Row] {
     val (_, responseTime) = time(apply(databaseName, tableName).replace(rowID, values))
     logger.info(f"$tableName($rowID) ~> $values [in $responseTime%.1f msec]")
     UpdateResult(count = 1, responseTime, __id = Some(rowID))
+  }
+
+  override def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateResult = {
+    val (newValues, responseTime) = time {
+      val tableFile = apply(databaseName, tableName)
+      for {
+        oldValues <- tableFile.get(rowID).map(_.toMap)
+        newValues = oldValues ++ values
+      } yield {
+        tableFile.replace(rowID, newValues)
+        newValues
+      }
+    }
+    logger.info(f"$tableName($rowID) ~> $newValues [in $responseTime%.1f msec]")
+    UpdateResult(count = newValues.map(_ => 1).getOrElse(0), responseTime, __id = Some(rowID))
   }
 
 }

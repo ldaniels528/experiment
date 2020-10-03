@@ -5,8 +5,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
-import com.qwery.database.server.JSONSupport.JSONProductConversion
+import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
+import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.server.QweryCustomJsonProtocol._
+import com.qwery.database.server.TableService._
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -71,30 +73,24 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   def route()(implicit service: ServerSideTableService): Route = {
-    // routes: /<database> (e.g. "/portfolio")
-    path(Segment) {
-      routesByDatabase
-    } ~
-      // routes: /<database>/<table> (e.g. "/portfolio/stocks")
-      path(Segment / Segment) {
-        routesByDatabaseTable
-      } ~
-      // routes: /<database>/<table>/<rowID> (e.g. "/portfolio/stocks/187")
-      path(Segment / Segment / IntNumber) {
-        routesByDatabaseTableRowID
-      } ~
-      // routes: /<database>/<table>/length (e.g. "/portfolio/stocks/length")
-      path(Segment / Segment / "length") {
-        routesByDatabaseTableLength
-      } ~
-      // routes: /<database>/<table>/<rowID>/<count> (e.g. "/portfolio/stocks/187/23")
-      path(Segment / Segment / IntNumber / IntNumber) {
-        routesByDatabaseTableRange
-      }
+    // route: /<database> (e.g. "/portfolio")
+    path(Segment)(routesByDatabase) ~
+      // route: /<database>/<table> (e.g. "/portfolio/stocks")
+      path(Segment / Segment)(routesByDatabaseTable) ~
+      // route: /<database>/<table>/<rowID> (e.g. "/portfolio/stocks/187")
+      path(Segment / Segment / IntNumber)(routesByDatabaseTableRowID) ~
+      // route: /<database>/<table>/<rowID>/<count> (e.g. "/portfolio/stocks/187/23")
+      path(Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableRange) ~
+      // route: /<database>/<table>/export/<format>/<fileName> (e.g. "/portfolio/stocks/export/json/stocks.json")
+      path(Segment / Segment / "export" / Segment / Segment)(routesByDatabaseTableExport) ~
+      // route: /<database>/<table>/length (e.g. "/portfolio/stocks/length")
+      path(Segment / Segment / "length")(routesByDatabaseTableLength) ~
+      // route: /<database>/<table>/sql (e.g. "/portfolio/stocks/sql")
+      path(Segment / Segment / "sql")(routesByDatabaseTableSQL)
   }
 
   /**
-   * Database-specific routes
+   * Database-specific API routes (e.g. "/portfolio")
    * @param databaseName the name of the database
    * @param service the implicit [[ServerSideTableService]]
    * @return the [[Route]]
@@ -105,15 +101,15 @@ object DatabaseServer {
       complete(service.getDatabaseMetrics(databaseName))
     } ~
       post {
-        // executes a SQL query (e.g. "POST /portfolio" <~ { sql: "TRUNCATE TABLE staging" })
-        entity(as[String]) { sql =>
-          complete(service.executeQuery(databaseName, sql).map(_.toMap))
+        // create the new table (e.g. "POST /portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]}
+        entity(as[String]) { jsonString =>
+          complete(service.createTable(databaseName, jsonString.fromJSON[TableCreation]))
         }
       }
   }
 
   /**
-   * Database Table-specific routes
+   * Database Table-specific API routes (e.g. "/portfolio/stocks")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param service      the implicit [[ServerSideTableService]]
@@ -121,8 +117,7 @@ object DatabaseServer {
    */
   private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit service: ServerSideTableService): Route = {
     delete {
-      // drops a table by name
-      // (e.g. "DELETE /portfolio/stocks")
+      // drop the table by name (e.g. "DELETE /portfolio/stocks")
       complete(service.dropTable(databaseName, tableName).toLiftJs.toSprayJs)
     } ~
       get {
@@ -134,20 +129,40 @@ object DatabaseServer {
               if (params.isEmpty) service.getTableMetrics(databaseName, tableName)
               else service.findRows(databaseName, tableName, condition, limit).map(_.toMap)
             )
-          }
+        }
       } ~
       post {
-        // appends a new record into a table by name
+        // append the new record to the table
         // (e.g. "POST /portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          val values = jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) }
-          complete(service.appendRow(databaseName, tableName, values).toLiftJs.toSprayJs)
+          complete(service.appendRow(databaseName, tableName, toValues(jsObject)))
         }
       }
   }
 
   /**
-   * Database Table Length-specific routes
+   * Database Table Export-specific API routes (e.g. "/portfolio/stocks/export/csv/stocks.csv")
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @param format       the destination file format (e.g. "csv", "json", "bin")
+   * @param fileName     the name of the file to be downloaded
+   * @param service      the implicit [[ServerSideTableService]]
+   * @return the [[Route]]
+   */
+  private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String)
+                                         (implicit service: ServerSideTableService): Route = {
+    val dataFile = format.toLowerCase() match {
+      case "csv" => service(databaseName, tableName).exportAsCSV
+      case "json" => service(databaseName, tableName).exportAsJSON
+      case "bin" => TableFile.getTableDataFile(databaseName, tableName)
+      case other => throw new IllegalArgumentException(s"Unsupported file format '$other'")
+    }
+    logger.info(s"Exporting '$fileName' (as ${format.toUpperCase()}) <~ ${dataFile.getAbsolutePath}")
+    getFromFile(dataFile)
+  }
+
+  /**
+   * Database Table Length-specific API routes (e.g. "/portfolio/stocks/length")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param service      the implicit [[ServerSideTableService]]
@@ -155,13 +170,13 @@ object DatabaseServer {
    */
   private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit service: ServerSideTableService): Route = {
     get {
-      // retrieve the length of the table (e.g. "GET /portfolio/stocks/287/length")
+      // retrieve the length of the table (e.g. "GET /portfolio/stocks/length")
       complete(service.getLength(databaseName, tableName))
     }
   }
 
   /**
-   * Database Table Range-specific routes
+   * Database Table Range-specific API routes (e.g. "/portfolio/stocks/187/23")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param start        the start of the range
@@ -170,14 +185,34 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: Int, length: Int)(implicit service: ServerSideTableService): Route = {
-    get {
-      // retrieve a range of rows (e.g. "GET /portfolio/stocks/287/20")
-      complete(service.getRange(databaseName, tableName, start, length).map(_.toMap))
+    delete {
+      // delete the range of rows (e.g. "DELETE /portfolio/stocks/287/20")
+      complete(service.deleteRange(databaseName, tableName, start, length))
+    } ~
+      get {
+        // retrieve the range of rows (e.g. "GET /portfolio/stocks/287/20")
+        complete(service.getRange(databaseName, tableName, start, length).map(_.toMap))
+      }
+  }
+
+  /**
+   * Database Table SQL-specific API routes (e.g. "/portfolio/stocks/sql")
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @param service      the implicit [[ServerSideTableService]]
+   * @return the [[Route]]
+   */
+  private def routesByDatabaseTableSQL(databaseName: String, tableName: String)(implicit service: ServerSideTableService): Route = {
+    post {
+      // execute the SQL query (e.g. "POST /portfolio" <~ { sql: "TRUNCATE TABLE staging" })
+      entity(as[String]) { sql =>
+        complete(service.executeQuery(databaseName, tableName, sql).map(_.toMap))
+      }
     }
   }
 
   /**
-   * Database Table Length-specific routes
+   * Database Table Length-specific API routes (e.g. "/portfolio/stocks/187")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param rowID        the referenced row ID
@@ -186,36 +221,34 @@ object DatabaseServer {
    */
   private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: Int)(implicit service: ServerSideTableService): Route = {
     delete {
-      // delete a row by index
-      // (e.g. "DELETE /portfolio/stocks/129")
-      complete(service.deleteRow(databaseName, tableName, rowID).toLiftJs.toSprayJs)
+      // delete the row by ID (e.g. "DELETE /portfolio/stocks/129")
+      complete(service.deleteRow(databaseName, tableName, rowID))
     } ~
       get {
-        // retrieve a row by index
-        // (e.g. "GET /portfolio/stocks/287")
+        // retrieve the row by ID (e.g. "GET /portfolio/stocks/287")
         service.getRow(databaseName, tableName, rowID) match {
           case Some(row) => complete(row.toMap.toJson)
           case None => complete(JsObject())
         }
       } ~
       post {
-        // partially updates a row by index into a table by name
-        // (e.g. "POST /portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
+        // partially update the row by ID
+        // (e.g. "POST /portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          val values = jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) }
-          complete(service.replaceRow(databaseName, tableName, rowID, values))
+          complete(service.updateRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       } ~
       put {
-        // replaces a row by index into a table by name
+        // replace the row by ID
         // (e.g. "PUT /portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          val values = jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) }
-          complete(service.replaceRow(databaseName, tableName, rowID, values))
+          complete(service.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       }
   }
 
   private def toValues(params: Uri.Query): TupleSet = Map(params.filterNot(_._1.name.startsWith("__")): _*)
+
+  private def toValues(jsObject: JsObject): TupleSet = jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) }
 
 }

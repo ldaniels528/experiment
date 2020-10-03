@@ -1,10 +1,15 @@
 package com.qwery.database
 
+import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.Codec._
 import com.qwery.database.OptionComparisonHelper.OptionComparator
+import com.qwery.database.PersistentSeq.newTempFile
+import com.qwery.util.ResourceHelper._
 
 import scala.collection.mutable
 
@@ -12,14 +17,6 @@ import scala.collection.mutable
  * Represents a raw block device
  */
 trait BlockDevice {
-
-  /**
-   * Closes the underlying file handle
-   */
-  def close(): Unit
-
-  def columns: Seq[Column]
-
   val columnOffsets: List[ROWID] = {
     case class Accumulator(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
     columns.filterNot(_.isLogical).map(_.maxPhysicalSize).foldLeft(Accumulator()) { (acc, maxLength) =>
@@ -39,9 +36,16 @@ trait BlockDevice {
    */
   val toRowIdField: ROWID => Option[Field] = {
     val rowIdColumn_? = columns.find(_.metadata.isRowID)
-    val fmd = FieldMetadata(isCompressed = false, isEncrypted = false, isNotNull = false, `type` = ColumnTypes.LongType)
+    val fmd = FieldMetadata(isNotNull = false, `type` = ColumnTypes.LongType)
     (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, fmd, value = Some(rowID)))
   }
+
+  /**
+   * Closes the underlying file handle
+   */
+  def close(): Unit
+
+  def columns: Seq[Column]
 
   /**
    * Counts the number of rows matching the predicate
@@ -58,6 +62,66 @@ trait BlockDevice {
     total
   }
 
+  /**
+   * Exports the contents of this device as Comma Separated Values (CSV)
+   * @return a new CSV [[File file]]
+   */
+  def exportAsCSV: File = {
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
+    val columnNames = columns.map(_.name)
+    val file = newTempFile()
+    new PrintWriter(file) use { out =>
+      // write the header
+      out.println(columnNames.map(s => s""""$s"""").mkString(","))
+
+      // write all rows
+      foreach { row =>
+        // get the key-value pairs
+        val mappings = Map(row.fields.map {
+          case Field(name, _, None) => name -> ""
+          case Field(name, metadata, Some(value: Date))
+            if metadata.`type` == ColumnTypes.DateType => name -> s""""${sdf.format(value)}""""
+          case Field(name, metadata, Some(value))
+            if metadata.`type` == ColumnTypes.StringType |
+               metadata.`type` == ColumnTypes.UUIDType => name -> s""""$value""""
+          case Field(name, _, Some(value)) => name -> value.toString
+        }: _*)
+
+        // build the line and write it
+        val line = (for {name <- columnNames; value <- mappings.get(name)} yield value).mkString(",")
+        out.println(line)
+      }
+    }
+    file
+  }
+
+  /**
+   * Exports the contents of this device as JSON
+   * @return a new JSON [[File file]]
+   */
+  def exportAsJSON: File = {
+    val file = newTempFile()
+    new PrintWriter(file) use { out =>
+      // write all rows
+      foreach { row =>
+        // get the key-value pairs
+        val mappings = Map(row.fields collect {
+          case Field(name, metadata, Some(value: Date))
+            if metadata.`type` == ColumnTypes.DateType => name -> value.getTime
+          case Field(name, metadata, Some(value))
+            if metadata.`type` == ColumnTypes.StringType |
+              metadata.`type` == ColumnTypes.UUIDType => name -> s""""$value""""
+          case Field(name, _, Some(value)) => name -> value.toString
+        }: _*)
+
+        // build the line and write it
+        val line = s"{ ${mappings map { case (k, v) => s""""$k":$v""" } mkString ","} }"
+        out.println(line)
+      }
+    }
+    file
+  }
+
   def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetadata => Boolean): Option[ROWID] = {
     var rowID = fromPos
     if (forward) while (rowID < length && !f(readRowMetaData(rowID))) rowID += 1
@@ -72,7 +136,17 @@ trait BlockDevice {
     if (rowID < eof) Some(rowID) else None
   }
 
-  def foreach[U](callback: (ROWID, ByteBuffer) => U): Unit = {
+  def foreach[U](callback: Row => U): Unit = {
+    var rowID: ROWID = 0
+    val eof: ROWID = length
+    while (rowID < eof) {
+      val row = getRow(rowID)
+      if (row.metadata.isActive) callback(row)
+      rowID += 1
+    }
+  }
+
+  def foreachBuffer[U](callback: (ROWID, ByteBuffer) => U): Unit = {
     var rowID: ROWID = 0
     val eof: ROWID = length
     while (rowID < eof) {

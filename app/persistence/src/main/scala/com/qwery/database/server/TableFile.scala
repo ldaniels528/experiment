@@ -7,8 +7,10 @@ import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
-import com.qwery.database.server.TableFile.{LoadMetrics, TableConfig, TableIndexRef, getTableIndexFile, rowIDColumn, writeTableConfig}
-import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, ColumnTypes, Field, FileBlockDevice, ROWID, Row, RowMetadata}
+import com.qwery.database.server.TableFile._
+import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.server.TableService._
+import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, Field, FileBlockDevice, ROWID, Row, RowMetadata}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -140,6 +142,18 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   def delete(condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, _) => delete(rowID) }
   }
+
+  /**
+   * Exports the contents of this device as Comma Separated Values (CSV)
+   * @return a new CSV [[File file]]
+   */
+  def exportAsCSV: File = device.exportAsCSV
+
+  /**
+   * Exports the contents of this device as JSON
+   * @return a new JSON [[File file]]
+   */
+  def exportAsJSON: File = device.exportAsJSON
 
   def findRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
     // check all available indices for the table
@@ -352,77 +366,6 @@ object TableFile {
 
   def writeTableConfig(databaseName: String, tableName: String, config: TableConfig): Unit = {
     new PrintWriter(getTableConfigFile(databaseName, tableName)).use(_.println(config.toJSONPretty))
-  }
-
-  final implicit class ColumnToTableColumnConversion(val column: Column) extends AnyVal {
-    @inline
-    def toTableColumn: TableColumn = TableColumn(
-      name = column.name,
-      `type` = column.metadata.`type`.toString,
-      comment = if (column.comment.nonEmpty) Some(column.comment) else None,
-      sizeInBytes = column.sizeInBytes,
-      isCompressed = column.metadata.isCompressed,
-      isEncrypted = column.metadata.isEncrypted,
-      isNullable = column.metadata.isNullable,
-      isPrimary = column.metadata.isPrimary,
-      isRowID = column.metadata.isRowID,
-    )
-  }
-
-  final implicit class TableColumnToColumnConversion(val column: TableColumn) extends AnyVal {
-    @inline
-    def toColumn: Column = new Column(
-      name = column.name,
-      comment = column.comment.getOrElse(""),
-      sizeInBytes = column.sizeInBytes,
-      metadata = ColumnMetadata(
-        `type` = ColumnTypes.withName(column.`type`),
-        isCompressed = column.isCompressed,
-        isEncrypted = column.isEncrypted,
-        isNullable = column.isNullable,
-        isPrimary = column.isPrimary,
-        isRowID = column.isRowID
-      ))
-  }
-
-  case class DatabaseMetrics(databaseName: String,
-                             tables: Seq[String],
-                             responseTimeMillis: Double = 0) {
-    override def toString: String = this.toJSON
-  }
-
-  case class LoadMetrics(records: Long, ingestTime: Double, recordsPerSec: Double) {
-    override def toString: String = this.toJSON
-  }
-
-  case class TableColumn(name: String,
-                         `type`: String,
-                         comment: Option[String],
-                         sizeInBytes: Int,
-                         isCompressed: Boolean,
-                         isEncrypted: Boolean,
-                         isNullable: Boolean,
-                         isPrimary: Boolean,
-                         isRowID: Boolean){
-    override def toString: String = this.toJSON
-  }
-
-  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]){
-    override def toString: String = this.toJSON
-  }
-
-  case class TableIndexRef(indexName: String, indexColumn: String){
-    override def toString: String = this.toJSON
-  }
-
-  case class TableMetrics(databaseName: String,
-                          tableName: String,
-                          columns: Seq[TableColumn],
-                          physicalSize: Option[Long],
-                          recordSize: Int,
-                          rows: ROWID,
-                          responseTimeMillis: Double = 0){
-    override def toString: String = this.toJSON
   }
 
 }

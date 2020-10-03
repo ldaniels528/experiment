@@ -4,6 +4,7 @@ import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
+import com.qwery.database.server.TableService.TableCreation
 import com.qwery.database.{Column, ColumnMetadata, ColumnTypes}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -31,8 +32,8 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     }
 
     it("should drop an existing table (SQL)") {
-      val sql =  s"DROP TABLE $tableNameB"
-      invoke(sql, service.executeQuery(databaseName, sql))
+      val sql = s"DROP TABLE $tableNameB"
+      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
     }
 
     it("should create a new table") {
@@ -43,8 +44,8 @@ class ClientSideTableServiceTest extends AnyFunSpec {
         Column(name = "lastTradeTime", comment = "the latest sale date/time", ColumnMetadata(`type` = ColumnTypes.DateType))
       )
       invoke(
-        label = s"TableFile.createTable($databaseName, $tableNameA, $columns)",
-        block = TableFile.createTable(databaseName, tableNameA, columns))
+        label = s"service.createTable($databaseName, $tableNameA, $columns)",
+        block = service.createTable(databaseName, TableCreation.create(tableNameA, columns)))
     }
 
     it("should create a new table (SQL)") {
@@ -57,7 +58,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
             |)
             |LOCATION '/$databaseName/$tableNameB/'
             |""".stripMargin.trim
-      invoke(sql, service.executeQuery(databaseName, sql))
+      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
     }
 
     it("should append a record to the end of a table") {
@@ -67,7 +68,12 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
     it("should replace a record at a specfic index") {
       val record = Map("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
-      invoke(label = s"service.replaceRow($databaseName, $tableNameA,  rowID = 2, $record)", service.replaceRow(databaseName, tableNameA, rowID = 2, values = record))
+      invoke(label = s"service.replaceRow($databaseName, $tableNameA,  rowID = 1, $record)", service.replaceRow(databaseName, tableNameA, rowID = 1, values = record))
+    }
+
+    it("should update a record at a specfic index") {
+      val record = Map("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 56.78, "lastSaleTime" -> System.currentTimeMillis())
+      invoke(label = s"service.updateRow($databaseName, $tableNameA,  rowID = 1, $record)", service.updateRow(databaseName, tableNameA, rowID = 1, values = record))
     }
 
     it("should append a record to the end of a table (SQL)") {
@@ -75,7 +81,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
         s"""|INSERT INTO $tableNameB (symbol, exchange, lastSale, lastTradeTime)
             |VALUES ("MSFT", "NYSE", 123.55, ${System.currentTimeMillis()})
             |""".stripMargin.replaceAllLiterally("\n", " ").trim
-      invoke(sql, service.executeQuery(databaseName, sql))
+      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
     }
 
     it("should iterate records from the server") {
@@ -126,8 +132,8 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     }
 
     it("should execute queries against the server") {
-      val sql = "SELECT * FROM stocks_test WHERE symbol = 'AAPL'"
-      invoke(sql, service.executeQuery(databaseName, sql))
+      val sql = s"SELECT * FROM $tableNameB WHERE symbol = 'AAPL'"
+      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
     }
 
     it("should delete a row by ID from the server") {
@@ -153,11 +159,12 @@ class ClientSideTableServiceTest extends AnyFunSpec {
   def invoke[A](label: String, block: => A): A = {
     val (results, responseTime) = time(block)
     results match {
-      case rows: Iterator[_] =>
-        logger.info(f"$label ~> (${rows.size}) [$responseTime%.1f msec]")
+      case it: Iterator[_] =>
+        val rows = it.toList
+        logger.info(f"$label ~> (${rows.size} items) [$responseTime%.1f msec]")
         rows.zipWithIndex.foreach { case (row, index) => logger.info(f"[$index%02d] $row") }
       case rows: Seq[_] =>
-        logger.info(f"$label ~> (${rows.size}) [$responseTime%.1f msec]")
+        logger.info(f"$label ~> (${rows.size} items) [$responseTime%.1f msec]")
         rows.zipWithIndex.foreach { case (row, index) => logger.info(f"[$index%02d] $row") }
       case result => logger.info(f"$label ~> $result [$responseTime%.1f msec]")
     }

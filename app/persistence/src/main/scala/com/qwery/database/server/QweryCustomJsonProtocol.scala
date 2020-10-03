@@ -2,8 +2,7 @@ package com.qwery.database.server
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.BlockDevice.RowStatistics
-import com.qwery.database.server.TableFile.{DatabaseMetrics, LoadMetrics, TableColumn, TableConfig, TableIndexRef, TableMetrics}
-import com.qwery.database.server.TableService.UpdateResult
+import com.qwery.database.server.TableService._
 import spray.json._
 
 /**
@@ -12,21 +11,13 @@ import spray.json._
 object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   import spray.json._
 
-  def unwrap(jsValue: JsValue): Any = jsValue match {
-    case js: JsArray => js.elements map unwrap
-    case JsNull => null
-    case JsBoolean(value) => value
-    case JsNumber(value) => value
-    case js: JsObject => js.fields map { case (name, jsValue) => name -> unwrap(jsValue) }
-    case JsString(value) => value
-    case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
-  }
-
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat3(DatabaseMetrics.apply)
 
   implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)
 
   implicit val rowStatisticsJsonFormat: RootJsonFormat[RowStatistics] = jsonFormat4(RowStatistics.apply)
+
+  implicit val tableCreationJsonFormat: RootJsonFormat[TableCreation] = jsonFormat2(TableCreation.apply)
 
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat9(TableColumn.apply)
 
@@ -64,6 +55,16 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
     override def read(value: JsValue): Seq[TupleSet] = ???
 
     override def write(items: Seq[TupleSet]): JsValue = JsArray(items.map(_.toJson):_*)
+  }
+
+  def unwrap(jsValue: JsValue): Any = jsValue match {
+    case js: JsArray => js.elements map unwrap
+    case JsNull => null
+    case JsBoolean(value) => value
+    case JsNumber(value) => value
+    case js: JsObject => js.fields map { case (name, jsValue) => name -> unwrap(jsValue) }
+    case JsString(value) => value
+    case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
   }
 
 }
