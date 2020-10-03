@@ -55,7 +55,7 @@ case class ServerSideTableService() extends TableService[Row] {
   }
 
   override def executeQuery(databaseName: String, tableName: String, sql: String): Seq[Row] = {
-    val (rows, responseTime) = time(SQLLanguageParser.parse(sql).invoke(this))
+    val (rows, responseTime) = time(SQLLanguageParser.parse(sql).invoke(databaseName)(this))
     logger.info(f"$sql ~> (${rows.length} items) [in $responseTime%.1f msec]")
     rows
   }
@@ -67,7 +67,7 @@ case class ServerSideTableService() extends TableService[Row] {
   }
 
   override def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
-    val (stats, responseTime) = time {
+    val (metrics, responseTime) = time {
       val directory = getDatabaseRootDirectory(databaseName)
       val tableConfigs = directory.listFilesRecursively.map(_.getName) flatMap {
         case name if name.endsWith(".json") =>
@@ -79,8 +79,8 @@ case class ServerSideTableService() extends TableService[Row] {
       }
       DatabaseMetrics(databaseName = databaseName, tables = tableConfigs)
     }
-    logger.info(f"$databaseName.metrics ~> ${stats.toJSON} [in $responseTime%.1f msec]")
-    stats.copy(responseTimeMillis = responseTime)
+    logger.info(f"$databaseName.metrics ~> ${metrics.toJSON} [in $responseTime%.1f msec]")
+    metrics.copy(responseTimeMillis = responseTime)
   }
 
   override def getLength(databaseName: String, tableName: String): UpdateResult = {
@@ -101,15 +101,15 @@ case class ServerSideTableService() extends TableService[Row] {
   }
 
   override def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
-    val (stats, responseTime) = time {
+    val (metrics, responseTime) = time {
       val table = apply(databaseName, tableName)
       val device = table.device
       TableMetrics(
         databaseName = databaseName, tableName = table.tableName, columns = device.columns.toList.map(_.toTableColumn),
         physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length)
     }
-    logger.info(f"$tableName.metrics ~> ${stats.toJSON} [in $responseTime%.1f msec]")
-    stats.copy(responseTimeMillis = responseTime)
+    logger.info(f"$tableName.metrics ~> ${metrics.toJSON} [in $responseTime%.1f msec]")
+    metrics.copy(responseTimeMillis = responseTime)
   }
 
   override def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateResult = {
@@ -154,8 +154,8 @@ object ServerSideTableService {
     QwColumnTypes.UUID -> ColumnTypes.UUIDType
   )
 
-  def createTable(t: Table): TableFile = {
-    TableFile.createTable(databaseName = DEFAULT_DATABASE, tableName = t.name, columns = t.columns.map { c =>
+  def createTable(databaseName: String, t: Table): TableFile = {
+    TableFile.createTable(databaseName = databaseName, tableName = t.name, columns = t.columns.map { c =>
       Column(
         name = c.name,
         comment = c.comment.getOrElse(""),
@@ -168,10 +168,10 @@ object ServerSideTableService {
   }
 
   def createTableIndex(databaseName: String, indexName: String, location: Location, indexColumns: Seq[Field])
-                      (implicit tables: ServerSideTableService): Option[BlockDevice] = {
+                      (implicit service: ServerSideTableService): Option[BlockDevice] = {
     location match {
       case TableRef(tableName) =>
-        val table = tables(databaseName, tableName)
+        val table = service(databaseName, tableName)
         val device = table.device
         for {
           indexColumnName <- indexColumns.headOption.map(_.name)
@@ -181,20 +181,20 @@ object ServerSideTableService {
     }
   }
 
-  def insertRows(tableName: String, fields: Seq[String], rowValuesList: List[List[Any]])(implicit tables: ServerSideTableService): List[ROWID] = {
-    val table = tables(DEFAULT_DATABASE, tableName)
+  def insertRows(databaseName: String, tableName: String, fields: Seq[String], rowValuesList: List[List[Any]])(implicit service: ServerSideTableService): List[ROWID] = {
+    val table = service(databaseName, tableName)
     for {
       rowValues <- rowValuesList
       rowID = table.insert(values = Map(fields zip rowValues: _*))
     } yield rowID
   }
 
-  def selectRows(select: Select)(implicit tables: ServerSideTableService): Seq[Row] = {
+  def selectRows(databaseName: String, select: Select)(implicit service: ServerSideTableService): Seq[Row] = {
     select.from match {
       case Some(TableRef(tableName)) =>
-        val table = tables(DEFAULT_DATABASE, tableName)
+        val table = service(databaseName, tableName)
         val conditions: TupleSet = select.where match {
-          case Some(ConditionalOp(Field(name), Literal(value), "==", "=")) => Map(name -> value)
+          case Some(ConditionalOp(Field(name), value, "==", "=")) => Map(name -> value.translate)
           case Some(condition) =>
             throw new IllegalArgumentException(s"Unsupported condition $condition")
           case None => Map.empty
@@ -222,19 +222,23 @@ object ServerSideTableService {
   }
 
   final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
-    def invoke(implicit tables: ServerSideTableService): Seq[Row] = invokable match {
-      case Create(table: Table) => createTable(table); Nil
+    def invoke(databaseName: String)(implicit service: ServerSideTableService): Seq[Row] = invokable match {
+      case Create(table: Table) =>
+        val (_, responseTime) = time(createTable(databaseName, table))
+        createUpdateResultSet(count = 1, responseTime = responseTime)
       case Create(TableIndex(name, table, columns)) =>
-        val (_, responseTime) = time(createTableIndex(DEFAULT_DATABASE, name, table, columns))
-        createUpdateResultSet(1, responseTime)
+        val (_, responseTime) = time(createTableIndex(databaseName, name, table, columns))
+        createUpdateResultSet(count = 1, responseTime = responseTime)
       case DropTable(TableRef(tableName)) =>
-        val (isDropped, responseTime) = time(dropTable(DEFAULT_DATABASE, tableName))
+        val (isDropped, responseTime) = time(dropTable(databaseName, tableName))
         createUpdateResultSet(count = if (isDropped) 1 else 0, responseTime)
-      case Insert(Into(TableRef(name)), Insert.Values(expressionValues), fields) =>
-        val (results, responseTime) = time(insertRows(name, fields.map(_.name), expressionValues.map(_.map(_.translate))))
+      case Insert(Into(TableRef(tableName)), Insert.Values(expressionValues), fields) =>
+        val (results, responseTime) = time(insertRows(databaseName, tableName, fields.map(_.name), expressionValues.map(_.map(_.translate))))
         results.flatMap(rowID => createUpdateResultSet(count = 1, responseTime, __id = Some(rowID)))
-      case select: Select => selectRows(select)
-      case Truncate(TableRef(name)) => tables(DEFAULT_DATABASE, name).truncate(); Nil
+      case select: Select => selectRows(databaseName, select)
+      case Truncate(TableRef(tableName)) =>
+        val (_, responseTime) = time(service(databaseName, tableName).truncate())
+        createUpdateResultSet(count = 1, responseTime = responseTime)
       case unknown => throw new IllegalArgumentException(s"Unsupported operation $unknown")
     }
   }
