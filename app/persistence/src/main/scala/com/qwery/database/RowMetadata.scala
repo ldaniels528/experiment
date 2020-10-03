@@ -10,20 +10,23 @@ import com.qwery.database.RowMetadata._
  * c - compressed bit . [0100.0000 ~ 0x40]
  * e - encrypted bit .. [0010.0000 ~ 0x20]
  * l - locked bit ..... [0001.0000 ~ 0x10]
- * r - reserved bits .. [0000.1111 ~ 0x0f]
+ * r - replicated bit . [0000.1000 ~ 0x08]
+ * u - unused bits .... [0000.0111 ~ 0x07]
  * ---------------------------------------
  * </pre>
  * @param isActive     indicates whether the row is active; meaning not deleted.
  * @param isCompressed indicates whether the row is compressed
  * @param isEncrypted  indicates whether the row is encrypted
  * @param isLocked     indicates whether the row is locked for update
- * @param reservedBits reserved for future use (4 bits)
+ * @param isReplicated indicates whether the row has been replicated
+ * @param unusedBits   reserved bits for future use (3 bits)
  */
 case class RowMetadata(isActive: Boolean = true,
                        isCompressed: Boolean = false,
                        isEncrypted: Boolean = false,
                        isLocked: Boolean = false,
-                       reservedBits: Int = 0) {
+                       isReplicated: Boolean = false,
+                       unusedBits: Int = 0) {
 
   /**
    * Encodes the [[RowMetadata metadata]] into a bit sequence representing the metadata
@@ -34,8 +37,9 @@ case class RowMetadata(isActive: Boolean = true,
     val c = if (isCompressed) COMPRESSED_BIT else 0
     val e = if (isEncrypted) ENCRYPTED_BIT else 0
     val l = if (isLocked) LOCKED_BIT else 0
-    val r = reservedBits & RESERVED_BITS
-    (a | c | e | l | r).toByte
+    val r = if (isReplicated) REPLICATED_BIT else 0
+    val u = unusedBits & UNUSED_BITS
+    (a | c | e | l | r | u).toByte
   }
 
   def isDeleted: Boolean = !isActive
@@ -46,7 +50,8 @@ case class RowMetadata(isActive: Boolean = true,
         |isCompressed=$isCompressed,
         |isEncrypted=$isEncrypted,
         |isLocked=$isLocked,
-        |reservedBits=$reservedBits%02xh
+        |isReplicated=$isReplicated,
+        |unusedBits=$unusedBits%02xh
         |)""".stripMargin.split("\n").mkString
 
 }
@@ -60,7 +65,8 @@ object RowMetadata {
   val COMPRESSED_BIT = 0x40
   val ENCRYPTED_BIT = 0x20
   val LOCKED_BIT = 0x10
-  val RESERVED_BITS = 0x0f
+  val REPLICATED_BIT = 0x08
+  val UNUSED_BITS = 0x07
 
   /**
    * Decodes the 8-bit metadata code into [[RowMetadata metadata]]
@@ -72,7 +78,8 @@ object RowMetadata {
     isCompressed = (metadataBits & COMPRESSED_BIT) > 0,
     isEncrypted = (metadataBits & ENCRYPTED_BIT) > 0,
     isLocked = (metadataBits & LOCKED_BIT) > 0,
-    reservedBits = metadataBits & RESERVED_BITS
+    isReplicated = (metadataBits & REPLICATED_BIT) > 0,
+    unusedBits = metadataBits & UNUSED_BITS
   )
 
 }
