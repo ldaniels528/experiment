@@ -2,6 +2,8 @@ package com.qwery
 
 import java.nio.ByteBuffer
 
+import scala.reflect.ClassTag
+
 /**
  * Qwery database package object
  */
@@ -20,6 +22,11 @@ package object database {
 
   // status bits
   val STATUS_BYTE = 1
+
+  def safeCast[T: ClassTag](x: Any): Option[T] = x match {
+    case v: T => Some(v)
+    case _ =>  Option.empty[T]
+  }
 
   /**
    * Math Utilities for Long integers

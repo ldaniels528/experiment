@@ -36,22 +36,22 @@ case class ServerSideTableService() extends TableService[Row] {
     UpdateResult(count = 1, responseTime)
   }
 
-  override def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): UpdateResult = {
+  override def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int): UpdateResult = {
     val (count, responseTime) = time(apply(databaseName, tableName).deleteRange(start, length))
-    logger.info(f"$tableName($start..${length + start}) ~> deleted $count [in $responseTime%.1f msec]")
+    logger.info(f"$tableName($start..${length + start}) ~> deleted $count items [in $responseTime%.1f msec]")
     UpdateResult(count, responseTime)
   }
 
   override def deleteRow(databaseName: String, tableName: String, rowID: ROWID): UpdateResult = {
     val (count, responseTime) = time(apply(databaseName, tableName).delete(rowID))
-    logger.info(f"$tableName($rowID) ~> deleted $count [in $responseTime%.1f msec]")
+    logger.info(f"$tableName($rowID) ~> deleted $count items [in $responseTime%.1f msec]")
     UpdateResult(count, responseTime, __id = Some(rowID))
   }
 
   override def dropTable(databaseName: String, tableName: String): UpdateResult = {
     tables.remove(databaseName -> tableName) foreach(_.close())
     val (isDropped, responseTime) = time(TableFile.dropTable(databaseName, tableName))
-    UpdateResult(count = if(isDropped) 1 else 0, responseTime)
+    UpdateResult(count = if (isDropped) 1 else 0, responseTime)
   }
 
   override def executeQuery(databaseName: String, tableName: String, sql: String): Seq[Row] = {
@@ -96,7 +96,7 @@ case class ServerSideTableService() extends TableService[Row] {
 
   override def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[Row] = {
     val (row, responseTime) = time(apply(databaseName, tableName).get(rowID))
-    logger.info(f"$tableName($rowID) ~> $row [in $responseTime%.1f msec]")
+    logger.info(f"$tableName($rowID) ~> ${row.map(_.toMap).orNull} [in $responseTime%.1f msec]")
     row
   }
 
@@ -129,7 +129,7 @@ case class ServerSideTableService() extends TableService[Row] {
         newValues
       }
     }
-    logger.info(f"$tableName($rowID) ~> $newValues [in $responseTime%.1f msec]")
+    logger.info(f"$tableName($rowID) ~> ${newValues.orNull} [in $responseTime%.1f msec]")
     UpdateResult(count = newValues.map(_ => 1).getOrElse(0), responseTime, __id = Some(rowID))
   }
 
@@ -181,7 +181,8 @@ object ServerSideTableService {
     }
   }
 
-  def insertRows(databaseName: String, tableName: String, fields: Seq[String], rowValuesList: List[List[Any]])(implicit service: ServerSideTableService): List[ROWID] = {
+  def insertRows(databaseName: String, tableName: String, fields: Seq[String], rowValuesList: List[List[Any]])
+                (implicit service: ServerSideTableService): List[ROWID] = {
     val table = service(databaseName, tableName)
     for {
       rowValues <- rowValuesList
@@ -195,11 +196,10 @@ object ServerSideTableService {
         val table = service(databaseName, tableName)
         val conditions: TupleSet = select.where match {
           case Some(ConditionalOp(Field(name), value, "==", "=")) => Map(name -> value.translate)
-          case Some(condition) =>
-            throw new IllegalArgumentException(s"Unsupported condition $condition")
+          case Some(condition) => throw new IllegalArgumentException(s"Unsupported condition $condition")
           case None => Map.empty
         }
-        table.findRows(conditions, limit = select.limit)  // TODO select.fields & select.orderBy
+        table.findRows(conditions, limit = select.limit) // TODO select.fields & select.orderBy
       case Some(queryable) =>
         throw new IllegalArgumentException(s"Unsupported queryable $queryable")
       case None => Nil

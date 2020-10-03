@@ -444,7 +444,7 @@ object PersistentSeq {
     val defaultMaxLen = 128
     val columns = declaredFields map { field =>
       val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
-      val `type` = ColumnTypes.determineType(field.getType)
+      val `type` = ColumnTypes.determineClassType(field.getType)
       val maxSize = ci.map(_.maxSize)
       if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
         logger.warn(

@@ -68,10 +68,10 @@ trait BlockDevice {
    */
   def exportAsCSV: File = {
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
-    val columnNames = columns.map(_.name)
     val file = newTempFile()
     new PrintWriter(file) use { out =>
       // write the header
+      val columnNames = columns.map(_.name)
       out.println(columnNames.map(s => s""""$s"""").mkString(","))
 
       // write all rows

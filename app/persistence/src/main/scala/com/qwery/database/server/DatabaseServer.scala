@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
+import com.qwery.database.ROWID
 import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.server.QweryCustomJsonProtocol._
 import com.qwery.database.server.TableService._
@@ -184,7 +185,8 @@ object DatabaseServer {
    * @param service      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: Int, length: Int)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int)
+                                        (implicit service: ServerSideTableService): Route = {
     delete {
       // delete the range of rows (e.g. "DELETE /portfolio/stocks/287/20")
       complete(service.deleteRange(databaseName, tableName, start, length))
