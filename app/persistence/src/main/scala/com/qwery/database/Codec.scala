@@ -4,7 +4,8 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, 
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.{Date, UUID}
 
 import com.qwery.database.ColumnTypes._
 import com.qwery.database.Compression.CompressionByteArrayExtensions
@@ -16,20 +17,69 @@ import scala.util.Try
  */
 object Codec extends Compression {
 
-  def decode(buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
+  def convertTo(value: Any, columnType: ColumnType): Any = {
+    import ColumnTypes._
+
+    val asNumber: Any => Number = {
+      case value: Number => value
+      case date: Date => date.getTime
+      case x => Try(x.toString.toDouble: Number) // date string? (e.g. "Fri Sep 25 13:09:38 PDT 2020")
+        .getOrElse(Try(new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy").parse(x.toString).getTime: Number)
+          .getOrElse(throw new IllegalArgumentException(s"'$x' is not a Numeric value")))
+    }
+
+    columnType match {
+      case BigIntType => asNumber(value) match {
+        case b: BigInt => b
+        case b: BigInteger => b
+        case n => BigInt(n.longValue())
+      }
+      case BooleanType => value match {
+        case b: Boolean => b
+        case n: Number => n.doubleValue() != 0
+        case x => throw new IllegalArgumentException(s"'$x' is not a Boolean value")
+      }
+      case ByteType => asNumber(value).byteValue()
+      case DateType => value match {
+        case d: java.util.Date => d
+        case n: Number => new java.util.Date(n.longValue())
+        case x => new java.util.Date(asNumber(x).longValue())
+      }
+      case CharType => value match {
+        case c: Char => c
+        case x =>
+          val s = x.toString
+          if (s.nonEmpty) s.charAt(0) else throw new IllegalArgumentException(s"'$x' is not a Character value")
+      }
+      case DoubleType => asNumber(value).doubleValue()
+      case FloatType => asNumber(value).floatValue()
+      case IntType => asNumber(value).intValue()
+      case LongType => asNumber(value).longValue()
+      case ShortType => asNumber(value).shortValue()
+      case StringType => value.toString
+      case UUIDType => value match {
+        case u: UUID => u
+        case x => Try(UUID.fromString(x.toString))
+          .getOrElse(throw new IllegalArgumentException(s"'$x' is not a UUID value"))
+      }
+      case _ => value
+    }
+  }
+
+  def decode(column: Column, buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
-    (fmd, decodeValue(buf))
+    (fmd, decodeValue(column, buf))
   }
 
   def encode(column: Column, value_? : Option[Any]): Array[Byte] = {
     implicit val fmd: FieldMetadata = FieldMetadata(column.metadata)
-    encodeValue(value_?) match {
+    encodeValue(column, value_?) match {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
         assert(bytes.length <= column.maxPhysicalSize, s"Column '${column.name}' is too long (${bytes.length} > ${column.maxPhysicalSize})")
         allocate(STATUS_BYTE + bytes.length).putFieldMetadata(fmd).put(bytes).array()
       case None =>
-        allocate(STATUS_BYTE).putFieldMetadata(fmd.copy(isNotNull = false)).array()
+        allocate(STATUS_BYTE).putFieldMetadata(fmd.copy(isActive = false)).array()
     }
   }
 
@@ -46,7 +96,7 @@ object Codec extends Compression {
     baos.toByteArray
   }
 
-  def decodeSeq(buf: ByteBuffer)(implicit fmd: FieldMetadata): Seq[Option[Any]] = {
+  def decodeSeq(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): Seq[Option[Any]] = {
     // read the collection as a block
     val blockSize = buf.getInt
     val count = buf.getInt
@@ -56,19 +106,19 @@ object Codec extends Compression {
     // decode the items
     val block = wrap(bytes.decompressOrNah)
     for {
-      _ <- 0 to count
-      (_, value) = decode(block)
+      _ <- 0 until count
+      (_, value) = decode(column, block)
     } yield value
   }
 
-  def encodeSeq(items: Seq[Any])(implicit fmd: FieldMetadata): ByteBuffer = {
+  def encodeSeq(column: Column, items: Seq[Any])(implicit fmd: FieldMetadata): ByteBuffer = {
     // create the data block
     val compressedBytes = (for {
       value_? <- items.toArray map {
         case o: Option[_] => o
         case v => Option(v)
       }
-      buf <- encodeValue(value_?).toArray
+      buf <- encodeValue(column, value_?).toArray
       bytes <- buf.array()
     } yield bytes).compressOrNah
 
@@ -80,10 +130,10 @@ object Codec extends Compression {
     block
   }
 
-  def decodeValue(buf: ByteBuffer)(implicit fmd: FieldMetadata): Option[Any] = {
+  def decodeValue(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): Option[Any] = {
     if (fmd.isNull) None else {
-      fmd.`type` match {
-        case ArrayType => Some(decodeSeq(buf))
+      column.metadata.`type` match {
+        case ArrayType => Some(decodeSeq(column, buf))
         case BigDecimalType => Some(buf.getBigDecimal)
         case BigIntType => Some(buf.getBigInteger)
         case BinaryType => Some(buf.getBinary)
@@ -104,10 +154,10 @@ object Codec extends Compression {
     }
   }
 
-  def encodeValue(value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
-    normalize(value_?) map {
-      case a: Array[_] if fmd.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
-      case a: Array[_] => encodeSeq(a)
+  def encodeValue(column: Column, value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
+    value_?.map(convertTo(_, column.metadata.`type`)) map {
+      case a: Array[_] if column.metadata.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
+      case a: Array[_] => encodeSeq(column, a)
       case b: BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigInteger => allocate(LONG_BYTES).putBigInteger(b)
@@ -126,55 +176,6 @@ object Codec extends Compression {
         allocate(SHORT_BYTES + bytes.length).putShort(bytes.length.toShort).put(bytes)
       case u: UUID => allocate(LONG_BYTES * 2).putLong(u.getMostSignificantBits).putLong(u.getLeastSignificantBits)
       case v => throw new IllegalArgumentException(s"Unrecognized type '${v.getClass.getSimpleName}' ($v)")
-    }
-  }
-
-  def normalize(value_? : Option[Any])(implicit fmd: FieldMetadata): Option[Any] = {
-    import ColumnTypes._
-
-    val asNumber: Any => Number = {
-      case value: Number => value
-      case x => Try(x.toString.toDouble)
-        .getOrElse(throw new IllegalArgumentException(s"'$x' is not a Numeric value"))
-    }
-
-    value_? map { value =>
-      fmd.`type` match {
-        case BigIntType => asNumber(value) match {
-          case b: BigInt => b
-          case b: BigInteger => b
-          case n => BigInt(n.longValue())
-        }
-        case BooleanType => value match {
-          case b: Boolean => b
-          case n: Number => n.doubleValue() != 0
-          case x => throw new IllegalArgumentException(s"'$x' is not a Boolean value")
-        }
-        case ByteType => asNumber(value).byteValue()
-        case DateType => value match {
-          case d: java.util.Date => d
-          case n: Number => new java.util.Date(n.longValue())
-          case x => new java.util.Date(asNumber(x).longValue())
-        }
-        case CharType => value match {
-          case c: Char => c
-          case x =>
-            val s = x.toString
-            if (s.nonEmpty) s.charAt(0) else throw new IllegalArgumentException(s"'$x' is not a Character value")
-        }
-        case DoubleType => asNumber(value).doubleValue()
-        case FloatType => asNumber(value).floatValue()
-        case IntType => asNumber(value).intValue()
-        case LongType => asNumber(value).longValue()
-        case ShortType => asNumber(value).shortValue()
-        case StringType => value.toString
-        case UUIDType => value match {
-          case u: UUID => u
-          case x => Try(UUID.fromString(x.toString))
-            .getOrElse(throw new IllegalArgumentException(s"'$x' is not a UUID value"))
-        }
-        case _ => value
-      }
     }
   }
 

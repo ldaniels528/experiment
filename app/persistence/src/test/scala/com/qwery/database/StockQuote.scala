@@ -37,13 +37,13 @@ object StockQuote {
   def randomSummary: String = {
     val length = 240
     val chars = 'A' to 'Z'
-    String.valueOf((0 to length).map(_ => chars(random.nextInt(chars.length))).toArray)
+    String.valueOf((0 until length).map(_ => chars(random.nextInt(chars.length))).toArray)
   }
 
   def randomSymbol: String = {
     val length = 3 + random.nextInt(3)
     val chars = 'A' to 'Z'
-    String.valueOf((0 to length).map(_ => chars(random.nextInt(chars.length))).toArray)
+    String.valueOf((0 until length).map(_ => chars(random.nextInt(chars.length))).toArray)
   }
 
 }

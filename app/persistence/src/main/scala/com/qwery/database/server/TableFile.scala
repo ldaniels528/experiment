@@ -143,6 +143,26 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     _iterate(condition, limit) { (rowID, _) => delete(rowID) }
   }
 
+  def executeQuery(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
+    // check all available indices for the table
+    val tableIndex_? = (for {
+      (searchColumn, searchValue) <- condition.toList
+      tableIndex <- indices.get(searchColumn).toList
+    } yield (tableIndex, searchValue)).headOption
+
+    // if an index was found use it, otherwise table scan
+    tableIndex_? match {
+      case Some((tableIndex@TableIndexRef(indexName, indexColumn), value)) =>
+        logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
+        for {
+          indexedRow <- binarySearch(tableIndex, Option(value)).toList
+          rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, Some(rowID: ROWID)) => rowID }
+          row <- get(rowID)
+        } yield row
+      case _ => scanRows(condition, limit)
+    }
+  }
+
   /**
    * Exports the contents of this device as Comma Separated Values (CSV)
    * @return a new CSV [[File file]]
@@ -154,26 +174,6 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    * @return a new JSON [[File file]]
    */
   def exportAsJSON: File = device.exportAsJSON
-
-  def findRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
-    // check all available indices for the table
-    val tableIndex_? = (for {
-      (searchColumn, searchValue) <- condition.toList
-      tableIndex <- indices.get(searchColumn).toList
-    } yield (tableIndex, searchValue)).headOption
-
-    // if an index was found use it, otherwise table scan
-    tableIndex_? match {
-      case Some((tableIndex@TableIndexRef(indexName, indexColumn), value)) =>
-        logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
-          for {
-            indexedRow <- binarySearch(tableIndex, Option(value)).toList
-            rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, Some(rowID: ROWID)) => rowID }
-            row <- get(rowID)
-          } yield row
-      case _ => scanRows(condition, limit)
-    }
-  }
 
   def get(rowID: ROWID): Option[Row] = {
     val row = device.getRow(rowID)
@@ -244,8 +244,13 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   /**
    * Truncates the table; removing all rows
+   * @return the number of rows removed
    */
-  def truncate(): Unit = device.shrinkTo(newSize = 0)
+  def truncate(): ROWID = {
+    val oldSize = device.length
+    device.shrinkTo(newSize = 0)
+    oldSize
+  }
 
   @inline
   private def isSatisfied(result: TupleSet, condition: TupleSet): Boolean = {

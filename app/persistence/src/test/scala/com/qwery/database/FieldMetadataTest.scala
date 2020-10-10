@@ -17,13 +17,13 @@ class FieldMetadataTest extends AnyFunSpec {
         c <- Seq(true, false)
         e <- Seq(true, false)
         n <- Seq(true, false)
-        t <- ColumnTypes.values
+        x <- Seq(true, false)
       } yield {
         verify(FieldMetadata(
           isCompressed = c,
           isEncrypted = e,
-          isNotNull = n,
-          `type` = t))
+          isActive = n,
+          isExternal = x))
       }
     }
   }

@@ -6,42 +6,44 @@ import com.qwery.database.FieldMetadata._
  * Represents the metadata of a field stored in the database.
  * <pre>
  * ----------------------------------------
- * c - compressed bit .. [1000.0000 ~ 0x80]
- * e - encrypted bit ... [0100.0000 ~ 0x40]
- * n - nullable bit .... [0010.0000 ~ 0x20]
- * t - type bits (x4) .. [0000.1111 ~ 0x0f]
+ * a - active bit ...... [1000.0000 ~ 0x80]
+ * c - compressed bit .. [0100.0000 ~ 0x40]
+ * e - encrypted bit ... [0010.0000 ~ 0x20]
+ * x - external bit .... [0001.0000 ~ 0x10]
  * ----------------------------------------
  * </pre>
- * @param `type`       the [[ColumnTypes.ColumnType column type]]
- * @param isCompressed indicates whether the data is compressed
- * @param isEncrypted  indicates whether the data is encrypted
- * @param isNotNull    indicates whether the data is available; meaning not null.
+ * @param isActive     indicates whether the field's data is active; meaning not null.
+ * @param isCompressed indicates whether the field's data is compressed
+ * @param isEncrypted  indicates whether the field's data is encrypted
+ * @param isExternal   indicates whether the field's data is external (e.g. Array or BLOB)
  */
-case class FieldMetadata(`type`: ColumnTypes.ColumnType,
+case class FieldMetadata(isActive: Boolean = true,
                          isCompressed: Boolean = false,
                          isEncrypted: Boolean = false,
-                         isNotNull: Boolean = true) {
+                         isExternal: Boolean = false) {
 
   /**
    * Encodes the [[FieldMetadata metadata]] into a bit sequence representing the metadata
    * @return a byte representing the metadata
    */
   def encode: Byte = {
+    val a = if (isActive) ACTIVE_BIT else 0
     val c = if (isCompressed) COMPRESSED_BIT else 0
     val e = if (isEncrypted) ENCRYPTED_BIT else 0
-    val n = if (isNotNull) NULLABLE_BIT else 0
-    val t = `type`.id & TYPE_BITS
-    (c | e | n | t).toByte
+    val x = if (isExternal) EXTERNAL_BIT else 0
+    (a | c | e | x).toByte
   }
 
-  def isNull: Boolean = !isNotNull
+  @inline def isNotNull: Boolean = isActive
+
+  @inline def isNull: Boolean = !isActive
 
   override def toString: String =
     f"""|${getClass.getSimpleName}(
+        |isAvailable=$isActive,
         |isCompressed=$isCompressed,
         |isEncrypted=$isEncrypted,
-        |isNotNull=$isNotNull,
-        |type=${`type`}
+        |isExternal=$isExternal
         |)""".stripMargin.split("\n").mkString
 
 }
@@ -51,10 +53,10 @@ case class FieldMetadata(`type`: ColumnTypes.ColumnType,
  */
 object FieldMetadata {
   // bit enumerations
-  val COMPRESSED_BIT = 0x80
-  val ENCRYPTED_BIT = 0x40
-  val NULLABLE_BIT = 0x20
-  val TYPE_BITS = 0x0f
+  val ACTIVE_BIT = 0x80
+  val COMPRESSED_BIT = 0x40
+  val ENCRYPTED_BIT = 0x20
+  val EXTERNAL_BIT = 0x10
 
   /**
    * Creates new field metadata based on existing column metadata
@@ -64,8 +66,7 @@ object FieldMetadata {
   def apply(metadata: ColumnMetadata): FieldMetadata = FieldMetadata(
     isCompressed = metadata.isCompressed,
     isEncrypted = metadata.isEncrypted,
-    isNotNull = true,
-    `type` = metadata.`type`
+    isExternal = metadata.`type`.isExternal
   )
 
   /**
@@ -74,10 +75,10 @@ object FieldMetadata {
    * @return a new [[FieldMetadata metadata]]
    */
   def decode(metadataBits: Byte): FieldMetadata = new FieldMetadata(
+    isActive = (metadataBits & ACTIVE_BIT) > 0,
     isCompressed = (metadataBits & COMPRESSED_BIT) > 0,
     isEncrypted = (metadataBits & ENCRYPTED_BIT) > 0,
-    isNotNull = (metadataBits & NULLABLE_BIT) > 0,
-    `type` = ColumnTypes(metadataBits & TYPE_BITS)
+    isExternal = (metadataBits & EXTERNAL_BIT) > 0
   )
 
 }

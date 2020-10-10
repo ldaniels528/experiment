@@ -3,7 +3,7 @@ package com.qwery.database
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.{Date, UUID}
 
 import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.Codec._
@@ -36,8 +36,7 @@ trait BlockDevice {
    */
   val toRowIdField: ROWID => Option[Field] = {
     val rowIdColumn_? = columns.find(_.metadata.isRowID)
-    val fmd = FieldMetadata(isNotNull = false, `type` = ColumnTypes.LongType)
-    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, fmd, value = Some(rowID)))
+    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), value = Some(rowID)))
   }
 
   /**
@@ -79,11 +78,9 @@ trait BlockDevice {
         // get the key-value pairs
         val mappings = Map(row.fields.map {
           case Field(name, _, None) => name -> ""
-          case Field(name, metadata, Some(value: Date))
-            if metadata.`type` == ColumnTypes.DateType => name -> s""""${sdf.format(value)}""""
-          case Field(name, metadata, Some(value))
-            if metadata.`type` == ColumnTypes.StringType |
-               metadata.`type` == ColumnTypes.UUIDType => name -> s""""$value""""
+          case Field(name, _, Some(value: Date)) => name -> s""""${sdf.format(value)}""""
+          case Field(name, _, Some(value: String)) => name -> s""""$value""""
+          case Field(name, _, Some(value: UUID)) => name -> s""""$value""""
           case Field(name, _, Some(value)) => name -> value.toString
         }: _*)
 
@@ -106,11 +103,9 @@ trait BlockDevice {
       foreach { row =>
         // get the key-value pairs
         val mappings = Map(row.fields collect {
-          case Field(name, metadata, Some(value: Date))
-            if metadata.`type` == ColumnTypes.DateType => name -> value.getTime
-          case Field(name, metadata, Some(value))
-            if metadata.`type` == ColumnTypes.StringType |
-              metadata.`type` == ColumnTypes.UUIDType => name -> s""""$value""""
+          case Field(name, metadata, Some(value: Date)) => name -> value.getTime
+          case Field(name, _, Some(value: String)) => name -> s""""$value""""
+          case Field(name, _, Some(value: UUID)) => name -> s""""$value""""
           case Field(name, _, Some(value)) => name -> value.toString
         }: _*)
 
@@ -167,7 +162,7 @@ trait BlockDevice {
     assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
-    val (fmd, value_?) = Codec.decode(buf)
+    val (fmd, value_?) = Codec.decode(column, buf)
     Field(name = column.name, fmd, value = value_?)
   }
 
@@ -175,7 +170,7 @@ trait BlockDevice {
     assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
-    val (fmd, value_?) = Codec.decode(buf)
+    val (fmd, value_?) = Codec.decode(column, buf)
     Field(name = column.name, fmd, value = value_?) -> buf
   }
 
@@ -318,9 +313,9 @@ trait BlockDevice {
   }
 
   def toFields(buf: ByteBuffer): Seq[Field] = {
-    physicalColumns.zipWithIndex map { case (col, index) =>
+    physicalColumns.zipWithIndex map { case (column, index) =>
       buf.position(columnOffsets(index))
-      col.name -> decode(buf)
+      column.name -> decode(column, buf)
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
 

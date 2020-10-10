@@ -19,11 +19,13 @@ class ColumnMetadataTest extends AnyFunSpec {
         n <- Seq(true, false)
         p <- Seq(true, false)
         r <- Seq(true, false)
+        x <- Seq(true, false)
         t <- ColumnTypes.values
       } yield {
         verify(ColumnMetadata(
           isCompressed = c,
           isEncrypted = e,
+          isExternal = x,
           isNullable = n,
           isPrimary = p,
           isRowID = r,

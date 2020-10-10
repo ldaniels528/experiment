@@ -23,7 +23,7 @@ package object database {
   // status bits
   val STATUS_BYTE = 1
 
-  def safeCast[T: ClassTag](x: Any): Option[T] = x match {
+  def safeCast[T](x: Any): Option[T] = x match {
     case v: T => Some(v)
     case _ =>  Option.empty[T]
   }

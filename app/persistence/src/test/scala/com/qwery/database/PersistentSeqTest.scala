@@ -55,13 +55,13 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should populate a product class with vales") {
       val ps = PersistentSeq[GenericData]()
-      val fmd = FieldMetadata(isCompressed = false, isEncrypted = false, isNotNull = true, `type` = StringType)
+      val fmd = FieldMetadata()
       val data = ps.createItem(Seq(
-        Field(name = "_id", fmd.copy(`type` = LongType), value = Some(1087L)),
+        Field(name = "_id", fmd, value = Some(1087L)),
         Field(name = "idValue", fmd, Some("Hello")),
         Field(name = "idType", fmd, Some("World")),
-        Field(name = "responseTime", fmd.copy(`type` = IntType), Some(307)),
-        Field(name = "reportDate", fmd.copy(`type` = LongType), Some(java.sql.Date.valueOf("2020-06-15").getTime))
+        Field(name = "responseTime", fmd, Some(307)),
+        Field(name = "reportDate", fmd, Some(java.sql.Date.valueOf("2020-06-15").getTime))
       ))
       assert(data == GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
     }

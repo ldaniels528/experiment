@@ -18,7 +18,7 @@ class TableFileTest extends AnyFunSpec {
   private implicit val service: ServerSideTableService = new ServerSideTableService()
 
   describe(classOf[TableFile].getName) {
-    val databaseName = DEFAULT_DATABASE
+    val databaseName = "test"
     val tableName = "stocks_test"
 
     it("should create a new table and insert new rows into it") {
@@ -30,7 +30,7 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "lastSale", comment = "the latest sale price", ColumnMetadata(`type` = ColumnTypes.DoubleType)),
           Column(name = "lastTradeTime", comment = "the latest sale date/time", ColumnMetadata(`type` = ColumnTypes.DateType))
         )) use { table =>
-        service.executeQuery(databaseName, tableName, s"TRUNCATE $tableName")
+        service.executeQuery(databaseName, s"TRUNCATE $tableName")
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
 
         table.insert(Map("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
@@ -40,7 +40,7 @@ class TableFileTest extends AnyFunSpec {
         table.insert(Map("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
         table.insert(Map("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
 
-        service.executeQuery(databaseName, tableName,
+        service.executeQuery(databaseName,
           s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
               |VALUES ('MSFT', 'NYSE', 167.55, 1601064578145)
               |""".stripMargin
@@ -68,15 +68,19 @@ class TableFileTest extends AnyFunSpec {
 
     it("should find rows via a condition in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val results = table.findRows(limit = None, condition = Map("exchange" -> "NASDAQ"))
+        val results = table.executeQuery(limit = None, condition = Map("exchange" -> "NASDAQ"))
         results.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
       }
     }
 
     it("should query rows via a condition from a table") {
        TableFile(databaseName, tableName) use { table =>
-         val results = service.executeQuery(databaseName, tableName, s"SELECT * FROM $tableName WHERE exchange = 'NASDAQ'")
-         results.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
+         val results = service.executeQuery(databaseName, s"SELECT * FROM $tableName WHERE exchange = 'NASDAQ'")
+         for {
+           row <- results.rows
+         } {
+           row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
+         }
        }
     }
 
@@ -90,8 +94,12 @@ class TableFileTest extends AnyFunSpec {
     it("should delete a row from a table") {
       TableFile(databaseName, tableName) use { table =>
         table.delete(0)
-        val results = service.executeQuery(databaseName, tableName, s"SELECT * FROM $tableName")
-        results.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
+        val results = service.executeQuery(databaseName, s"SELECT * FROM $tableName")
+        for {
+          row <- results.rows
+        } {
+          row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
+        }
       }
     }
 
@@ -149,10 +157,10 @@ class TableFileTest extends AnyFunSpec {
       val searchSymbol = "MSFT"
 
       // drop the previous table (if it exists)
-      service.executeQuery(databaseName, tableName, sql = s"DROP TABLE $tableName")
+      service.executeQuery(databaseName, sql = s"DROP TABLE $tableName")
 
       // create the table
-      service.executeQuery(databaseName, tableName, sql =
+      service.executeQuery(databaseName, sql =
         s"""|CREATE TABLE $tableName (
             |  symbol STRING(8) comment 'the ticker symbol',
             |  exchange STRING(8) comment 'the stock exchange',
@@ -167,20 +175,24 @@ class TableFileTest extends AnyFunSpec {
       copyInto(databaseName, tableName, new File("./stocks.csv"))
 
       // insert the MSFT record
-      service.executeQuery(databaseName, tableName, sql =
+      service.executeQuery(databaseName, sql =
         s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
             |VALUES ("MSFT", "NYSE", 98.55, ${System.currentTimeMillis()})
             |""".stripMargin
       )
 
       // create the table index
-      val (_, indexCreationTime) = time(service.executeQuery(databaseName, tableName, sql = s"CREATE INDEX $indexName ON $tableName ($indexColumn)"))
+      val (_, indexCreationTime) = time(service.executeQuery(databaseName, sql = s"CREATE INDEX $indexName ON $tableName ($indexColumn)"))
       logger.info(f"Created index '$indexName' in $indexCreationTime%.2f msec")
 
       // retrieve the row
-      val rows = service.executeQuery(databaseName, tableName, sql = s"SELECT * FROM $tableName WHERE $indexColumn = '$searchSymbol'")
-      assert(rows.nonEmpty)
-      rows.foreach(row => logger.info(s"row: $row"))
+      val results = service.executeQuery(databaseName, sql = s"SELECT * FROM $tableName WHERE $indexColumn = '$searchSymbol'")
+      assert(results.rows.nonEmpty)
+      for {
+        row <- results.rows
+      } {
+        row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
+      }
     }
 
   }
@@ -199,7 +211,7 @@ class TableFileTest extends AnyFunSpec {
   def showBuffer(rowID: ROWID, buf: ByteBuffer)(implicit indexDevice: BlockDevice): Unit = {
     val row = Map(indexDevice.columns.zipWithIndex flatMap { case (column, idx) =>
       buf.position(indexDevice.columnOffsets(idx))
-      val (_, value_?) = Codec.decode(buf)
+      val (_, value_?) = Codec.decode(column, buf)
       value_?.map(value => column.name -> value)
     }: _*)
     logger.debug(f"$rowID%d - $row")

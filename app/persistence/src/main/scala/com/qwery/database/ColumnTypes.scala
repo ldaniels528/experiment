@@ -61,6 +61,24 @@ object ColumnTypes extends Enumeration {
     }
   }
 
+  def convertSqlToColumnType(sqlType: Int): ColumnType = {
+    import java.sql.Types._
+    sqlType match {
+      case BIGINT => LongType
+      case BINARY | VARBINARY  => BinaryType
+      case BOOLEAN => BooleanType
+      case BLOB | CLOB | NCLOB | SQLXML => BlobType
+      case DATE | TIME | TIMESTAMP | TIME_WITH_TIMEZONE => DateType
+      case JAVA_OBJECT | OTHER => BlobType
+      case INTEGER => IntType
+      case ROWID => IntType
+      case SMALLINT => ShortType
+      case TINYINT => ByteType
+      case LONGNVARCHAR | NVARCHAR | VARCHAR => StringType
+      case other => throw new RuntimeException(s"Unhandled SQL type ($other)")
+    }
+  }
+
   /**
    * Determines the equivalent column type to the given Scala Type
    * @return the [[ColumnType]]
@@ -145,6 +163,35 @@ object ColumnTypes extends Enumeration {
       case ShortType => Some(SHORT_BYTES)
       case UUIDType => Some(2 * LONG_BYTES)
       case _ => None
+    }
+
+    @inline
+    def getPrecision: Int = getFixedLength getOrElse 128 // TODO revisit this soon!
+
+    @inline
+    def getScale: Int = 0 // TODO revisit this soon!
+
+    @inline
+    def isExternal: Boolean = `type` match {
+      case ArrayType | BlobType => true
+      case _ => false
+    }
+
+    @inline
+    def isNullable: Boolean = {
+      getFixedLength.isEmpty || (`type` != ColumnTypes.DateType && `type` != ColumnTypes.UUIDType)
+    }
+
+    @inline
+    def isSigned: Boolean = `type` match {
+      case BigIntType => true
+      case ByteType => true
+      case DoubleType => true
+      case FloatType => true
+      case IntType => true
+      case LongType => true
+      case ShortType => true
+      case _ => false
     }
 
   }

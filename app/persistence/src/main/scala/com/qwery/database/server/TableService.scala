@@ -10,23 +10,23 @@ import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, ROWID}
  */
 trait TableService[R] {
 
-  def appendRow(databaseName: String, tableName: String, values: TupleSet): UpdateResult
+  def appendRow(databaseName: String, tableName: String, values: TupleSet): QueryResult
 
-  def createTable(databaseName: String, ref: TableCreation): UpdateResult
+  def createTable(databaseName: String, ref: TableCreation): QueryResult
 
-  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): UpdateResult
+  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): QueryResult
 
-  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): UpdateResult
+  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): QueryResult
 
-  def dropTable(databaseName: String, tableName: String): UpdateResult
+  def dropTable(databaseName: String, tableName: String): QueryResult
 
-  def executeQuery(databaseName: String, tableName: String, sql: String): Seq[R]
+  def executeQuery(databaseName: String, sql: String): QueryResult
 
   def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[R]
 
   def getDatabaseMetrics(databaseName: String): DatabaseMetrics
 
-  def getLength(databaseName: String, tableName: String): UpdateResult
+  def getLength(databaseName: String, tableName: String): QueryResult
 
   def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[R]
 
@@ -34,9 +34,9 @@ trait TableService[R] {
 
   def getTableMetrics(databaseName: String, tableName: String): TableMetrics
 
-  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateResult
+  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
 
-  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateResult
+  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
 
 }
 
@@ -55,18 +55,27 @@ object TableService {
     override def toString: String = this.toJSON
   }
 
+  case class QueryResult(databaseName: String,
+                         tableName: String,
+                         responseTime: Double,
+                         columns: Seq[TableColumn] = Nil,
+                         rows: Seq[Seq[Option[Any]]] = Nil,
+                         count: Int = 0,
+                         __id: Option[Int] = None,
+                         __ids: List[Int] = Nil) {
+    override def toString: String = this.toJSON
+  }
+
   case class TableColumn(name: String,
                          columnType: String,
-                         comment: Option[String],
                          sizeInBytes: Int,
+                         comment: Option[String] = None,
                          isCompressed: Boolean = false,
                          isEncrypted: Boolean = false,
                          isNullable: Boolean = true,
                          isPrimary: Boolean = false,
                          isRowID: Boolean = false) {
-
     override def toString: String = this.toJSON
-
   }
 
   object TableColumn {
@@ -125,10 +134,6 @@ object TableService {
                           recordSize: Int,
                           rows: ROWID,
                           responseTimeMillis: Double = 0){
-    override def toString: String = this.toJSON
-  }
-
-  case class UpdateResult(count: Int, responseTime: Double, __id: Option[Int] = None) {
     override def toString: String = this.toJSON
   }
 

@@ -35,7 +35,7 @@ class BlockDeviceTest extends AnyFunSpec {
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val field = eval(f"device.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
-      assert(field.metadata.`type` == StringType)
+      assert(field.value.contains("BXXG"))
     }
 
     it("should read an individual field value (via column name)") {
@@ -43,7 +43,7 @@ class BlockDeviceTest extends AnyFunSpec {
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
       val field = eval(f"device.getField(rowID = 0, column = 'lastSale)", coll.device.getField(rowID = 0, column = 'lastSale))
-      assert(field.metadata.`type` == DoubleType)
+      assert(field.value.contains(147.63))
     }
 
     it("should retrieve one row by its offset (rowID)") {

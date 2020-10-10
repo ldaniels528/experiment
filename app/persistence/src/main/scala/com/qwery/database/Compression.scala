@@ -52,11 +52,11 @@ object Compression extends Compression {
     def compress: Array[Byte] = compressBytes(bytes)
 
     def compressOrNah(implicit fmd: FieldMetadata): Array[Byte] = {
-      if (fmd.isCompressed && fmd.isNotNull) compressBytes(bytes) else bytes
+      if (fmd.isCompressed && fmd.isActive) compressBytes(bytes) else bytes
     }
 
     def decompressOrNah(implicit fmd: FieldMetadata): Array[Byte] = {
-      if (fmd.isCompressed && fmd.isNotNull) decompressBytes(bytes) else bytes
+      if (fmd.isCompressed && fmd.isActive) decompressBytes(bytes) else bytes
     }
   }
 
@@ -69,11 +69,11 @@ object Compression extends Compression {
     def compress: ByteBuffer = wrap(compressBytes(buf.array()))
 
     def compressOrNah(implicit fmd: FieldMetadata): ByteBuffer = {
-      if (fmd.isCompressed && fmd.isNotNull) wrap(compressBytes(buf.array())) else buf
+      if (fmd.isCompressed && fmd.isActive) wrap(compressBytes(buf.array())) else buf
     }
 
     def decompressOrNah(implicit fmd: FieldMetadata): ByteBuffer = {
-      if (fmd.isCompressed && fmd.isNotNull) wrap(decompressBytes(buf.array())) else buf
+      if (fmd.isCompressed && fmd.isActive) wrap(decompressBytes(buf.array())) else buf
     }
   }
 

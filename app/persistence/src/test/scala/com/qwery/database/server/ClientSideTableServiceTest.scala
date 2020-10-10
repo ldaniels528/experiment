@@ -33,7 +33,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
     it("should drop an existing table (SQL)") {
       val sql = s"DROP TABLE $tableNameB"
-      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
+      invoke(sql, service.executeQuery(databaseName, sql))
     }
 
     it("should create a new table") {
@@ -58,7 +58,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
             |)
             |LOCATION '/$databaseName/$tableNameB/'
             |""".stripMargin.trim
-      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
+      invoke(sql, service.executeQuery(databaseName, sql))
     }
 
     it("should append a record to the end of a table") {
@@ -81,7 +81,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
         s"""|INSERT INTO $tableNameB (symbol, exchange, lastSale, lastTradeTime)
             |VALUES ("MSFT", "NYSE", 123.55, ${System.currentTimeMillis()})
             |""".stripMargin.replaceAllLiterally("\n", " ").trim
-      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
+      invoke(sql, service.executeQuery(databaseName, sql))
     }
 
     it("should iterate records from the server") {
@@ -133,7 +133,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
     it("should execute queries against the server") {
       val sql = s"SELECT * FROM $tableNameB WHERE symbol = 'AAPL'"
-      invoke(sql, service.executeQuery(databaseName, tableNameB, sql))
+      invoke(sql, service.executeQuery(databaseName, sql))
     }
 
     it("should delete a row by ID from the server") {

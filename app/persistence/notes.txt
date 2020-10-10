@@ -1,10 +1,26 @@
 Database ideas
 ---------------
 1. Arrays as tables.
-2. Stored Procedures can be deployed asb Spark/Flink jobs.
+2. Stored Procedures can be deployed as Spark/Flink jobs.
 3. database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
 
 Chimera
+
+Incoming Features
+-----------------
+1. Add isExternal flag to FieldMetadata for BLOBs & Arrays - TINY -> DONE
+2. Remove data type information from field metadata - SMALL/MEDIUM -> DONE
+3. GET/PUT/DELETE images (or columns) - MEDIUM
+    a. GET - SMALL
+    b. PUT - SMALL
+    c. DELETE - TINY
+4. BLOBs in separate file [columnar] - MEDIUM
+5. indexed fields vs payload (event sourcing) - MEDIUM
+6. allocatable blocks for TEXT string types (all variable sized types) - MEDIUM/LARGE
+7. COMPRESS/DECOMPRESS columns - SMALL
+8. Persistent collections should use the database table structure instead of individual files - MEDIUM
+9. Circular tables - MEDIUM
+
 
 instruction set
 ---------------

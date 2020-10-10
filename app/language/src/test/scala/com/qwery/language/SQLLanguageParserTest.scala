@@ -251,6 +251,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = true))
     }
 
+    it("should support DELETE statements") {
+      val results = SQLLanguageParser.parse("DELETE FROM todo_list where item_id = 1238 LIMIT 25")
+      assert(results == Delete(table = Table("todo_list"), where = Field('item_id) === 1238, limit = Some(25)))
+    }
+
     it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN statements") {
       case class Expected(command: String, opCode: String => Console, message: String)
       val tests = Seq(

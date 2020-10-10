@@ -159,7 +159,7 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
         val jsonString = Source.fromInputStream(conn.getInputStream).use(_.mkString)
         toJSON(jsonString)
       case conn =>
-        throw new IllegalArgumentException(s"Invalid connection type $conn")
+        throw new IllegalArgumentException(s"Invalid connection type $conn [$method|$url]")
     }
   }
 
@@ -173,15 +173,16 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
         conn.setRequestProperty("Accept", "application/json")
         conn.setRequestProperty("User-Agent", "Mozilla/5.0")
         conn.setDoOutput(true)
-        if(doInput) conn.setDoInput(doInput)
+        if (doInput) conn.setDoInput(doInput)
         conn.getOutputStream.use(_.write(body))
         conn.getResponseCode match {
           case HttpURLConnection.HTTP_OK =>
             if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JObject()
-          case code => throw new IllegalStateException(s"Server Error HTTP/$code: ${conn.getResponseMessage}")
+          case code =>
+            throw new IllegalStateException(s"Server Error HTTP/$code: ${conn.getResponseMessage} [$method|$url]")
         }
       case conn =>
-        throw new IllegalArgumentException(s"Invalid connection type $conn")
+        throw new IllegalArgumentException(s"Invalid connection type $conn [$method|$url]")
     }
   }
 

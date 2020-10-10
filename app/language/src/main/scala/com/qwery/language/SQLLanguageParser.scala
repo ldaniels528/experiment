@@ -47,6 +47,7 @@ trait SQLLanguageParser {
     "CREATE" -> parseCreate,
     "DECLARE" -> parseDeclare,
     "DEBUG" -> parseConsoleDebug,
+    "DELETE" -> parseDelete,
     "DROP" -> parseDrop,
     "ERROR" -> parseConsoleError,
     "FILESYSTEM" -> parseFileSystem,
@@ -256,6 +257,11 @@ trait SQLLanguageParser {
     val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
     if (!isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
     Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
+  }
+
+  def parseDelete(ts: TokenStream): Delete = {
+    val params = SQLTemplateParams(ts, "DELETE FROM %t:name ?WHERE +?%c:condition ?LIMIT +?%n:limit")
+    Delete(Table(name = params.atoms("name")), where = params.conditions.get("condition"), limit = params.numerics.get("limit").map(_.toInt))
   }
 
   /**
