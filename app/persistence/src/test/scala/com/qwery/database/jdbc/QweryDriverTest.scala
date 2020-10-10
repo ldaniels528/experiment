@@ -82,19 +82,30 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute an INSERT statement with parameters") {
       DriverManager.getConnection(jdbcURL) use { conn =>
+        val now = System.currentTimeMillis()
         val sql =
           s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
               |VALUES (?, ?, ?, ?), (?, ?, ?, ?)
               |""".stripMargin
         val ps = conn.prepareStatement(sql)
-        Seq(
-          "AMZN", "NYSE", 56.55, System.currentTimeMillis(),
-          "GOOG", "NASDAQ", 98.55, System.currentTimeMillis()).zipWithIndex foreach { case (value, index) =>
+        Seq("AMZN", "NYSE", 56.55, now, "GOOG", "NASDAQ", 98.55, now).zipWithIndex foreach { case (value, index) =>
           ps.setObject(index + 1, value)
         }
         val count = ps.executeUpdate()
         logger.info(f"Insert count: $count")
         assert(count == 2)
+      }
+    }
+
+    it("should execute an UPDATE statement") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        val now = System.currentTimeMillis()
+        val sql =
+          s"""|UPDATE $tableName SET lastSale = 101.12, lastTradeTime = $now WHERE symbol = "GOOG"
+              |""".stripMargin
+        val count = conn.createStatement().executeUpdate(sql)
+        logger.info(f"Update count: $count")
+        assert(count == 1)
       }
     }
 

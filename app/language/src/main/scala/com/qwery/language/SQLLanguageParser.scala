@@ -549,22 +549,24 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses an UPDATE statement
-    * @example
-    * {{{
-    * UPDATE Companies
-    * SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
-    * WHERE Symbol = 'AAPL'
-    * }}}
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Update]]
-    */
+   * Parses an UPDATE statement
+   * @example
+   * {{{
+   * UPDATE Companies
+   * SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
+   * WHERE Symbol = 'AAPL'
+   * LIMIT 20
+   * }}}
+   * @param ts the given [[TokenStream token stream]]
+   * @return an [[Update]]
+   */
   def parseUpdate(ts: TokenStream): Update = {
-    val params = SQLTemplateParams(ts, "UPDATE %L:target SET %U:assignments ?WHERE +?%c:condition")
+    val params = SQLTemplateParams(ts, "UPDATE %t:name SET %U:assignments ?WHERE +?%c:condition ?LIMIT +?%n:limit")
     Update(
-      table = params.locations("target"),
+      table = Table(params.atoms("name")),
       assignments = params.keyValuePairs("assignments"),
-      where = params.conditions.get("condition"))
+      where = params.conditions.get("condition"),
+      limit = params.numerics.get("limit").map(_.toInt))
   }
 
   /**

@@ -148,6 +148,26 @@ object InvokableProcessor {
     QueryResult(databaseName, tableName, count = count, responseTime = responseTime)
   }
 
+  /**
+   * Updates rows in a table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param assignments  the assignments
+   * @param where        the optional where [[Condition condition]]
+   * @param limit        the limit
+   * @param service      the implicit [[ServerSideTableService]]
+   * @return the [[QueryResult]]
+   */
+  def updateRows(databaseName: String, tableName: String, assignments: Seq[(String, Expression)], where: Option[Condition], limit: Option[Int])
+                (implicit service: ServerSideTableService): QueryResult  = {
+    val (count, responseTime) = time {
+      val table = service(databaseName, tableName)
+      val values = Map(assignments.map { case (k, v) => (k, v.translate) }: _*)
+      table.update(values, condition = toCriteria(where), limit)
+    }
+    QueryResult(databaseName, tableName, count = count, responseTime = responseTime)
+  }
+
   private def toCriteria(condition_? : Option[Condition]): TupleSet = {
     condition_? match {
       case Some(ConditionalOp(Field(name), value, "==", "=")) => Map(name -> value.translate)
@@ -172,12 +192,13 @@ object InvokableProcessor {
       def invoke(databaseName: String)(implicit service: ServerSideTableService): QueryResult = invokable match {
         case Create(table: Table) => createTable(databaseName, table)
         case Create(TableIndex(indexName, table, columns)) => createTableIndex(databaseName, indexName, table, columns)
-        case Delete(ref, condition_?, limit) => deleteRows(databaseName, tableName = ref.name, condition_?, limit)
+        case Delete(ref, where, limit) => deleteRows(databaseName, tableName = ref.name, where, limit)
         case DropTable(TableRef(tableName)) => service.dropTable(databaseName, tableName)
         case Insert(Into(TableRef(tableName)), Insert.Values(expressionValues), fields) =>
           insertRows(databaseName, tableName, fields.map(_.name), expressionValues.map(_.map(_.translate)))
         case select: Select => selectRows(databaseName, select)
         case Truncate(TableRef(tableName)) => truncateTable(databaseName, tableName)
+        case Update(TableRef(tableName), assignments, where, limit) => updateRows(databaseName, tableName, assignments, where, limit)
         case unknown => throw new IllegalArgumentException(s"Unsupported operation $unknown")
       }
     }

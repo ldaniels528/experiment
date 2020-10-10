@@ -920,6 +920,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         """|UPDATE Companies
            |SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
            |WHERE Symbol = 'AAPL'
+           |LIMIT 25
            |""".stripMargin)
       assert(results == Update(
         table = Table("Companies"),
@@ -927,7 +928,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
           "Symbol" -> "AAPL", "Name" -> "Apple, Inc.",
           "Sector" -> "Technology", "Industry" -> "Computers", "LastSale" -> 203.45
         ),
-        where = Field('Symbol) === "AAPL"
+        where = Field('Symbol) === "AAPL",
+        limit = Some(25)
       ))
     }
 
