@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
-import com.qwery.database.ROWID
+import com.qwery.database.{QweryFiles, ROWID}
 import com.qwery.database.server.JSONSupport._
 import com.qwery.database.server.QweryCustomJsonProtocol._
 import com.qwery.database.server.TableService._
@@ -155,7 +155,7 @@ object DatabaseServer {
     val dataFile = format.toLowerCase() match {
       case "csv" => service(databaseName, tableName).exportAsCSV
       case "json" => service(databaseName, tableName).exportAsJSON
-      case "bin" => TableFile.getTableDataFile(databaseName, tableName)
+      case "bin" => QweryFiles.getTableDataFile(databaseName, tableName)
       case other => throw new IllegalArgumentException(s"Unsupported file format '$other'")
     }
     logger.info(s"Exporting '$fileName' (as ${format.toUpperCase()}) <~ ${dataFile.getAbsolutePath}")

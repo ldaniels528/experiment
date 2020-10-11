@@ -1,8 +1,8 @@
 package com.qwery.database.server
 
+import com.qwery.database.QweryFiles._
 import com.qwery.database.server.InvokableProcessor.implicits._
 import com.qwery.database.server.JSONSupport.JSONProductConversion
-import com.qwery.database.server.TableFile._
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
 import com.qwery.database.{ROWID, Row}

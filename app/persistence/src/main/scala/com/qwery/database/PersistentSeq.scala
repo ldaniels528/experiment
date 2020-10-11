@@ -436,8 +436,32 @@ object PersistentSeq {
     builder[A].withPersistenceFile(persistenceFile).build
   }
 
+  /**
+   * Creates a new database table-based sequence implementation
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @tparam A the product class
+   * @return a new [[PersistentSeq persistent sequence]]
+   */
+  def apply[A <: Product : ClassTag](databaseName: String, tableName: String): PersistentSeq[A] = {
+    val persistenceFile = QweryFiles.getTableDataFile(databaseName, tableName)
+    val config = QweryFiles.readTableConfig(databaseName, tableName)
+    val `class`: Class[A] = classTag[A].runtimeClass.asInstanceOf[Class[A]]
+    new PersistentSeq[A](new FileBlockDevice(config.columns.map(_.toColumn), persistenceFile), `class`)
+  }
+
+  /**
+   * Creates a new builder
+   * @tparam A the product type
+   * @return a new [[Builder]]
+   */
   def builder[A <: Product : ClassTag]: Builder[A] = new PersistentSeq.Builder[A]()
 
+  /**
+   * Retrieves the columns that represent the [[Product product type]] T
+   * @tparam T the [[Product product type]] T
+   * @return a tuple of collection of [[Column columns]]
+   */
   def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
     val `class` = classTag[T].runtimeClass
     val declaredFields = `class`.getDeclaredFields.toList
