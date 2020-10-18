@@ -1,8 +1,9 @@
 package com.qwery
 
+import java.io.File
 import java.nio.ByteBuffer
 
-import scala.reflect.ClassTag
+import com.qwery.database.ColumnTypes.ColumnType
 
 /**
  * Qwery database package object
@@ -23,10 +24,37 @@ package object database {
   // status bits
   val STATUS_BYTE = 1
 
-  def safeCast[T](x: Any): Option[T] = x match {
+  /**
+   * Returns the option of the given value as the desired type
+   * @param value the given value
+   * @tparam T the desired type
+   * @return the option of the given value casted as the desired type
+   */
+  def safeCast[T](value: Any): Option[T] = value match {
     case v: T => Some(v)
-    case _ =>  Option.empty[T]
+    case _ => Option.empty[T]
   }
+
+  case class ColumnCapacityExceededException(column: Column, fieldLength: Int)
+    extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
+
+  case class ColumnOutOfRangeException(columnIndex: Int)
+    extends RuntimeException(s"Column index is out of range: $columnIndex")
+
+  case class DataDirectoryNotFoundException(directory: File)
+    extends RuntimeException(s"Could not create or find the data directory: ${directory.getAbsolutePath}")
+
+  case class OffsetOutOfRangeException(offset: RECORD_ID, limit: RECORD_ID)
+    extends RuntimeException(s"Maximum capacity exceeded: $offset > $limit")
+
+  case class PartitionSizeException(partitionSize: Int)
+    extends RuntimeException(s"Partition size must be greater than zero: $partitionSize")
+
+  case class RowOutOfRangeException(rowIndex: ROWID)
+    extends RuntimeException(s"Row ID is out of range: $rowIndex")
+
+  case class TypeConversionException(value: Any, toType: ColumnType)
+    extends RuntimeException(s"Failed to convert '$value' to $toType")
 
   /**
    * Math Utilities for Long integers

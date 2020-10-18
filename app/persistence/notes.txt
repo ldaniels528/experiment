@@ -1,7 +1,7 @@
 Database ideas
 ---------------
 1. Arrays as tables.
-2. Stored Procedures can be deployed as Spark/Flink jobs.
+2. Work flows (Stored Procedures) can be deployed as Spark/Flink jobs.
 3. database + kafka(streaming) - easy to get data in and out (json, csv, avro, parquet, orc)
 
 Chimera
@@ -18,7 +18,7 @@ Incoming Features
 5. indexed fields vs payload (event sourcing) - MEDIUM
 6. allocatable blocks for TEXT string types (all variable sized types) - MEDIUM/LARGE
 7. COMPRESS/DECOMPRESS columns - SMALL
-8. Persistent collections should use the database table structure instead of individual files - MEDIUM
+8. Persistent collections should use the database table structure instead of individual files - MEDIUM -> DONE
 9. Circular tables - MEDIUM
 
 
@@ -52,25 +52,5 @@ instruction set
 1.101.0000 = 0xD0 - write length <deviceUUID> <offset64> (shrink)
 1.110.0000 = 0xE0 - write metadata <deviceUUID> <offset64> <value8>
 1.111.0000 = 0xF0 - delete device <deviceUUID>
-
-
-HexaWords
----------
-A       AB0DE   ACE     AC1D        A1DE
-BABE    BE      BEAD    BED         BEE     BEEF    B1B7E   BE5IDE
-CAFE    CA5E    C0DE
-DAD     DEAD    DEAF    DECEA5ED    DEC1DE  DEC1DED D1CE    D1E     D1ED D0
-FACADE  FACE    FADE    F00D
-1CE     1DEA
-0BESE
-SE7F
-
-BEF04E 1 D1E 1 5EE DECEA5ED BEEF BECAASE 1 DEC1DED 2 FACE A AC1D BEE
-
-BECAASE 1 DEC1DED 2 FACE A AC1D BEE 1 D1ED
-
-D15 15 2020
-
-3E DEC1DED 2 BID 2 CAFE 4 F00D
 
 

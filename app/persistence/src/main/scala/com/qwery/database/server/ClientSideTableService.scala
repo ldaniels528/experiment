@@ -6,14 +6,12 @@ import com.qwery.database.server.QweryWebServiceClient._
 import com.qwery.database.server.TableService._
 import com.qwery.database.{ROWID, Row}
 import net.liftweb.json._
-import org.slf4j.LoggerFactory
 import spray.json._
 
 /**
  * Client-Side Table Service
  */
 case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends TableService[TupleSet] {
-  private val logger = LoggerFactory.getLogger(getClass)
   private implicit val formats: DefaultFormats = DefaultFormats
   private val $http = new QweryWebServiceClient()
 
@@ -23,6 +21,10 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
 
   override def createTable(databaseName: String, ref: TableCreation): QueryResult = {
     $http.post(toUrl(databaseName), ref.toJSON.getBytes("utf-8")).as[QueryResult]
+  }
+
+  override def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): QueryResult = {
+    $http.delete(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID").as[QueryResult]
   }
 
   override def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): QueryResult = {
@@ -38,7 +40,7 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
   }
 
   override def executeQuery(databaseName: String, sql: String): QueryResult = {
-    $http.post(toSQLUrl(databaseName), body = sql.getBytes("utf-8")).toSprayJs.convertTo[QueryResult]
+    $http.post(toQueryUrl(databaseName), body = sql.getBytes("utf-8")).toSprayJs.convertTo[QueryResult]
   }
 
   override def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[TupleSet] = {
@@ -52,12 +54,16 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
     $http.get(toUrl(databaseName)).as[DatabaseMetrics]
   }
 
+  override def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
+    $http.download(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID")
+  }
+
   override def getLength(databaseName: String, tableName: String): QueryResult = {
     $http.get(url = s"${toUrl(databaseName, tableName)}/length").as[QueryResult]
   }
 
   override def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[TupleSet] = {
-    $http.get(url = s"${toUrl(databaseName, tableName)}/$start/$length") match {
+    $http.get(url = s"${toRangeUrl(databaseName, tableName)}/$start/$length") match {
       case js: JArray => js.values.map(_.asInstanceOf[TupleSet])
       case js => throw new IllegalArgumentException(s"Unexpected type returned $js")
     }
@@ -80,7 +86,12 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
 
   override def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult = {
     val (_, responseTime) = time($http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")))
-    QueryResult(databaseName, tableName, count = 1, responseTime = responseTime, __id = Some(rowID))
+    QueryResult(databaseName, tableName, count = 1, responseTime = responseTime)
+  }
+
+  override def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): QueryResult = {
+    val (_, responseTime) = time($http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes("utf-8")))
+    QueryResult(databaseName, tableName, count = 1, responseTime = responseTime)
   }
 
   override def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult = {
@@ -101,7 +112,9 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
     }
   }
 
-  private def toSQLUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"
+  private def toQueryUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"
+
+  private def toRangeUrl(databaseName: String, tableName: String): String = s"http://$host:$port/r/$databaseName/$tableName"
 
   private def toUrl(databaseName: String): String = s"http://$host:$port/d/$databaseName"
 
@@ -113,5 +126,7 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
   }
 
   private def toUrl(databaseName: String, tableName: String, rowID: ROWID): String = s"${toUrl(databaseName, tableName)}/$rowID"
+
+  private def toUrl(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): String = s"${toUrl(databaseName, tableName)}/$rowID/$columnID"
 
 }

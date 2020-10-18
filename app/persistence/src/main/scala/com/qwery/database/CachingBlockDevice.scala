@@ -25,6 +25,8 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
 
   override def readBlock(rowID: ROWID): ByteBuffer = wrap(cache.getOrElseUpdate(rowID, host.readBlock(rowID).array()))
 
+  override def readFieldMetaData(rowID: ROWID, columnID: RECORD_ID): FieldMetadata = host.readFieldMetaData(rowID, columnID)
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = host.readRowMetaData(rowID)
 
   override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = {
@@ -40,6 +42,16 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     cache(rowID) = buf.array()
     host.writeBlock(rowID, buf)
+  }
+
+  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+    cache.remove(rowID)
+    host.writeBytes(rowID, columnID, buf)
+  }
+
+  override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
+    cache.remove(rowID)
+    host.writeFieldMetaData(rowID, columnID, metadata)
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {

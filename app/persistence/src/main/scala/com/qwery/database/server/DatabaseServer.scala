@@ -2,14 +2,17 @@ package com.qwery.database.server
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.Uri
-import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.ContentTypes._
+import akka.http.scaladsl.model.{HttpResponse, _}
+import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
-import com.qwery.database.{QweryFiles, ROWID}
+import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ColumnType, StringType}
 import com.qwery.database.server.JSONSupport._
 import com.qwery.database.server.QweryCustomJsonProtocol._
 import com.qwery.database.server.TableService._
+import com.qwery.database.{Codec, ColumnOutOfRangeException, QweryFiles, ROWID}
+import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -42,7 +45,7 @@ object DatabaseServer {
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val service: ServerSideTableService = new ServerSideTableService()
+    implicit val service: ServerSideTableService = ServerSideTableService()
     import system.dispatcher
 
     // start the server
@@ -80,8 +83,10 @@ object DatabaseServer {
       path("d" / Segment / Segment)(routesByDatabaseTable) ~
       // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
       path("d" / Segment / Segment / IntNumber)(routesByDatabaseTableRowID) ~
-      // route: /d/<database>/<table>/<rowID>/<count> (e.g. "/d/portfolio/stocks/187/23")
-      path("d" / Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableRange) ~
+      // route: /d/<database>/<table>/<rowID>/<columnID> (e.g. "/d/portfolio/stocks/187/2")
+      path("d" / Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableColumnID) ~
+      // route: /r/<database>/<table>/<rowID>/<count> (e.g. "/r/portfolio/stocks/187/23")
+      path("r" / Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableRange) ~
       // route: /d/<database>/<table>/export/<format>/<fileName> (e.g. "/d/portfolio/stocks/export/json/stocks.json")
       path("d" / Segment / Segment / "export" / Segment / Segment)(routesByDatabaseTableExport) ~
       // route: /d/<database>/<table>/length (e.g. "/d/portfolio/stocks/length")
@@ -155,7 +160,7 @@ object DatabaseServer {
     val dataFile = format.toLowerCase() match {
       case "csv" => service(databaseName, tableName).exportAsCSV
       case "json" => service(databaseName, tableName).exportAsJSON
-      case "bin" => QweryFiles.getTableDataFile(databaseName, tableName)
+      case "binary" => QweryFiles.getTableDataFile(databaseName, tableName)
       case other => throw new IllegalArgumentException(s"Unsupported file format '$other'")
     }
     logger.info(s"Exporting '$fileName' (as ${format.toUpperCase()}) <~ ${dataFile.getAbsolutePath}")
@@ -177,7 +182,44 @@ object DatabaseServer {
   }
 
   /**
-   * Database Table Range-specific API routes (e.g. "/d/portfolio/stocks/187/23")
+   * Database Table Field-specific API routes (e.g. "/d/portfolio/stocks/187/0")
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @param rowID        the desired row by ID
+   * @param columnID     the desired column by index
+   * @param service      the implicit [[ServerSideTableService]]
+   * @return the [[Route]]
+   */
+  private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)
+                                           (implicit service: ServerSideTableService): Route = {
+    delete {
+      // delete a field (e.g. "DELETE /d/portfolio/stocks/287/0")
+      complete(service.deleteField(databaseName, tableName, rowID, columnID))
+    } ~
+      get {
+        // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
+        parameters('__contentType.?) { contentType_? =>
+          val column = service.apply(databaseName, tableName).device.columns(columnID)
+          val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
+          val bytes = service.getField(databaseName, tableName, rowID, columnID)
+          val response = HttpResponse(StatusCodes.OK, entity = if (contentType == `application/octet-stream`) bytes else new String(bytes))
+          response.entity.withContentType(contentType).withSizeLimit(bytes.length)
+          complete(response)
+        }
+      } ~
+      put {
+        // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
+        entity(as[String]) { value =>
+          val device = service(databaseName, tableName).device
+          assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+          val columnType = device.columns(columnID).metadata.`type`
+          complete(service.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
+        }
+      }
+  }
+
+  /**
+   * Database Table Range-specific API routes (e.g. "/r/portfolio/stocks/187/23")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param start        the start of the range
@@ -188,11 +230,11 @@ object DatabaseServer {
   private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int)
                                         (implicit service: ServerSideTableService): Route = {
     delete {
-      // delete the range of rows (e.g. "DELETE /d/portfolio/stocks/287/20")
+      // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
       complete(service.deleteRange(databaseName, tableName, start, length))
     } ~
       get {
-        // retrieve the range of rows (e.g. "GET /d/portfolio/stocks/287/20")
+        // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
         complete(service.getRange(databaseName, tableName, start, length).map(_.toMap))
       }
   }
@@ -229,8 +271,8 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
-        extract(_.request.uri.query()) { params =>
-          val isMetadata = params.exists { case ("__metadata", "yes") => true }
+        parameters('__metadata.?) { metadata_? =>
+          val isMetadata = metadata_?.contains("yes")
           service.getRow(databaseName, tableName, rowID) match {
             case Some(row) => complete(if (isMetadata) row.toLiftJs.toSprayJs else row.toMap.toJson)
             case None => complete(JsObject())
@@ -251,6 +293,27 @@ object DatabaseServer {
           complete(service.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       }
+  }
+
+  private def toContentType(`type`: String): ContentType = {
+    `type`.toLowerCase() match {
+      case "binary" => ContentTypes.`application/octet-stream`
+      case "csv" => ContentTypes.`text/csv(UTF-8)`
+      case "json" => ContentTypes.`application/json`
+      case "html" => ContentTypes.`text/html(UTF-8)`
+      case "text" => ContentTypes.`text/plain(UTF-8)`
+      case "xml" => ContentTypes.`text/xml(UTF-8)`
+      case _ => toContentType(StringType)
+    }
+  }
+
+  private def toContentType(`type`: ColumnType): ContentType = {
+    `type` match {
+      case ArrayType => ContentTypes.`application/octet-stream`
+      case BlobType => ContentTypes.`application/octet-stream`
+      case StringType => ContentTypes.`text/html(UTF-8)`
+      case _ => ContentTypes.`text/plain(UTF-8)`
+    }
   }
 
   private def toValues(params: Uri.Query): TupleSet = Map(params.filterNot(_._1.name.startsWith("__")): _*)

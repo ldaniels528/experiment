@@ -34,6 +34,11 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
     wrap(bytes)
   }
 
+  override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
+    raf.seek(toOffset(rowID, columnID))
+    FieldMetadata.decode(raf.read().toByte)
+  }
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
     raf.seek(toOffset(rowID))
     RowMetadata.decode(raf.read().toByte)
@@ -54,6 +59,16 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     raf.seek(toOffset(rowID))
     raf.write(buf.array())
+  }
+
+  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+    raf.seek(toOffset(rowID, columnID))
+    raf.write(buf.array())
+  }
+
+  override def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit = {
+    raf.seek(toOffset(rowID, columnID))
+    raf.write(metadata.encode)
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {

@@ -5,7 +5,7 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 import java.text.SimpleDateFormat
-import java.util.{Date, UUID}
+import java.util.UUID
 
 import com.qwery.database.ColumnTypes._
 import com.qwery.database.Compression.CompressionByteArrayExtensions
@@ -22,10 +22,10 @@ object Codec extends Compression {
 
     val asNumber: Any => Number = {
       case value: Number => value
-      case date: Date => date.getTime
+      case date: java.util.Date => date.getTime
       case x => Try(x.toString.toDouble: Number) // date string? (e.g. "Fri Sep 25 13:09:38 PDT 2020")
         .getOrElse(Try(new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy").parse(x.toString).getTime: Number)
-          .getOrElse(throw new IllegalArgumentException(s"'$x' is not a Numeric value")))
+          .getOrElse(throw TypeConversionException(x, columnType)))
     }
 
     columnType match {
@@ -37,7 +37,7 @@ object Codec extends Compression {
       case BooleanType => value match {
         case b: Boolean => b
         case n: Number => n.doubleValue() != 0
-        case x => throw new IllegalArgumentException(s"'$x' is not a Boolean value")
+        case x => throw TypeConversionException(x, columnType)
       }
       case ByteType => asNumber(value).byteValue()
       case DateType => value match {
@@ -49,7 +49,7 @@ object Codec extends Compression {
         case c: Char => c
         case x =>
           val s = x.toString
-          if (s.nonEmpty) s.charAt(0) else throw new IllegalArgumentException(s"'$x' is not a Character value")
+          if (s.nonEmpty) s.charAt(0) else throw TypeConversionException(x, columnType)
       }
       case DoubleType => asNumber(value).doubleValue()
       case FloatType => asNumber(value).floatValue()
@@ -59,8 +59,7 @@ object Codec extends Compression {
       case StringType => value.toString
       case UUIDType => value match {
         case u: UUID => u
-        case x => Try(UUID.fromString(x.toString))
-          .getOrElse(throw new IllegalArgumentException(s"'$x' is not a UUID value"))
+        case x => Try(UUID.fromString(x.toString)).getOrElse(throw TypeConversionException(x, columnType))
       }
       case _ => value
     }
@@ -76,7 +75,7 @@ object Codec extends Compression {
     encodeValue(column, value_?) match {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
-        assert(bytes.length <= column.maxPhysicalSize, s"Column '${column.name}' is too long (${bytes.length} > ${column.maxPhysicalSize})")
+        assert(bytes.length <= column.maxPhysicalSize, throw ColumnCapacityExceededException(column, bytes.length))
         allocate(STATUS_BYTE + bytes.length).putFieldMetadata(fmd).put(bytes).array()
       case None =>
         allocate(STATUS_BYTE).putFieldMetadata(fmd.copy(isActive = false)).array()
@@ -149,7 +148,7 @@ object Codec extends Compression {
         case ShortType => Some(buf.getShort)
         case StringType => Some(buf.getText)
         case UUIDType => Some(buf.getUUID)
-        case unknown => throw new IllegalArgumentException(s"Unrecognized column type '$unknown'")
+        case unknown => throw TypeConversionException(buf, unknown)
       }
     }
   }
@@ -175,7 +174,7 @@ object Codec extends Compression {
         val bytes = s.getBytes.compressOrNah
         allocate(SHORT_BYTES + bytes.length).putShort(bytes.length.toShort).put(bytes)
       case u: UUID => allocate(LONG_BYTES * 2).putLong(u.getMostSignificantBits).putLong(u.getLeastSignificantBits)
-      case v => throw new IllegalArgumentException(s"Unrecognized type '${v.getClass.getSimpleName}' ($v)")
+      case v => throw TypeConversionException(v, column.metadata.`type`)
     }
   }
 

@@ -24,12 +24,16 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     if (rowID < capacity) mem.readBlock(rowID) else disk.readBlock(rowID - capacity)
   }
 
-  override def readRowMetaData(rowID: ROWID): RowMetadata = {
-    if (rowID < capacity) mem.readRowMetaData(rowID) else disk.readRowMetaData(rowID - capacity)
-  }
-
   override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
     if (rowID < capacity) mem.readBytes(rowID, numberOfBytes, offset) else disk.readBytes(rowID - capacity, numberOfBytes, offset)
+  }
+
+  override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
+    if (rowID < capacity) mem.readFieldMetaData(rowID, columnID) else disk.readFieldMetaData(rowID - capacity, columnID)
+  }
+
+  override def readRowMetaData(rowID: ROWID): RowMetadata = {
+    if (rowID < capacity) mem.readRowMetaData(rowID) else disk.readRowMetaData(rowID - capacity)
   }
 
   override def shrinkTo(newSize: ROWID): Unit = {
@@ -42,6 +46,14 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
 
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
     if (rowID < capacity) mem.writeBlock(rowID, buf) else disk.writeBlock(rowID - capacity, buf)
+  }
+
+  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+    if (rowID < capacity) mem.writeBytes(rowID, columnID, buf) else disk.writeBytes(rowID - capacity, columnID, buf)
+  }
+
+  override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
+    if (rowID < capacity) mem.writeFieldMetaData(rowID, columnID, metadata) else disk.writeFieldMetaData(rowID - capacity, columnID, metadata)
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {

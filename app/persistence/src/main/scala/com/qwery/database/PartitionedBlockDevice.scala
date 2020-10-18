@@ -1,6 +1,5 @@
 package com.qwery.database
 
-import java.io.File
 import java.nio.ByteBuffer
 
 import com.qwery.database.PersistentSeq.newTempFile
@@ -12,10 +11,9 @@ import com.qwery.database.PersistentSeq.newTempFile
  */
 class PartitionedBlockDevice(val columns: Seq[Column],
                              val partitionSize: Int,
-                             persistenceDirectory: File = newTempFile().getParentFile,
                              isInMemory: Boolean = false) extends BlockDevice {
   protected var partitions: List[BlockDevice] = Nil
-  assert(partitionSize > 0, "Partition size must be greater than zero")
+  assert(partitionSize > 0, throw PartitionSizeException(partitionSize))
   //ensurePartitions(index = 1)
 
   def addPartition(partition: BlockDevice): this.type = {
@@ -43,6 +41,11 @@ class PartitionedBlockDevice(val columns: Seq[Column],
       blocks <- partition.readBlocks(toLocalOffset(globalOffset, index))
         .map { case (_id, buf) => toGlobalOffset(_id, index) -> buf }
     } yield blocks
+  }
+
+  override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
+    val index = toPartitionIndex(rowID)
+    partitions(index).readFieldMetaData(toLocalOffset(rowID, index), columnID)
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
@@ -76,6 +79,17 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     partition.writeBlock(toLocalOffset(rowID, index), buf)
   }
 
+  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.writeBytes(toLocalOffset(rowID, index), columnID, buf)
+  }
+
+  override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
+    val index = toPartitionIndex(rowID)
+    partitions(index).writeFieldMetaData(toLocalOffset(rowID, index), columnID, metadata)
+  }
+
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
     val index = toPartitionIndex(rowID)
     partitions(index).writeRowMetaData(toLocalOffset(rowID, index), metadata)
@@ -89,11 +103,11 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else new FileBlockDevice(columns, newTempFile())
   }
 
-  protected def toGlobalOffset(offset: ROWID, index: Int): ROWID = offset + index * partitionSize
+  protected def toGlobalOffset(rowID: ROWID, index: Int): ROWID = rowID + index * partitionSize
 
-  protected def toLocalOffset(offset: ROWID, index: Int): ROWID = Math.min(offset - index * partitionSize, partitionSize)
+  protected def toLocalOffset(rowID: ROWID, index: Int): ROWID = Math.min(rowID - index * partitionSize, partitionSize)
 
-  protected def toPartitionIndex(offset: Int, isLimit: Boolean = false): Int = {
+  protected def toPartitionIndex(offset: RECORD_ID, isLimit: Boolean = false): Int = {
     val index = offset / partitionSize
     val normalizedIndex = if (isLimit && offset == partitionSize) Math.min(0, index - 1) else index
     ensurePartitions(normalizedIndex)

@@ -2,7 +2,6 @@ package com.qwery.database
 
 import java.io.File
 
-import com.qwery.database.ColumnTypes.{IntType, LongType, StringType}
 import com.qwery.database.StockQuote._
 import com.qwery.util.ServicingTools._
 import org.scalatest.funspec.AnyFunSpec

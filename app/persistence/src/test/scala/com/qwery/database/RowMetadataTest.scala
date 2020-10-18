@@ -34,7 +34,7 @@ class RowMetadataTest extends AnyFunSpec {
 
   private def verify(md: RowMetadata): Assertion = {
     val code = md.encode
-    logger.info(f"$md ~> [$code%02x] ${code.toBinaryString}")
+    logger.info(f"$md ~> [${code & 0xFF}%02x] ${(code & 0xFF).toBinaryString}")
     assert(RowMetadata.decode(code) == md)
   }
 

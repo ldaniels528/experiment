@@ -1,10 +1,8 @@
 package com.qwery.database
 
-import java.io.File
 import java.nio.ByteBuffer
 
 import com.qwery.database.BlockDevice.RowStatistics
-import com.qwery.database.PersistentSeq.newTempFile
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -17,9 +15,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
  */
 class ParallelPartitionedBlockDevice(columns: Seq[Column],
                                      partitionSize: Int,
-                                     persistenceDirectory: File = newTempFile().getParentFile,
                                      isInMemory: Boolean = false)(implicit ec: ExecutionContext)
-  extends PartitionedBlockDevice(columns, partitionSize, persistenceDirectory, isInMemory) {
+  extends PartitionedBlockDevice(columns, partitionSize, isInMemory) {
 
   override def countRows(predicate: RowMetadata => Boolean): ROWID = {
     Await.result(Future.sequence(partitions map { partition =>

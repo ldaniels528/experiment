@@ -26,6 +26,10 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
     wrap(bytes)
   }
 
+  override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
+    FieldMetadata.decode(array(toOffset(rowID, columnID)))
+  }
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(array(toOffset(rowID)))
 
   override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
@@ -40,18 +44,37 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+    val offset = toOffset(rowID)
+    val required = offset + 1
+    assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
     val bytes = buf.array()
-    System.arraycopy(bytes, 0, array, toOffset(rowID), bytes.length)
-    limit = Math.max(limit, toOffset(rowID) + 1)
+    System.arraycopy(bytes, 0, array, offset, bytes.length)
+    limit = Math.max(limit, required)
+  }
+
+  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+    val offset = toOffset(rowID, columnID)
+    val required = offset + 1
+    assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
+    val bytes = buf.array()
+    System.arraycopy(bytes, 0, array, offset, bytes.length)
+    limit = Math.max(limit, required)
+  }
+
+  override def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit = {
+    val offset = toOffset(rowID, columnID)
+    val required = offset + 1
+    assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
+    array(offset) = metadata.encode
+    limit = Math.max(limit, required)
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
-    val required = toOffset(rowID) + 1
-    if (required > _capacity) throw new IllegalStateException(s"Maximum capacity exceeded ($required > $capacity)")
-    else {
-      array(toOffset(rowID)) = metadata.encode
-      limit = Math.max(limit, toOffset(rowID) + 1)
-    }
+    val offset = toOffset(rowID)
+    val required = offset + 1
+    assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
+    array(offset) = metadata.encode
+    limit = Math.max(limit, required)
   }
 
 }

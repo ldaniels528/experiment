@@ -12,7 +12,7 @@ val pluginVersion = "1.0.0"
 val scalaAppVersion = scalaVersion_2_12
 
 val akkaVersion = "2.6.9"
-val akkaHttpVersion = "10.1.3"
+val akkaHttpVersion = "10.2.1"
 val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
 val sparkVersion_2_3_x = "2.3.4"

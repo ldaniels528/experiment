@@ -84,6 +84,14 @@ class ClientSideTableServiceTest extends AnyFunSpec {
       invoke(sql, service.executeQuery(databaseName, sql))
     }
 
+    it("should retrieve a field from a row on the server") {
+      val (rowID, columnID) = (0, 0)
+      invoke(
+        label = s"service.getField($databaseName, $tableNameA, rowID = $rowID, columnID = $columnID)",
+        block = service.getField(databaseName, tableNameA, rowID, columnID)
+      )
+    }
+
     it("should iterate records from the server") {
       invoke(
         label = s"service.toIterator($databaseName, $tableNameA)",
@@ -173,7 +181,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val service: ServerSideTableService = new ServerSideTableService()
+    implicit val service: ServerSideTableService = ServerSideTableService()
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

@@ -103,7 +103,7 @@ trait BlockDevice {
       foreach { row =>
         // get the key-value pairs
         val mappings = Map(row.fields collect {
-          case Field(name, metadata, Some(value: Date)) => name -> value.getTime
+          case Field(name, _, Some(value: Date)) => name -> value.getTime
           case Field(name, _, Some(value: String)) => name -> s""""$value""""
           case Field(name, _, Some(value: UUID)) => name -> s""""$value""""
           case Field(name, _, Some(value)) => name -> value.toString
@@ -159,7 +159,7 @@ trait BlockDevice {
   }
 
   def getField(rowID: ROWID, columnIndex: Int): Field = {
-    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
+    assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
     val (fmd, value_?) = Codec.decode(column, buf)
@@ -167,7 +167,7 @@ trait BlockDevice {
   }
 
   def getFieldWithBinary(rowID: ROWID, columnIndex: Int): (Field, ByteBuffer) = {
-    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column index ($columnIndex/${columns.size}) is out of range")
+    assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
     val (fmd, value_?) = Codec.decode(column, buf)
@@ -186,7 +186,7 @@ trait BlockDevice {
   }
 
   def getRowStatistics: RowStatistics = {
-    var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID) = (0, 0, 0, 0)
+    var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) = (0, 0, 0, 0, 0, 0)
     var (rowID: ROWID, eof: ROWID) = (0, length)
     while (rowID < eof) {
       val rmd = readRowMetaData(rowID)
@@ -194,9 +194,11 @@ trait BlockDevice {
       if (rmd.isCompressed) compressed += 1
       if (rmd.isDeleted) deleted += 1
       if (rmd.isEncrypted) encrypted += 1
+      if (rmd.isLocked) locked += 1
+      if (rmd.isReplicated) replicated += 1
       rowID += 1
     }
-    RowStatistics(active, compressed, deleted, encrypted)
+    RowStatistics(active, compressed, deleted, encrypted, locked, replicated)
   }
 
   /**
@@ -228,6 +230,13 @@ trait BlockDevice {
 
   def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer
 
+  def readColumnMetaData(columnID: Int): ColumnMetadata = {
+    assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+    columns(columnID).metadata
+  }
+
+  def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata
+
   def readRowMetaData(rowID: ROWID): RowMetadata
 
   /**
@@ -239,7 +248,7 @@ trait BlockDevice {
    * Remove an item from the collection via its record offset
    * @param rowID the record offset
    */
-  def remove(rowID: ROWID): Unit = writeRowMetaData(rowID, RowMetadata(isActive = false))
+  def remove(rowID: ROWID): Unit = updateRowMetaData(rowID)(_.copy(isActive = false))
 
   def reverseInPlace(): Unit = {
     var (top: ROWID, bottom: ROWID) = (0, length - 1)
@@ -256,7 +265,7 @@ trait BlockDevice {
 
     override def hasNext: Boolean = {
       rowID = findRow(fromPos = rowID, forward = false)(_.isActive).getOrElse(-1)
-      item_? = if (rowID > -1) Some(rowID -> readBlock(rowID)) else None
+      item_? = if (rowID >= 0) Some(rowID -> readBlock(rowID)) else None
       rowID -= 1
       item_?.nonEmpty
     }
@@ -326,6 +335,8 @@ trait BlockDevice {
 
   def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize + headerSize
 
+  def toOffset(rowID: ROWID, columnID: Int): RECORD_ID = toOffset(rowID) + columnOffsets(columnID)
+
   /**
    * Trims dead entries from of the collection
    * @return the new size of the file
@@ -338,9 +349,31 @@ trait BlockDevice {
     newLength
   }
 
+  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Boolean = {
+    assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+    val column = columns(columnID)
+    val fmd = FieldMetadata(column.metadata)
+    Codec.encodeValue(column, value)(fmd) exists { buf =>
+      writeBytes(rowID, columnID, buf)
+      true
+    }
+  }
+
+  def updateFieldMetaData(rowID: ROWID, columnID: Int)(update: FieldMetadata => FieldMetadata): Unit = {
+    writeFieldMetaData(rowID, columnID, update(readFieldMetaData(rowID, columnID)))
+  }
+
+  def updateRowMetaData(rowID: ROWID)(update: RowMetadata => RowMetadata): Unit = {
+    writeRowMetaData(rowID, update(readRowMetaData(rowID)))
+  }
+
   def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit
 
   def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = blocks foreach { case (offset, buf) => writeBlock(offset, buf) }
+
+  def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit
+
+  def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit
 
   def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit
 
@@ -352,12 +385,14 @@ trait BlockDevice {
 object BlockDevice {
   val HEADER_CODE = 0xBABEFACE
 
-  case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID) {
+  case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) {
     def +(that: RowStatistics): RowStatistics = that.copy(
       active = that.active + active,
       compressed = that.compressed + compressed,
       deleted = that.deleted + deleted,
-      encrypted = that.encrypted + encrypted
+      encrypted = that.encrypted + encrypted,
+      locked = that.locked + locked,
+      replicated = that.replicated + replicated
     )
   }
 

@@ -15,25 +15,35 @@ object ColumnTypes extends Enumeration {
   private lazy val logger = LoggerFactory.getLogger(getClass)
   type ColumnType = Value
 
-  // primitive types
+  // fixed-length types
   val BooleanType: ColumnType = Value(0x00) //... 0000
   val ByteType: ColumnType = Value(0x01) // ..... 0001
   val CharType: ColumnType = Value(0x02) // ..... 0010
-  val DoubleType: ColumnType = Value(0x03) // ... 0011
-  val FloatType: ColumnType = Value(0x04) // .... 0100
-  val IntType: ColumnType = Value(0x05) // ...... 0101
-  val LongType: ColumnType = Value(0x06) // ..... 0110
-  val ShortType: ColumnType = Value(0x07) // .... 0111
+  val DateType: ColumnType = Value(0x03) // ..... 0011
+  val DoubleType: ColumnType = Value(0x04) // ... 0100
+  val FloatType: ColumnType = Value(0x05) // .... 0101
+  val IntType: ColumnType = Value(0x06) // ...... 0110
+  val LongType: ColumnType = Value(0x07) // ..... 0111
+  val ShortType: ColumnType = Value(0x08) // .... 1000
+  val UUIDType: ColumnType = Value(0x09) // ..... 1001
 
-  // non-primitive types
-  val ArrayType: ColumnType = Value(0x08) // .... 1000
-  val BigDecimalType: ColumnType = Value(0x09) // 1001
-  val BigIntType: ColumnType = Value(0x0A) // ... 1010
-  val BinaryType: ColumnType = Value(0x0B) // ... 1011
-  val BlobType: ColumnType = Value(0x0C) // ..... 1100
-  val DateType: ColumnType = Value(0x0D) // ..... 1101 (fixed-length)
-  val StringType: ColumnType = Value(0x0E) // ... 1110
-  val UUIDType: ColumnType = Value(0x0F) // ..... 1111 (fixed-length)
+  // variable-length types
+  val BigDecimalType: ColumnType = Value(0x0A) // 1010
+  val BigIntType: ColumnType = Value(0x0B) // ... 1011
+  val BinaryType: ColumnType = Value(0x0C) // ... 1100
+  val StringType: ColumnType = Value(0x0D) // ... 1101
+
+  // externally-stored types
+  val ArrayType: ColumnType = Value(0x0E) // .... 1110 (Array[T] - where T is a non-external type)
+  val BlobType: ColumnType = Value(0x0F) // ..... 1111
+
+  // potential future types
+  // TODO ClobType - separate BLOB and CLOB; CLOB can be seamlessly converted to String's
+  // TODO Enumerations
+  // TODO JSONType - JSON could also be handled via StringType
+  // TODO MD5Type (fixed-length) - alias for UUID
+  // TODO TableType - could also be handled via ArrayType
+  // TODO combine BinaryType and BlobType?
 
   /**
    * Determines the equivalent column type to the given class
@@ -46,10 +56,10 @@ object ColumnTypes extends Enumeration {
       case c if c == classOf[BigDecimal] | c == classOf[java.math.BigDecimal] => BigDecimalType
       case c if c == classOf[BigInt] | c == classOf[java.math.BigInteger] => BigIntType
       case c if c == classOf[Boolean] | c == classOf[java.lang.Boolean] => BooleanType
-      case c if c == classOf[Byte] | c == classOf[java.lang.Byte] => ByteType
       case c if c.getName.startsWith("java.nio") & c.getName.contains("Buffer") => BinaryType
+      case c if c == classOf[Byte] | c == classOf[java.lang.Byte] => ByteType
       case c if c == classOf[Char] | c == classOf[java.lang.Character] => CharType
-      case c if c == classOf[java.util.Date] => DateType
+      case c if c == classOf[java.util.Date] | c == classOf[java.sql.Date] | c == classOf[java.sql.Timestamp] => DateType
       case c if c == classOf[Double] | c == classOf[java.lang.Double] => DoubleType
       case c if c == classOf[Float] | c == classOf[java.lang.Float] => FloatType
       case c if c == classOf[Int] | c == classOf[java.lang.Integer] => IntType

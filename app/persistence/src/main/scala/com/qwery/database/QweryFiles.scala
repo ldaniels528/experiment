@@ -20,7 +20,7 @@ object QweryFiles {
 
   def getServerRootDirectory: File = {
     val directory = new File(sys.env.getOrElse("QWERY_DB", "qwery_db"))
-    assert(directory.mkdirs() || directory.exists(), s"Could not create data directory - ${directory.getAbsolutePath}")
+    assert(directory.mkdirs() || directory.exists(), throw DataDirectoryNotFoundException(directory))
     directory
   }
 

@@ -30,7 +30,7 @@ class FieldMetadataTest extends AnyFunSpec {
 
   private def verify(md: FieldMetadata): Assertion = {
     val code = md.encode
-    logger.info(f"$md ~> [$code%02x] ${code.toBinaryString}")
+    logger.info(f"$md ~> [$code%02x] ${(code & 0xFF).toBinaryString}")
     assert(FieldMetadata.decode(code) == md)
   }
 

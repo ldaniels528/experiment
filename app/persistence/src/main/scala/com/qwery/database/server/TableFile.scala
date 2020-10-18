@@ -1,4 +1,5 @@
-package com.qwery.database.server
+package com.qwery.database
+package server
 
 import java.io.File
 import java.nio.ByteBuffer.allocate
@@ -10,7 +11,6 @@ import com.qwery.database.QweryFiles._
 import com.qwery.database.server.TableFile._
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
-import com.qwery.database.{BlockDevice, Codec, Column, ColumnMetadata, Field, FileBlockDevice, ROWID, Row, RowMetadata}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -57,7 +57,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       }
 
       // determine whether a match was found
-      val rowID_? =
+      val rowID_? : Option[ROWID] =
         if (valueAt(p0) == searchValue) Some(p0)
         else if (valueAt(p1) == searchValue) Some(p1)
         else None
@@ -124,11 +124,16 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   def delete(rowID: ROWID): Int = {
-    device.writeRowMetaData(rowID, RowMetadata(isActive = false))
+    device.updateRowMetaData(rowID)(_.copy(isActive = false))
     1
   }
 
-  def deleteRange(start: ROWID, length: ROWID): Int = {
+  def deleteField(rowID: ROWID, columnID: Int): Boolean = {
+    device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false))
+    true
+  }
+
+  def deleteRange(start: ROWID, length: Int): Int = {
     var total = 0
     val limit: ROWID = Math.min(device.length, start + length)
     var rowID: ROWID = start
@@ -145,20 +150,21 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def executeQuery(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
     // check all available indices for the table
-    val tableIndex_? = (for {
+    val tableIndices = for {
       (searchColumn, searchValue) <- condition.toList
       tableIndex <- indices.get(searchColumn).toList
-    } yield (tableIndex, searchValue)).headOption
+    } yield (tableIndex, searchValue)
 
-    // if an index was found use it, otherwise table scan
-    tableIndex_? match {
-      case Some((tableIndex@TableIndexRef(indexName, indexColumn), value)) =>
+    tableIndices.headOption match {
+      // if an index was found use it
+      case Some((tableIndex@TableIndexRef(indexName, indexColumn), searchValue)) =>
         logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
         for {
-          indexedRow <- binarySearch(tableIndex, Option(value)).toList
+          indexedRow <- binarySearch(tableIndex, Option(searchValue)).toList
           rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, Some(rowID: ROWID)) => rowID }
           row <- get(rowID)
         } yield row
+      // otherwise perform a table scan
       case _ => scanRows(condition, limit)
     }
   }
@@ -180,7 +186,12 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     if (row.metadata.isActive) Some(row) else None
   }
 
-  def getRange(start: ROWID, length: ROWID): Seq[Row] = {
+  def getField(rowID: ROWID, columnID: Int): Field = {
+    assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+    device.getField(rowID, columnID)
+  }
+
+  def getRange(start: ROWID, length: Int): Seq[Row] = {
     var rows: List[Row] = Nil
     val limit = Math.min(device.length, start + length)
     var rowID: ROWID = start
@@ -242,6 +253,11 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     }
   }
 
+  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Unit = {
+    assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+    device.updateField(rowID, columnID, value)
+  }
+
   /**
    * Truncates the table; removing all rows
    * @return the number of rows removed
@@ -264,7 +280,6 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   @inline
   private def _iterate(condition: TupleSet, limit: Option[Int] = None)(f: (ROWID, Row) => Unit): Int = {
-    val condCached = condition.map { case (symbol, value) => (symbol.name, value) }
     var matches: Int = 0
     var rowID: ROWID = 0
     val eof = device.length
@@ -272,7 +287,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       val row_? = get(rowID)
       row_?.foreach { row =>
         val result = Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*).asInstanceOf[TupleSet]
-        if (isSatisfied(result, condCached) || condCached.isEmpty) {
+        if (isSatisfied(result, condition) || condition.isEmpty) {
           f(rowID, row)
           matches += 1
         }

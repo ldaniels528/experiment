@@ -1,9 +1,11 @@
 package com.qwery.database.server
 
+import java.io.ByteArrayOutputStream
 import java.net.{HttpURLConnection, URL}
 
 import com.qwery.util.ResourceHelper._
 import net.liftweb.json.{DefaultFormats, JObject, JValue, parse}
+import org.apache.commons.io.IOUtils
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.io.Source
@@ -43,6 +45,8 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
    * @return the response as a [[JValue JSON value]]
    */
   def delete(url: String, body: Array[Byte]): JValue = httpXXX(method = "DELETE", url)
+
+  def download(url: String): Array[Byte] = httpDownload(method = "GET", url)
 
   /**
    * The HTTP GET method requests a representation of the specified resource. Requests using GET should only retrieve data.
@@ -150,6 +154,19 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
    * @param body the request body
    */
   def put(url: String, body: Array[Byte]): Unit = httpXXX(method = "PUT", url, body, doInput = false)
+
+  private def httpDownload(method: String, url: String): Array[Byte] = {
+    new URL(url).openConnection() match {
+      case conn: HttpURLConnection =>
+        conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
+        conn.setRequestMethod(method)
+        val out = new ByteArrayOutputStream()
+        conn.getInputStream.use { in => IOUtils.copy(in, out) }
+        out.toByteArray
+      case conn =>
+        throw new IllegalArgumentException(s"Invalid connection type $conn [$method|$url]")
+    }
+  }
 
   private def httpXXX(method: String, url: String): JValue = {
     new URL(url).openConnection() match {

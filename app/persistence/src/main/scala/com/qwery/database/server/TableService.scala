@@ -14,6 +14,8 @@ trait TableService[R] {
 
   def createTable(databaseName: String, ref: TableCreation): QueryResult
 
+  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): QueryResult
+
   def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): QueryResult
 
   def deleteRow(databaseName: String, tableName: String, rowID: ROWID): QueryResult
@@ -26,6 +28,8 @@ trait TableService[R] {
 
   def getDatabaseMetrics(databaseName: String): DatabaseMetrics
 
+  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte]
+
   def getLength(databaseName: String, tableName: String): QueryResult
 
   def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[R]
@@ -35,6 +39,8 @@ trait TableService[R] {
   def getTableMetrics(databaseName: String, tableName: String): TableMetrics
 
   def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
+
+  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): QueryResult
 
   def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
 

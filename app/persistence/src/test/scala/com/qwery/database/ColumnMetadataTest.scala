@@ -36,7 +36,7 @@ class ColumnMetadataTest extends AnyFunSpec {
 
   private def verify(md: ColumnMetadata): Assertion = {
     val code = md.encode
-    logger.info(f"$md ~> [$code%04x] ${code.toBinaryString}")
+    logger.info(f"$md ~> [$code%04x] ${(code & 0xFFFF).toBinaryString}")
     assert(ColumnMetadata.decode(code) == md)
   }
 

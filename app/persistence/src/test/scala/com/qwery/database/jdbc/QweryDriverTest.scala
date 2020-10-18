@@ -4,6 +4,8 @@ package jdbc
 import java.nio.ByteBuffer
 import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
+import akka.actor.ActorSystem
+import com.qwery.database.server.{DatabaseServer, ServerSideTableService}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -13,8 +15,12 @@ import org.slf4j.LoggerFactory
  */
 class QweryDriverTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val jdbcURL = "jdbc:qwery://localhost:12122/test"
+  private val port = 12121
+  private val jdbcURL = s"jdbc:qwery://localhost:$port/test"
   private val tableName = "stocks_jdbc_test"
+
+  // start the server
+  startServer(port)
 
   describe(QweryDriver.getClass.getSimpleName) {
     Class.forName("com.qwery.database.jdbc.QweryDriver")
@@ -172,6 +178,15 @@ class QweryDriverTest extends AnyFunSpec {
   def iterateRows(rs: ResultSet)(f: Map[String, Any] => Unit): Unit = {
     val rsmd = rs.getMetaData
     while (rs.next()) f(toRow(rs, rsmd))
+  }
+
+  def startServer(port: Int): Unit = {
+    implicit val system: ActorSystem = ActorSystem(name = "test-server")
+    implicit val service: ServerSideTableService = ServerSideTableService()
+    import system.dispatcher
+
+    logger.info(s"Starting Database Server on port $port...")
+    DatabaseServer.startServer(port = port)
   }
 
   def toRow(rs: ResultSet, rsmd: ResultSetMetaData): Map[String, AnyRef] = {

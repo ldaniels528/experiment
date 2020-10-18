@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory
  */
 class TableFileTest extends AnyFunSpec {
   private lazy val logger = LoggerFactory.getLogger(getClass)
-  private implicit val service: ServerSideTableService = new ServerSideTableService()
+  private implicit val service: ServerSideTableService = ServerSideTableService()
 
   describe(classOf[TableFile].getName) {
     val databaseName = "test"
