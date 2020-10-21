@@ -6,25 +6,28 @@ import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnCon
 import com.qwery.database.{Column, ColumnMetadata, ColumnTypes}
 import com.qwery.models.Insert.Into
 import com.qwery.models.expressions._
-import com.qwery.models.{ColumnTypes => QwColumnTypes, _}
+import com.qwery.models._
+
+import scala.collection.concurrent.TrieMap
 
 /**
  * Invokable Processor
  */
 object InvokableProcessor {
+  private val enumTypes = TrieMap[String, Seq[String]]()
   private val columnTypeMap = Map(
-    QwColumnTypes.ARRAY -> ColumnTypes.ArrayType,
-    QwColumnTypes.BINARY -> ColumnTypes.BlobType,
-    QwColumnTypes.BOOLEAN -> ColumnTypes.BooleanType,
-    QwColumnTypes.DATE -> ColumnTypes.DateType,
-    QwColumnTypes.DOUBLE -> ColumnTypes.DoubleType,
-    QwColumnTypes.FLOAT -> ColumnTypes.FloatType,
-    QwColumnTypes.INTEGER -> ColumnTypes.IntType,
-    QwColumnTypes.LONG -> ColumnTypes.LongType,
-    QwColumnTypes.SHORT -> ColumnTypes.ShortType,
-    QwColumnTypes.STRING -> ColumnTypes.StringType,
-    QwColumnTypes.TIMESTAMP -> ColumnTypes.DateType,
-    QwColumnTypes.UUID -> ColumnTypes.UUIDType
+    "ARRAY" -> ColumnTypes.ArrayType,
+    "BINARY" -> ColumnTypes.BlobType,
+    "BOOLEAN" -> ColumnTypes.BooleanType,
+    "DATE" -> ColumnTypes.DateType,
+    "DOUBLE" -> ColumnTypes.DoubleType,
+    "FLOAT" -> ColumnTypes.FloatType,
+    "INTEGER" -> ColumnTypes.IntType,
+    "LONG" -> ColumnTypes.LongType,
+    "SHORT" -> ColumnTypes.ShortType,
+    "STRING" -> ColumnTypes.StringType,
+    "TIMESTAMP" -> ColumnTypes.DateType,
+    "UUID" -> ColumnTypes.UUIDType
   )
 
   /**
@@ -39,10 +42,11 @@ object InvokableProcessor {
         Column(
           name = c.name,
           comment = c.comment.getOrElse(""),
-          maxSize = c.precision.headOption,
+          enumValues = c.enumValues,
+          maxSize = c.spec.precision.headOption,
           metadata = ColumnMetadata(
             isNullable = c.isNullable,
-            `type` = columnTypeMap.getOrElse(c.`type`, ColumnTypes.BlobType)
+            `type` = columnTypeMap.getOrElse(c.spec.typeName, ColumnTypes.BlobType)
           ))
       })
     }
@@ -73,6 +77,18 @@ object InvokableProcessor {
       }
     }
     QueryResult(databaseName, indexName, count = 1, responseTime = responseTime)
+  }
+
+  /**
+   * Defines a new type enumeration
+   * @param databaseName the database name
+   * @param name the enumeration name
+   * @param values the enumeration values
+   * @return the [[QueryResult]]
+   */
+  def createTypeEnum(databaseName: String, name: String, values: Seq[String]): QueryResult = {
+    val (_, responseTime) = time { enumTypes(name) = values }
+    QueryResult(databaseName = databaseName, tableName = "", count = 1, responseTime = responseTime)
   }
 
   /**
@@ -192,6 +208,7 @@ object InvokableProcessor {
       def invoke(databaseName: String)(implicit service: ServerSideTableService): QueryResult = invokable match {
         case Create(table: Table) => createTable(databaseName, table)
         case Create(TableIndex(indexName, table, columns)) => createTableIndex(databaseName, indexName, table, columns)
+        case Create(TypeAsEnum(name, values)) => createTypeEnum(databaseName, name, values)
         case Delete(ref, where, limit) => deleteRows(databaseName, tableName = ref.name, where, limit)
         case DropTable(TableRef(tableName)) => service.dropTable(databaseName, tableName)
         case Insert(Into(TableRef(tableName)), Insert.Values(expressionValues), fields) =>

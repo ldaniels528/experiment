@@ -16,69 +16,69 @@ sealed trait SQLEntity {
 }
 
 /**
-  * Base class for table-like entities (e.g. tables, inline tables and views)
-  * @author lawrence.daniels@gmail.com
-  */
+ * Base class for table-like entities (e.g. tables, inline tables and views)
+ * @author lawrence.daniels@gmail.com
+ */
 sealed trait TableLike extends SQLEntity
 
 /**
-  * Represents an inline table definition
-  * @param name    the name of the table
-  * @param columns the table columns
-  * @param source  the physical location of the data files
-  * @example
-  * {{{
-  *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
-  *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
-  * }}}
-  */
+ * Represents an inline table definition
+ * @param name    the name of the table
+ * @param columns the table columns
+ * @param source  the physical location of the data files
+ * @example
+ * {{{
+ *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
+ *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
+ * }}}
+ */
 case class InlineTable(name: String, columns: List[Column], source: Invokable) extends TableLike
 
 /**
-  * Represents an executable procedure
-  * @param name   the name of the procedure
-  * @param params the procedure's parameters
-  * @param code   the procedure's code
-  */
+ * Represents an executable procedure
+ * @param name   the name of the procedure
+ * @param params the procedure's parameters
+ * @param code   the procedure's code
+ */
 case class Procedure(name: String, params: Seq[Column], code: Invokable) extends SQLEntity
 
 /**
-  * Enumeration of Storage Formats
-  * @author lawrence.daniels@gmail.com
-  */
+ * Enumeration of Storage Formats
+ * @author lawrence.daniels@gmail.com
+ */
 object StorageFormats extends Enumeration {
   type StorageFormat = Value
   val AVRO, CSV, JDBC, JSON, ORC, PARQUET: StorageFormat = Value
 }
 
 /**
-  * Represents a Hive-compatible table definition
-  * @param name            the name of the table
-  * @param columns         the table columns
-  * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
-  * @param inputFormat     the [[StorageFormat input format]]
-  * @param outputFormat    the [[StorageFormat output format]]
-  * @param location        the physical location of the data files
-  * @example
-  * {{{
-  *     CREATE [EXTERNAL] TABLE [IF NOT EXISTS] Cars(
-  *         Name STRING,
-  *         Miles_per_Gallon INT,
-  *         Cylinders INT,
-  *         Displacement INT,
-  *         Horsepower INT,
-  *         Weight_in_lbs INT,
-  *         Acceleration DECIMAL,
-  *         Year DATE,
-  *         Origin CHAR(1))
-  *     COMMENT 'Data about cars from a public database'
-  *     ROW FORMAT DELIMITED
-  *     FIELDS TERMINATED BY ','
-  *     STORED AS TEXTFILE
-  *     LOCATION '/user/ldaniels/visdata';
-  * }}}
-  * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
-  */
+ * Represents a Hive-compatible table definition
+ * @param name            the name of the table
+ * @param columns         the table columns
+ * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
+ * @param inputFormat     the [[StorageFormat input format]]
+ * @param outputFormat    the [[StorageFormat output format]]
+ * @param location        the physical location of the data files
+ * @example
+ * {{{
+ *     CREATE [EXTERNAL] TABLE [IF NOT EXISTS] Cars(
+ *         Name STRING,
+ *         Miles_per_Gallon INT,
+ *         Cylinders INT,
+ *         Displacement INT,
+ *         Horsepower INT,
+ *         Weight_in_lbs INT,
+ *         Acceleration DECIMAL,
+ *         Year DATE,
+ *         Origin CHAR(1))
+ *     COMMENT 'Data about cars from a public database'
+ *     ROW FORMAT DELIMITED
+ *     FIELDS TERMINATED BY ','
+ *     STORED AS TEXTFILE
+ *     LOCATION '/user/ldaniels/visdata';
+ * }}}
+ * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
+ */
 case class Table(name: String,
                  columns: List[Column],
                  location: Location,
@@ -93,16 +93,16 @@ case class Table(name: String,
                  tableProperties: Map[String, String] = Map.empty) extends TableLike
 
 /**
-  * Table Companion
-  * @author lawrence.daniels@gmail.com
-  */
+ * Table Companion
+ * @author lawrence.daniels@gmail.com
+ */
 object Table {
 
   /**
-    * Creates a reference to a table by name
-    * @param name the given table name
-    * @return a [[TableRef table reference]]
-    */
+   * Creates a reference to a table by name
+   * @param name the given table name
+   * @return a [[TableRef table reference]]
+   */
   def apply(name: String): TableRef = TableRef(name)
 }
 
@@ -115,11 +115,19 @@ object Table {
 case class TableIndex(name: String, table: Location, columns: Seq[Field]) extends SQLEntity
 
 /**
-  * Represents a User-defined Function (UDF)
-  * @param name        the name of the function
-  * @param `class`     the fully-qualified function class name
-  * @param jarLocation the optional Jar file path
-  */
+ * Represents an enumeration type definition
+ * @param name   the name of the enumeration
+ * @param values the enumeration values
+ * @example CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
+ */
+case class TypeAsEnum(name: String, values: Seq[String]) extends SQLEntity
+
+/**
+ * Represents a User-defined Function (UDF)
+ * @param name        the name of the function
+ * @param `class`     the fully-qualified function class name
+ * @param jarLocation the optional Jar file path
+ */
 case class UserDefinedFunction(name: String, `class`: String, jarLocation: Option[String]) extends SQLEntity
 
 /**

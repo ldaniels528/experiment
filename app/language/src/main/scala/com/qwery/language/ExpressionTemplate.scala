@@ -1,6 +1,6 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.ColumnSpec
 import com.qwery.models.expressions.{Condition, Expression, Field, VariableRef}
 
 /**
@@ -12,7 +12,7 @@ case class ExpressionTemplate(atoms: Map[String, String] = Map.empty,
                               expressions: Map[String, Expression] = Map.empty,
                               expressionLists: Map[String, List[Expression]] = Map.empty,
                               fields: Map[String, Field] = Map.empty,
-                              types: Map[String, ColumnType] = Map.empty,
+                              types: Map[String, ColumnSpec] = Map.empty,
                               variables: Map[String, VariableRef] = Map.empty) {
 
   def +(that: ExpressionTemplate): ExpressionTemplate = {

@@ -95,7 +95,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setObject(parameterIndex: Int, x: Any): Unit = parameterMetaData(parameterIndex) = x
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Int): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(reader, length)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Int): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader, length)
 
   override def setRef(parameterIndex: Int, x: Ref): Unit = parameterMetaData(parameterIndex) = x
 
@@ -125,7 +125,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setNClob(parameterIndex: Int, value: NClob): Unit = setClob(parameterIndex, value)
 
-  override def setClob(parameterIndex: Int, reader: Reader, length: Long): Unit = JDBCBlob.create(reader, length)
+  override def setClob(parameterIndex: Int, reader: Reader, length: Long): Unit = JDBCClob.create(reader, length)
 
   override def setBlob(parameterIndex: Int, inputStream: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(inputStream, length)
 
@@ -139,17 +139,17 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setBinaryStream(parameterIndex: Int, x: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x, length)
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(reader, length)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader, length)
 
   override def setAsciiStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x)
 
   override def setBinaryStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x)
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(reader)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader)
 
   override def setNCharacterStream(parameterIndex: Int, value: Reader): Unit = setCharacterStream(parameterIndex, value)
 
-  override def setClob(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(reader)
+  override def setClob(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader)
 
   override def setBlob(parameterIndex: Int, inputStream: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(inputStream)
 
@@ -163,7 +163,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 object JDBCPreparedStatement {
 
   def _cast(value: Any, targetSqlType: Int, scale: Int = 0): Option[Any] = {
-    Option(Codec.convertTo(value, ColumnTypes.convertSqlToColumnType(targetSqlType)))
+    Option(Codec.convertTo(value, convertSqlToColumnType(targetSqlType)))
   }
 
   def _null(sqlType: Int): Option[Any] = None

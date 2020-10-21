@@ -1,7 +1,6 @@
 package com.qwery.models.expressions
 
-import com.qwery.models.Aliasable
-import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.{Aliasable, ColumnSpec}
 
 /**
   * Represents an expression; which in its simplest form is a value (boolean, double or string)
@@ -13,7 +12,7 @@ trait Expression extends Aliasable
   * Casts the value expr to the target data type type.
   * @example cast(expr AS type)
   */
-case class Cast(value: Expression, toType: ColumnType) extends Expression
+case class Cast(value: Expression, toType: ColumnSpec) extends Expression
 
 /**
   * Current Row

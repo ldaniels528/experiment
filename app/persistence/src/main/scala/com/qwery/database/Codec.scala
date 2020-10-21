@@ -40,16 +40,16 @@ object Codec extends Compression {
         case x => throw TypeConversionException(x, columnType)
       }
       case ByteType => asNumber(value).byteValue()
-      case DateType => value match {
-        case d: java.util.Date => d
-        case n: Number => new java.util.Date(n.longValue())
-        case x => new java.util.Date(asNumber(x).longValue())
-      }
       case CharType => value match {
         case c: Char => c
         case x =>
           val s = x.toString
           if (s.nonEmpty) s.charAt(0) else throw TypeConversionException(x, columnType)
+      }
+      case DateType => value match {
+        case d: java.util.Date => d
+        case n: Number => new java.util.Date(n.longValue())
+        case x => new java.util.Date(asNumber(x).longValue())
       }
       case DoubleType => asNumber(value).doubleValue()
       case FloatType => asNumber(value).floatValue()
@@ -140,12 +140,14 @@ object Codec extends Compression {
         case BooleanType => Some(buf.get > 0)
         case ByteType => Some(buf.get)
         case CharType => Some(buf.getChar)
+        case ClobType => Some(buf)
         case DateType => Some(buf.getDate)
         case DoubleType => Some(buf.getDouble)
         case FloatType => Some(buf.getFloat)
         case IntType => Some(buf.getInt)
         case LongType => Some(buf.getLong)
         case ShortType => Some(buf.getShort)
+        case StringType if column.isEnum => Some(column.enumValues(buf.getShort))
         case StringType => Some(buf.getText)
         case UUIDType => Some(buf.getUUID)
         case unknown => throw TypeConversionException(buf, unknown)
@@ -159,7 +161,7 @@ object Codec extends Compression {
       case a: Array[_] => encodeSeq(column, a)
       case b: BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
-      case b: java.math.BigInteger => allocate(LONG_BYTES).putBigInteger(b)
+      case b: java.math.BigInteger => allocate(sizeOf(b)).putBigInteger(b)
       case b: Boolean => allocate(ONE_BYTE).put((if (b) 0 else 1).toByte)
       case b: Byte => allocate(ONE_BYTE).put(b)
       case b: ByteBuffer => b
@@ -170,6 +172,11 @@ object Codec extends Compression {
       case i: Int => allocate(INT_BYTES).putInt(i)
       case l: Long => allocate(LONG_BYTES).putLong(l)
       case s: Short => allocate(SHORT_BYTES).putShort(s)
+      case s: String if column.isEnum =>
+        column.enumValues.indexOf(s) match {
+          case -1 => throw new IllegalArgumentException(s"'$s' is not allowed for column '${column.name}'")
+          case index => allocate(SHORT_BYTES).putShort(index.toShort)
+        }
       case s: String =>
         val bytes = s.getBytes.compressOrNah
         allocate(SHORT_BYTES + bytes.length).putShort(bytes.length.toShort).put(bytes)
@@ -178,10 +185,9 @@ object Codec extends Compression {
     }
   }
 
-  def sizeOf(b: BigDecimal): Int = {
-    val size = 2 * SHORT_BYTES + b.bigDecimal.unscaledValue().toByteArray.length
-    size
-  }
+  def sizeOf(b: BigDecimal): Int = 2 * SHORT_BYTES + b.bigDecimal.unscaledValue().toByteArray.length
+
+  def sizeOf(b: BigInt): Int = SHORT_BYTES + b.toByteArray.length
 
   /**
    * Codec ByteBuffer
@@ -206,13 +212,16 @@ object Codec extends Compression {
 
     @inline
     def getBigInteger: BigInteger = {
-      val bytes = new Array[Byte](LONG_BYTES)
+      val bytes = new Array[Byte](buf.getShort)
       buf.get(bytes)
       new BigInteger(bytes)
     }
 
     @inline
-    def putBigInteger(b: BigInteger): ByteBuffer = buf.put(b.toByteArray)
+    def putBigInteger(b: BigInteger): ByteBuffer = {
+      val array = b.toByteArray
+      buf.putShort(array.length.toShort).put(array)
+    }
 
     @inline
     def getBinary: Array[Byte] = {
@@ -226,25 +235,35 @@ object Codec extends Compression {
     def putBinary(bytes: Array[Byte]): ByteBuffer = buf.putInt(bytes.length).put(bytes)
 
     @inline
-    def getBlob: AnyRef = {
+    def getBlob: Array[Byte] = {
       val length = buf.getInt
       val bytes = new Array[Byte](length)
       buf.get(bytes)
-      new ObjectInputStream(new ByteArrayInputStream(bytes)).readObject()
+      bytes
     }
 
     @inline
-    def putBlob(blob: AnyRef): ByteBuffer = {
-      val baos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(baos)
-      oos.writeObject(blob)
-      val bytes = baos.toByteArray
+    def putBlob(bytes: Array[Byte]): ByteBuffer = {
+      buf.putInt(bytes.length).put(bytes)
+    }
+
+    @inline
+    def getClob(implicit fmd: FieldMetadata): CharSequence = {
+      val length = buf.getInt
+      val bytes = new Array[Byte](length)
+      buf.get(bytes)
+      new String(bytes.decompressOrNah)
+    }
+
+    @inline
+    def putClob(chars: CharSequence)(implicit fmd: FieldMetadata): ByteBuffer = {
+      val bytes = chars.toString.getBytes("utf-8").compressOrNah
       buf.putInt(bytes.length).put(bytes)
     }
 
     @inline
     def getColumn: Column = {
-      Column(name = buf.getString, comment = buf.getString, metadata = buf.getColumnMetadata, sizeInBytes = buf.getInt)
+      Column(name = buf.getString, comment = buf.getString, metadata = buf.getColumnMetadata, enumValues = Nil, sizeInBytes = buf.getInt)
     }
 
     @inline
@@ -268,6 +287,26 @@ object Codec extends Compression {
     @inline def getFieldMetadata: FieldMetadata = FieldMetadata.decode(buf.get)
 
     @inline def putFieldMetadata(fmd: FieldMetadata): ByteBuffer = buf.put(fmd.encode)
+
+    @inline
+    def getObjectAs[T](implicit fmd: FieldMetadata): T = getObject.asInstanceOf[T]
+
+    @inline
+    def getObject(implicit fmd: FieldMetadata): AnyRef = {
+      val length = buf.getInt
+      val bytes = new Array[Byte](length)
+      buf.get(bytes)
+      new ObjectInputStream(new ByteArrayInputStream(bytes.decompressOrNah)).readObject()
+    }
+
+    @inline
+    def putObject(blob: AnyRef)(implicit fmd: FieldMetadata): ByteBuffer = {
+      val baos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(baos)
+      oos.writeObject(blob)
+      val bytes = baos.toByteArray.compressOrNah
+      buf.putInt(bytes.length).put(bytes)
+    }
 
     @inline def getRowID: ROWID = buf.getInt
 

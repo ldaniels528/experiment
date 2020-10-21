@@ -45,10 +45,7 @@ class JDBCParameterMetaData() extends ParameterMetaData with JDBCWrapper {
   }
 
   override def isNullable(parameterNumber: Int): Int = {
-    determineValueType(parameters(parameterNumber)) match {
-      case t if t.isNullable => ParameterMetaData.parameterNullable
-      case _ => ParameterMetaData.parameterNoNulls
-    }
+    if (parameters.isNullable(parameterNumber)) ParameterMetaData.parameterNullable else ParameterMetaData.parameterNoNulls
   }
 
   override def isSigned(parameterNumber: Int): Boolean = determineValueType(parameters(parameterNumber)).isSigned

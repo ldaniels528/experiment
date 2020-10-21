@@ -56,12 +56,23 @@ class QweryDriverTest extends AnyFunSpec {
       }
     }
 
+    it("should execute a CREATE TYPE .. AS ENUM statement") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        val sql =
+          s"""|CREATE TYPE ExchangeEnum AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC')
+              |""".stripMargin
+        val isCreated = conn.createStatement().execute(sql)
+        logger.info(f"$sql => $isCreated")
+        assert(isCreated)
+      }
+    }
+
     it("should execute a CREATE TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val sql =
           s"""|CREATE TABLE $tableName (
               |  symbol STRING(8) comment 'the ticker symbol',
-              |  exchange STRING(8) comment 'the stock exchange',
+              |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)

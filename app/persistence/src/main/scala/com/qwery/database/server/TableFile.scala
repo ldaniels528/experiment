@@ -303,7 +303,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
  * Table File Companion
  */
 object TableFile {
-  private val rowIDColumn = Column(name = "rowID", comment = "unique row ID", ColumnMetadata(`type` = IntType))
+  private val rowIDColumn = Column(name = "rowID", comment = "unique row ID", enumValues = Nil, ColumnMetadata(`type` = IntType))
 
   /**
    * Retrieves a table by name

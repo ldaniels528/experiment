@@ -35,10 +35,6 @@ class ColumnTypesTest extends AnyFunSpec {
       check(value = ByteBuffer.allocate(4).putInt(0xDEADBEEF), expectedType = ColumnTypes.BinaryType)
     }
 
-    it("should detect BlobType column types") {
-      check(value = CustomBlob(message = "Hello"), expectedType = ColumnTypes.BlobType)
-    }
-
     it("should detect BooleanType column types") {
       check(value = true, expectedType = ColumnTypes.BooleanType)
     }
@@ -65,6 +61,10 @@ class ColumnTypesTest extends AnyFunSpec {
 
     it("should detect IntType column types") {
       check(value = 123, expectedType = ColumnTypes.IntType)
+    }
+
+    it("should detect JVMObjectType column types") {
+      check(value = CustomBlob(message = "Hello"), expectedType = ColumnTypes.JVMObjectType)
     }
 
     it("should detect LongType column types") {

@@ -1,6 +1,6 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypes
+import com.qwery.models.ColumnSpec
 import com.qwery.models.expressions.Case.When
 import com.qwery.models.expressions.{NativeFunctions => f, _}
 import org.scalatest.funspec.AnyFunSpec
@@ -96,7 +96,7 @@ class NativeFunctionTest extends AnyFunSpec {
     }
 
     it("should parse: cast(LastSale AS String)") {
-      verify("cast(LastSale AS String)", Cast('LastSale, ColumnTypes.STRING))
+      verify("cast(LastSale AS String)", Cast('LastSale, ColumnSpec("STRING")))
     }
 
     it("should parse: count(*)") {

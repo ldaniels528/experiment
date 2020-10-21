@@ -116,7 +116,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE TABLE w/COMMENT statements") {
+    it("should support CREATE TABLE w/COMMENT") {
       val results = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (
            |    customer_uid UUID COMMENT 'Unique Customer ID',
@@ -144,6 +144,25 @@ class SQLLanguageParserTest extends AnyFunSpec {
         inputFormat = StorageFormats.CSV,
         outputFormat = None,
         location = LocationRef("./dataSets/customers/csv/")
+      )))
+    }
+
+    it("should support CREATE TABLE w/ENUM") {
+      val results = SQLLanguageParser.parse(
+        s"""|CREATE TABLE Stocks (
+            |  symbol STRING,
+            |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC'),
+            |  lastSale DOUBLE,
+            |  lastTradeTime DATE
+            |)
+            |LOCATION './dataSets/stocks/json/'
+            |""".stripMargin
+      )
+      assert(results == Create(Table(name = "Stocks",
+        columns = List(
+          Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
+          Column("lastSale DOUBLE"), Column("lastTradeTime DATE")),
+        location = LocationRef("./dataSets/stocks/json/")
       )))
     }
 
@@ -224,6 +243,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
         `class` = "com.qwery.udf.MyFunc",
         jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
       )))
+    }
+
+    it("should support CREATE TYPE ... AS ENUM statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
+           |""".stripMargin
+      )
+      assert(results == Create(TypeAsEnum(name = "mood", values = Seq("sad", "ok", "happy"))))
     }
 
     it("should support CREATE VIEW statements") {

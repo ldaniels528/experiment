@@ -129,8 +129,7 @@ trait ExpressionTemplateProcessor {
     * @return the [[ExpressionTemplate]]
     */
   private def extractType(name: String, ts: TokenStream): ExpressionTemplate = {
-    val `type` = ColumnTypes.withName(ts.next().text.toUpperCase())
-    ExpressionTemplate(types = Map(name -> `type`))
+    ExpressionTemplate(types = Map(name -> ColumnSpec(typeName = ts.next().text.toUpperCase())))
   }
 
   /**

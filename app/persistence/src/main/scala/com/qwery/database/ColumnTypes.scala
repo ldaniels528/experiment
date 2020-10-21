@@ -15,35 +15,36 @@ object ColumnTypes extends Enumeration {
   private lazy val logger = LoggerFactory.getLogger(getClass)
   type ColumnType = Value
 
-  // fixed-length types
-  val BooleanType: ColumnType = Value(0x00) //... 0000
-  val ByteType: ColumnType = Value(0x01) // ..... 0001
-  val CharType: ColumnType = Value(0x02) // ..... 0010
-  val DateType: ColumnType = Value(0x03) // ..... 0011
-  val DoubleType: ColumnType = Value(0x04) // ... 0100
-  val FloatType: ColumnType = Value(0x05) // .... 0101
-  val IntType: ColumnType = Value(0x06) // ...... 0110
-  val LongType: ColumnType = Value(0x07) // ..... 0111
-  val ShortType: ColumnType = Value(0x08) // .... 1000
-  val UUIDType: ColumnType = Value(0x09) // ..... 1001
+  // numeric fixed-length types
+  val ByteType: ColumnType = Value(0x00) //........ 00000
+  val DoubleType: ColumnType = Value(0x01) //...... 00001
+  val FloatType: ColumnType = Value(0x02) //....... 00010
+  val IntType: ColumnType = Value(0x03) //......... 00011
+  val LongType: ColumnType = Value(0x04) //........ 00100
+  val ShortType: ColumnType = Value(0x05) //....... 00101
+
+  // non-numeric fixed-length types
+  val BooleanType: ColumnType = Value(0x08) //..... 01000
+  val CharType: ColumnType = Value(0x09) //........ 01001
+  val DateType: ColumnType = Value(0x0A) //........ 01010
+  val UUIDType: ColumnType = Value(0x0B) //........ 01011
 
   // variable-length types
-  val BigDecimalType: ColumnType = Value(0x0A) // 1010
-  val BigIntType: ColumnType = Value(0x0B) // ... 1011
-  val BinaryType: ColumnType = Value(0x0C) // ... 1100
-  val StringType: ColumnType = Value(0x0D) // ... 1101
+  val BigDecimalType: ColumnType = Value(0x10) //.. 10000
+  val BigIntType: ColumnType = Value(0x11) //...... 10001
+  val BinaryType: ColumnType = Value(0x16) //...... 10110
+  val StringType: ColumnType = Value(0x17) //...... 10111
 
   // externally-stored types
-  val ArrayType: ColumnType = Value(0x0E) // .... 1110 (Array[T] - where T is a non-external type)
-  val BlobType: ColumnType = Value(0x0F) // ..... 1111
+  val ArrayType: ColumnType = Value(0x18) //....... 11000 (Array[T] - where T is a non-external type)
+  val BlobType: ColumnType = Value(0x19) //........ 11001
+  val ClobType: ColumnType = Value(0x1E) //........ 11110
+  val JVMObjectType: ColumnType = Value(0x1F) //... 11111
 
   // potential future types
-  // TODO ClobType - separate BLOB and CLOB; CLOB can be seamlessly converted to String's
-  // TODO Enumerations
   // TODO JSONType - JSON could also be handled via StringType
   // TODO MD5Type (fixed-length) - alias for UUID
   // TODO TableType - could also be handled via ArrayType
-  // TODO combine BinaryType and BlobType?
 
   /**
    * Determines the equivalent column type to the given class
@@ -71,24 +72,6 @@ object ColumnTypes extends Enumeration {
     }
   }
 
-  def convertSqlToColumnType(sqlType: Int): ColumnType = {
-    import java.sql.Types._
-    sqlType match {
-      case BIGINT => LongType
-      case BINARY | VARBINARY  => BinaryType
-      case BOOLEAN => BooleanType
-      case BLOB | CLOB | NCLOB | SQLXML => BlobType
-      case DATE | TIME | TIMESTAMP | TIME_WITH_TIMEZONE => DateType
-      case JAVA_OBJECT | OTHER => BlobType
-      case INTEGER => IntType
-      case ROWID => IntType
-      case SMALLINT => ShortType
-      case TINYINT => ByteType
-      case LONGNVARCHAR | NVARCHAR | VARCHAR => StringType
-      case other => throw new RuntimeException(s"Unhandled SQL type ($other)")
-    }
-  }
-
   /**
    * Determines the equivalent column type to the given Scala Type
    * @return the [[ColumnType]]
@@ -108,8 +91,8 @@ object ColumnTypes extends Enumeration {
     case t if t =:= typeOf[Some[String]] => StringType
     case t if t =:= typeOf[Some[UUID]] => UUIDType
     case t =>
-      logger.info(s"Type '$t' is assumed to be a blob")
-      BlobType
+      logger.info(s"Type '$t' is assumed to be a $JVMObjectType")
+      JVMObjectType
   }
 
   /**
@@ -148,8 +131,8 @@ object ColumnTypes extends Enumeration {
       case _: String => StringType
       case _: UUID => UUIDType
       case x =>
-        logger.info(s"Class '${x.getClass}' is assumed to be a blob")
-        BlobType
+        logger.info(s"Class '${x.getClass.getName}' is assumed to be a $JVMObjectType")
+        JVMObjectType
     }
   }
 
@@ -161,11 +144,10 @@ object ColumnTypes extends Enumeration {
 
     @inline
     def getFixedLength: Option[Int] = `type` match {
-      case BigIntType => Some(LONG_BYTES)
       case BooleanType => Some(ONE_BYTE)
       case ByteType => Some(ONE_BYTE)
-      case DateType => Some(LONG_BYTES)
       case CharType => Some(SHORT_BYTES)
+      case DateType => Some(LONG_BYTES)
       case DoubleType => Some(LONG_BYTES)
       case FloatType => Some(INT_BYTES)
       case IntType => Some(INT_BYTES)
@@ -183,17 +165,16 @@ object ColumnTypes extends Enumeration {
 
     @inline
     def isExternal: Boolean = `type` match {
-      case ArrayType | BlobType => true
+      case ArrayType | BlobType | ClobType => true
       case _ => false
     }
 
     @inline
-    def isNullable: Boolean = {
-      getFixedLength.isEmpty || (`type` != ColumnTypes.DateType && `type` != ColumnTypes.UUIDType)
-    }
+    def isNullable: Boolean = getFixedLength.isEmpty || `type` == ColumnTypes.DateType || `type` == ColumnTypes.UUIDType
 
     @inline
     def isSigned: Boolean = `type` match {
+      case BigDecimalType => true
       case BigIntType => true
       case ByteType => true
       case DoubleType => true

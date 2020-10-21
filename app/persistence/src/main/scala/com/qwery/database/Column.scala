@@ -1,6 +1,6 @@
 package com.qwery.database
 
-import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, StringType}
+import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, ClobType, StringType}
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 /**
@@ -9,8 +9,18 @@ import com.qwery.util.OptionHelper.OptionEnrichment
  * @param comment     the column's optional comment/documentation
  * @param metadata    the [[ColumnMetadata column metadata]]
  * @param sizeInBytes the maximum size (in bytes) of the column
+ * @param enumValues  the enumeration values (if any)
  */
-case class Column(name: String, comment: String, metadata: ColumnMetadata, sizeInBytes: Int) {
+case class Column(name: String,
+                  comment: String,
+                  enumValues: Seq[String],
+                  metadata: ColumnMetadata,
+                  sizeInBytes: Int) {
+
+  /**
+   * @return true, if the column is an enumeration type
+   */
+  def isEnum: Boolean = enumValues.nonEmpty
 
   /**
    * @return true if the column is a non-persistent column
@@ -23,8 +33,9 @@ case class Column(name: String, comment: String, metadata: ColumnMetadata, sizeI
   val maxPhysicalSize: Int = {
     val size = metadata.`type` match {
       case ArrayType => sizeInBytes + SHORT_BYTES
-      case BlobType => sizeInBytes + INT_BYTES
+      case BlobType | ClobType => sizeInBytes + INT_BYTES
       case BigDecimalType => sizeInBytes + 2 * SHORT_BYTES
+      case StringType if isEnum => SHORT_BYTES
       case StringType => sizeInBytes + SHORT_BYTES
       case _ => sizeInBytes
     }
@@ -34,6 +45,8 @@ case class Column(name: String, comment: String, metadata: ColumnMetadata, sizeI
   override def toString: String =
     f"""|${getClass.getSimpleName}(
         |name=$name,
+        |comment=$comment,
+        |enumValues=${enumValues.map(s => s"'$s'").mkString(",")},
         |sizeInBytes=$sizeInBytes,
         |metadata=$metadata
         |)""".stripMargin.split("\n").mkString
@@ -53,8 +66,13 @@ object Column {
    * @param maxSize  the optional maximum length of the column
    * @return a new [[Column]]
    */
-  def apply(name: String, comment: String, metadata: ColumnMetadata, maxSize: Option[Int] = None): Column = {
-    new Column(name, comment, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? maxSize)
+  def apply(name: String,
+            comment: String,
+            enumValues: Seq[String] = Nil,
+            metadata: ColumnMetadata,
+            maxSize: Option[Int] = None): Column = {
+    val enumMaxLength = if (enumValues.nonEmpty) Some(enumValues.map(_.length).max) else None
+    new Column(name, comment, enumValues, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? enumMaxLength ?? maxSize)
       .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
   }
 

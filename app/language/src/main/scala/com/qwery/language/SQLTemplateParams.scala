@@ -1,6 +1,6 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypes.ColumnType
+import com.qwery.models.ColumnSpec
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
@@ -21,7 +21,7 @@ import com.qwery.util.StringHelper._
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
   * @param sources       the named collection of queries
-  * @param types         the named collection of [[ColumnType types]]
+  * @param types         the named collection of [[ColumnSpec types]]
   * @param variables     the named collection of [[VariableRef variables]]
   */
 case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
@@ -39,7 +39,7 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
                              properties: Map[String, Map[String, String]] = Map.empty,
                              repeatedSets: Map[String, List[SQLTemplateParams]] = Map.empty,
                              sources: Map[String, Invokable] = Map.empty,
-                             types: Map[String, (ColumnType, List[Int])] = Map.empty,
+                             types: Map[String, ColumnSpec] = Map.empty,
                              variables: Map[String, VariableRef] = Map.empty) {
 
   def +(that: SQLTemplateParams): SQLTemplateParams = {

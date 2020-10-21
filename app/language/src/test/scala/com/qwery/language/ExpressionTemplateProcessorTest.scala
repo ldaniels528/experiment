@@ -19,7 +19,7 @@ class ExpressionTemplateProcessorTest extends AnyFunSpec {
       val ts = TokenStream("CAST(1234 as String)")
       val results = processor.process("CAST ( %e:value AS %t:type )", ts)
       assert(results.expressions.get("value").contains(Literal(1234)))
-      assert(results.types.get("type").contains(ColumnTypes.STRING))
+      assert(results.types.get("type").contains(ColumnSpec("STRING")))
     }
 
     it("should process IF(LastSale < 1, 'Penny Stock', 'Stock')") {

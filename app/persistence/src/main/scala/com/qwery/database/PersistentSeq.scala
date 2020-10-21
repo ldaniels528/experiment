@@ -481,7 +481,7 @@ object PersistentSeq {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column(name = field.getName, comment = "", maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+      Column(name = field.getName, comment = "", enumValues = Nil, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
         `type` = `type`,
         isCompressed = ci.exists(_.isCompressed),
         isEncrypted = ci.exists(_.isEncrypted),

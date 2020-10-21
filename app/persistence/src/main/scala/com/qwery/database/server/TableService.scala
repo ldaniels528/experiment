@@ -3,7 +3,8 @@ package com.qwery.database.server
 import com.qwery.database.server.JSONSupport.JSONProductConversion
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, ROWID}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, ROWID, SHORT_BYTES}
+import com.qwery.models.TypeAsEnum
 
 /**
  * Table Service
@@ -51,6 +52,10 @@ trait TableService[R] {
  */
 object TableService {
 
+  case class DatabaseConfig(types: Seq[TypeAsEnum]) {
+    override def toString: String = this.toJSON
+  }
+
   case class DatabaseMetrics(databaseName: String,
                              tables: Seq[String],
                              responseTimeMillis: Double = 0) {
@@ -76,11 +81,18 @@ object TableService {
                          columnType: String,
                          sizeInBytes: Int,
                          comment: Option[String] = None,
+                         enumValues: Seq[String] = Nil,
                          isCompressed: Boolean = false,
                          isEncrypted: Boolean = false,
                          isNullable: Boolean = true,
                          isPrimary: Boolean = false,
                          isRowID: Boolean = false) {
+
+    /**
+     * @return true, if the column is an enumeration type
+     */
+    def isEnum: Boolean = enumValues.nonEmpty
+
     override def toString: String = this.toJSON
   }
 
@@ -92,7 +104,8 @@ object TableService {
         name = column.name,
         columnType = column.metadata.`type`.toString,
         comment = if (column.comment.nonEmpty) Some(column.comment) else None,
-        sizeInBytes = column.sizeInBytes,
+        enumValues = column.enumValues,
+        sizeInBytes = if (column.isEnum) SHORT_BYTES else column.sizeInBytes,
         isCompressed = column.metadata.isCompressed,
         isEncrypted = column.metadata.isEncrypted,
         isNullable = column.metadata.isNullable,
@@ -106,7 +119,8 @@ object TableService {
       def toColumn: Column = new Column(
         name = column.name,
         comment = column.comment.getOrElse(""),
-        sizeInBytes = column.sizeInBytes,
+        enumValues = column.enumValues,
+        sizeInBytes = if (column.isEnum) SHORT_BYTES else column.sizeInBytes,
         metadata = ColumnMetadata(
           `type` = ColumnTypes.withName(column.columnType),
           isCompressed = column.isCompressed,

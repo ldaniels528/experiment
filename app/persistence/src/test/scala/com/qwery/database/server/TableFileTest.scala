@@ -25,10 +25,10 @@ class TableFileTest extends AnyFunSpec {
       TableFile.dropTable(databaseName, tableName)
       TableFile.createTable(databaseName, tableName,
         columns = Seq(
-          Column(name = "symbol", comment = "the ticker symbol", ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column(name = "exchange", comment = "the stock exchange", ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column(name = "lastSale", comment = "the latest sale price", ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column(name = "lastTradeTime", comment = "the latest sale date/time", ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+          Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+          Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
+          Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         )) use { table =>
         service.executeQuery(databaseName, s"TRUNCATE $tableName")
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
@@ -114,10 +114,10 @@ class TableFileTest extends AnyFunSpec {
 
       // create the table
       TableFile.createTable(databaseName, tableName, columns = Seq(
-        Column(name = "symbol", comment = "the ticker symbol", ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-        Column(name = "exchange", comment = "the stock exchange", ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-        Column(name = "lastSale", comment = "the latest sale price", ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-        Column(name = "lastTradeTime", comment = "the latest sale date/time", ColumnMetadata(`type` = ColumnTypes.DateType))
+        Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+        Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+        Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
+        Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
       ))
 
       // populate the table

@@ -98,11 +98,11 @@ class JDBCConnection(val service: ClientSideTableService, val database: String, 
     new JDBCPreparedStatement(this, sql)
   }
 
-  override def createClob(): Clob = JDBCBlob.create()
+  override def createClob(): Clob = JDBCClob.create()
 
   override def createBlob(): Blob = JDBCBlob.create()
 
-  override def createNClob(): NClob = JDBCBlob.create()
+  override def createNClob(): NClob = JDBCClob.create()
 
   override def createSQLXML(): SQLXML = JDBCSQLXML.create()
 

@@ -7,6 +7,7 @@ import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.server.TableService._
 import com.qwery.database.{ColumnTypes, Field, FieldMetadata, Row, RowMetadata}
+import com.qwery.models.TypeAsEnum
 import spray.json._
 
 /**
@@ -56,6 +57,8 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
   //      Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
+  implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
+
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat3(DatabaseMetrics.apply)
 
   implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)
@@ -64,13 +67,15 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit val tableCreationJsonFormat: RootJsonFormat[TableCreation] = jsonFormat2(TableCreation.apply)
 
-  implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat9(TableColumn.apply)
+  implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
   implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat2(TableConfig.apply)
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat2(TableIndexRef.apply)
 
   implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat7(TableMetrics.apply)
+
+  implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Result Set Implicits

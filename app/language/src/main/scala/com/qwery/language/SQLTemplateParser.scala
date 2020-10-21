@@ -1,8 +1,6 @@
 package com.qwery.language
 
 import com.qwery.language.SQLTemplateParser._
-import com.qwery.language.SQLTypesHelper._
-import com.qwery.models.ColumnTypes.ColumnType
 import com.qwery.models.Insert.DataRow
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
@@ -432,14 +430,18 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "customerId String, customerName String")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractListOfParameters(name: String) = Try {
+  private def extractListOfParameters(name: String): Try[SQLTemplateParams] = Try {
     var columns: List[Column] = Nil
     do {
-      val params = SQLTemplateParams(stream, template = "%a:name %T:type ?COMMENT +?%z:comment")
+      val params = SQLTemplateParams(stream, template = "%a:name %T:type ?AS +?ENUM +?( +?%E:values +?) ?COMMENT +?%z:comment")
       val colName = params.atoms.getOrElse("name", stream.die("Column name not provided"))
       val comment = params.atoms.get("comment").flatMap(_.noneIfBlank)
-      val (_type, precision) = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
-      columns = Column(name = colName, `type` = _type, precision = precision, comment = comment) :: columns
+      val enumValues = params.expressions.getOrElse("values", Nil) map {
+        case Literal(value: String) => value
+        case other => throw new SyntaxException(s"String constant expected near '$other'")
+      }
+      val _type = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
+      columns = Column(name = colName, spec =_type, enumValues = enumValues, comment = comment) :: columns
     } while (stream nextIf ",")
 
     SQLTemplateParams(columns = Map(name -> columns.reverse))
@@ -742,11 +744,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       if (!ts.isNumeric) ts.die("Numeric value expected") else ts.next().text.toDouble.toInt
     }
 
-    // build the type definition
-    val typeDef = if (precision.isEmpty) typeName else s"$typeName(${precision.mkString(",")})"
-    val sqlType = determineType(typeName).getOrElse(stream.die(s"Invalid type reference '$typeDef'"))
-
-    SQLTemplateParams(types = Map(name -> (sqlType, precision)))
+    SQLTemplateParams(types = Map(name -> ColumnSpec(typeName.toUpperCase, precision)))
   }
 
   /**
@@ -786,10 +784,8 @@ object SQLTemplateParser {
 
     @inline def isQuery: Boolean = invokable.isInstanceOf[Queryable]
 
-    @inline def isVariable: Boolean = invokable match {
-      case _: VariableRef => true
-      case _ => false
-    }
+    @inline def isVariable: Boolean = invokable.isInstanceOf[VariableRef]
+
   }
 
   /**

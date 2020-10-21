@@ -4,7 +4,6 @@ import java.io.{File, InputStream}
 import java.net.URL
 
 import com.qwery.language.SQLTemplateParams.MappedParameters
-import com.qwery.language.SQLTypesHelper._
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
 import com.qwery.models.{StorageFormats, _}
@@ -137,6 +136,7 @@ trait SQLLanguageParser {
     "CREATE TEMPORARY FUNCTION" -> parseCreateFunction,
     "CREATE TEMPORARY PROCEDURE" -> parseCreateProcedure,
     "CREATE TEMPORARY VIEW" -> parseCreateView,
+    "CREATE TYPE" -> parseCreateTypeAsEnum,
     "CREATE VIEW" -> parseCreateView
   )
 
@@ -217,11 +217,11 @@ trait SQLLanguageParser {
 
   /**
    * Parses a CREATE INDEX statement
+   * @param ts the [[TokenStream token stream]]
+   * @return an [[Create executable]]
    * @example {{{
    * CREATE INDEX stocks_symbol ON stocks (name)
    * }}}
-   * @param ts the [[TokenStream token stream]]
-   * @return an [[Create executable]]
    */
   def parseCreateTableIndex(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INDEX %a:name ON %L:table ( %F:columns )")
@@ -229,16 +229,32 @@ trait SQLLanguageParser {
   }
 
   /**
+   * Parses a CREATE TYPE ... AS ENUM statement
+   * @param ts the [[TokenStream token stream]]
+   * @return an [[Create executable]]
+   * @example {{{
+   * CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
+   * }}}
+   */
+  def parseCreateTypeAsEnum(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE TYPE %t:name AS ENUM ( %E:values )")
+    Create(TypeAsEnum(name = params.atoms("name"), values = params.expressions("values") map {
+      case Literal(value: String) => value
+      case other => throw SyntaxException(s"String constant expected near '$other'", ts)
+    }))
+  }
+
+  /**
     * Parses a CREATE VIEW statement
-    * @example
-    * {{{
-    * CREATE VIEW OilAndGas AS
-    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-    * FROM Customers
-    * WHERE Industry = 'Oil/Gas Transmission'
-    * }}}
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable invokable]]
+   * @example
+   * {{{
+   * CREATE VIEW OilAndGas AS
+   * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+   * FROM Customers
+   * WHERE Industry = 'Oil/Gas Transmission'
+   * }}}
     */
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY VIEW %t:name ?AS %Q:query")
@@ -255,7 +271,6 @@ trait SQLLanguageParser {
     val params = SQLTemplateParams(ts, "DECLARE ?%C(mode|EXTERNAL) %v:variable %a:type")
     val `type` = params.atoms("type")
     val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
-    if (!isValidType(`type`)) ts.die(s"Invalid variable type '${`type`}'")
     Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
   }
 

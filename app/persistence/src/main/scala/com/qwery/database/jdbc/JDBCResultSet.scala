@@ -189,7 +189,7 @@ class JDBCResultSet(connection: JDBCConnection,
 
   override def updateBinaryStream(columnIndex: Int, x: InputStream, length: Int): Unit = rows.update(columnIndex, JDBCBlob.create(x, length))
 
-  override def updateCharacterStream(columnIndex: Int, x: Reader, length: Int): Unit = rows.update(columnIndex, JDBCBlob.create(x, length))
+  override def updateCharacterStream(columnIndex: Int, x: Reader, length: Int): Unit = rows.update(columnIndex, JDBCClob.create(x, length))
 
   override def updateObject(columnIndex: Int, x: Any, scaleOrLength: Int): Unit = rows.update(columnIndex, Option(x)) // TODO scaleOrLength
 
@@ -227,7 +227,7 @@ class JDBCResultSet(connection: JDBCConnection,
 
   override def updateBinaryStream(columnLabel: String, x: InputStream, length: Int): Unit = rows.update(columnLabel, JDBCBlob.create(x, length))
 
-  override def updateCharacterStream(columnLabel: String, reader: Reader, length: Int): Unit = rows.update(columnLabel, JDBCBlob.create(reader, length))
+  override def updateCharacterStream(columnLabel: String, reader: Reader, length: Int): Unit = rows.update(columnLabel, JDBCClob.create(reader, length))
 
   override def updateObject(columnLabel: String, x: Any, scaleOrLength: Int): Unit = rows.update(columnLabel, Option(x)) // TODO scaleOrLength
 
@@ -345,21 +345,21 @@ class JDBCResultSet(connection: JDBCConnection,
 
   override def updateBinaryStream(columnIndex: Int, x: InputStream, length: Long): Unit = rows.update(columnIndex, JDBCBlob.create(x, length))
 
-  override def updateCharacterStream(columnIndex: Int, x: Reader, length: Long): Unit = rows.update(columnIndex, JDBCBlob.create(x, length))
+  override def updateCharacterStream(columnIndex: Int, x: Reader, length: Long): Unit = rows.update(columnIndex, JDBCClob.create(x, length))
 
   override def updateAsciiStream(columnLabel: String, x: InputStream, length: Long): Unit = rows.update(columnLabel, JDBCBlob.create(x, length))
 
   override def updateBinaryStream(columnLabel: String, x: InputStream, length: Long): Unit = rows.update(columnLabel, JDBCBlob.create(x, length))
 
-  override def updateCharacterStream(columnLabel: String, reader: Reader, length: Long): Unit = rows.update(columnLabel, JDBCBlob.create(reader, length))
+  override def updateCharacterStream(columnLabel: String, reader: Reader, length: Long): Unit = rows.update(columnLabel, JDBCClob.create(reader, length))
 
   override def updateBlob(columnIndex: Int, inputStream: InputStream, length: Long): Unit = rows.update(columnIndex, JDBCBlob.create(inputStream, length))
 
   override def updateBlob(columnLabel: String, inputStream: InputStream, length: Long): Unit = rows.update(columnLabel, JDBCBlob.create(inputStream, length))
 
-  override def updateClob(columnIndex: Int, reader: Reader, length: Long): Unit = rows.update(columnIndex, JDBCBlob.create(reader, length))
+  override def updateClob(columnIndex: Int, reader: Reader, length: Long): Unit = rows.update(columnIndex, JDBCClob.create(reader, length))
 
-  override def updateClob(columnLabel: String, reader: Reader, length: Long): Unit = rows.update(columnLabel, JDBCBlob.create(reader, length))
+  override def updateClob(columnLabel: String, reader: Reader, length: Long): Unit = rows.update(columnLabel, JDBCClob.create(reader, length))
 
   override def updateNClob(columnIndex: Int, reader: Reader, length: Long): Unit = updateClob(columnIndex, reader, length)
 
@@ -373,21 +373,21 @@ class JDBCResultSet(connection: JDBCConnection,
 
   override def updateBinaryStream(columnIndex: Int, x: InputStream): Unit = rows.update(columnIndex, JDBCBlob.create(x))
 
-  override def updateCharacterStream(columnIndex: Int, x: Reader): Unit = rows.update(columnIndex, JDBCBlob.create(x))
+  override def updateCharacterStream(columnIndex: Int, x: Reader): Unit = rows.update(columnIndex, JDBCClob.create(x))
 
   override def updateAsciiStream(columnLabel: String, x: InputStream): Unit = rows.update(columnLabel, JDBCBlob.create(x))
 
   override def updateBinaryStream(columnLabel: String, x: InputStream): Unit = rows.update(columnLabel, JDBCBlob.create(x))
 
-  override def updateCharacterStream(columnLabel: String, reader: Reader): Unit = rows.update(columnLabel, JDBCBlob.create(reader))
+  override def updateCharacterStream(columnLabel: String, reader: Reader): Unit = rows.update(columnLabel, JDBCClob.create(reader))
 
   override def updateBlob(columnIndex: Int, inputStream: InputStream): Unit = rows.update(columnIndex, JDBCBlob.create(inputStream))
 
   override def updateBlob(columnLabel: String, inputStream: InputStream): Unit = rows.update(columnLabel, JDBCBlob.create(inputStream))
 
-  override def updateClob(columnIndex: Int, reader: Reader): Unit = rows.update(columnIndex, JDBCBlob.create(reader))
+  override def updateClob(columnIndex: Int, reader: Reader): Unit = rows.update(columnIndex, JDBCClob.create(reader))
 
-  override def updateClob(columnLabel: String, reader: Reader): Unit = rows.update(columnLabel, JDBCBlob.create(reader))
+  override def updateClob(columnLabel: String, reader: Reader): Unit = rows.update(columnLabel, JDBCClob.create(reader))
 
   override def updateNClob(columnIndex: Int, reader: Reader): Unit = updateClob(columnIndex, reader)
 

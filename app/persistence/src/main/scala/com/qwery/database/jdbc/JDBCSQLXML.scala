@@ -8,7 +8,8 @@ import com.qwery.database.PersistentSeq.newTempFile
 import javax.xml.transform.{Result, Source}
 
 /**
- * Qwery SQL XML
+ * SQL/XML Text
+ * @param raf the [[RandomAccessFile]]
  */
 class JDBCSQLXML(raf: RandomAccessFile) extends SQLXML {
   private var position: Long = 0L
@@ -77,7 +78,7 @@ class JDBCSQLXML(raf: RandomAccessFile) extends SQLXML {
 }
 
 /**
- * Qwery SQL XML Companion
+ * JDBC SQL/XML Companion
  */
 object JDBCSQLXML {
 
