@@ -10,7 +10,7 @@ import org.scalatest.funspec.AnyFunSpec
  * Big Table File Test Suite
  */
 class BigTableFileTest extends AnyFunSpec {
-  private implicit val tables: ServerSideTableService = new ServerSideTableService()
+  private implicit val tables: ServerSideTableService = ServerSideTableService()
   private val databaseName = DEFAULT_DATABASE
   private val tableName = "big_stocks"
 

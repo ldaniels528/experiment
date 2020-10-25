@@ -12,7 +12,6 @@ import com.qwery.database.server.JSONSupport._
 import com.qwery.database.server.QweryCustomJsonProtocol._
 import com.qwery.database.server.TableService._
 import com.qwery.database.{Codec, ColumnOutOfRangeException, QweryFiles, ROWID}
-import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -62,8 +61,8 @@ object DatabaseServer {
   def startServer(host: String = "0.0.0.0", port: Int)
                  (implicit ec: ExecutionContext, service: ServerSideTableService, system: ActorSystem): Unit = {
     // bind to the port
-    val bindingFuture = Http().bindAndHandle(route(), host, port)
-    bindingFuture.onComplete {
+    val bindingFuture = Http().newServerAt(host, port).bindFlow(route())
+    bindingFuture onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
       case Failure(e) =>

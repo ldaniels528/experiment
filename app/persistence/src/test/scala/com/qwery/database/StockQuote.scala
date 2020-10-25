@@ -1,7 +1,5 @@
 package com.qwery.database
 
-import java.text.SimpleDateFormat
-
 import scala.annotation.meta.field
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -15,7 +13,6 @@ case class StockQuote(@(ColumnInfo@field)(maxSize = 8) symbol: String,
 
 object StockQuote {
   private val random = new Random()
-  private val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   @tailrec
   def randomURID[A <: Product : ClassTag](coll: PersistentSeq[A]): ROWID = {
@@ -30,7 +27,7 @@ object StockQuote {
 
   def randomQuote: StockQuote = StockQuote(randomSymbol, randomExchange, randomPrice, randomDate)
 
-  def randomDate: Long = sdf.parse("2020-08-01 14:33:11").getTime + random.nextInt(20).days.toMillis
+  def randomDate: Long = 1603486147408L + random.nextInt(20).days.toMillis
 
   def randomPrice: Double = random.nextDouble() * random.nextInt(1000)
 
