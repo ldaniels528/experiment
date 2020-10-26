@@ -3,12 +3,12 @@ package com.qwery.database
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import java.util.{Date, UUID}
 
 import com.qwery.database.BlockDevice.RowStatistics
-import com.qwery.database.Codec._
+import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.PersistentSeq.newTempFile
+import com.qwery.database.types._
 import com.qwery.util.ResourceHelper._
 
 import scala.collection.mutable
@@ -36,7 +36,7 @@ trait BlockDevice {
    */
   val toRowIdField: ROWID => Option[Field] = {
     val rowIdColumn_? = columns.find(_.metadata.isRowID)
-    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), value = Some(rowID)))
+    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), typedValue = QxInt(Some(rowID))))
   }
 
   /**
@@ -77,11 +77,11 @@ trait BlockDevice {
       foreach { row =>
         // get the key-value pairs
         val mappings = Map(row.fields.map {
-          case Field(name, _, None) => name -> ""
-          case Field(name, _, Some(value: Date)) => name -> s""""${sdf.format(value)}""""
-          case Field(name, _, Some(value: String)) => name -> s""""$value""""
-          case Field(name, _, Some(value: UUID)) => name -> s""""$value""""
-          case Field(name, _, Some(value)) => name -> value.toString
+          case Field(name, _, QxAny(None)) => name -> ""
+          case Field(name, _, QxDate(Some(value))) => name -> s""""${sdf.format(value)}""""
+          case Field(name, _, QxString(Some(value))) => name -> s""""$value""""
+          case Field(name, _, QxUUID(Some(value))) => name -> s""""$value""""
+          case Field(name, _, QxAny(Some(value))) => name -> value.toString
         }: _*)
 
         // build the line and write it
@@ -103,10 +103,10 @@ trait BlockDevice {
       foreach { row =>
         // get the key-value pairs
         val mappings = Map(row.fields collect {
-          case Field(name, _, Some(value: Date)) => name -> value.getTime
-          case Field(name, _, Some(value: String)) => name -> s""""$value""""
-          case Field(name, _, Some(value: UUID)) => name -> s""""$value""""
-          case Field(name, _, Some(value)) => name -> value.toString
+          case Field(name, _, QxDate(Some(value))) => name -> value.getTime
+          case Field(name, _, QxString(Some(value))) => name -> s""""$value""""
+          case Field(name, _, QxUUID(Some(value))) => name -> s""""$value""""
+          case Field(name, _, QxAny(Some(value))) => name -> value.toString
         }: _*)
 
         // build the line and write it
@@ -162,16 +162,16 @@ trait BlockDevice {
     assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
-    val (fmd, value_?) = Codec.decode(column, buf)
-    Field(name = column.name, fmd, value = value_?)
+    val (fmd, value_?) = QxAny.decode(column, buf)
+    Field(name = column.name, fmd, typedValue = value_?)
   }
 
   def getFieldWithBinary(rowID: ROWID, columnIndex: Int): (Field, ByteBuffer) = {
     assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
     val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
     val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
-    val (fmd, value_?) = Codec.decode(column, buf)
-    Field(name = column.name, fmd, value = value_?) -> buf
+    val (fmd, value_?) = QxAny.decode(column, buf)
+    Field(name = column.name, fmd, typedValue = value_?) -> buf
   }
 
   def getPhysicalSize: Option[Long]
@@ -324,7 +324,7 @@ trait BlockDevice {
   def toFields(buf: ByteBuffer): Seq[Field] = {
     physicalColumns.zipWithIndex map { case (column, index) =>
       buf.position(columnOffsets(index))
-      column.name -> decode(column, buf)
+      column.name -> QxAny.decode(column, buf)
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
 

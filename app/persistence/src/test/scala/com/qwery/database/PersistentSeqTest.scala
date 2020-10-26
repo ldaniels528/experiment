@@ -56,11 +56,11 @@ class PersistentSeqTest extends AnyFunSpec {
       val ps = PersistentSeq[GenericData]()
       val fmd = FieldMetadata()
       val data = ps.createItem(Seq(
-        Field(name = "_id", fmd, value = Some(1087L)),
-        Field(name = "idValue", fmd, Some("Hello")),
-        Field(name = "idType", fmd, Some("World")),
-        Field(name = "responseTime", fmd, Some(307)),
-        Field(name = "reportDate", fmd, Some(java.sql.Date.valueOf("2020-06-15").getTime))
+        Field.create(name = "_id", fmd, value = 1087L),
+        Field.create(name = "idValue", fmd, value = "Hello"),
+        Field.create(name = "idType", fmd, value = "World"),
+        Field.create(name = "responseTime", fmd, value = 307),
+        Field.create(name = "reportDate", fmd, value = java.sql.Date.valueOf("2020-06-15").getTime)
       ))
       assert(data == GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
     }

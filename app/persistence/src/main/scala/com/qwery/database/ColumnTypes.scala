@@ -1,8 +1,11 @@
 package com.qwery.database
 
 import java.nio.ByteBuffer
+import java.sql.{Blob, Clob}
 import java.util.UUID
 
+import com.qwery.database.types.ArrayBlock
+import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
@@ -39,7 +42,7 @@ object ColumnTypes extends Enumeration {
   val ArrayType: ColumnType = Value(0x18) //....... 11000 (Array[T] - where T is a non-external type)
   val BlobType: ColumnType = Value(0x19) //........ 11001
   val ClobType: ColumnType = Value(0x1E) //........ 11110
-  val JVMObjectType: ColumnType = Value(0x1F) //... 11111
+  val SerializableType: ColumnType = Value(0x1F) // 11111
 
   // potential future types
   // TODO JSONType - JSON could also be handled via StringType
@@ -53,18 +56,21 @@ object ColumnTypes extends Enumeration {
    */
   def determineClassType[A](`class`: Class[A])(implicit tt: TypeTag[A]): ColumnType = {
     `class` match {
-      case c if c.isArray => ArrayType
+      case c if c == classOf[ArrayBlock] | c.isArray => ArrayType
       case c if c == classOf[BigDecimal] | c == classOf[java.math.BigDecimal] => BigDecimalType
       case c if c == classOf[BigInt] | c == classOf[java.math.BigInteger] => BigIntType
+      case c if c == classOf[SerialBlob] => BlobType
       case c if c == classOf[Boolean] | c == classOf[java.lang.Boolean] => BooleanType
-      case c if c.getName.startsWith("java.nio") & c.getName.contains("Buffer") => BinaryType
       case c if c == classOf[Byte] | c == classOf[java.lang.Byte] => ByteType
+      case c if c.getName.startsWith("java.nio") & c.getName.contains("Buffer") => BinaryType
       case c if c == classOf[Char] | c == classOf[java.lang.Character] => CharType
+      case c if c == classOf[SerialClob] => ClobType
       case c if c == classOf[java.util.Date] | c == classOf[java.sql.Date] | c == classOf[java.sql.Timestamp] => DateType
       case c if c == classOf[Double] | c == classOf[java.lang.Double] => DoubleType
       case c if c == classOf[Float] | c == classOf[java.lang.Float] => FloatType
       case c if c == classOf[Int] | c == classOf[java.lang.Integer] => IntType
       case c if c == classOf[Long] | c == classOf[java.lang.Long] => LongType
+      case c if c == classOf[Serializable] => SerializableType
       case c if c == classOf[Short] | c == classOf[java.lang.Short] => ShortType
       case c if c == classOf[String] => StringType
       case c if c == classOf[UUID] => UUIDType
@@ -77,22 +83,24 @@ object ColumnTypes extends Enumeration {
    * @return the [[ColumnType]]
    */
   def determineType[T: TypeTag]: ColumnType = typeOf[T] match {
+    case t if t =:= typeOf[Some[ArrayBlock]] => ArrayType
     case t if t =:= typeOf[Some[BigDecimal]] => BigDecimalType
     case t if t =:= typeOf[Some[BigInt]] => BigIntType
+    case t if t =:= typeOf[Some[SerialBlob]] => BlobType
     case t if t =:= typeOf[Some[Boolean]] => BooleanType
-    //case t if t =:= typeOf[Array[Byte]] => BinaryType
     case t if t =:= typeOf[Some[Byte]] => ByteType
+    case t if t =:= typeOf[Some[ByteBuffer]] => BinaryType
+    case t if t =:= typeOf[Some[SerialClob]] => ClobType
     case t if t =:= typeOf[Some[java.util.Date]] => DateType
-    case t if t =:= typeOf[Some[Double]] => DoubleType
-    case t if t =:= typeOf[Some[Float]] => FloatType
-    case t if t =:= typeOf[Some[Int]] => IntType
-    case t if t =:= typeOf[Some[Long]] => LongType
-    case t if t =:= typeOf[Some[Short]] => ShortType
+    case t if t =:= typeOf[Some[Double]] | t =:= typeOf[Some[java.lang.Double]] => DoubleType
+    case t if t =:= typeOf[Some[Float]] | t =:= typeOf[Some[java.lang.Float]] => FloatType
+    case t if t =:= typeOf[Some[Int]] | t =:= typeOf[Some[Integer]] => IntType
+    case t if t =:= typeOf[Some[Long]] | t =:= typeOf[Some[java.lang.Long]] => LongType
+    case t if t =:= typeOf[Some[Short]] | t =:= typeOf[Some[java.lang.Short]] => ShortType
     case t if t =:= typeOf[Some[String]] => StringType
     case t if t =:= typeOf[Some[UUID]] => UUIDType
-    case t =>
-      logger.info(s"Type '$t' is assumed to be a $JVMObjectType")
-      JVMObjectType
+    case t if t =:= typeOf[Some[Serializable]] => SerializableType
+    case t => SerializableType
   }
 
   /**
@@ -105,11 +113,12 @@ object ColumnTypes extends Enumeration {
     value match {
       case Some(value) => determineValueType(value)
       case None => BlobType
-      case _: Array[_] => ArrayType
+      case _: ArrayBlock => ArrayType
       case _: BigDecimal => BigDecimalType
       case _: java.math.BigDecimal => BigDecimalType
       case _: BigInt => BigIntType
       case _: java.math.BigInteger => BigIntType
+      case _: Blob => BlobType
       case _: Boolean => BooleanType
       case _: java.lang.Boolean => BooleanType
       case _: Byte => ByteType
@@ -117,6 +126,7 @@ object ColumnTypes extends Enumeration {
       case _: ByteBuffer => BinaryType
       case _: Char => CharType
       case _: Character => CharType
+      case _: Clob => ClobType
       case _: java.util.Date => DateType
       case _: Double => DoubleType
       case _: java.lang.Double => DoubleType
@@ -131,8 +141,8 @@ object ColumnTypes extends Enumeration {
       case _: String => StringType
       case _: UUID => UUIDType
       case x =>
-        logger.info(s"Class '${x.getClass.getName}' is assumed to be a $JVMObjectType")
-        JVMObjectType
+        logger.info(s"Class '${x.getClass.getName}' is assumed to be a $SerializableType")
+        SerializableType
     }
   }
 

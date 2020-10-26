@@ -7,6 +7,7 @@ import java.sql.{Array => SQLArray, _}
 import java.util.Calendar
 
 import com.qwery.database.jdbc.JDBCPreparedStatement._
+import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 
 import scala.beans.BeanProperty
 import scala.language.postfixOps
@@ -95,7 +96,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setObject(parameterIndex: Int, x: Any): Unit = parameterMetaData(parameterIndex) = x
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Int): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader, length)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Int): Unit = parameterMetaData(parameterIndex) = reader.toClob(length)
 
   override def setRef(parameterIndex: Int, x: Ref): Unit = parameterMetaData(parameterIndex) = x
 
@@ -125,9 +126,9 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setNClob(parameterIndex: Int, value: NClob): Unit = setClob(parameterIndex, value)
 
-  override def setClob(parameterIndex: Int, reader: Reader, length: Long): Unit = JDBCClob.create(reader, length)
+  override def setClob(parameterIndex: Int, reader: Reader, length: Long): Unit = reader.toClob(length)
 
-  override def setBlob(parameterIndex: Int, inputStream: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(inputStream, length)
+  override def setBlob(parameterIndex: Int, inputStream: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = inputStream.toBlob(length)
 
   override def setNClob(parameterIndex: Int, reader: Reader, length: Long): Unit = setClob(parameterIndex, reader, length)
 
@@ -135,23 +136,23 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setObject(parameterIndex: Int, x: Any, targetSqlType: Int, scaleOrLength: Int): Unit = parameterMetaData(parameterIndex) = _cast(x, targetSqlType, scaleOrLength)
 
-  override def setAsciiStream(parameterIndex: Int, x: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x, length)
+  override def setAsciiStream(parameterIndex: Int, x: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = x.toBlob(length)
 
-  override def setBinaryStream(parameterIndex: Int, x: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x, length)
+  override def setBinaryStream(parameterIndex: Int, x: InputStream, length: Long): Unit = parameterMetaData(parameterIndex) = x.toBlob(length)
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Long): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader, length)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader, length: Long): Unit = parameterMetaData(parameterIndex) = reader.toClob(length)
 
-  override def setAsciiStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x)
+  override def setAsciiStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = x.toBlob
 
-  override def setBinaryStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(x)
+  override def setBinaryStream(parameterIndex: Int, x: InputStream): Unit = parameterMetaData(parameterIndex) = x.toBlob
 
-  override def setCharacterStream(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader)
+  override def setCharacterStream(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = reader.toClob
 
   override def setNCharacterStream(parameterIndex: Int, value: Reader): Unit = setCharacterStream(parameterIndex, value)
 
-  override def setClob(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = JDBCClob.create(reader)
+  override def setClob(parameterIndex: Int, reader: Reader): Unit = parameterMetaData(parameterIndex) = reader.toClob
 
-  override def setBlob(parameterIndex: Int, inputStream: InputStream): Unit = parameterMetaData(parameterIndex) = JDBCBlob.create(inputStream)
+  override def setBlob(parameterIndex: Int, inputStream: InputStream): Unit = parameterMetaData(parameterIndex) = inputStream.toBlob
 
   override def setNClob(parameterIndex: Int, reader: Reader): Unit = setClob(parameterIndex, reader)
 

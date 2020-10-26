@@ -7,6 +7,7 @@ import java.util
 import java.util.Calendar
 
 import com.qwery.database.jdbc.JDBCPreparedStatement._
+import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 
 import scala.beans.BeanProperty
 import scala.collection.concurrent.TrieMap
@@ -114,9 +115,9 @@ class JDBCCallableStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def setTimestamp(parameterName: String, x: Timestamp): Unit = setParameter(parameterName, x)
 
-  override def setAsciiStream(parameterName: String, x: InputStream, length: Int): Unit = setParameter(parameterName, JDBCBlob.create(x, length))
+  override def setAsciiStream(parameterName: String, x: InputStream, length: Int): Unit = setParameter(parameterName, x.toBlob(length))
 
-  override def setBinaryStream(parameterName: String, x: InputStream, length: Int): Unit = setParameter(parameterName, JDBCBlob.create(x, length))
+  override def setBinaryStream(parameterName: String, x: InputStream, length: Int): Unit = setParameter(parameterName, x.toBlob(length))
 
   override def setObject(parameterName: String, x: Any, targetSqlType: Int, scale: Int): Unit = setParameter(parameterName, _cast(x, targetSqlType, scale))
 
@@ -124,7 +125,7 @@ class JDBCCallableStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def setObject(parameterName: String, x: Any): Unit = setParameter(parameterName, x)
 
-  override def setCharacterStream(parameterName: String, reader: Reader, length: Int): Unit = setParameter(parameterName, JDBCClob.create(reader, length))
+  override def setCharacterStream(parameterName: String, reader: Reader, length: Int): Unit = setParameter(parameterName, reader.toBlob(length))
 
   override def setDate(parameterName: String, x: Date, cal: Calendar): Unit = setParameter(parameterName, x)
 
@@ -192,9 +193,9 @@ class JDBCCallableStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def setNClob(parameterName: String, value: NClob): Unit = setClob(parameterName, value)
 
-  override def setClob(parameterName: String, reader: Reader, length: Long): Unit = setParameter(parameterName, JDBCClob.create(reader, length))
+  override def setClob(parameterName: String, reader: Reader, length: Long): Unit = setParameter(parameterName, reader.toBlob(length))
 
-  override def setBlob(parameterName: String, inputStream: InputStream, length: Long): Unit = setParameter(parameterName, JDBCBlob.create(inputStream, length))
+  override def setBlob(parameterName: String, inputStream: InputStream, length: Long): Unit = setParameter(parameterName, inputStream.toBlob(length))
 
   override def setNClob(parameterName: String, reader: Reader, length: Long): Unit = setClob(parameterName, reader, length)
 
@@ -224,23 +225,23 @@ class JDBCCallableStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def setClob(parameterName: String, x: Clob): Unit = setParameter(parameterName, x)
 
-  override def setAsciiStream(parameterName: String, x: InputStream, length: Long): Unit = setParameter(parameterName, JDBCBlob.create(x, length))
+  override def setAsciiStream(parameterName: String, x: InputStream, length: Long): Unit = setParameter(parameterName, x.toBlob(length))
 
-  override def setBinaryStream(parameterName: String, x: InputStream, length: Long): Unit = setParameter(parameterName, JDBCBlob.create(x, length))
+  override def setBinaryStream(parameterName: String, x: InputStream, length: Long): Unit = setParameter(parameterName, x.toBlob(length))
 
-  override def setCharacterStream(parameterName: String, reader: Reader, length: Long): Unit = setParameter(parameterName, JDBCClob.create(reader, length))
+  override def setCharacterStream(parameterName: String, reader: Reader, length: Long): Unit = setParameter(parameterName, reader.toClob(length))
 
-  override def setAsciiStream(parameterName: String, x: InputStream): Unit = setParameter(parameterName, JDBCBlob.create(x))
+  override def setAsciiStream(parameterName: String, x: InputStream): Unit = setParameter(parameterName, x.toBlob)
 
-  override def setBinaryStream(parameterName: String, x: InputStream): Unit = setParameter(parameterName, JDBCBlob.create(x))
+  override def setBinaryStream(parameterName: String, x: InputStream): Unit = setParameter(parameterName, x.toBlob)
 
-  override def setCharacterStream(parameterName: String, reader: Reader): Unit = setParameter(parameterName, JDBCClob.create(reader))
+  override def setCharacterStream(parameterName: String, reader: Reader): Unit = setParameter(parameterName, reader.toClob)
 
   override def setNCharacterStream(parameterName: String, value: Reader): Unit = setCharacterStream(parameterName, value)
 
-  override def setClob(parameterName: String, reader: Reader): Unit = setParameter(parameterName, JDBCClob.create(reader))
+  override def setClob(parameterName: String, reader: Reader): Unit = setParameter(parameterName, reader.toClob)
 
-  override def setBlob(parameterName: String, inputStream: InputStream): Unit = setParameter(parameterName, JDBCBlob.create(inputStream))
+  override def setBlob(parameterName: String, inputStream: InputStream): Unit = setParameter(parameterName, inputStream.toBlob)
 
   override def setNClob(parameterName: String, reader: Reader): Unit = setClob(parameterName, reader)
 

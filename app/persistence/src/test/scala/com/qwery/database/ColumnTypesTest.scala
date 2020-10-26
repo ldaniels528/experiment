@@ -1,10 +1,13 @@
 package com.qwery.database
 
+import java.io.{BufferedReader, File, FileReader}
 import java.nio.ByteBuffer
 import java.util.{Date, UUID}
 
-import com.qwery.database.ColumnTypes.ColumnType
-import com.qwery.database.ColumnTypesTest.CustomBlob
+import com.qwery.database.ColumnTypes.{ColumnType, IntType}
+import com.qwery.database.ColumnTypesTest.CustomThing
+import com.qwery.database.types.ArrayBlock
+import com.qwery.database.types.QxAny.RichReader
 import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -18,21 +21,29 @@ class ColumnTypesTest extends AnyFunSpec {
   describe(ColumnTypes.getClass.getSimpleName) {
 
     it("should detect ArrayType column types") {
-      check(value = Array(1, 2, 3), expectedType = ColumnTypes.ArrayType)
+      check(value = ArrayBlock(`type` = IntType, items = Seq(1, 2, 3)), expectedType = ColumnTypes.ArrayType)
     }
 
     it("should detect BigDecimalType column types") {
-      check(value = BigDecimal(123), expectedType = ColumnTypes.BigDecimalType)
-      check(value = new java.math.BigDecimal("123.0"), expectedType = ColumnTypes.BigDecimalType)
+      check(value = BigDecimal(123.456), expectedType = ColumnTypes.BigDecimalType)
+      check(value = new java.math.BigDecimal("123.456"), expectedType = ColumnTypes.BigDecimalType)
     }
 
     it("should detect BigIntType column types") {
-      check(value = BigInt(123), expectedType = ColumnTypes.BigIntType)
-      check(value = new java.math.BigInteger("123"), expectedType = ColumnTypes.BigIntType)
+      check(value = BigInt(123456), expectedType = ColumnTypes.BigIntType)
+      check(value = new java.math.BigInteger("123456"), expectedType = ColumnTypes.BigIntType)
     }
 
     it("should detect BinaryType column types") {
       check(value = ByteBuffer.allocate(4).putInt(0xDEADBEEF), expectedType = ColumnTypes.BinaryType)
+    }
+
+    it("should detect BlobType column types") {
+      val srcFile = new File("./stocks.csv")
+      val blob = new FileReader(srcFile).toBlob
+      assert(blob.length() == srcFile.length())
+      check(value = blob, expectedType = ColumnTypes.BlobType)
+      blob.free()
     }
 
     it("should detect BooleanType column types") {
@@ -40,11 +51,19 @@ class ColumnTypesTest extends AnyFunSpec {
     }
 
     it("should detect ByteType column types") {
-      check(value = 123.toByte, expectedType = ColumnTypes.ByteType)
+      check(value = Byte.MaxValue, expectedType = ColumnTypes.ByteType)
     }
 
     it("should detect CharType column types") {
       check(value = ' ', expectedType = ColumnTypes.CharType)
+    }
+
+    it("should detect ClobType column types") {
+      val srcFile = new File("./build.sbt")
+      val clob = new FileReader(srcFile).toClob
+      assert(clob.length() >= srcFile.length())
+      check(value = clob, expectedType = ColumnTypes.ClobType)
+      clob.free()
     }
 
     it("should detect DateType column types") {
@@ -52,32 +71,31 @@ class ColumnTypesTest extends AnyFunSpec {
     }
 
     it("should detect DoubleType column types") {
-      check(value = 123.0, expectedType = ColumnTypes.DoubleType)
+      check(value = Double.MaxValue, expectedType = ColumnTypes.DoubleType)
     }
 
     it("should detect FloatType column types") {
-      check(value = 123.0f, expectedType = ColumnTypes.FloatType)
+      check(value = Float.MaxValue, expectedType = ColumnTypes.FloatType)
     }
 
     it("should detect IntType column types") {
-      check(value = 123, expectedType = ColumnTypes.IntType)
-    }
-
-    it("should detect JVMObjectType column types") {
-      check(value = CustomBlob(message = "Hello"), expectedType = ColumnTypes.JVMObjectType)
+      check(value = Int.MaxValue, expectedType = ColumnTypes.IntType)
     }
 
     it("should detect LongType column types") {
-      check(value = 123L, expectedType = ColumnTypes.LongType)
+      check(value = Long.MaxValue, expectedType = ColumnTypes.LongType)
+    }
+
+    it("should detect SerializableType column types") {
+      check(value = CustomThing(message = "Hello World"), expectedType = ColumnTypes.SerializableType)
     }
 
     it("should detect ShortType column types") {
-      check(value = 123.toShort, expectedType = ColumnTypes.ShortType)
+      check(value = Short.MaxValue, expectedType = ColumnTypes.ShortType)
     }
 
     it("should detect StringType column types") {
-      check(value = "123", expectedType = ColumnTypes.StringType)
-      //check(value = Option("123"), expectedType = ColumnTypes.StringType)
+      check(value = "Hello World", expectedType = ColumnTypes.StringType)
     }
 
     it("should detect UUIDType column types") {
@@ -101,6 +119,6 @@ class ColumnTypesTest extends AnyFunSpec {
  */
 object ColumnTypesTest {
 
-  case class CustomBlob(message: String)
+  case class CustomThing(message: String)
 
 }

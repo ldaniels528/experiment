@@ -46,7 +46,7 @@ package object jdbc {
         ColumnTypes.DoubleType -> Types.DOUBLE,
         ColumnTypes.FloatType -> Types.FLOAT,
         ColumnTypes.IntType -> Types.INTEGER,
-        ColumnTypes.JVMObjectType -> Types.BLOB,
+        ColumnTypes.SerializableType -> Types.BLOB,
         ColumnTypes.LongType -> Types.BIGINT,
         ColumnTypes.ShortType -> Types.SMALLINT,
         ColumnTypes.StringType -> Types.VARCHAR,

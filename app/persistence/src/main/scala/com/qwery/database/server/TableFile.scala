@@ -11,6 +11,7 @@ import com.qwery.database.QweryFiles._
 import com.qwery.database.server.TableFile._
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
+import com.qwery.database.types.QxInt
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -98,7 +99,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     while (rowID < eof) {
       // build the data payload
       val indexField = device.getField(rowID, sourceIndex)
-      val payloads = Seq(rowIDColumn -> Some(rowID), indexColumn -> indexField.value) map(t => Codec.encode(t._1, t._2))
+      val payloads = Seq(rowIDColumn -> QxInt(Some(rowID)), indexColumn -> indexField.typedValue) map { case (col, value) => value.encode(col) }
 
       // convert the payloads to binary
       val buf = allocate(out.recordSize).putRowMetadata(RowMetadata())
@@ -161,7 +162,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
         logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
         for {
           indexedRow <- binarySearch(tableIndex, Option(searchValue)).toList
-          rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, Some(rowID: ROWID)) => rowID }
+          rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, QxInt(Some(rowID))) => rowID: ROWID }
           row <- get(rowID)
         } yield row
       // otherwise perform a table scan

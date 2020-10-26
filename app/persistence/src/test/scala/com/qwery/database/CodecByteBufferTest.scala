@@ -82,11 +82,11 @@ class CodecByteBufferTest extends AnyFunSpec {
       implicit val fmd: FieldMetadata = FieldMetadata(isCompressed = true)
       val expected = FakeNews(message = "Yes, they did it!!!")
       val buf = ByteBuffer.allocate(1024)
-      buf.putObject(expected)
+      buf.putSerializable(expected)
       info(s"object size in bytes is ${buf.remaining()}")
       buf.flip()
 
-      val actual = buf.getObjectAs[FakeNews]
+      val actual = buf.getSerializableAs[FakeNews]
       verify(actual, expected)
     }
 

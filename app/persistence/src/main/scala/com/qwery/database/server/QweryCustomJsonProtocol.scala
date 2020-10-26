@@ -6,6 +6,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.server.TableService._
+import com.qwery.database.types.QxAny
 import com.qwery.database.{ColumnTypes, Field, FieldMetadata, Row, RowMetadata}
 import com.qwery.models.TypeAsEnum
 import spray.json._
@@ -94,6 +95,12 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
   }
 
   implicit val fieldMetadataJsonFormat: RootJsonFormat[FieldMetadata] = jsonFormat4(FieldMetadata.apply)
+
+  implicit object QxAnyJsonFormat extends JsonFormat[QxAny] {
+    override def read(value: JsValue): QxAny = QxAny(unwrap(value))
+
+    override def write(value: QxAny): JsValue = value.value.toJson
+  }
 
   implicit val fieldJsonFormat: RootJsonFormat[Field] = jsonFormat3(Field.apply)
 

@@ -90,7 +90,7 @@ case class ServerSideTableService() extends TableService[Row] {
     val (field, responseTime) = time(tableFile.getField(rowID, columnID))
     logger.info(f"$tableName($rowID, $columnID) ~> '${field.value}' [in $responseTime%.1f msec]")
     val column = tableFile.device.columns(columnID)
-    Codec.encodeValue(column, field.value)(field.metadata).map(_.array()).getOrElse(new Array[Byte](0))
+    field.typedValue.encode(column)
   }
 
   override def getLength(databaseName: String, tableName: String): QueryResult = {

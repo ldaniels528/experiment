@@ -1,11 +1,13 @@
 package com.qwery.database
 package jdbc
 
-import java.util.{Properties, UUID}
 import java.sql.{SQLWarning, Array => SQLArray, _}
 import java.util.concurrent.Executor
+import java.util.{Properties, UUID}
 
 import com.qwery.database.server.ClientSideTableService
+import com.qwery.database.types.SerialNClob
+import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 
 import scala.beans.{BeanProperty, BooleanBeanProperty}
 import scala.collection.concurrent.TrieMap
@@ -98,11 +100,11 @@ class JDBCConnection(val service: ClientSideTableService, val database: String, 
     new JDBCPreparedStatement(this, sql)
   }
 
-  override def createClob(): Clob = JDBCClob.create()
+  override def createClob(): Clob = new SerialClob(new Array[Char](0))
 
-  override def createBlob(): Blob = JDBCBlob.create()
+  override def createBlob(): Blob = new SerialBlob(new Array[Byte](0))
 
-  override def createNClob(): NClob = JDBCClob.create()
+  override def createNClob(): NClob = new SerialNClob(new Array[Char](0))
 
   override def createSQLXML(): SQLXML = JDBCSQLXML.create()
 

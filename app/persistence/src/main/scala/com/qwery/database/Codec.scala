@@ -9,6 +9,7 @@ import java.util.UUID
 
 import com.qwery.database.ColumnTypes._
 import com.qwery.database.Compression.CompressionByteArrayExtensions
+import com.qwery.database.types.{ArrayBlock, QxAny}
 
 import scala.util.Try
 
@@ -95,7 +96,7 @@ object Codec extends Compression {
     baos.toByteArray
   }
 
-  def decodeSeq(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): Seq[Option[Any]] = {
+  def decodeArray(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): ArrayBlock = {
     // read the collection as a block
     val blockSize = buf.getInt
     val count = buf.getInt
@@ -104,27 +105,24 @@ object Codec extends Compression {
 
     // decode the items
     val block = wrap(bytes.decompressOrNah)
-    for {
+    ArrayBlock(`type` = block.getColumnMetadata.`type`, for {
       _ <- 0 until count
-      (_, value) = decode(column, block)
-    } yield value
+      (fmd, rawValue) = decode(column, block)
+      value = if (fmd.isActive) QxAny(rawValue) else null
+    } yield value)
   }
 
-  def encodeSeq(column: Column, items: Seq[Any])(implicit fmd: FieldMetadata): ByteBuffer = {
+  def encodeArray(column: Column, array: ArrayBlock)(implicit fmd: FieldMetadata): ByteBuffer = {
     // create the data block
     val compressedBytes = (for {
-      value_? <- items.toArray map {
-        case o: Option[_] => o
-        case v => Option(v)
-      }
-      buf <- encodeValue(column, value_?).toArray
-      bytes <- buf.array()
+      value_? <- array.items.toArray
+      bytes <- value_?.encode(column)
     } yield bytes).compressOrNah
 
     // encode the items as a block
     val block = allocate(2 * INT_BYTES + compressedBytes.length)
     block.putInt(compressedBytes.length)
-    block.putInt(items.length)
+    block.putInt(array.length)
     block.put(compressedBytes)
     block
   }
@@ -132,7 +130,7 @@ object Codec extends Compression {
   def decodeValue(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): Option[Any] = {
     if (fmd.isNull) None else {
       column.metadata.`type` match {
-        case ArrayType => Some(decodeSeq(column, buf))
+        case ArrayType => Some(decodeArray(column, buf))
         case BigDecimalType => Some(buf.getBigDecimal)
         case BigIntType => Some(buf.getBigInteger)
         case BinaryType => Some(buf.getBinary)
@@ -158,7 +156,7 @@ object Codec extends Compression {
   def encodeValue(column: Column, value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
     value_?.map(convertTo(_, column.metadata.`type`)) map {
       case a: Array[_] if column.metadata.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
-      case a: Array[_] => encodeSeq(column, a)
+      case a: ArrayBlock => encodeArray(column, a)
       case b: BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigInteger => allocate(sizeOf(b)).putBigInteger(b)
@@ -288,26 +286,6 @@ object Codec extends Compression {
 
     @inline def putFieldMetadata(fmd: FieldMetadata): ByteBuffer = buf.put(fmd.encode)
 
-    @inline
-    def getObjectAs[T](implicit fmd: FieldMetadata): T = getObject.asInstanceOf[T]
-
-    @inline
-    def getObject(implicit fmd: FieldMetadata): AnyRef = {
-      val length = buf.getInt
-      val bytes = new Array[Byte](length)
-      buf.get(bytes)
-      new ObjectInputStream(new ByteArrayInputStream(bytes.decompressOrNah)).readObject()
-    }
-
-    @inline
-    def putObject(blob: AnyRef)(implicit fmd: FieldMetadata): ByteBuffer = {
-      val baos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(baos)
-      oos.writeObject(blob)
-      val bytes = baos.toByteArray.compressOrNah
-      buf.putInt(bytes.length).put(bytes)
-    }
-
     @inline def getRowID: ROWID = buf.getInt
 
     @inline def putRowID(rowID: ROWID): ByteBuffer = buf.putInt(rowID)
@@ -315,6 +293,26 @@ object Codec extends Compression {
     @inline def getRowMetadata: RowMetadata = RowMetadata.decode(buf.get)
 
     @inline def putRowMetadata(rmd: RowMetadata): ByteBuffer = buf.put(rmd.encode)
+
+    @inline
+    def getSerializableAs[T <: Serializable](implicit fmd: FieldMetadata): T = getSerializable.asInstanceOf[T]
+
+    @inline
+    def getSerializable(implicit fmd: FieldMetadata): Serializable = {
+      val length = buf.getInt
+      val bytes = new Array[Byte](length)
+      buf.get(bytes)
+      new ObjectInputStream(new ByteArrayInputStream(bytes.decompressOrNah)).readObject().asInstanceOf[Serializable]
+    }
+
+    @inline
+    def putSerializable(value: Serializable)(implicit fmd: FieldMetadata): ByteBuffer = {
+      val baos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(baos)
+      oos.writeObject(value)
+      val bytes = baos.toByteArray.compressOrNah
+      buf.putInt(bytes.length).put(bytes)
+    }
 
     @inline
     def getString: String = {
