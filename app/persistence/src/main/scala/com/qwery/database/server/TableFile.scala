@@ -8,6 +8,7 @@ import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.QweryFiles._
+import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.server.TableFile._
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
@@ -42,7 +43,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    */
   def binarySearch(tableIndex: TableIndexRef, searchValue: Option[Any]): Option[Row] = {
     val indexColumns = List(rowIDColumn, device.columns(device.columns.indexWhere(_.name == tableIndex.indexColumn)))
-    new FileBlockDevice(indexColumns, getTableIndexFile(databaseName, tableName, tableIndex.indexName)) use { indexDevice =>
+    new RowOrientedFileBlockDevice(indexColumns, getTableIndexFile(databaseName, tableName, tableIndex.indexName)) use { indexDevice =>
       // create a closure to lookup a field value by row ID
       val valueAt: ROWID => Option[Any] = {
         val columnIndex = indexDevice.columns.indexWhere(_.name == tableIndex.indexColumn)
@@ -74,7 +75,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def count(): ROWID = device.countRows(_.isActive)
 
-  def count(condition: TupleSet, limit: Option[Int] = None): Int = {
+  def countRows(condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (_, _) => }
   }
 
@@ -90,7 +91,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     val sourceIndex = device.columns.indexOf(indexColumn)
 
     // create the index device
-    val out = new FileBlockDevice(indexAllColumns, getTableIndexFile(databaseName, tableName, indexName))
+    val out = new RowOrientedFileBlockDevice(indexAllColumns, getTableIndexFile(databaseName, tableName, indexName))
     out.shrinkTo(0)
 
     // iterate the source file/table
@@ -109,7 +110,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       }
 
       // write the index data to disk
-      out.writeBlock(rowID, buf)
+      out.writeRow(rowID, buf)
       rowID += 1
     }
 
@@ -124,7 +125,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     out
   }
 
-  def delete(rowID: ROWID): Int = {
+  def deleteRow(rowID: ROWID): Int = {
     device.updateRowMetaData(rowID)(_.copy(isActive = false))
     1
   }
@@ -139,14 +140,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     val limit: ROWID = Math.min(device.length, start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
-      total += delete(rowID)
+      total += deleteRow(rowID)
       rowID += 1
     }
     total
   }
 
-  def delete(condition: TupleSet, limit: Option[Int] = None): Int = {
-    _iterate(condition, limit) { (rowID, _) => delete(rowID) }
+  def deleteRows(condition: TupleSet, limit: Option[Int] = None): Int = {
+    _iterate(condition, limit) { (rowID, _) => deleteRow(rowID) }
   }
 
   def executeQuery(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
@@ -203,15 +204,15 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     rows
   }
 
-  def insert(row: Row): ROWID = {
+  def insertRow(row: Row): ROWID = {
     val rowID = device.length
-    replace(rowID, row.toMap)
+    replaceRow(rowID, row.toMap)
     rowID
   }
 
-  def insert(values: TupleSet): ROWID = {
+  def insertRow(values: TupleSet): ROWID = {
     val rowID = device.length
-    replace(rowID, values)
+    replaceRow(rowID, values)
     rowID
   }
 
@@ -221,7 +222,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     Source.fromFile(file).use(_.getLines() foreach { line =>
       val values = transform(line)
       if (values.nonEmpty) {
-        insert(values)
+        insertRow(values)
         records += 1
       }
     })
@@ -230,7 +231,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     LoadMetrics(records, ingestTime, recordsPerSec)
   }
 
-  def replace(rowID: ROWID, values: TupleSet): Unit = {
+  def replaceRow(rowID: ROWID, values: TupleSet): Unit = {
     val buf = allocate(device.recordSize)
     buf.putRowMetadata(RowMetadata())
     device.columns zip device.columnOffsets foreach { case (col, offset) =>
@@ -238,7 +239,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       val value_? = values.get(col.name)
       buf.put(Codec.encode(col, value_?))
     }
-    device.writeBlock(rowID, buf)
+    device.writeRow(rowID, buf)
   }
 
   def scanRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
@@ -247,10 +248,10 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     rows
   }
 
-  def update(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
+  def updateRows(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, row) =>
       val updatedValues = row.toMap ++ values
-      replace(rowID, updatedValues)
+      replaceRow(rowID, updatedValues)
     }
   }
 
@@ -317,7 +318,7 @@ object TableFile {
     assert(configFile.exists() && dataFile.exists(), s"Table '$tableName' does not exist")
 
     val config = readTableConfig(databaseName, tableName)
-    val device = new FileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+    val device = new RowOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
     new TableFile(databaseName, tableName, config, device)
   }
 
@@ -340,7 +341,7 @@ object TableFile {
     writeTableConfig(databaseName, tableName, config)
 
     // return the table
-    new TableFile(databaseName, tableName, config, new FileBlockDevice(columns, dataFile))
+    new TableFile(databaseName, tableName, config, new RowOrientedFileBlockDevice(columns, dataFile))
   }
 
   /**

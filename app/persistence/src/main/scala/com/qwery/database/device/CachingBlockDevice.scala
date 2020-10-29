@@ -1,7 +1,9 @@
-package com.qwery.database
+package com.qwery.database.device
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
+
+import com.qwery.database.{Column, FieldMetadata, RECORD_ID, ROWID, RowMetadata}
 
 import scala.collection.mutable
 
@@ -23,15 +25,15 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
 
   override def length: ROWID = host.length
 
-  override def readBlock(rowID: ROWID): ByteBuffer = wrap(cache.getOrElseUpdate(rowID, host.readBlock(rowID).array()))
+  override def readRow(rowID: ROWID): ByteBuffer = wrap(cache.getOrElseUpdate(rowID, host.readRow(rowID).array()))
 
   override def readFieldMetaData(rowID: ROWID, columnID: RECORD_ID): FieldMetadata = host.readFieldMetaData(rowID, columnID)
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = host.readRowMetaData(rowID)
 
-  override def readBytes(rowID: ROWID, numberOfBytes: ROWID, offset: ROWID): ByteBuffer = {
+  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     //cache.remove(rowID)
-    host.readBytes(rowID, numberOfBytes, offset)
+    host.readField(rowID, columnID)
   }
 
   override def shrinkTo(newSize: ROWID): Unit = {
@@ -39,14 +41,14 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
     host.shrinkTo(newSize)
   }
 
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
     cache(rowID) = buf.array()
-    host.writeBlock(rowID, buf)
+    host.writeRow(rowID, buf)
   }
 
-  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+  override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
     cache.remove(rowID)
-    host.writeBytes(rowID, columnID, buf)
+    host.writeField(rowID, columnID, buf)
   }
 
   override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {

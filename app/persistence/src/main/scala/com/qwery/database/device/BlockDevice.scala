@@ -1,13 +1,15 @@
 package com.qwery.database
+package device
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
+import java.nio.ByteBuffer.allocate
 import java.text.SimpleDateFormat
 
-import com.qwery.database.BlockDevice.RowStatistics
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.PersistentSeq.newTempFile
+import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.types._
 import com.qwery.util.ResourceHelper._
 
@@ -18,7 +20,7 @@ import scala.collection.mutable
  */
 trait BlockDevice {
   val columnOffsets: List[ROWID] = {
-    case class Accumulator(agg: Int = 0, var last: Int = STATUS_BYTE, var list: List[Int] = Nil)
+    case class Accumulator(agg: Int = 0, var last: Int = FieldMetadata.BYTES_LENGTH, var list: List[Int] = Nil)
     columns.filterNot(_.isLogical).map(_.maxPhysicalSize).foldLeft(Accumulator()) { (acc, maxLength) =>
       val index = acc.agg + acc.last
       acc.last = maxLength + index
@@ -145,7 +147,7 @@ trait BlockDevice {
     var rowID: ROWID = 0
     val eof: ROWID = length
     while (rowID < eof) {
-      val buf = readBlock(rowID)
+      val buf = readRow(rowID)
       if (buf.getRowMetadata.isActive) {
         buf.position(0)
         callback(rowID, buf)
@@ -160,16 +162,16 @@ trait BlockDevice {
 
   def getField(rowID: ROWID, columnIndex: Int): Field = {
     assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
-    val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
+    val column = columns(columnIndex)
+    val buf = readField(rowID, columnIndex)
     val (fmd, value_?) = QxAny.decode(column, buf)
     Field(name = column.name, fmd, typedValue = value_?)
   }
 
   def getFieldWithBinary(rowID: ROWID, columnIndex: Int): (Field, ByteBuffer) = {
     assert(columns.indices isDefinedAt columnIndex, throw ColumnOutOfRangeException(columnIndex))
-    val (column, columnOffset) = (columns(columnIndex), columnOffsets(columnIndex))
-    val buf = readBytes(rowID, numberOfBytes = column.maxPhysicalSize, offset = columnOffset)
+    val column = columns(columnIndex)
+    val buf = readField(rowID, columnIndex)
     val (fmd, value_?) = QxAny.decode(column, buf)
     Field(name = column.name, fmd, typedValue = value_?) -> buf
   }
@@ -177,12 +179,12 @@ trait BlockDevice {
   def getPhysicalSize: Option[Long]
 
   def getRow(rowID: ROWID): Row = {
-    val buf = readBlock(rowID)
+    val buf = readRow(rowID)
     Row(rowID, metadata = buf.getRowMetadata, fields = toFields(buf))
   }
 
   def getRows(start: ROWID, numberOfRows: Int): Seq[Row] = {
-    readBlocks(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
+    readRows(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
   }
 
   def getRowStatistics: RowStatistics = {
@@ -202,11 +204,6 @@ trait BlockDevice {
   }
 
   /**
-   * @return the length of the header
-   */
-  lazy val headerSize: Int = 0
-
-  /**
    * @return the last active row ID or <tt>None</tt>
    */
   def lastIndexOption: Option[ROWID] = {
@@ -222,27 +219,27 @@ trait BlockDevice {
    */
   def length: ROWID
 
-  def readBlock(rowID: ROWID): ByteBuffer
-
-  def readBlocks(rowID: ROWID, numberOfBlocks: Int = 1): Seq[(ROWID, ByteBuffer)] = {
-    for {rowID <- rowID until rowID + numberOfBlocks} yield rowID -> readBlock(rowID)
-  }
-
-  def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer
-
   def readColumnMetaData(columnID: Int): ColumnMetadata = {
     assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
     columns(columnID).metadata
   }
 
+  def readField(rowID: ROWID, columnID: Int): ByteBuffer
+
   def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata
 
+  def readRow(rowID: ROWID): ByteBuffer
+
   def readRowMetaData(rowID: ROWID): RowMetadata
+
+  def readRows(rowID: ROWID, numberOfRows: Int = 1): Seq[(ROWID, ByteBuffer)] = {
+    for {rowID <- rowID until rowID + numberOfRows} yield rowID -> readRow(rowID)
+  }
 
   /**
    * @return the record length in bytes
    */
-  val recordSize: Int = STATUS_BYTE + physicalColumns.map(_.maxPhysicalSize).sum
+  val recordSize: Int = FieldMetadata.BYTES_LENGTH + physicalColumns.map(_.maxPhysicalSize).sum
 
   /**
    * Remove an item from the collection via its record offset
@@ -265,7 +262,7 @@ trait BlockDevice {
 
     override def hasNext: Boolean = {
       rowID = findRow(fromPos = rowID, forward = false)(_.isActive).getOrElse(-1)
-      item_? = if (rowID >= 0) Some(rowID -> readBlock(rowID)) else None
+      item_? = if (rowID >= 0) Some(rowID -> readRow(rowID)) else None
       rowID -= 1
       item_?.nonEmpty
     }
@@ -316,9 +313,13 @@ trait BlockDevice {
   }
 
   def swap(offset0: ROWID, offset1: ROWID): Unit = {
-    val (block0, block1) = (readBlock(offset0), readBlock(offset1))
-    writeBlock(offset0, block1)
-    writeBlock(offset1, block0)
+    val (block0, block1) = (readRow(offset0), readRow(offset1))
+    writeRow(offset0, block1)
+    writeRow(offset1, block0)
+  }
+
+  def fromOffset(offset: RECORD_ID): ROWID = {
+    ((offset / recordSize) + Math.min(1, offset % recordSize)).toRowID
   }
 
   def toFields(buf: ByteBuffer): Seq[Field] = {
@@ -328,14 +329,20 @@ trait BlockDevice {
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
 
-  def fromOffset(offset: RECORD_ID): ROWID = {
-    val _offset = Math.max(0, offset - headerSize)
-    ((_offset / recordSize) + Math.min(1, _offset % recordSize)).toRowID
-  }
-
-  def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize + headerSize
+  def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize
 
   def toOffset(rowID: ROWID, columnID: Int): RECORD_ID = toOffset(rowID) + columnOffsets(columnID)
+
+  def toRowBuffer(values: Map[String, Any]): ByteBuffer = {
+    val buf = allocate(recordSize)
+    buf.putRowMetadata(RowMetadata())
+    columns zip columnOffsets foreach { case (col, offset) =>
+      buf.position(offset)
+      val value_? = values.get(col.name)
+      buf.put(Codec.encode(col, value_?))
+    }
+    buf
+  }
 
   /**
    * Trims dead entries from of the collection
@@ -354,7 +361,7 @@ trait BlockDevice {
     val column = columns(columnID)
     val fmd = FieldMetadata(column.metadata)
     Codec.encodeValue(column, value)(fmd) exists { buf =>
-      writeBytes(rowID, columnID, buf)
+      writeField(rowID, columnID, buf)
       true
     }
   }
@@ -367,15 +374,15 @@ trait BlockDevice {
     writeRowMetaData(rowID, update(readRowMetaData(rowID)))
   }
 
-  def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit
-
-  def writeBlocks(blocks: Seq[(ROWID, ByteBuffer)]): Unit = blocks foreach { case (offset, buf) => writeBlock(offset, buf) }
-
-  def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit
+  def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit
 
   def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit
 
+  def writeRow(rowID: ROWID, buf: ByteBuffer): Unit
+
   def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit
+
+  def writeRows(blocks: Seq[(ROWID, ByteBuffer)]): Unit = blocks foreach { case (offset, buf) => writeRow(offset, buf) }
 
 }
 

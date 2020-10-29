@@ -1,7 +1,9 @@
-package com.qwery.database
+package com.qwery.database.device
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
+
+import com.qwery.database.{Column, FieldMetadata, OffsetOutOfRangeException, ROWID, RowMetadata}
 
 /**
  * Byte Array Block Device
@@ -19,7 +21,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
 
   override def length: ROWID = fromOffset(limit)
 
-  override def readBlock(rowID: ROWID): ByteBuffer = {
+  override def readRow(rowID: ROWID): ByteBuffer = {
     val p0 = toOffset(rowID)
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
@@ -32,9 +34,10 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(array(toOffset(rowID)))
 
-  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
-    val p0 = toOffset(rowID) + offset
-    val bytes = new Array[Byte](numberOfBytes)
+  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
+    val column = columns(columnID)
+    val p0 = toOffset(rowID, columnID)
+    val bytes = new Array[Byte](column.maxPhysicalSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     wrap(bytes)
   }
@@ -43,7 +46,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
     if (newSize >= 0 && newSize < limit) limit = toOffset(newSize)
   }
 
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
     val offset = toOffset(rowID)
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
@@ -52,7 +55,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
     limit = Math.max(limit, required)
   }
 
-  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+  override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
     val offset = toOffset(rowID, columnID)
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))

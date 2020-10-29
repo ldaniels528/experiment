@@ -58,6 +58,9 @@ object FieldMetadata {
   val ENCRYPTED_BIT = 0x20
   val EXTERNAL_BIT = 0x10
 
+  // the length of the encoded metadata
+  val BYTES_LENGTH = 1
+
   /**
    * Creates new field metadata based on existing column metadata
    * @param metadata the [[ColumnMetadata column metadata]]

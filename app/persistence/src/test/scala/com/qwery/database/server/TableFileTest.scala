@@ -5,6 +5,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.util.Date
 
+import com.qwery.database.device.BlockDevice
 import com.qwery.database.server.TableService.TableIndexRef
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -33,12 +34,12 @@ class TableFileTest extends AnyFunSpec {
         service.executeQuery(databaseName, s"TRUNCATE $tableName")
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
 
-        table.insert(Map("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
-        table.insert(Map("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
-        table.insert(Map("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
-        table.insert(Map("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
-        table.insert(Map("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
-        table.insert(Map("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
 
         service.executeQuery(databaseName,
           s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
@@ -61,7 +62,7 @@ class TableFileTest extends AnyFunSpec {
 
     it("should count the number of rows in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val count = table.count(condition = Map("exchange" -> "NYSE"))
+        val count = table.countRows(condition = Map("exchange" -> "NYSE"))
         logger.info(s"NYSE => $count")
       }
     }
@@ -86,14 +87,14 @@ class TableFileTest extends AnyFunSpec {
 
     it("should update rows in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val count = table.update(values = Map("lastSale" -> 0.50), condition = Map("symbol" -> "PEREZ"))
+        val count = table.updateRows(values = Map("lastSale" -> 0.50), condition = Map("symbol" -> "PEREZ"))
         logger.info(s"update count => $count")
       }
     }
 
     it("should delete a row from a table") {
       TableFile(databaseName, tableName) use { table =>
-        table.delete(0)
+        table.deleteRow(0)
         val results = service.executeQuery(databaseName, s"SELECT * FROM $tableName")
         for {
           row <- results.rows
@@ -126,7 +127,7 @@ class TableFileTest extends AnyFunSpec {
       // open the table file for read/write
       TableFile(databaseName, tableName) use { table =>
         // insert the MSFT record
-        table.insert(Map("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 98.55, "lastTradeTime" -> new Date()))
+        table.insertRow(Map("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 98.55, "lastTradeTime" -> new Date()))
 
         // create the table index
         val (indexDevice, indexCreationTime) = {

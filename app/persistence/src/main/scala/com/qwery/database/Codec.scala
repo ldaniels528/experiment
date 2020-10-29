@@ -77,9 +77,9 @@ object Codec extends Compression {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
         assert(bytes.length <= column.maxPhysicalSize, throw ColumnCapacityExceededException(column, bytes.length))
-        allocate(STATUS_BYTE + bytes.length).putFieldMetadata(fmd).put(bytes).array()
+        allocate(FieldMetadata.BYTES_LENGTH + bytes.length).putFieldMetadata(fmd).put(bytes).array()
       case None =>
-        allocate(STATUS_BYTE).putFieldMetadata(fmd.copy(isActive = false)).array()
+        allocate(FieldMetadata.BYTES_LENGTH).putFieldMetadata(fmd.copy(isActive = false)).array()
     }
   }
 

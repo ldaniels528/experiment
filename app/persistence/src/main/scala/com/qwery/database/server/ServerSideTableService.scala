@@ -5,7 +5,7 @@ import com.qwery.database.server.InvokableProcessor.implicits._
 import com.qwery.database.server.JSONSupport.JSONProductConversion
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
-import com.qwery.database.{Codec, ROWID, Row}
+import com.qwery.database.{ROWID, Row}
 import com.qwery.language.SQLLanguageParser
 import org.slf4j.LoggerFactory
 
@@ -24,7 +24,7 @@ case class ServerSideTableService() extends TableService[Row] {
 
   override def appendRow(databaseName: String, tableName: String, values: TupleSet): QueryResult = {
     logger.info(s"$databaseName.$tableName <~ $values")
-    val (rowID, responseTime) = time(apply(databaseName, tableName).insert(values))
+    val (rowID, responseTime) = time(apply(databaseName, tableName).insertRow(values))
     QueryResult(databaseName, tableName, count = 1, responseTime=responseTime, __id = Some(rowID))
   }
 
@@ -45,7 +45,7 @@ case class ServerSideTableService() extends TableService[Row] {
   }
 
   override def deleteRow(databaseName: String, tableName: String, rowID: ROWID): QueryResult = {
-    val (count, responseTime) = time(apply(databaseName, tableName).delete(rowID))
+    val (count, responseTime) = time(apply(databaseName, tableName).deleteRow(rowID))
     logger.info(f"$tableName($rowID) ~> deleted $count items [in $responseTime%.1f msec]")
     QueryResult(databaseName, tableName, count = count, responseTime = responseTime, __id = Some(rowID))
   }
@@ -88,8 +88,8 @@ case class ServerSideTableService() extends TableService[Row] {
   override def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
     val tableFile = apply(databaseName, tableName)
     val (field, responseTime) = time(tableFile.getField(rowID, columnID))
-    logger.info(f"$tableName($rowID, $columnID) ~> '${field.value}' [in $responseTime%.1f msec]")
     val column = tableFile.device.columns(columnID)
+    logger.info(f"$tableName($rowID, $columnID:${column.name}) ~> '${field.value}' [in $responseTime%.1f msec]")
     field.typedValue.encode(column)
   }
 
@@ -123,7 +123,7 @@ case class ServerSideTableService() extends TableService[Row] {
   }
 
   override def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult = {
-    val (_, responseTime) = time(apply(databaseName, tableName).replace(rowID, values))
+    val (_, responseTime) = time(apply(databaseName, tableName).replaceRow(rowID, values))
     logger.info(f"$tableName($rowID) ~> $values [in $responseTime%.1f msec]")
     QueryResult(databaseName, tableName, count = 1, responseTime = responseTime)
   }
@@ -141,7 +141,7 @@ case class ServerSideTableService() extends TableService[Row] {
         oldValues <- tableFile.get(rowID).map(_.toMap)
         newValues = oldValues ++ values
       } yield {
-        tableFile.replace(rowID, newValues)
+        tableFile.replaceRow(rowID, newValues)
         newValues
       }
     }

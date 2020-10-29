@@ -72,6 +72,9 @@ object ColumnMetadata {
   val ROW_ID_BIT = 0x0020
   val TYPE_BITS = 0x001F
 
+  // the length of the encoded metadata
+  val BYTES_LENGTH = 2
+
   /**
    * Decodes the 16-bit metadata code into [[ColumnMetadata metadata]]
    * @param metadataBits the metadata code

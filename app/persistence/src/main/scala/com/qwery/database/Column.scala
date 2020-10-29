@@ -1,6 +1,6 @@
 package com.qwery.database
 
-import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, ClobType, StringType}
+import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, ClobType, SerializableType, StringType}
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 /**
@@ -18,9 +18,17 @@ case class Column(name: String,
                   sizeInBytes: Int) {
 
   /**
-   * @return true, if the column is an enumeration type
+   * @return true if the column is an enumeration type
    */
   def isEnum: Boolean = enumValues.nonEmpty
+
+  /**
+   * @return true if the column is an Array, BLOB, CLOB or Serializable
+   */
+  def isExternal: Boolean = metadata.`type` match {
+    case ArrayType | BlobType | ClobType | SerializableType => true
+    case _ => false
+  }
 
   /**
    * @return true if the column is a non-persistent column
@@ -33,13 +41,13 @@ case class Column(name: String,
   val maxPhysicalSize: Int = {
     val size = metadata.`type` match {
       case ArrayType => sizeInBytes + SHORT_BYTES
-      case BlobType | ClobType => sizeInBytes + INT_BYTES
+      case BlobType | ClobType | SerializableType => sizeInBytes + INT_BYTES
       case BigDecimalType => sizeInBytes + 2 * SHORT_BYTES
       case StringType if isEnum => SHORT_BYTES
       case StringType => sizeInBytes + SHORT_BYTES
       case _ => sizeInBytes
     }
-    size + STATUS_BYTE
+    size + FieldMetadata.BYTES_LENGTH
   }
 
   override def toString: String =
@@ -67,7 +75,7 @@ object Column {
    * @return a new [[Column]]
    */
   def apply(name: String,
-            comment: String,
+            comment: String = "",
             enumValues: Seq[String] = Nil,
             metadata: ColumnMetadata,
             maxSize: Option[Int] = None): Column = {

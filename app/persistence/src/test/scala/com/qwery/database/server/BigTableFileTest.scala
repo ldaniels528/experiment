@@ -32,7 +32,7 @@ class BigTableFileTest extends AnyFunSpec {
         // populate the table with random quotes
         (1 to expected) foreach { _ =>
           val q = StockQuote.randomQuote
-          table.insert(Map("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
+          table.insertRow(Map("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
         }
 
         // ensure the data was inserted

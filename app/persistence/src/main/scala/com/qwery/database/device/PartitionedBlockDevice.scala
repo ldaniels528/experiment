@@ -1,8 +1,9 @@
-package com.qwery.database
+package com.qwery.database.device
 
 import java.nio.ByteBuffer
 
 import com.qwery.database.PersistentSeq.newTempFile
+import com.qwery.database.{Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata}
 
 /**
  * Represents a partitioned block device
@@ -27,18 +28,18 @@ class PartitionedBlockDevice(val columns: Seq[Column],
 
   override def length: ROWID = partitions.map(_.length).sum
 
-  override def readBlock(rowID: ROWID): ByteBuffer = {
+  override def readRow(rowID: ROWID): ByteBuffer = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.readBlock(toLocalOffset(rowID, index))
+    partition.readRow(toLocalOffset(rowID, index))
   }
 
-  override def readBlocks(rowID: ROWID, numberOfBlocks: ROWID): Seq[(ROWID, ByteBuffer)] = {
+  override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[(ROWID, ByteBuffer)] = {
     for {
-      globalOffset <- rowID until rowID + numberOfBlocks
+      globalOffset <- rowID until rowID + numberOfRows
       index = toPartitionIndex(globalOffset)
       partition = partitions(index)
-      blocks <- partition.readBlocks(toLocalOffset(globalOffset, index))
+      blocks <- partition.readRows(toLocalOffset(globalOffset, index))
         .map { case (_id, buf) => toGlobalOffset(_id, index) -> buf }
     } yield blocks
   }
@@ -53,10 +54,10 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     partitions(index).readRowMetaData(toLocalOffset(rowID, index))
   }
 
-  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
+  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.readBytes(toLocalOffset(rowID, index), numberOfBytes, offset)
+    partition.readField(toLocalOffset(rowID, index), columnID)
   }
 
   override def shrinkTo(newSize: ROWID): Unit = {
@@ -73,16 +74,16 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     } partition.shrinkTo(0)
   }
 
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.writeBlock(toLocalOffset(rowID, index), buf)
+    partition.writeRow(toLocalOffset(rowID, index), buf)
   }
 
-  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+  override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.writeBytes(toLocalOffset(rowID, index), columnID, buf)
+    partition.writeField(toLocalOffset(rowID, index), columnID, buf)
   }
 
   override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
@@ -100,7 +101,7 @@ class PartitionedBlockDevice(val columns: Seq[Column],
   }
 
   protected def newPartition: BlockDevice = {
-    if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else new FileBlockDevice(columns, newTempFile())
+    if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else new RowOrientedFileBlockDevice(columns, newTempFile())
   }
 
   protected def toGlobalOffset(rowID: ROWID, index: Int): ROWID = rowID + index * partitionSize

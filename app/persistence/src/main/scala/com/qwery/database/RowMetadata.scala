@@ -11,7 +11,7 @@ import com.qwery.database.RowMetadata._
  * e - encrypted bit .. [0010.0000 ~ 0x20]
  * l - locked bit ..... [0001.0000 ~ 0x10]
  * r - replicated bit . [0000.1000 ~ 0x08]
- * u - unused bits .... [0000.0111 ~ 0x07]
+ * x - unused bits .... [0000.0111 ~ 0x07]
  * ---------------------------------------
  * </pre>
  * @param isActive     indicates whether the row is active; meaning not deleted.
@@ -19,14 +19,12 @@ import com.qwery.database.RowMetadata._
  * @param isEncrypted  indicates whether the row is encrypted
  * @param isLocked     indicates whether the row is locked for update
  * @param isReplicated indicates whether the row has been replicated
- * @param unusedBits   reserved bits for future use (3 bits)
  */
 case class RowMetadata(isActive: Boolean = true,
                        isCompressed: Boolean = false,
                        isEncrypted: Boolean = false,
                        isLocked: Boolean = false,
-                       isReplicated: Boolean = false,
-                       unusedBits: Int = 0) {
+                       isReplicated: Boolean = false) {
 
   /**
    * Encodes the [[RowMetadata metadata]] into a bit sequence representing the metadata
@@ -38,8 +36,7 @@ case class RowMetadata(isActive: Boolean = true,
     val e = if (isEncrypted) ENCRYPTED_BIT else 0
     val l = if (isLocked) LOCKED_BIT else 0
     val r = if (isReplicated) REPLICATED_BIT else 0
-    val u = unusedBits & UNUSED_BITS
-    (a | c | e | l | r | u).toByte
+    (a | c | e | l | r).toByte
   }
 
   def isDeleted: Boolean = !isActive
@@ -51,7 +48,6 @@ case class RowMetadata(isActive: Boolean = true,
         |isEncrypted=$isEncrypted,
         |isLocked=$isLocked,
         |isReplicated=$isReplicated,
-        |unusedBits=$unusedBits%02xh
         |)""".stripMargin.split("\n").mkString
 
 }
@@ -68,6 +64,9 @@ object RowMetadata {
   val REPLICATED_BIT = 0x08
   val UNUSED_BITS = 0x07
 
+  // the length of the encoded metadata
+  val BYTES_LENGTH = 1
+
   /**
    * Decodes the 8-bit metadata code into [[RowMetadata metadata]]
    * @param metadataBits the metadata byte
@@ -78,8 +77,7 @@ object RowMetadata {
     isCompressed = (metadataBits & COMPRESSED_BIT) > 0,
     isEncrypted = (metadataBits & ENCRYPTED_BIT) > 0,
     isLocked = (metadataBits & LOCKED_BIT) > 0,
-    isReplicated = (metadataBits & REPLICATED_BIT) > 0,
-    unusedBits = metadataBits & UNUSED_BITS
+    isReplicated = (metadataBits & REPLICATED_BIT) > 0
   )
 
 }

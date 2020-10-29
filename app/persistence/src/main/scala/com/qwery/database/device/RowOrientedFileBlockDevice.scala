@@ -1,18 +1,18 @@
-package com.qwery.database
+package com.qwery.database.device
 
 import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 
-import com.qwery.database.BlockDevice.HEADER_CODE
+import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
 
 /**
- * File Block Device
+ * Row-Oriented File Block Device
  * @param columns         the collection of [[Column columns]]
- * @param persistenceFile the persistence [[File file]]
+ * @param file the persistence [[File file]]
  */
-class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends BlockDevice {
-  private val raf = new RandomAccessFile(persistenceFile, "rw")
+class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends BlockDevice {
+  private val raf = new RandomAccessFile(file, "rw")
 
   override def close(): Unit = raf.close()
 
@@ -20,15 +20,17 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
 
   override def length: ROWID = fromOffset(raf.length().toRowID)
 
-  override def readBlock(rowID: ROWID): ByteBuffer = {
+  override def readRow(rowID: ROWID): ByteBuffer = {
     val payload = new Array[Byte](recordSize)
     raf.seek(toOffset(rowID))
     raf.read(payload)
     wrap(payload)
   }
 
-  override def readBytes(rowID: ROWID, numberOfBytes: Int, offset: Int = 0): ByteBuffer = {
-    val bytes = new Array[Byte](numberOfBytes)
+  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
+    val column = columns(columnID)
+    val offset = columnOffsets(columnID)
+    val bytes = new Array[Byte](column.maxPhysicalSize)
     raf.seek(toOffset(rowID) + offset)
     raf.read(bytes)
     wrap(bytes)
@@ -48,20 +50,12 @@ class FileBlockDevice(val columns: Seq[Column], persistenceFile: File) extends B
     if (newSize >= 0 && newSize < raf.length()) raf.setLength(toOffset(newSize))
   }
 
-  def verifyHeaderCode(): Unit = {
-    // check for the identification code
-    raf.seek(0)
-    val headerCode = raf.readInt()
-    if (headerCode != HEADER_CODE)
-      throw new IllegalStateException(f"Device is not a valid block device (header code = $headerCode%08x")
-  }
-
-  override def writeBlock(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
     raf.seek(toOffset(rowID))
     raf.write(buf.array())
   }
 
-  override def writeBytes(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
+  override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
     raf.seek(toOffset(rowID, columnID))
     raf.write(buf.array())
   }

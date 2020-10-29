@@ -21,9 +21,6 @@ package object database {
   val ROW_ID_BYTES = 4
   val SHORT_BYTES = 2
 
-  // status bits
-  val STATUS_BYTE = 1
-
   /**
    * Returns the option of the given value as the desired type
    * @param value the given value

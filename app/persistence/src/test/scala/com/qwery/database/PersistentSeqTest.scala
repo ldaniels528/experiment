@@ -23,6 +23,7 @@ class PersistentSeqTest extends AnyFunSpec {
       //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
       .withParallelism(ExecutionContext.global)
       .withPartitions(partitionSize = partitionSize)
+      .withColumnModel
       .build
   }
 

@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec._
+import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, CachingBlockDevice, ColumnOrientedFileBlockDevice, HybridBlockDevice, ParallelPartitionedBlockDevice, PartitionedBlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -17,6 +18,9 @@ import scala.reflect.{ClassTag, classTag}
 
 /**
  * Represents a persistent sequential collection
+ * @param blockDevice the [[BlockDevice block device]]
+ * @param `class` the [[Class product class]]
+ * @tparam T the [[Product product]] type
  */
 class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) extends Traversable[T] {
   val device: BlockDevice = new CachingBlockDevice(blockDevice)
@@ -46,7 +50,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
    * @return [[PersistentSeq self]]
    */
   def append(item: T): PersistentSeq[T] = {
-    device.writeBlock(device.length, toBytes(item))
+    device.writeRow(device.length, toBytes(item))
     this
   }
 
@@ -56,7 +60,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
    * @return [[PersistentSeq self]]
    */
   def append(items: Traversable[T]): PersistentSeq[T] = {
-    device.writeBlocks(toBlocks(device.length, items))
+    device.writeRows(toBlocks(device.length, items))
     this
   }
 
@@ -66,7 +70,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
    * @return the [[T item]]
    */
   def apply(rowID: ROWID): T = {
-    toItem(rowID, buf = device.readBlock(rowID), evenDeletes = true)
+    toItem(rowID, buf = device.readRow(rowID), evenDeletes = true)
       .getOrElse(throw new IllegalStateException("No record found"))
   }
 
@@ -94,7 +98,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   override def copyToArray[B >: T](array: Array[B], start: ROWID, len: ROWID): Unit = {
     var n: Int = 0
     for {
-      (rowID, buf) <- device.readBlocks(start, len)
+      (rowID, buf) <- device.readRows(start, len)
       item <- toItem(rowID, buf)
     } {
       array(n) = item
@@ -149,7 +153,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     device.foreachBuffer { case (rowID, buf) => toItem(rowID, buf).foreach(callback) }
   }
 
-  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readBlock(rowID))
+  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readRow(rowID))
 
   override def headOption: Option[T] = device.firstIndexOption.flatMap(get)
 
@@ -260,7 +264,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2))
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    device.readBlocks(start, numberOfBlocks = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
+    device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
   }
 
   /**
@@ -377,7 +381,7 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
 
   override def toTraversable: Traversable[T] = this
 
-  def update(rowID: ROWID, item: T): Unit = device.writeBlock(rowID, toBytes(item))
+  def update(rowID: ROWID, item: T): Unit = device.writeRow(rowID, toBytes(item))
 
   def zip[U](that: GenIterable[U]): Iterator[(T, U)] = this.iterator zip that.iterator
 
@@ -447,7 +451,7 @@ object PersistentSeq {
     val persistenceFile = QweryFiles.getTableDataFile(databaseName, tableName)
     val config = QweryFiles.readTableConfig(databaseName, tableName)
     val `class`: Class[A] = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-    new PersistentSeq[A](new FileBlockDevice(config.columns.map(_.toColumn), persistenceFile), `class`)
+    new PersistentSeq[A](new RowOrientedFileBlockDevice(config.columns.map(_.toColumn), persistenceFile), `class`)
   }
 
   /**
@@ -481,7 +485,7 @@ object PersistentSeq {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column(name = field.getName, comment = "", enumValues = Nil, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+      Column(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
         `type` = `type`,
         isCompressed = ci.exists(_.isCompressed),
         isEncrypted = ci.exists(_.isEncrypted),
@@ -508,10 +512,17 @@ object PersistentSeq {
     private var executionContext: ExecutionContext = _
     private var partitionSize: Int = 0
     private var persistenceFile: File = _
+    private var isColumnModel: Boolean = false
 
     def build: PersistentSeq[A] = {
+      // is it column-oriented?
+      if (isColumnModel) {
+        val file = if (persistenceFile != null) persistenceFile else newTempFile()
+        new PersistentSeq(ColumnOrientedFileBlockDevice(columns, file), theClass)
+      }
+
       // is it partitioned?
-      if (partitionSize > 0) {
+      else if (partitionSize > 0) {
         new PersistentSeq(`class` = theClass, blockDevice =
           if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
           else {
@@ -523,19 +534,30 @@ object PersistentSeq {
       // is it in memory?
       else if (capacity > 0) {
         new PersistentSeq(`class` = theClass, blockDevice =
-          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new FileBlockDevice(columns, persistenceFile))
+          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new RowOrientedFileBlockDevice(columns, persistenceFile))
           else new ByteArrayBlockDevice(columns, capacity))
       }
 
       // must be a simple disk-based collection
       else {
         val file = if (persistenceFile != null) persistenceFile else newTempFile()
-        new PersistentSeq(new FileBlockDevice(columns, file), theClass)
+        new PersistentSeq(new RowOrientedFileBlockDevice(columns, file), theClass)
       }
+    }
+
+    def withColumnModel: this.type = {
+      this.isColumnModel = true
+      this
+    }
+
+    def withRowModel: this.type = {
+      this.isColumnModel = false
+      this
     }
 
     def withMemoryCapacity(capacity: Int): this.type = {
       this.capacity = capacity
+      this.isColumnModel = false
       this
     }
 
@@ -546,6 +568,7 @@ object PersistentSeq {
 
     def withPartitions(partitionSize: Int): this.type = {
       this.partitionSize = partitionSize
+      this.isColumnModel = false
       this
     }
 

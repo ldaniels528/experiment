@@ -3,7 +3,7 @@ package com.qwery.database.server
 import java.util.{Date, UUID}
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.qwery.database.BlockDevice.RowStatistics
+import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.server.TableService._
 import com.qwery.database.types.QxAny

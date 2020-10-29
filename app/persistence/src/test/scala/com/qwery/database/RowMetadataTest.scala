@@ -19,15 +19,13 @@ class RowMetadataTest extends AnyFunSpec {
         e <- Seq(true, false)
         l <- Seq(true, false)
         r <- Seq(true, false)
-        u <- 0x00 to 0x07
       } yield {
         verify(RowMetadata(
           isActive = a,
           isCompressed = c,
           isEncrypted = e,
           isLocked = l,
-          isReplicated = r,
-          unusedBits = u))
+          isReplicated = r))
       }
     }
   }

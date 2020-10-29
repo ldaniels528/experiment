@@ -2,7 +2,6 @@ package com.qwery.database.server
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.{HttpResponse, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
@@ -11,7 +10,7 @@ import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ColumnType, StringTy
 import com.qwery.database.server.JSONSupport._
 import com.qwery.database.server.QweryCustomJsonProtocol._
 import com.qwery.database.server.TableService._
-import com.qwery.database.{Codec, ColumnOutOfRangeException, QweryFiles, ROWID}
+import com.qwery.database.{Codec, ColumnOutOfRangeException, FieldMetadata, QweryFiles, ROWID}
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -200,10 +199,16 @@ object DatabaseServer {
         parameters('__contentType.?) { contentType_? =>
           val column = service.apply(databaseName, tableName).device.columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
-          val bytes = service.getField(databaseName, tableName, rowID, columnID)
-          val response = HttpResponse(StatusCodes.OK, entity = if (contentType == `application/octet-stream`) bytes else new String(bytes))
-          response.entity.withContentType(contentType).withSizeLimit(bytes.length)
-          complete(response)
+          val fieldBytes = service.getField(databaseName, tableName, rowID, columnID)
+          if (fieldBytes.length <= FieldMetadata.BYTES_LENGTH) complete(HttpResponse(status = StatusCodes.NoContent))
+          else {
+            // copy the field's contents only (without metadata)
+            val content = new Array[Byte](fieldBytes.length - FieldMetadata.BYTES_LENGTH)
+            System.arraycopy(fieldBytes, FieldMetadata.BYTES_LENGTH, content, 0, content.length)
+            val response = HttpResponse(StatusCodes.OK, headers = Nil, entity = HttpEntity(contentType, content))
+            response.entity.withContentType(contentType).withSizeLimit(content.length)
+            complete(response)
+          }
         }
       } ~
       put {

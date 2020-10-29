@@ -104,7 +104,7 @@ object InvokableProcessor {
                 (implicit service: ServerSideTableService): QueryResult = {
     val (count, responseTime) = time {
       val table = service(databaseName, tableName)
-      table.delete(condition = toCriteria(condition_?), limit = limit)
+      table.deleteRows(condition = toCriteria(condition_?), limit = limit)
     }
     QueryResult(databaseName, tableName, count = count, responseTime = responseTime)
   }
@@ -124,7 +124,7 @@ object InvokableProcessor {
       val table = service(databaseName, tableName)
       for {
         rowValues <- rowValuesList
-        rowID = table.insert(values = Map(fields zip rowValues: _*))
+        rowID = table.insertRow(values = Map(fields zip rowValues: _*))
       } yield rowID
     }
     QueryResult(databaseName, tableName, count = results.size, __ids = results, responseTime = responseTime)
@@ -179,7 +179,7 @@ object InvokableProcessor {
     val (count, responseTime) = time {
       val table = service(databaseName, tableName)
       val values = Map(assignments.map { case (k, v) => (k, v.translate) }: _*)
-      table.update(values, condition = toCriteria(where), limit)
+      table.updateRows(values, condition = toCriteria(where), limit)
     }
     QueryResult(databaseName, tableName, count = count, responseTime = responseTime)
   }

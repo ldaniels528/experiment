@@ -1,8 +1,8 @@
-package com.qwery.database
+package com.qwery.database.device
 
-import com.qwery.database.ColumnTypes.{DoubleType, StringType}
 import com.qwery.database.PersistentSeq.toColumns
 import com.qwery.database.StockQuote.randomURID
+import com.qwery.database.{Field, PersistentSeq, ROWID, StockQuote}
 import com.qwery.util.ServicingTools.time
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
