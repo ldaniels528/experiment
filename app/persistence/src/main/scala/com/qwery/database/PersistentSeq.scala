@@ -18,8 +18,7 @@ import scala.reflect.{ClassTag, classTag}
 /**
  * Represents a persistent sequential collection
  */
-class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) extends Traversable[T] {
-  val device: BlockDevice = new CachingBlockDevice(blockDevice)
+class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) extends Traversable[T] {
 
   // cache the class information for type T
   private val declaredFields = `class`.getDeclaredFields.toList
@@ -512,7 +511,7 @@ object PersistentSeq {
     def build: PersistentSeq[A] = {
       // is it partitioned?
       if (partitionSize > 0) {
-        new PersistentSeq(`class` = theClass, blockDevice =
+        new PersistentSeq(`class` = theClass, device =
           if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
           else {
             implicit val ec: ExecutionContext = executionContext
@@ -522,7 +521,7 @@ object PersistentSeq {
 
       // is it in memory?
       else if (capacity > 0) {
-        new PersistentSeq(`class` = theClass, blockDevice =
+        new PersistentSeq(`class` = theClass, device =
           if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new FileBlockDevice(columns, persistenceFile))
           else new ByteArrayBlockDevice(columns, capacity))
       }
