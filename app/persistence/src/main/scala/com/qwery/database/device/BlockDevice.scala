@@ -3,7 +3,7 @@ package device
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
-import java.nio.ByteBuffer.allocate
+import java.nio.ByteBuffer.{allocate, wrap}
 import java.text.SimpleDateFormat
 
 import com.qwery.database.Codec.CodecByteBuffer
@@ -183,10 +183,6 @@ trait BlockDevice {
     Row(rowID, metadata = buf.getRowMetadata, fields = toFields(buf))
   }
 
-  def getRows(start: ROWID, numberOfRows: Int): Seq[Row] = {
-    readRows(start, numberOfRows) map { case (rowID, buf) => Row(rowID, buf.getRowMetadata, fields = toFields(buf)) }
-  }
-
   def getRowStatistics: RowStatistics = {
     var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) = (0, 0, 0, 0, 0, 0)
     var (rowID: ROWID, eof: ROWID) = (0, length)
@@ -229,6 +225,8 @@ trait BlockDevice {
   def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata
 
   def readRow(rowID: ROWID): ByteBuffer
+
+  def readRowAsFields(rowID: ROWID): BinaryRow
 
   def readRowMetaData(rowID: ROWID): RowMetadata
 
@@ -318,8 +316,13 @@ trait BlockDevice {
     writeRow(offset1, block0)
   }
 
-  def fromOffset(offset: RECORD_ID): ROWID = {
-    ((offset / recordSize) + Math.min(1, offset % recordSize)).toRowID
+  def toFieldBuffers(buf: ByteBuffer): Seq[ByteBuffer] = {
+    physicalColumns.zipWithIndex map { case (column, index) =>
+      buf.position(columnOffsets(index))
+      val fieldBytes = new Array[Byte](column.maxPhysicalSize)
+      buf.get(fieldBytes)
+      wrap(fieldBytes)
+    }
   }
 
   def toFields(buf: ByteBuffer): Seq[Field] = {
@@ -329,9 +332,23 @@ trait BlockDevice {
     } map { case (name, (fmd, value_?)) => Field(name, fmd, value_?) }
   }
 
-  def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize
+  def toFields(row: BinaryRow): Seq[Field] = {
+    row.fields.zipWithIndex map { case (fieldBuf, columnIndex) =>
+      val column = columns(columnIndex)
+      val (fmd, typedValue) = QxAny.decode(column, fieldBuf)
+      Field(column.name, fmd, typedValue)
+    }
+  }
 
-  def toOffset(rowID: ROWID, columnID: Int): RECORD_ID = toOffset(rowID) + columnOffsets(columnID)
+  def toRowBuffer(row: BinaryRow): ByteBuffer = {
+    val buf = allocate(recordSize)
+    buf.putRowMetadata(row.metadata)
+    row.fields zip columnOffsets foreach { case (fieldBuf, offset) =>
+      buf.position(offset)
+      buf.put(fieldBuf)
+    }
+    buf
+  }
 
   def toRowBuffer(values: Map[String, Any]): ByteBuffer = {
     val buf = allocate(recordSize)
@@ -390,7 +407,6 @@ trait BlockDevice {
  * Block Device Companion
  */
 object BlockDevice {
-  val HEADER_CODE = 0xBABEFACE
 
   case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) {
     def +(that: RowStatistics): RowStatistics = that.copy(

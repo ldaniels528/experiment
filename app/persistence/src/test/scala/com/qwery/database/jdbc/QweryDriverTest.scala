@@ -5,10 +5,12 @@ import java.nio.ByteBuffer
 import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
 import akka.actor.ActorSystem
-import com.qwery.database.server.{DatabaseServer, ServerSideTableService}
+import com.qwery.database.server.{DatabaseServer, QueryProcessor, ServerSideTableService}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.duration.DurationInt
 
 /**
  * Qwery JDBC Driver Test Suite
@@ -53,17 +55,6 @@ class QweryDriverTest extends AnyFunSpec {
         val isDropped = conn.createStatement().execute(sql)
         logger.info(f"$sql => $isDropped")
         //assert(isDropped)
-      }
-    }
-
-    it("should execute a CREATE TYPE .. AS ENUM statement") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        val sql =
-          s"""|CREATE TYPE ExchangeEnum AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC')
-              |""".stripMargin
-        val isCreated = conn.createStatement().execute(sql)
-        logger.info(f"$sql => $isCreated")
-        assert(isCreated)
       }
     }
 
@@ -194,6 +185,7 @@ class QweryDriverTest extends AnyFunSpec {
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
     implicit val service: ServerSideTableService = ServerSideTableService()
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 5.seconds)
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

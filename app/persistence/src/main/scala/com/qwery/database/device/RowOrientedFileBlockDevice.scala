@@ -4,6 +4,7 @@ import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 
+import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
 
 /**
@@ -11,7 +12,7 @@ import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetad
  * @param columns         the collection of [[Column columns]]
  * @param file the persistence [[File file]]
  */
-class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends BlockDevice {
+class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends RowOrientedBlockDevice {
   private val raf = new RandomAccessFile(file, "rw")
 
   override def close(): Unit = raf.close()
@@ -19,13 +20,6 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends B
   override def getPhysicalSize: Option[Long] = Some(raf.length())
 
   override def length: ROWID = fromOffset(raf.length().toRowID)
-
-  override def readRow(rowID: ROWID): ByteBuffer = {
-    val payload = new Array[Byte](recordSize)
-    raf.seek(toOffset(rowID))
-    raf.read(payload)
-    wrap(payload)
-  }
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val column = columns(columnID)
@@ -39,6 +33,21 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends B
   override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
     raf.seek(toOffset(rowID, columnID))
     FieldMetadata.decode(raf.read().toByte)
+  }
+
+  override def readRow(rowID: ROWID): ByteBuffer = {
+    val payload = new Array[Byte](recordSize)
+    raf.seek(toOffset(rowID))
+    raf.read(payload)
+    wrap(payload)
+  }
+
+  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+    val payload = new Array[Byte](recordSize)
+    raf.seek(toOffset(rowID))
+    raf.read(payload)
+    val buf = wrap(payload)
+    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = toFieldBuffers(buf))
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {

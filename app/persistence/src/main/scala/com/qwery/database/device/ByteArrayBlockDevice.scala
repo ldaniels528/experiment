@@ -3,14 +3,15 @@ package com.qwery.database.device
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 
+import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.{Column, FieldMetadata, OffsetOutOfRangeException, ROWID, RowMetadata}
 
 /**
- * Byte Array Block Device
+ * Byte Array Block Device (row-oriented)
  * @param columns  the collection of [[Column columns]]
  * @param capacity the maximum number of item the collection may contain
  */
-class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends BlockDevice {
+class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends RowOrientedBlockDevice {
   private val _capacity = toOffset(capacity)
   private val array = new Array[Byte](_capacity)
   private var limit: ROWID = 0
@@ -26,6 +27,14 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     wrap(bytes)
+  }
+
+  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+    val p0 = toOffset(rowID)
+    val bytes = new Array[Byte](recordSize)
+    System.arraycopy(array, p0, bytes, 0, bytes.length)
+    val buf = wrap(bytes)
+    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = toFieldBuffers(buf))
   }
 
   override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {

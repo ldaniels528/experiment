@@ -69,7 +69,7 @@ class TableFileTest extends AnyFunSpec {
 
     it("should find rows via a condition in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val results = table.executeQuery(limit = None, condition = Map("exchange" -> "NASDAQ"))
+        val results = table.findRows(limit = None, condition = Map("exchange" -> "NASDAQ"))
         results.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
       }
     }

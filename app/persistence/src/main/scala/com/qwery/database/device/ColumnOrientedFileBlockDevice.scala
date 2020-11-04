@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 
 import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, RECORD_ID, ROWID, RowMetadata}
+import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
 
 import scala.language.postfixOps
 
@@ -14,10 +14,15 @@ import scala.language.postfixOps
  * @param columns the collection of [[Column columns]]
  * @param file    the persistence [[File file]]
  */
-case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) extends BlockDevice {
+case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) extends ColumnOrientedBlockDevice {
   private val raf0 = new RandomAccessFile(file, "rw")
   private val rafN: Seq[(RandomAccessFile, Column)] = columns.filterNot(_.isLogical).zipWithIndex map { case (column, columnIndex) =>
-    (new RandomAccessFile(new File(file.getParentFile, file.getName + '_' + columnIndex), "rw"), column)
+    val fileName = file.getName
+    val theFileName = fileName.lastIndexOf('.') match {
+      case -1 => fileName + s"_$columnIndex.qbd"
+      case n => new StringBuilder(fileName).replace(n, n + 1, s"_$columnIndex.").toString()
+    }
+    (new RandomAccessFile(new File(file.getParentFile, theFileName), "rw"), column)
   }
 
   override def close(): Unit = {
@@ -44,25 +49,25 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
   }
 
   override def readRow(rowID: ROWID): ByteBuffer = {
-    val (rmd, fieldBufs) = readRowFields(rowID)
+    val BinaryRow(_, rmd, fieldBufs) = readRowAsFields(rowID)
     val payload = allocate(recordSize)
     payload.putRowMetadata(rmd)
-    fieldBufs.zipWithIndex foreach { case ((_, fieldBuf), columnIndex) =>
+    fieldBufs.zipWithIndex foreach { case (fieldBuf, columnIndex) =>
       payload.position(columnOffsets(columnIndex))
       payload.put(fieldBuf)
     }
+    payload.flip()
     payload
   }
 
-  def readRowFields(rowID: ROWID): (RowMetadata, Seq[(Column, ByteBuffer)]) = {
+  override def readRowAsFields(rowID: ROWID): BinaryRow = {
     val rmd = readRowMetaData(rowID)
-    val fields = rafN map { case (raf, column) =>
+    BinaryRow(rowID, rmd, fields = rafN map { case (raf, column) =>
       val columnBytes = new Array[Byte](column.maxPhysicalSize)
       raf.seek(toOffset(rowID, column))
       raf.read(columnBytes)
-      column -> wrap(columnBytes)
-    }
-    (rmd, fields)
+      wrap(columnBytes)
+    })
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
@@ -72,8 +77,8 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
 
   override def shrinkTo(newSize: ROWID): Unit = {
     if (newSize >= 0 && newSize < raf0.length()) {
-      raf0.setLength(toOffset(newSize))
-      rafN.foreach(_._1.setLength(newSize))
+      raf0.setLength(newSize)
+      rafN.foreach { case (raf, column) => raf.setLength(toOffset(newSize, column)) }
     }
   }
 
@@ -95,7 +100,6 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
       val columnBytes = new Array[Byte](column.maxPhysicalSize)
       buf.position(columnOffsets(columnIndex))
       buf.get(columnBytes)
-
       raf.seek(toOffset(rowID, column))
       raf.write(columnBytes)
     }
@@ -105,7 +109,5 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
     raf0.seek(rowID)
     raf0.write(metadata.encode)
   }
-
-  protected def toOffset(rowID: ROWID, column: Column): RECORD_ID = rowID * column.maxPhysicalSize
 
 }

@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 import spray.json._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -44,6 +45,7 @@ object DatabaseServer {
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
     implicit val service: ServerSideTableService = ServerSideTableService()
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 15.seconds)
     import system.dispatcher
 
     // start the server
@@ -52,16 +54,17 @@ object DatabaseServer {
 
   /**
    * Starts the server
-   * @param host   the server host (e.g. "0.0.0.0")
-   * @param port   the server port
-   * @param ec     the [[ExecutionContext]]
-   * @param system the [[ActorSystem]]
+   * @param host the server host (e.g. "0.0.0.0")
+   * @param port the server port
+   * @param as   the implicit [[ActorSystem]]
+   * @param ec   the implicit [[ExecutionContext]]
+   * @param qp   the implicit [[QueryProcessor]]
+   * @param ssts the implicit [[ServerSideTableService]]
    */
   def startServer(host: String = "0.0.0.0", port: Int)
-                 (implicit ec: ExecutionContext, service: ServerSideTableService, system: ActorSystem): Unit = {
+                 (implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor, ssts: ServerSideTableService): Unit = {
     // bind to the port
-    val bindingFuture = Http().newServerAt(host, port).bindFlow(route())
-    bindingFuture onComplete {
+    Http().newServerAt(host, port).bindFlow(route()) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
       case Failure(e) =>
@@ -71,10 +74,11 @@ object DatabaseServer {
 
   /**
    * Define the API routes
-   * @param service the implicit [[ServerSideTableService]]
+   * @param qp   the implicit [[QueryProcessor]]
+   * @param ssts the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  def route()(implicit service: ServerSideTableService): Route = {
+  def route()(implicit ec: ExecutionContext, qp: QueryProcessor, ssts: ServerSideTableService): Route = {
     // route: /d/<database> (e.g. "/d/portfolio")
     path("d" / Segment)(routesByDatabase) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
@@ -96,18 +100,20 @@ object DatabaseServer {
   /**
    * Database-specific API routes (e.g. "/d/portfolio")
    * @param databaseName the name of the database
-   * @param service the implicit [[ServerSideTableService]]
+   * @param ssts the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  private def routesByDatabase(databaseName: String)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabase(databaseName: String)(implicit qp: QueryProcessor, ssts: ServerSideTableService): Route = {
     get {
       // retrieve the database metrics (e.g. "GET /d/portfolio")
-      complete(service.getDatabaseMetrics(databaseName))
+      complete(ssts.getDatabaseMetrics(databaseName))
     } ~
       post {
         // create the new table (e.g. "POST /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]}
         entity(as[String]) { jsonString =>
-          complete(service.createTable(databaseName, jsonString.fromJSON[TableCreation]))
+          val ref = jsonString.fromJSON[TableCreation]
+          //complete(qp.createTable(databaseName, ref.tableName, ref.columns))
+          complete(ssts.createTable(databaseName, ref))
         }
       }
   }
@@ -116,13 +122,13 @@ object DatabaseServer {
    * Database Table-specific API routes (e.g. "/d/portfolio/stocks")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit ssts: ServerSideTableService): Route = {
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks")
-      complete(service.dropTable(databaseName, tableName).toLiftJs.toSprayJs)
+      complete(ssts.dropTable(databaseName, tableName))
     } ~
       get {
         // retrieve the table metrics (e.g. "GET /d/portfolio/stocks")
@@ -130,8 +136,8 @@ object DatabaseServer {
         extract(_.request.uri.query()) { params =>
           val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
           complete(
-            if (params.isEmpty) service.getTableMetrics(databaseName, tableName)
-            else service.findRows(databaseName, tableName, condition, limit).map(_.toMap)
+            if (params.isEmpty) ssts.getTableMetrics(databaseName, tableName)
+            else ssts.findRows(databaseName, tableName, condition, limit).map(_.toMap)
           )
         }
       } ~
@@ -139,7 +145,7 @@ object DatabaseServer {
         // append the new record to the table
         // (e.g. "POST /d/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(service.appendRow(databaseName, tableName, toValues(jsObject)))
+          complete(ssts.appendRow(databaseName, tableName, toValues(jsObject)))
         }
       }
   }
@@ -150,14 +156,14 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @param format       the destination file format (e.g. "csv", "json", "bin")
    * @param fileName     the name of the file to be downloaded
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String)
-                                         (implicit service: ServerSideTableService): Route = {
+                                         (implicit ssts: ServerSideTableService): Route = {
     val dataFile = format.toLowerCase() match {
-      case "csv" => service(databaseName, tableName).exportAsCSV
-      case "json" => service(databaseName, tableName).exportAsJSON
+      case "csv" => ssts.getTable(databaseName, tableName).exportAsCSV
+      case "json" => ssts.getTable(databaseName, tableName).exportAsJSON
       case "binary" => QweryFiles.getTableDataFile(databaseName, tableName)
       case other => throw new IllegalArgumentException(s"Unsupported file format '$other'")
     }
@@ -169,13 +175,13 @@ object DatabaseServer {
    * Database Table Length-specific API routes (e.g. "/d/portfolio/stocks/length")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit ssts: ServerSideTableService): Route = {
     get {
       // retrieve the length of the table (e.g. "GET /d/portfolio/stocks/length")
-      complete(service.getLength(databaseName, tableName))
+      complete(ssts.getLength(databaseName, tableName))
     }
   }
 
@@ -185,21 +191,21 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @param rowID        the desired row by ID
    * @param columnID     the desired column by index
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)
-                                           (implicit service: ServerSideTableService): Route = {
+                                           (implicit ssts: ServerSideTableService): Route = {
     delete {
       // delete a field (e.g. "DELETE /d/portfolio/stocks/287/0")
-      complete(service.deleteField(databaseName, tableName, rowID, columnID))
+      complete(ssts.deleteField(databaseName, tableName, rowID, columnID))
     } ~
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
         parameters('__contentType.?) { contentType_? =>
-          val column = service.apply(databaseName, tableName).device.columns(columnID)
+          val column = QweryFiles.getTableFile(databaseName, tableName).device.columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
-          val fieldBytes = service.getField(databaseName, tableName, rowID, columnID)
+          val fieldBytes = ssts.getField(databaseName, tableName, rowID, columnID)
           if (fieldBytes.length <= FieldMetadata.BYTES_LENGTH) complete(HttpResponse(status = StatusCodes.NoContent))
           else {
             // copy the field's contents only (without metadata)
@@ -214,10 +220,10 @@ object DatabaseServer {
       put {
         // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
         entity(as[String]) { value =>
-          val device = service(databaseName, tableName).device
+          val device = ssts.getTable(databaseName, tableName).device
           assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
           val columnType = device.columns(columnID).metadata.`type`
-          complete(service.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
+          complete(ssts.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
         }
       }
   }
@@ -228,32 +234,33 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @param start        the start of the range
    * @param length       the number of rows referenced
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts      the implicit [[ServerSideTableService]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int)
-                                        (implicit service: ServerSideTableService): Route = {
+                                        (implicit ssts: ServerSideTableService): Route = {
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
-      complete(service.deleteRange(databaseName, tableName, start, length))
+      complete(ssts.deleteRange(databaseName, tableName, start, length))
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(service.getRange(databaseName, tableName, start, length).map(_.toMap))
+        complete(ssts.getRange(databaseName, tableName, start, length).map(_.toMap))
       }
   }
 
   /**
    * Database Table Query-specific API routes (e.g. "/q/portfolio")
    * @param databaseName the name of the database
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ssts         the implicit [[ServerSideTableService]]
+   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableQuery(databaseName: String)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabaseTableQuery(databaseName: String)(implicit qp: QueryProcessor, ssts: ServerSideTableService): Route = {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
-        val outcome = service.executeQuery(databaseName, sql)
+        val outcome = qp.executeQuery(databaseName, sql)
         logger.info(s"outcome => $outcome")
         complete(outcome)
       }
@@ -265,36 +272,38 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param rowID        the referenced row ID
-   * @param service      the implicit [[ServerSideTableService]]
+   * @param ec           the implicit [[ExecutionContext]]
+   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: Int)(implicit service: ServerSideTableService): Route = {
+  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: Int)
+                                        (implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
-      complete(service.deleteRow(databaseName, tableName, rowID))
+      complete(qp.deleteRow(databaseName, tableName, rowID))
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
         parameters('__metadata.?) { metadata_? =>
-          val isMetadata = metadata_?.contains("yes")
-          service.getRow(databaseName, tableName, rowID) match {
-            case Some(row) => complete(if (isMetadata) row.toLiftJs.toSprayJs else row.toMap.toJson)
-            case None => complete(JsObject())
-          }
+          val isMetadata = metadata_?.contains("true")
+          complete(qp.getRow(databaseName, tableName, rowID) map {
+            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toMap.toJson
+            case None => JsObject()
+          })
         }
       } ~
       post {
         // partially update the row by ID
         // (e.g. "POST /d/portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          complete(service.updateRow(databaseName, tableName, rowID, toValues(jsObject)))
+          complete(qp.updateRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       } ~
       put {
         // replace the row by ID
         // (e.g. "PUT /d/portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(service.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
+          complete(qp.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       }
   }

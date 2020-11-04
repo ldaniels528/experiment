@@ -29,6 +29,8 @@ class CachingBlockDevice(host: BlockDevice) extends BlockDevice {
 
   override def readFieldMetaData(rowID: ROWID, columnID: RECORD_ID): FieldMetadata = host.readFieldMetaData(rowID, columnID)
 
+  override def readRowAsFields(rowID: ROWID): BinaryRow = host.readRowAsFields(rowID)
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = host.readRowMetaData(rowID)
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {

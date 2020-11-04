@@ -9,10 +9,12 @@ import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.QweryFiles._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.server.InvokableProcessor.implicits.InvokableFacade
 import com.qwery.database.server.TableFile._
 import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.TableService._
 import com.qwery.database.types.QxInt
+import com.qwery.language.SQLLanguageParser
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -108,6 +110,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
         buf.position(out.columnOffsets(idx))
         buf.put(bytes)
       }
+      buf.flip()
 
       // write the index data to disk
       out.writeRow(rowID, buf)
@@ -150,7 +153,19 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     _iterate(condition, limit) { (rowID, _) => deleteRow(rowID) }
   }
 
-  def executeQuery(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
+  /**
+   * Exports the contents of this device as Comma Separated Values (CSV)
+   * @return a new CSV [[File file]]
+   */
+  def exportAsCSV: File = device.exportAsCSV
+
+  /**
+   * Exports the contents of this device as JSON
+   * @return a new JSON [[File file]]
+   */
+  def exportAsJSON: File = device.exportAsJSON
+
+  def findRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
     // check all available indices for the table
     val tableIndices = for {
       (searchColumn, searchValue) <- condition.toList
@@ -170,18 +185,6 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       case _ => scanRows(condition, limit)
     }
   }
-
-  /**
-   * Exports the contents of this device as Comma Separated Values (CSV)
-   * @return a new CSV [[File file]]
-   */
-  def exportAsCSV: File = device.exportAsCSV
-
-  /**
-   * Exports the contents of this device as JSON
-   * @return a new JSON [[File file]]
-   */
-  def exportAsJSON: File = device.exportAsJSON
 
   def get(rowID: ROWID): Option[Row] = {
     val row = device.getRow(rowID)
@@ -246,6 +249,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     var rows: List[Row] = Nil
     _iterate(condition, limit) { (_, row) => rows = row :: rows }
     rows
+  }
+
+  def updateRow(rowID: ROWID, values: TupleSet): Boolean = {
+    get(rowID) exists { row =>
+      val updatedValues = row.toMap ++ values
+      replaceRow(rowID, updatedValues)
+      true
+    }
   }
 
   def updateRows(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
@@ -355,5 +366,7 @@ object TableFile {
     val files = directory.listFilesRecursively
     files.forall(_.delete())
   }
+
+  def executeQuery(databaseName: String, sql: String): QueryResult = SQLLanguageParser.parse(sql).invoke(databaseName)
 
 }

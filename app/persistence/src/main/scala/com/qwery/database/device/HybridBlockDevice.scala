@@ -34,6 +34,10 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     if (rowID < capacity) mem.readFieldMetaData(rowID, columnID) else disk.readFieldMetaData(rowID - capacity, columnID)
   }
 
+  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+    if (rowID < capacity) mem.readRowAsFields(rowID) else disk.readRowAsFields(rowID - capacity)
+  }
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
     if (rowID < capacity) mem.readRowMetaData(rowID) else disk.readRowMetaData(rowID - capacity)
   }

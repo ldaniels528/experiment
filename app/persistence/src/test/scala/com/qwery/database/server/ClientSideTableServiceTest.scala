@@ -10,6 +10,8 @@ import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.duration.DurationInt
+
 /**
  * Client-Side Table Service Test Suite
  */
@@ -182,6 +184,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
     implicit val service: ServerSideTableService = ServerSideTableService()
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 5.seconds)
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

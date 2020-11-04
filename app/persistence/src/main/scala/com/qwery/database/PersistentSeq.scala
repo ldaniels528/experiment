@@ -5,7 +5,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec._
-import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, CachingBlockDevice, ColumnOrientedFileBlockDevice, HybridBlockDevice, ParallelPartitionedBlockDevice, PartitionedBlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.device._
+import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.server.TableService.TableConfig
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -18,12 +20,11 @@ import scala.reflect.{ClassTag, classTag}
 
 /**
  * Represents a persistent sequential collection
- * @param blockDevice the [[BlockDevice block device]]
+ * @param device  the [[BlockDevice block device]]
  * @param `class` the [[Class product class]]
  * @tparam T the [[Product product]] type
  */
-class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) extends Traversable[T] {
-  val device: BlockDevice = new CachingBlockDevice(blockDevice)
+class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) extends Traversable[T] {
 
   // cache the class information for type T
   private val declaredFields = `class`.getDeclaredFields.toList
@@ -98,8 +99,9 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   override def copyToArray[B >: T](array: Array[B], start: ROWID, len: ROWID): Unit = {
     var n: Int = 0
     for {
-      (rowID, buf) <- device.readRows(start, len)
-      item <- toItem(rowID, buf)
+      rowID <- start until (start + len)
+      row = device.readRowAsFields(rowID)
+      item <- toItem(row, evenDeletes = false)
     } {
       array(n) = item
       n += 1
@@ -150,10 +152,10 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
   def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = toStream.flatMap(predicate)
 
   override def foreach[U](callback: T => U): Unit = {
-    device.foreachBuffer { case (rowID, buf) => toItem(rowID, buf).foreach(callback) }
+    device.foreachBuffer { case (rowID, buf) => toItem(rowID, buf, evenDeletes = false).foreach(callback) }
   }
 
-  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readRow(rowID))
+  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readRow(rowID), evenDeletes = false)
 
   override def headOption: Option[T] = device.firstIndexOption.flatMap(get)
 
@@ -261,10 +263,10 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
 
   def reverse: Stream[T] = reverseIterator.toStream
 
-  def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2))
+  def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2, evenDeletes = false))
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf) } toStream
+    device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf, evenDeletes = false) } toStream
   }
 
   /**
@@ -340,8 +342,8 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
     array
   }
 
-  def toBlocks(offset: ROWID, items: Seq[T]): Seq[(ROWID, ByteBuffer)] = {
-    items.zipWithIndex.map { case (item, index) => (offset + index) -> toBytes(item) }
+  def toBinaryRow(offset: ROWID, items: Traversable[T]): Stream[BinaryRow] = {
+    items.toStream.zipWithIndex.map { case (item, index) => BinaryRow(id = offset + index, buf = toBytes(item))(device) }
   }
 
   def toBlocks(offset: ROWID, items: Traversable[T]): Stream[(ROWID, ByteBuffer)] = {
@@ -360,16 +362,21 @@ class PersistentSeq[T <: Product](blockDevice: BlockDevice, `class`: Class[T]) e
       buf.position(device.columnOffsets(index))
       buf.put(bytes)
     }
+    buf.flip()
     buf
   }
 
   def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(item => toBytes(item))
 
-  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.map(item => toBytes(item)).toStream
+  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.toStream.map(item => toBytes(item))
 
-  def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean = false): Option[T] = {
+  def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean): Option[T] = {
     val metadata = buf.getRowMetadata
     if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf).toList)) else None
+  }
+
+  def toItem(row: BinaryRow, evenDeletes: Boolean): Option[T] = {
+    if (row.metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(row.id).toList ::: device.toFields(row).toList)) else None
   }
 
   override def toIterator: Iterator[T] = iterator
@@ -523,17 +530,15 @@ object PersistentSeq {
 
       // is it partitioned?
       else if (partitionSize > 0) {
-        new PersistentSeq(`class` = theClass, blockDevice =
+        new PersistentSeq(`class` = theClass, device =
           if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
-          else {
-            implicit val ec: ExecutionContext = executionContext
-            new ParallelPartitionedBlockDevice(columns, partitionSize)
-          })
+          else new ParallelPartitionedBlockDevice(columns, partitionSize)(executionContext)
+        )
       }
 
       // is it in memory?
       else if (capacity > 0) {
-        new PersistentSeq(`class` = theClass, blockDevice =
+        new PersistentSeq(`class` = theClass, device =
           if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new RowOrientedFileBlockDevice(columns, persistenceFile))
           else new ByteArrayBlockDevice(columns, capacity))
       }
@@ -574,6 +579,17 @@ object PersistentSeq {
 
     def withPersistenceFile(file: File): this.type = {
       this.persistenceFile = file
+      this
+    }
+
+    def withTable(databaseName: String, tableName: String): this.type = {
+      this.persistenceFile = QweryFiles.getTableDataFile(databaseName, tableName)
+      // create the table
+      val tableDirectory = persistenceFile.getParentFile
+      if (!tableDirectory.exists()) {
+        tableDirectory.mkdirs()
+        QweryFiles.writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), indices = Nil))
+      }
       this
     }
   }

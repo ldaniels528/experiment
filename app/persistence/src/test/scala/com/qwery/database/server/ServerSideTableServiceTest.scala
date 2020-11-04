@@ -1,19 +1,19 @@
-package com.qwery.database
+package com.qwery.database.server
 
 import com.qwery.database.StockQuote.randomQuote
 import com.qwery.database.server.JSONSupport.JSONProductConversion
-import com.qwery.database.server.ServerSideTableService
+import com.qwery.database.{PersistentSeq, StockQuote}
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
 /**
- * PersistentSeq Database Test Suite
+ * Server-Side Table Service Test Suite
  */
-class PersistentSeqDatabaseTest extends AnyFunSpec {
+class ServerSideTableServiceTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private implicit val service: ServerSideTableService = ServerSideTableService()
 
-  describe(classOf[PersistentSeq[_]].getSimpleName) {
+  describe(classOf[ServerSideTableService].getSimpleName) {
     val databaseName = "test"
     val tableName = "stockQuotes"
 

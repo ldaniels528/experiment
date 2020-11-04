@@ -12,7 +12,7 @@ import com.qwery.database.{Column, FieldMetadata, PartitionSizeException, RECORD
  */
 class PartitionedBlockDevice(val columns: Seq[Column],
                              val partitionSize: Int,
-                             isInMemory: Boolean = false) extends BlockDevice {
+                             isInMemory: Boolean = false) extends RowOrientedBlockDevice {
   protected var partitions: List[BlockDevice] = Nil
   assert(partitionSize > 0, throw PartitionSizeException(partitionSize))
   //ensurePartitions(index = 1)
@@ -32,6 +32,12 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
     partition.readRow(toLocalOffset(rowID, index))
+  }
+
+  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.readRowAsFields(toLocalOffset(rowID, index))
   }
 
   override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[(ROWID, ByteBuffer)] = {

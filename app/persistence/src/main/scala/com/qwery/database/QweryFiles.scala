@@ -3,6 +3,7 @@ package com.qwery.database
 import java.io.{File, PrintWriter}
 
 import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
+import com.qwery.database.server.TableFile
 import com.qwery.database.server.TableService.{DatabaseConfig, TableConfig}
 import com.qwery.util.ResourceHelper._
 
@@ -52,12 +53,18 @@ object QweryFiles {
     new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
   }
 
+  def getTableFile(databaseName: String, tableName: String): TableFile = TableFile(databaseName, tableName)
+
   def getTableRootDirectory(databaseName: String, tableName: String): File = {
     new File(new File(getServerRootDirectory, databaseName), tableName)
   }
 
   def getTableDataFile(databaseName: String, tableName: String): File = {
     new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.qdb")
+  }
+
+  def getTableColumnFile(databaseName: String, tableName: String, columnID: Int): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName-$columnID.qdb")
   }
 
   def getTableIndexFile(databaseName: String, tableName: String, indexName: String): File = {
