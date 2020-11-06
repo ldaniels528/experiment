@@ -81,7 +81,7 @@ object Column {
             maxSize: Option[Int] = None): Column = {
     val enumMaxLength = if (enumValues.nonEmpty) Some(enumValues.map(_.length).max) else None
     new Column(name, comment, enumValues, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? enumMaxLength ?? maxSize)
-      .getOrElse(throw new IllegalArgumentException(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
+      .getOrElse(die(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
   }
 
 }

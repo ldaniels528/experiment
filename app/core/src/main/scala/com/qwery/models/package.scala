@@ -29,7 +29,7 @@ package object models {
   final implicit class InvokableConversions(val invokable: Invokable) extends AnyVal {
     @inline def toQueryable: Queryable = invokable match {
       case q: Queryable => q
-      case x => throw new IllegalArgumentException(s"Invalid input source '$x'")
+      case x => die(s"Invalid input source '$x'")
     }
   }
 

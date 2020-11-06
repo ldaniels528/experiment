@@ -6,8 +6,8 @@ import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec._
 import com.qwery.database.device._
-import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.server.TableService.TableConfig
+import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.models.TableConfig
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -30,7 +30,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
   private val declaredFields = `class`.getDeclaredFields.toList
   private val declaredFieldNames = declaredFields.map(_.getName)
   private val constructor = `class`.getConstructors.find(_.getParameterCount == declaredFields.length)
-    .getOrElse(throw new IllegalArgumentException(s"No suitable constructor found for class ${`class`.getName}"))
+    .getOrElse(die(s"No suitable constructor found for class ${`class`.getName}"))
   private val parameterTypes = constructor.getParameterTypes
 
   /**

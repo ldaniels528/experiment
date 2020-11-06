@@ -4,7 +4,7 @@ package jdbc
 import java.sql.ResultSet
 import java.{sql, util}
 
-import com.qwery.database.server.TableService.TableColumn
+import com.qwery.database.models.TableColumn
 
 case class JDBCArray(connection: JDBCConnection, typeName: String, elements: Array[AnyRef]) extends sql.Array {
 

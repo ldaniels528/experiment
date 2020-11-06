@@ -7,7 +7,7 @@ import java.sql.{Array => SQLArray, _}
 import java.util
 import java.util.{Calendar, UUID}
 
-import com.qwery.database.server.TableService.{QueryResult, TableColumn}
+import com.qwery.database.models.{QueryResult, TableColumn}
 import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 
 import scala.beans.{BeanProperty, BooleanBeanProperty}

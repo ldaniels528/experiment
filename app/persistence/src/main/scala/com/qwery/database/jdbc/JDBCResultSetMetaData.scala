@@ -3,7 +3,7 @@ package jdbc
 
 import java.sql.ResultSetMetaData
 
-import com.qwery.database.server.TableService.TableColumn
+import com.qwery.database.models.TableColumn
 
 /**
  * Qwery Result Set MetaData

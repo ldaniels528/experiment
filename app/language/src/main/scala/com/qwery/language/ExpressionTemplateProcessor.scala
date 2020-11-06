@@ -116,8 +116,7 @@ trait ExpressionTemplateProcessor {
     val field = stream.next() match {
       case t: AlphaToken => Field(t.text)
       case t: QuotedToken if t.isBackTicks => Field(t.text)
-      case t =>
-        throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
+      case t => throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
     }
     ExpressionTemplate(fields = Map(name -> field))
   }

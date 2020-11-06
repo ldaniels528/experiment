@@ -21,6 +21,12 @@ package object database {
   val ROW_ID_BYTES = 4
   val SHORT_BYTES = 2
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //      UTILITIES
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+
+  def die[A](message: => String): A = throw new RuntimeException(message)
+
   /**
    * Returns the option of the given value as the desired type
    * @param value the given value
@@ -31,6 +37,27 @@ package object database {
     case v: T => Some(v)
     case _ => Option.empty[T]
   }
+
+  type StopWatch = () => Double
+
+  def stopWatch: StopWatch = {
+    val startTime = System.nanoTime()
+    () => (System.nanoTime() - startTime) / 1e+6
+  }
+
+  /**
+   * Executes the block capturing its execution the time in milliseconds
+   * @param block the block to execute
+   * @return a tuple containing the result of the block and its execution the time in milliseconds
+   */
+  def time[A](block: => A): (A, Double) = {
+    val clock = stopWatch
+    (block, clock())
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //      EXCEPTIONS
+  /////////////////////////////////////////////////////////////////////////////////////////////////
 
   case class ColumnCapacityExceededException(column: Column, fieldLength: Int)
     extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
@@ -52,6 +79,10 @@ package object database {
 
   case class TypeConversionException(value: Any, toType: ColumnType)
     extends RuntimeException(s"Failed to convert '$value' to $toType")
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //      IMPLICIT CLASSES
+  /////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * Math Utilities for Long integers

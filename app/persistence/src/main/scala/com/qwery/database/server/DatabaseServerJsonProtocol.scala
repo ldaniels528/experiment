@@ -1,20 +1,20 @@
-package com.qwery.database.server
+package com.qwery.database
+package server
 
 import java.util.{Date, UUID}
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.ColumnTypes.ColumnType
-import com.qwery.database.server.TableService._
+import com.qwery.database.device.BlockDevice.RowStatistics
+import com.qwery.database.models._
 import com.qwery.database.types.QxAny
-import com.qwery.database.{ColumnTypes, Field, FieldMetadata, Row, RowMetadata}
 import com.qwery.models.TypeAsEnum
 import spray.json._
 
 /**
- * Qwery Custom JSON Protocol
+ * Database Server JSON Protocol
  */
-object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   import spray.json._
 
   ////////////////////////////////////////////////////////////////////////
@@ -60,7 +60,7 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
-  implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat3(DatabaseMetrics.apply)
+  implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat2(DatabaseMetrics.apply)
 
   implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)
 
@@ -74,15 +74,17 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat2(TableIndexRef.apply)
 
-  implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat7(TableMetrics.apply)
+  implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat6(TableMetrics.apply)
 
   implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
+
+  implicit val updateCount: RootJsonFormat[UpdateCount] = jsonFormat2(UpdateCount.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Result Set Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat8(QueryResult.apply)
+  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat6(QueryResult.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Row/Field Implicits
@@ -129,7 +131,7 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
     case JsNumber(value) => value
     case js: JsObject => js.fields map { case (name, jsValue) => name -> unwrap(jsValue) }
     case JsString(value) => value
-    case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+    case x => die(s"Unsupported type $x (${x.getClass.getName})")
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -138,12 +140,12 @@ object QweryCustomJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
 
   implicit object TupleSetJsonFormat extends JsonFormat[TupleSet] {
     override def read(jsValue: JsValue): TupleSet = jsValue match {
-      case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
-      case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+      case js: JsObject => TupleSet(js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON })
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
 
     override def write(m: TupleSet): JsValue = {
-      JsObject(m.mapValues {
+      JsObject(m.toMap.mapValues {
         case b: Boolean => if (b) JsTrue else JsFalse
         case d: java.util.Date => JsNumber(d.getTime)
         case n: Double => JsNumber(n)

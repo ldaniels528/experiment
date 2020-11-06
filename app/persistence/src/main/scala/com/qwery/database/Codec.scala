@@ -172,7 +172,7 @@ object Codec extends Compression {
       case s: Short => allocate(SHORT_BYTES).putShort(s)
       case s: String if column.isEnum =>
         column.enumValues.indexOf(s) match {
-          case -1 => throw new IllegalArgumentException(s"'$s' is not allowed for column '${column.name}'")
+          case -1 => die(s"'$s' is not allowed for column '${column.name}'")
           case index => allocate(SHORT_BYTES).putShort(index.toShort)
         }
       case s: String =>

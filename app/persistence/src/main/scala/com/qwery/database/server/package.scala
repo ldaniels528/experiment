@@ -15,24 +15,6 @@ package object server {
   val DEFAULT_DATABASE = "qwery"
 
   /**
-   * Represents a row; a collection of tuples
-   */
-  type TupleSet = Map[String, Any]
-
-  /**
-   * Executes the block capturing its execution the time in milliseconds
-   * @param block the block to execute
-   * @return a tuplee containing the result of the block and its execution the time in milliseconds
-   */
-  def time[A](block: => A): (A, Double) = {
-    val startTime = System.nanoTime()
-    val result = block
-    val finishTime = System.nanoTime()
-    val elapsedTime = (finishTime - startTime) / 1e+6
-    (result, elapsedTime)
-  }
-
-  /**
    * JsValue Conversion (Spray)
    * @param jsValue the [[JsValue JSON value]]
    */
@@ -45,7 +27,7 @@ package object server {
       case JsNumber(value) => value
       case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
       case JsString(value) => value
-      case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
   }
 
@@ -63,7 +45,7 @@ package object server {
       case JNull | JNothing => JsNull
       case JObject(values) => new JsObject(Map(values.map { case JField(k, v) => (k, v.toSprayJs) }: _*))
       case JString(value) => JsString(value)
-      case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
 
     @inline
@@ -75,7 +57,7 @@ package object server {
       case JNull | JNothing => null
       case js: JObject => js.values
       case JString(value) => value
-      case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
   }
 
@@ -88,7 +70,7 @@ package object server {
       case n: Number => JsNumber(n.doubleValue())
       case s: Seq[Any] => JsArray(s.map(_.toSprayJs): _*)
       case s: String => JsString(s)
-      case x => throw new IllegalArgumentException(s"Unsupported type $x (${x.getClass.getName})")
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
   }
 

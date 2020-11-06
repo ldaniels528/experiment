@@ -4,7 +4,7 @@ package jdbc
 import java.sql.{DatabaseMetaData, ResultSet, ResultSetMetaData, RowIdLifetime}
 
 import com.qwery.database.ColumnTypes._
-import com.qwery.database.server.TableService.TableColumn
+import com.qwery.database.models.TableColumn
 
 import scala.beans.{BeanProperty, BooleanBeanProperty}
 

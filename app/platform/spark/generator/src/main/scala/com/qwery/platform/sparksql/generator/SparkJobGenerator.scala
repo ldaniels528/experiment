@@ -56,7 +56,7 @@ class SparkJobGenerator() {
       */
     val sparkPrefix: String = sparkVersion.split('.').toList match {
       case a :: b :: _ if a.toSafeInt === 2 & b.toSafeInt.exists(v => v >= 3 && v <= 4) => s"v${a}_$b"
-      case _ => throw new IllegalArgumentException(s"Unsupported Spark version '$sparkVersion'")
+      case _ => die(s"Unsupported Spark version '$sparkVersion'")
     }
 
     writeToDisk(outputFile = new File(outputPath, "built.sbt")) {

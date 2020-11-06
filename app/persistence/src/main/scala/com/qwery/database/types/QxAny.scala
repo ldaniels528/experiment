@@ -125,7 +125,7 @@ object QxAny {
     case s: String => QxString(Some(s))
     case u: UUID => QxUUID(Some(u))
     case s: Serializable => QxSerializable(Some(s))
-    case x => throw new IllegalArgumentException(s"Unhandled value '$x' (${x.getClass.getName})")
+    case x => die(s"Unhandled value '$x' (${x.getClass.getName})")
   }
 
   def decode(column: Column, buf: ByteBuffer): (FieldMetadata, QxAny) = {
@@ -357,7 +357,7 @@ trait QxNumber extends QxAny {
     case (aa: QxByte, bb: QxNumber) => QxByte(for {a <- aa.value; b <- bb.toByte} yield (a + b).toByte)
     case (aa: QxNumber, bb: QxShort) => bb + aa
     // anything else ...
-    case (aa, bb) => throw new IllegalArgumentException(s"Cannot add '$bb' to '$aa'")
+    case (aa, bb) => die(s"Cannot add '$bb' to '$aa'")
   }
 
   def -(that: QxNumber): QxNumber = (this, that) match {
@@ -383,7 +383,7 @@ trait QxNumber extends QxAny {
     case (aa: QxByte, bb: QxNumber) => QxByte(for {a <- aa.value; b <- bb.toByte} yield (a - b).toByte)
     case (aa: QxNumber, bb: QxShort) => bb - aa
     // anything else ...
-    case (aa, bb) => throw new IllegalArgumentException(s"Cannot subtract '$bb' from '$aa'")
+    case (aa, bb) => die(s"Cannot subtract '$bb' from '$aa'")
   }
 
   def *(that: QxNumber): QxNumber = (this, that) match {
@@ -409,7 +409,7 @@ trait QxNumber extends QxAny {
     case (aa: QxByte, bb: QxNumber) => QxByte(for {a <- aa.value; b <- bb.toByte} yield (a * b).toByte)
     case (aa: QxNumber, bb: QxShort) => bb * aa
     // anything else ...
-    case (aa, bb) => throw new IllegalArgumentException(s"Cannot multiply '$bb' by '$aa'")
+    case (aa, bb) => die(s"Cannot multiply '$bb' by '$aa'")
   }
 
   def /(that: QxNumber): QxNumber = (this, that) match {
@@ -435,7 +435,7 @@ trait QxNumber extends QxAny {
     case (aa: QxByte, bb: QxNumber) => QxByte(for {a <- aa.value; b <- bb.toByte} yield (a / b).toByte)
     case (aa: QxNumber, bb: QxShort) => bb / aa
     // anything else ...
-    case (aa, bb) => throw new IllegalArgumentException(s"Cannot divide '$bb' by '$aa'")
+    case (aa, bb) => die(s"Cannot divide '$bb' by '$aa'")
   }
 
   def %(that: QxNumber): QxNumber = (this, that) match {
@@ -461,7 +461,7 @@ trait QxNumber extends QxAny {
     case (aa: QxByte, bb: QxNumber) => QxByte(for {a <- aa.value; b <- bb.toByte} yield (a % b).toByte)
     case (aa: QxNumber, bb: QxShort) => bb % aa
     // anything else ...
-    case (aa, bb) => throw new IllegalArgumentException(s"Cannot multiply '$bb' by '$aa'")
+    case (aa, bb) => die(s"Cannot multiply '$bb' by '$aa'")
   }
 
 }

@@ -295,7 +295,7 @@ trait SQLLanguageParser {
    */
   def parseDropTable(ts: TokenStream): DropTable = {
     val params = SQLTemplateParams(ts, "DROP ?EXTERNAL TABLE %t:name")
-    DropTable(Table(name = params.atoms("name")))
+    DropTable(Table(name = params.atoms("name")), ifExists = true)
   }
 
   /**

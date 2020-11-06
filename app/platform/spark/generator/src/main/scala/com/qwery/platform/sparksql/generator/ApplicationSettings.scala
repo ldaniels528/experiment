@@ -159,8 +159,7 @@ object ApplicationSettings {
     }
   }
 
-  def fail[A](property: String): A =
-    throw new IllegalArgumentException(s"Required property '$property' is missing")
+  def fail[A](property: String): A = throw new IllegalArgumentException(s"Required property '$property' is missing")
 
   /**
     * Application Settings Builder

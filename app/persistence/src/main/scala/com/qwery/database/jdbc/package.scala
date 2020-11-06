@@ -21,7 +21,7 @@ package object jdbc {
       case SMALLINT => ShortType
       case TINYINT => ByteType
       case LONGNVARCHAR | NVARCHAR | VARCHAR => StringType
-      case other => throw new RuntimeException(s"Unhandled SQL type ($other)")
+      case other => die(s"Unhandled SQL type ($other)")
     }
   }
 

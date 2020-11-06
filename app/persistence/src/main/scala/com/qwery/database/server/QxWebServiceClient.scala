@@ -13,7 +13,7 @@ import scala.io.Source
 /**
  * Qwery Web Service Client
  */
-class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout: Duration = 1.second) {
+class QxWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout: Duration = 1.second) {
 
   /**
    * The HTTP DELETE request method deletes the specified resource.
@@ -203,7 +203,7 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
     }
   }
 
-  private  def toJSON(jsonString: String): JValue = {
+  private def toJSON(jsonString: String): JValue = {
     implicit val formats: DefaultFormats = DefaultFormats
     parse(jsonString)
   }
@@ -213,7 +213,7 @@ class QweryWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout:
 /**
  * Qwery Web Service Companion
  */
-object QweryWebServiceClient {
+object QxWebServiceClient {
 
   final implicit class QweryResponseConversion(val response: JValue) extends AnyVal {
 

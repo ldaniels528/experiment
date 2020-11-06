@@ -1,4 +1,4 @@
-package com.qwery.database.server
+package com.qwery.database
 
 import net.liftweb.json.Extraction.decompose
 import net.liftweb.json.{DefaultFormats, JValue, compactRender, parse, prettyRender}

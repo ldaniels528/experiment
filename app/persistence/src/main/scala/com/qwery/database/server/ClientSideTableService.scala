@@ -1,78 +1,76 @@
-package com.qwery.database.server
+package com.qwery.database
+package server
 
-import com.qwery.database.server.JSONSupport._
-import com.qwery.database.server.QweryCustomJsonProtocol._
-import com.qwery.database.server.QweryWebServiceClient._
-import com.qwery.database.server.TableService._
-import com.qwery.database.{ROWID, Row}
+import com.qwery.database.JSONSupport._
+import com.qwery.database.models._
+import com.qwery.database.server.DatabaseServerJsonProtocol._
+import com.qwery.database.server.QxWebServiceClient._
 import net.liftweb.json._
 import spray.json._
 
 /**
  * Client-Side Table Service
+ * @param host the remote hostname
+ * @param port the remote port
  */
-case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends TableService[TupleSet] {
+case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
   private implicit val formats: DefaultFormats = DefaultFormats
-  private val $http = new QweryWebServiceClient()
+  private val $http = new QxWebServiceClient()
 
-  override def appendRow(databaseName: String, tableName: String, values: TupleSet): QueryResult = {
-    $http.post(toUrl(databaseName, tableName), values.toJson.toString().getBytes("utf-8")).as[QueryResult]
+  def createTable(databaseName: String, ref: TableCreation): UpdateCount = {
+    $http.post(toUrl(databaseName), ref.toJSON.getBytes("utf-8")).as[UpdateCount]
   }
 
-  override def createTable(databaseName: String, ref: TableCreation): QueryResult = {
-    $http.post(toUrl(databaseName), ref.toJSON.getBytes("utf-8")).as[QueryResult]
+  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): UpdateCount = {
+    $http.delete(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID").as[UpdateCount]
   }
 
-  override def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): QueryResult = {
-    $http.delete(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID").as[QueryResult]
+  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): UpdateCount = {
+    $http.delete(url = s"${toUrl(databaseName, tableName)}/$start/$length").as[UpdateCount]
   }
 
-  override def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): QueryResult = {
-    $http.delete(url = s"${toUrl(databaseName, tableName)}/$start/$length").as[QueryResult]
+  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): UpdateCount = {
+    $http.delete(toUrl(databaseName, tableName, rowID)).as[UpdateCount]
   }
 
-  override def deleteRow(databaseName: String, tableName: String, rowID: ROWID): QueryResult = {
-    $http.delete(toUrl(databaseName, tableName, rowID)).as[QueryResult]
+  def dropTable(databaseName: String, tableName: String): UpdateCount = {
+    $http.delete(toUrl(databaseName, tableName)).as[UpdateCount]
   }
 
-  override def dropTable(databaseName: String, tableName: String): QueryResult = {
-    $http.delete(toUrl(databaseName, tableName)).as[QueryResult]
-  }
-
-  override def executeQuery(databaseName: String, sql: String): QueryResult = {
+  def executeQuery(databaseName: String, sql: String): QueryResult = {
     $http.post(toQueryUrl(databaseName), body = sql.getBytes("utf-8")).toSprayJs.convertTo[QueryResult]
   }
 
-  override def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[TupleSet] = {
+  def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[TupleSet] = {
     $http.get(toUrl(databaseName, tableName, condition, limit)) match {
-      case js: JArray => js.values.map(_.asInstanceOf[TupleSet])
-      case js => throw new IllegalArgumentException(s"Unexpected type returned $js")
+      case js: JArray => js.values.map(m => TupleSet(m.asInstanceOf[Map[String, Any]]))
+      case js => die(s"Unexpected type returned $js")
     }
   }
 
-  override def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
+  def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
     $http.get(toUrl(databaseName)).as[DatabaseMetrics]
   }
 
-  override def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
+  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
     $http.download(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID")
   }
 
-  override def getLength(databaseName: String, tableName: String): QueryResult = {
-    $http.get(url = s"${toUrl(databaseName, tableName)}/length").as[QueryResult]
+  def getLength(databaseName: String, tableName: String): UpdateCount = {
+    $http.get(url = s"${toUrl(databaseName, tableName)}/length").as[UpdateCount]
   }
 
-  override def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[TupleSet] = {
+  def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[TupleSet] = {
     $http.get(url = s"${toRangeUrl(databaseName, tableName)}/$start/$length") match {
-      case js: JArray => js.values.map(_.asInstanceOf[TupleSet])
-      case js => throw new IllegalArgumentException(s"Unexpected type returned $js")
+      case js: JArray => js.values.map(m => TupleSet(m.asInstanceOf[Map[String, Any]]))
+      case js => die(s"Unexpected type returned $js")
     }
   }
 
-  override def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[TupleSet] = {
+  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[TupleSet] = {
     $http.get(toUrl(databaseName, tableName, rowID)) match {
-      case js: JObject => Option(js.values)
-      case js => throw new IllegalArgumentException(s"Unexpected type returned $js")
+      case js: JObject => Option(TupleSet(js.values))
+      case js => die(s"Unexpected type returned $js")
     }
   }
 
@@ -80,31 +78,35 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) extends T
     $http.get(toUrl(databaseName, tableName, rowID)).extract[Row]
   }
 
-  override def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
+  def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
     $http.get(toUrl(databaseName, tableName)).as[TableMetrics]
   }
 
-  override def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult = {
-    val (_, responseTime) = time($http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")))
-    QueryResult(databaseName, tableName, count = 1, responseTime = responseTime)
+  def insertRow(databaseName: String, tableName: String, values: TupleSet): UpdateCount = {
+    $http.post(toUrl(databaseName, tableName), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
   }
 
-  override def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): QueryResult = {
-    val (_, responseTime) = time($http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes("utf-8")))
-    QueryResult(databaseName, tableName, count = 1, responseTime = responseTime)
+  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateCount = {
+    $http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8"))
+    UpdateCount(count = 1, __id = Some(rowID))
   }
 
-  override def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult = {
-    $http.post(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")).as[QueryResult]
+  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): UpdateCount = {
+    $http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes("utf-8"))
+    UpdateCount(count = 1, __id = Some(rowID))
+  }
+
+  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): UpdateCount = {
+    $http.post(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
   }
 
   def toIterator(databaseName: String, tableName: String): Iterator[TupleSet] = new Iterator[TupleSet] {
     private var rowID: ROWID = 0
     private val eof: ROWID = getLength(databaseName, tableName).__id.getOrElse(0: ROWID)
 
-    override def hasNext: Boolean = rowID < eof
+    def hasNext: Boolean = rowID < eof
 
-    override def next(): TupleSet = {
+    def next(): TupleSet = {
       if (!hasNext) throw new IndexOutOfBoundsException()
       val row = getRow(databaseName, tableName, rowID)
       rowID += 1

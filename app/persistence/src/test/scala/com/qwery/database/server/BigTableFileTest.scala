@@ -2,7 +2,7 @@ package com.qwery.database.server
 
 import java.util.Date
 
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote, TupleSet}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 
@@ -10,7 +10,6 @@ import org.scalatest.funspec.AnyFunSpec
  * Big Table File Test Suite
  */
 class BigTableFileTest extends AnyFunSpec {
-  private implicit val tables: ServerSideTableService = ServerSideTableService()
   private val databaseName = DEFAULT_DATABASE
   private val tableName = "big_stocks"
 
@@ -32,7 +31,7 @@ class BigTableFileTest extends AnyFunSpec {
         // populate the table with random quotes
         (1 to expected) foreach { _ =>
           val q = StockQuote.randomQuote
-          table.insertRow(Map("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
+          table.insertRow(TupleSet("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
         }
 
         // ensure the data was inserted
@@ -42,8 +41,7 @@ class BigTableFileTest extends AnyFunSpec {
 
     it("should handle indexing large data sets") {
       TableFile(databaseName, tableName) use { table =>
-        val columns = table.device.columns
-        table.createIndex(indexName = s"${tableName}_symbol", indexColumn = columns(columns.indexWhere(_.name == "symbol")))
+        table.createIndex(indexName = s"${tableName}_symbol", indexColumnName = "symbol")
       }
     }
 

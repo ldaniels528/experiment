@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
 import akka.actor.ActorSystem
-import com.qwery.database.server.{DatabaseServer, QueryProcessor, ServerSideTableService}
+import com.qwery.database.server.DatabaseServer
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -19,7 +19,7 @@ class QweryDriverTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val port = 12121
   private val jdbcURL = s"jdbc:qwery://localhost:$port/test"
-  private val tableName = "stocks_jdbc_test"
+  private val tableName = "stocks_test_jdbc"
 
   // start the server
   startServer(port)
@@ -184,7 +184,6 @@ class QweryDriverTest extends AnyFunSpec {
 
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val service: ServerSideTableService = ServerSideTableService()
     implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 5.seconds)
     import system.dispatcher
 

@@ -106,7 +106,7 @@ object QweryMavenPlugin {
       }
 
       private def required[A](app: Application, message: String): A =
-        throw new IllegalArgumentException(s"$message in application '${app.appName}'")
+        die(s"$message in application '${app.appName}'")
     }
 
   }

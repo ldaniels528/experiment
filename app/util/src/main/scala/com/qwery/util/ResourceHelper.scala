@@ -67,8 +67,7 @@ object ResourceHelper {
 
     def require[B <: A](message: String)(implicit tag: ClassTag[B]): B = entity match {
       case entityB: B => entityB
-      case _ =>
-        throw new IllegalArgumentException(message)
+      case _ => throw new IllegalArgumentException(message)
     }
 
   }

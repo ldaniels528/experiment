@@ -1,64 +1,16 @@
-package com.qwery.database.server
+package com.qwery.database
 
-import com.qwery.database.server.JSONSupport.JSONProductConversion
-import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.server.TableService._
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, ROWID, SHORT_BYTES}
+import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
+import JSONSupport.JSONProductConversion
 import com.qwery.models.TypeAsEnum
 
-/**
- * Table Service
- */
-trait TableService[R] {
-
-  def appendRow(databaseName: String, tableName: String, values: TupleSet): QueryResult
-
-  def createTable(databaseName: String, ref: TableCreation): QueryResult
-
-  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): QueryResult
-
-  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): QueryResult
-
-  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): QueryResult
-
-  def dropTable(databaseName: String, tableName: String): QueryResult
-
-  def executeQuery(databaseName: String, sql: String): QueryResult
-
-  def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Seq[R]
-
-  def getDatabaseMetrics(databaseName: String): DatabaseMetrics
-
-  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte]
-
-  def getLength(databaseName: String, tableName: String): QueryResult
-
-  def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[R]
-
-  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[R]
-
-  def getTableMetrics(databaseName: String, tableName: String): TableMetrics
-
-  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
-
-  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): QueryResult
-
-  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): QueryResult
-
-}
-
-/**
- * Table Service Companion
- */
-object TableService {
+package object models {
 
   case class DatabaseConfig(types: Seq[TypeAsEnum]) {
     override def toString: String = this.toJSON
   }
 
-  case class DatabaseMetrics(databaseName: String,
-                             tables: Seq[String],
-                             responseTimeMillis: Double = 0) {
+  case class DatabaseMetrics(databaseName: String, tables: Seq[String]) {
     override def toString: String = this.toJSON
   }
 
@@ -68,11 +20,9 @@ object TableService {
 
   case class QueryResult(databaseName: String,
                          tableName: String,
-                         responseTime: Double,
                          columns: Seq[TableColumn] = Nil,
                          rows: Seq[Seq[Option[Any]]] = Nil,
                          count: Int = 0,
-                         __id: Option[Int] = None,
                          __ids: List[Int] = Nil) {
     override def toString: String = this.toJSON
   }
@@ -152,8 +102,11 @@ object TableService {
                           columns: Seq[TableColumn],
                           physicalSize: Option[Long],
                           recordSize: Int,
-                          rows: ROWID,
-                          responseTimeMillis: Double = 0){
+                          rows: ROWID) {
+    override def toString: String = this.toJSON
+  }
+
+  case class UpdateCount(count: Int, __id: Option[Int] = None) {
     override def toString: String = this.toJSON
   }
 

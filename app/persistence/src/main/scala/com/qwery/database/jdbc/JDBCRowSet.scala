@@ -5,8 +5,7 @@ import java.nio.ByteBuffer
 import java.sql.RowId
 
 import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.server.TableService.TableColumn
-import com.qwery.database.server.TupleSet
+import com.qwery.database.models.TableColumn
 
 /**
  * Qwery JDBC Row Set
@@ -34,11 +33,11 @@ class JDBCRowSet(connection: JDBCConnection,
   }
 
   def getColumnValue[T](columnIndex: Int): T = {
-    getColumnValueOpt[T](columnIndex).getOrElse(throw new RuntimeException(s"No value was found for column index $columnIndex"))
+    getColumnValueOpt[T](columnIndex).getOrElse(die(s"No value was found for column index $columnIndex"))
   }
 
   def getColumnValue[T](columnLabel: String): T = {
-    getColumnValueOpt[T](columnLabel).getOrElse(throw new RuntimeException(s"No value was found for column name '$columnLabel''"))
+    getColumnValueOpt[T](columnLabel).getOrElse(die(s"No value was found for column name '$columnLabel''"))
   }
 
   def getColumnValueOpt[T](columnIndex: Int): Option[T] = {
@@ -103,7 +102,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def moveToCurrentRow(): Unit = rowIndex = rows.length - 1
 
-  def insertRow(): Unit = connection.service.appendRow(connection.database, tableName, constructRow)
+  def insertRow(): Unit = connection.service.insertRow(connection.database, tableName, constructRow)
 
   def updateRow(): Unit = connection.service.replaceRow(connection.database, tableName, __id(), constructRow)
 
@@ -147,7 +146,7 @@ class JDBCRowSet(connection: JDBCConnection,
   private def constructRow: TupleSet = {
     val p0 = rowIndex * columns.length
     val p1 = (rowIndex + 1) * columns.length
-    Map((for {
+    TupleSet((for {
       n <- p0 until p1
       name = columns(n - p0).name
       value <- matrix(n)

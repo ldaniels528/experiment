@@ -26,7 +26,7 @@ class QweryDriver() extends Driver {
     url match {
       case regex(host, port, database) =>
         new JDBCConnection(service = ClientSideTableService(host, port.toInt), database = database, url = url)
-      case x => throw new IllegalArgumentException(s"Invalid JDBC URL: $x")
+      case x => die(s"Invalid JDBC URL: $x")
     }
   }
 

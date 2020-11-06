@@ -6,19 +6,18 @@ import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
+import com.qwery.database.InvokableProcessor.implicits.InvokableFacade
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.QweryFiles._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
-import com.qwery.database.server.InvokableProcessor.implicits.InvokableFacade
+import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.models._
 import com.qwery.database.server.TableFile._
-import com.qwery.database.server.TableService.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.server.TableService._
 import com.qwery.database.types.QxInt
 import com.qwery.language.SQLLanguageParser
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
-import scala.collection.Map
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
 import scala.language.postfixOps
@@ -83,12 +82,13 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   /**
    * Creates a new binary search index
-   * @param indexName   the name of the index
-   * @param indexColumn the index [[Column column]]
+   * @param indexName       the name of the index
+   * @param indexColumnName the name of the index [[Column column]]
    * @return a new binary search index [[BlockDevice device]]
    */
-  def createIndex(indexName: String, indexColumn: Column): BlockDevice = {
+  def createIndex(indexName: String, indexColumnName: String): BlockDevice = {
     // define the columns
+    val indexColumn = device.columns.find(_.name == indexColumnName).getOrElse(die(s"Column '$indexColumnName' not found"))
     val indexAllColumns = List(rowIDColumn, indexColumn)
     val sourceIndex = device.columns.indexOf(indexColumn)
 
@@ -207,6 +207,11 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     rows
   }
 
+  def getTableMetrics: TableMetrics = TableMetrics(
+    databaseName = databaseName, tableName = tableName, columns = device.columns.toList.map(_.toTableColumn),
+    physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length
+  )
+
   def insertRow(row: Row): ROWID = {
     val rowID = device.length
     replaceRow(rowID, row.toMap)
@@ -217,6 +222,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     val rowID = device.length
     replaceRow(rowID, values)
     rowID
+  }
+
+  def insertRows(columns: Seq[String], valueList: List[List[Any]]): Int = {
+    for {
+      values <- valueList
+      row = TupleSet(columns zip values map { case (column, value) => column -> value }: _*)
+    } replaceRow(device.length, row)
+    valueList.length
   }
 
   def load(file: File)(transform: String => TupleSet): LoadMetrics = {
@@ -299,7 +312,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     while (rowID < eof && !limit.exists(matches >= _)) {
       val row_? = get(rowID)
       row_?.foreach { row =>
-        val result = Map((for {field <- row.fields; value <- field.value} yield field.name -> value): _*).asInstanceOf[TupleSet]
+        val result = TupleSet((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)
         if (isSatisfied(result, condition) || condition.isEmpty) {
           f(rowID, row)
           matches += 1
@@ -359,9 +372,10 @@ object TableFile {
    * Deletes the table
    * @param databaseName the name of the database
    * @param tableName    the name of the table
+   * @param ifExists     indicates whether an existence check before attempting to delete
    * @return true, if the table was deleted
    */
-  def dropTable(databaseName: String, tableName: String): Boolean = {
+  def dropTable(databaseName: String, tableName: String, ifExists: Boolean = true): Boolean = {
     val directory = getTableRootDirectory(databaseName, tableName)
     val files = directory.listFilesRecursively
     files.forall(_.delete())

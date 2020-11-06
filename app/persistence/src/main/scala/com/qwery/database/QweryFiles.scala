@@ -2,9 +2,9 @@ package com.qwery.database
 
 import java.io.{File, PrintWriter}
 
-import com.qwery.database.server.JSONSupport.{JSONProductConversion, JSONStringConversion}
+import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
+import com.qwery.database.models.{DatabaseConfig, TableConfig}
 import com.qwery.database.server.TableFile
-import com.qwery.database.server.TableService.{DatabaseConfig, TableConfig}
 import com.qwery.util.ResourceHelper._
 
 import scala.io.Source

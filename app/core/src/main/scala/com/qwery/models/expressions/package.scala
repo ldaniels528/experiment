@@ -175,8 +175,7 @@ package object expressions {
 
       @inline def asAny: Any = expression match {
         case Literal(value) => value
-        case unknown =>
-          throw new IllegalArgumentException(s"Unsupported expression '$unknown' primitive value expected.")
+        case unknown => throw new IllegalArgumentException(s"Unsupported expression '$unknown' primitive value expected.")
       }
 
       @inline def asInt: Int = expression.asNumber.toInt
@@ -189,14 +188,12 @@ package object expressions {
         case Literal(value: Int) => value
         case Literal(value: Long) => value
         case Literal(value: Short) => value
-        case unknown =>
-          throw new IllegalArgumentException(s"Unsupported expression '$unknown' numeric value expected.")
+        case unknown => throw new IllegalArgumentException(s"Unsupported expression '$unknown' numeric value expected.")
       }
 
       @inline def asString: String = expression match {
         case Literal(value: String) => value
-        case unknown =>
-          throw new IllegalArgumentException(s"Unsupported expression '$unknown' string expected.")
+        case unknown => throw new IllegalArgumentException(s"Unsupported expression '$unknown' string expected.")
       }
     }
 
