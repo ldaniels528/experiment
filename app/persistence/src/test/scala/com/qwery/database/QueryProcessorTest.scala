@@ -1,6 +1,5 @@
-package com.qwery.database.server
+package com.qwery.database
 
-import com.qwery.database.{QueryProcessor, TupleSet}
 import com.qwery.database.StockQuote._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory

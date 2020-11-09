@@ -4,10 +4,11 @@ import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Scheduler}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.qwery.database.QueryProcessor.CommandRoutingActor
+import com.qwery.database.QueryProcessor.{CommandRoutingActor, logger}
 import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.models._
 import com.qwery.database.server.{DatabaseFile, TableFile}
+import com.qwery.models.expressions.Expression
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -62,7 +63,20 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
   }
 
   def executeQuery(databaseName: String, sql: String): Future[QueryResult] = {
-    asResultSet { ExecuteQuery(databaseName, sql) }
+    val command = SQLCompiler.compile(databaseName, sql)
+    val tableName = command match {
+      case cmd: TableIORequest => cmd.tableName
+      case cmd =>
+        logger.warn(s"Could not determine 'tableName' for $cmd")
+        ""
+    }
+    this ? command map {
+      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
+      case QueryResultRetrieved(queryResult) => queryResult
+      case RowUpdated(rowID) => QueryResult(databaseName, tableName, count = 1, __ids = List(rowID))
+      case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count)
+      case response => throw UnhandledCommandException(command, response)
+    }
   }
 
   def findRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None): Future[Seq[Row]] = {
@@ -94,7 +108,7 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Future[Option[Row]] = {
     val command = GetRow(databaseName, tableName, rowID)
     this ? command map {
-      case FailureOccurred(cause, _) => throw FailedCommandException(command, cause)
+      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
       case RowRetrieved(row_?) => row_?
       case response => throw UnhandledCommandException(command, response)
     }
@@ -123,6 +137,10 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
 
   def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: TupleSet): Future[UpdateCount] = {
     asUpdateCount { ReplaceRow(databaseName, tableName, rowID, values) }
+  }
+
+  def selectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: TupleSet, limit: Option[Int]): Future[QueryResult] = {
+    asResultSet { SelectRows(databaseName, tableName, fields, where, limit) }
   }
 
   def truncateTable(databaseName: String, tableName: String): Future[UpdateCount] = {
@@ -239,12 +257,6 @@ object QueryProcessor {
     private lazy val databaseFile: DatabaseFile = DatabaseFile(databaseName)
 
     override def receive: Receive = {
-      case cmd@CreateTable(_, tableName, columns) =>
-        invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn))) { case (caller, _) => caller ! RowsUpdated(1) }
-      case cmd@DropTable(_, tableName, ifExists) =>
-        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)){ case (caller, isDropped) => caller ! RowsUpdated(count = if (isDropped) 1 else 0) }
-      case cmd@ExecuteQuery(_, sql) =>
-        invoke(cmd, sender())(TableFile.executeQuery(databaseName, sql)) { case (caller, rows) => caller ! QueryResultRetrieved(rows) }
       case cmd: GetDatabaseMetrics =>
         invoke(cmd, sender())(databaseFile.getDatabaseMetrics) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
       case message =>
@@ -272,6 +284,8 @@ object QueryProcessor {
     override def receive: Receive = {
       case cmd@CreateIndex(_, _, indexName, indexColumn) =>
         invoke(cmd, sender())(table.createIndex(indexName, indexColumn)) { case (caller, n) => caller ! RowsUpdated(n.length) }
+      case cmd@CreateTable(_, tableName, columns) =>
+        invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn))) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
         invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, b) => caller ! RowsUpdated(if (b) 1 else 0) }
       case cmd@DeleteRange(_, _, start, length) =>
@@ -280,6 +294,8 @@ object QueryProcessor {
         invoke(cmd, sender())(table.deleteRow(rowID)) { case (caller, _id) => caller ! RowUpdated(_id) }
       case cmd@DeleteRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.deleteRows(condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
+      case cmd@DropTable(_, tableName, ifExists) =>
+        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)){ case (caller, isDropped) => caller ! RowsUpdated(count = if (isDropped) 1 else 0) }
       case cmd@FindRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.findRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows) }
       case cmd@GetField(_, _, rowID, columnID) =>
@@ -298,6 +314,8 @@ object QueryProcessor {
         invoke(cmd, sender())(table.insertRows(columns, rows)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@ReplaceRow(_, _, rowID, row) =>
         invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID) }
+      case cmd@SelectRows(_, _, fields, where, limit) =>
+        invoke(cmd, sender())(table.selectRows(fields, where, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@UpdateField(_, _, rowID, columnID, value) =>
@@ -352,7 +370,7 @@ object QueryProcessor {
 
     case class CreateIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String) extends TableIORequest
 
-    case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends DatabaseIORequest
+    case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends TableIORequest
 
     case class DeleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableIORequest
 
@@ -362,9 +380,7 @@ object QueryProcessor {
 
     case class DeleteRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int]) extends TableIORequest
 
-    case class DropTable(databaseName: String, tableName: String, ifExists: Boolean) extends DatabaseIORequest
-
-    case class ExecuteQuery(databaseName: String, sql: String) extends DatabaseIORequest
+    case class DropTable(databaseName: String, tableName: String, ifExists: Boolean) extends TableIORequest
 
     case class FindRows(databaseName: String, tableName: String, condition: TupleSet, limit: Option[Int] = None) extends TableIORequest
 
@@ -386,13 +402,19 @@ object QueryProcessor {
 
     case class ReplaceRow(databaseName: String, tableName: String, rowID: ROWID, row: TupleSet) extends TableIORequest
 
+    case class SelectRows(databaseName: String,
+                          tableName: String,
+                          fields: Seq[Expression],
+                          where: TupleSet,
+                          limit: Option[Int]) extends TableIORequest
+
     case class TruncateTable(databaseName: String, tableName: String) extends TableIORequest
 
     case class UpdateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]) extends TableIORequest
 
-    case class UpdateRow(databaseName: String, tableName: String, rowID: ROWID, row: TupleSet) extends TableIORequest
+    case class UpdateRow(databaseName: String, tableName: String, rowID: ROWID, changes: TupleSet) extends TableIORequest
 
-    case class UpdateRows(databaseName: String, tableName: String, values: TupleSet, condition: TupleSet, limit: Option[Int]) extends TableIORequest
+    case class UpdateRows(databaseName: String, tableName: String, changes: TupleSet, condition: TupleSet, limit: Option[Int]) extends TableIORequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //      RESPONSES

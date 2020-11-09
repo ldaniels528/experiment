@@ -1,37 +1,61 @@
 package com.qwery.database
 
-import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, FindRows}
+import com.qwery.database.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.QueryProcessor.{commands => cx}
+import com.qwery.database.SQLCompiler.implicits.InvokableFacade
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
-import com.qwery.models.Insert.Into
+import com.qwery.language.SQLLanguageParser
+import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal}
-import com.qwery.models.{Invokable, TableIndex, TableRef, TypeAsEnum, expressions => ex}
+import com.qwery.models.{Invokable, TableIndex, TableRef, expressions => ex}
 import com.qwery.{models => mx}
 
 /**
- * SQL Model Cross-Compiler - translates [[Invokable]]s into [[DatabaseIORequest]]s
+ * SQL Compiler - compiles SQL into [[DatabaseIORequest]]s
  */
-object SQLModelCrossCompiler {
+object SQLCompiler {
   private val columnTypeMap = Map(
     "ARRAY" -> ColumnTypes.ArrayType,
-    "BINARY" -> ColumnTypes.BlobType,
+    "BIGINT" -> ColumnTypes.BigIntType,
+    "BINARY" -> ColumnTypes.BinaryType,
+    "BLOB" -> ColumnTypes.BlobType,
     "BOOLEAN" -> ColumnTypes.BooleanType,
+    "CHAR" -> ColumnTypes.StringType,
+    "CLOB" -> ColumnTypes.ClobType,
     "DATE" -> ColumnTypes.DateType,
+    "DATETIME" -> ColumnTypes.DateType,
+    "DECIMAL" -> ColumnTypes.BigDecimalType,
     "DOUBLE" -> ColumnTypes.DoubleType,
     "FLOAT" -> ColumnTypes.FloatType,
+    "INT" -> ColumnTypes.IntType,
     "INTEGER" -> ColumnTypes.IntType,
     "LONG" -> ColumnTypes.LongType,
+    "OBJECT" -> ColumnTypes.SerializableType,
+    "REAL" -> ColumnTypes.DoubleType,
     "SHORT" -> ColumnTypes.ShortType,
+    "SMALLINT" -> ColumnTypes.ShortType,
     "STRING" -> ColumnTypes.StringType,
+    "TEXT" -> ColumnTypes.ClobType,
     "TIMESTAMP" -> ColumnTypes.DateType,
-    "UUID" -> ColumnTypes.UUIDType
+    "TINYINT" -> ColumnTypes.ByteType,
+    "UUID" -> ColumnTypes.UUIDType,
+    "VARCHAR" -> ColumnTypes.StringType
   )
+
+  def compile(databaseName: String, sql: String): DatabaseIORequest = {
+    val model = SQLLanguageParser.parse(sql)
+    model.compile(databaseName)
+  }
 
   /**
    * Implicit classes and conversions
    */
   object implicits {
 
+    /**
+     * Expression Facade
+     * @param expression the [[Expression]]
+     */
     final implicit class ExpressionFacade(val expression: Expression) extends AnyVal {
       def translate: Any = expression match {
         case Literal(value) => value
@@ -39,37 +63,31 @@ object SQLModelCrossCompiler {
       }
     }
 
+    /**
+     * Invokable Facade
+     * @param invokable the [[Invokable]]
+     */
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
-      def extractTableName: String = invokable match {
-        case mx.Create(table: mx.Table) => table.name
-        case mx.Create(TypeAsEnum(name, _)) => name
-        case mx.Delete(TableRef(tableName), _, _) => tableName
-        case mx.DropTable(TableRef(tableName), _) => tableName
-        case mx.Insert(Into(TableRef(tableName)), _, _) => tableName
-        case select: mx.Select => select.from.map(_.extractTableName).getOrElse(die(s"No table reference found in $select"))
-        case mx.TableRef(tableName) => tableName
-        case mx.Truncate(TableRef(tableName)) => tableName
-        case mx.Update(TableRef(tableName), _, _, _) => tableName
-        case unknown => die(s"Unsupported operation $unknown")
-      }
 
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
           cx.CreateTable(databaseName, table.name, columns = table.columns.map(_.toColumn.toTableColumn))
         case mx.Create(TableIndex(indexName, TableRef(tableName), columns)) =>
-          cx.CreateIndex(databaseName, tableName, indexName, columns.map(_.name).onlyOne("Multiple columns is not supported"))
+          cx.CreateIndex(databaseName, tableName, indexName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Delete(TableRef(tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
         case mx.DropTable(TableRef(tableName), ifExists) =>
           cx.DropTable(databaseName, tableName, ifExists)
         case mx.Insert(Into(TableRef(tableName)), mx.Insert.Values(expressionValues), fields) =>
           cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values = expressionValues.map(_.map(_.translate)))
-        case select: mx.Select =>
-          toSelectRows(databaseName, select)
+        case mx.Insert(Overwrite(TableRef(tableName)), mx.Insert.Values(expressionValues), fields) =>
+          cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values = expressionValues.map(_.map(_.translate)))
+        case mx.Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
+          cx.SelectRows(databaseName, tableName, fields, toCriteria(where), limit)
         case mx.Truncate(TableRef(tableName)) =>
           cx.TruncateTable(databaseName, tableName)
-        case mx.Update(TableRef(tableName), assignments, where, limit) =>
-          cx.UpdateRows(databaseName, tableName, values = TupleSet(assignments.map { case (k, v) => k -> v.translate }:_*), condition = toCriteria(where), limit)
+        case mx.Update(TableRef(tableName), changes, where, limit) =>
+          cx.UpdateRows(databaseName, tableName, changes = TupleSet(changes.map { case (k, v) => k -> v.translate }: _*), condition = toCriteria(where), limit)
         case unknown => die(s"Unsupported operation $unknown")
       }
 
@@ -79,25 +97,25 @@ object SQLModelCrossCompiler {
         case None => TupleSet()
       }
 
-      private def toSelectRows(databaseName: String, select: mx.Select): DatabaseIORequest = {
-        select.from match {
-          case Some(TableRef(tableName)) =>
-            FindRows(databaseName, tableName, toCriteria(select.where), limit = select.limit)
-          case Some(queryable) => die(s"Unsupported queryable $queryable")
-          case None => die("No query source was specified")
-        }
-      }
-
     }
 
+    /**
+     * Item Sequence Utilities
+     * @param items the collection of items
+     * @tparam A the item type
+     */
     final implicit class ItemSeqUtilities[A](val items: Seq[A]) extends AnyVal {
       @inline
-      def onlyOne(message: => String = "Only one identifier was expected"): A = items.toList match {
+      def onlyOne(label: => String = "column"): A = items.toList match {
         case value :: Nil => value
-        case _ => die(message)
+        case _ => die(s"Multiple ${label}s are not supported")
       }
     }
 
+    /**
+     * SQL Column-To-Column Conversion
+     * @param column the [[mx.Column SQL Column]]
+     */
     final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
       @inline
       def toColumn: Column = Column(

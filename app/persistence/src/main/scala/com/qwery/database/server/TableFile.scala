@@ -15,6 +15,7 @@ import com.qwery.database.models._
 import com.qwery.database.server.TableFile._
 import com.qwery.database.types.QxInt
 import com.qwery.language.SQLLanguageParser
+import com.qwery.models.expressions.{BasicField, Expression}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -214,7 +215,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def insertRow(row: Row): ROWID = {
     val rowID = device.length
-    replaceRow(rowID, row.toMap)
+    replaceRow(rowID, row.toTupleSet)
     rowID
   }
 
@@ -264,9 +265,23 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     rows
   }
 
+  def selectRows(fields: Seq[Expression], where: TupleSet, limit: Option[Int] = None): QueryResult = {
+    val rows = findRows(where, limit)
+    val columns = device.columns.map(_.toTableColumn)
+    val fieldNames: Set[String] = {
+      val selectFields = fields.collect { case f: BasicField => f.name } // TODO resolve computed fields too
+      if (selectFields.isEmpty) columns.map(_.name) else selectFields
+    }.toSet
+
+    QueryResult(databaseName, tableName, columns, __ids = rows.map(_.rowID), rows = rows map { row =>
+      val mapping = row.toMap.filter { case (name, _) => fieldNames.contains(name) } // TODO properly handle field projection
+      columns map { column => mapping.get(column.name) }
+    })
+  }
+
   def updateRow(rowID: ROWID, values: TupleSet): Boolean = {
     get(rowID) exists { row =>
-      val updatedValues = row.toMap ++ values
+      val updatedValues = row.toTupleSet ++ values
       replaceRow(rowID, updatedValues)
       true
     }
@@ -274,7 +289,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def updateRows(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, row) =>
-      val updatedValues = row.toMap ++ values
+      val updatedValues = row.toTupleSet ++ values
       replaceRow(rowID, updatedValues)
     }
   }

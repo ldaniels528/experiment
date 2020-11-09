@@ -160,10 +160,4 @@ object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupp
     }
   }
 
-  implicit object TupleSetSeqJsonFormat extends JsonFormat[Seq[TupleSet]] {
-    override def read(value: JsValue): Seq[TupleSet] = ???
-
-    override def write(items: Seq[TupleSet]): JsValue = JsArray(items.map(_.toJson):_*)
-  }
-
 }

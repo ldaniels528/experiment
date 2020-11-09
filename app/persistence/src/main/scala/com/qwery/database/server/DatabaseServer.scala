@@ -134,7 +134,7 @@ object DatabaseServer {
           val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
           complete(
             if (params.isEmpty) qp.getTableMetrics(databaseName, tableName)
-            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toMap))
+            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toTupleSet))
           )
         }
       } ~
@@ -244,7 +244,7 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toMap)))
+        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toTupleSet)))
       }
   }
 
@@ -283,7 +283,7 @@ object DatabaseServer {
         parameters('__metadata.?) { metadata_? =>
           val isMetadata = metadata_?.contains("true")
           complete(qp.getRow(databaseName, tableName, rowID) map {
-            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toMap.toJson
+            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toTupleSet.toJson
             case None => JsObject()
           })
         }

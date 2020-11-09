@@ -8,6 +8,8 @@ package com.qwery.database
  */
 case class Row(rowID: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
 
-  def toMap: TupleSet = TupleSet("__id" -> rowID) ++ TupleSet((for {field <- fields; value <- field.value} yield field.name -> value): _*)
+  def toTupleSet: TupleSet = TupleSet(toMap)
+
+  def toMap: Map[String, Any] = Map(fields.flatMap(f => f.value.map(f.name -> _)): _*) + ("__id" -> rowID)
 
 }
