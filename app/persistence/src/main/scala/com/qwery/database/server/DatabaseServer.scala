@@ -134,7 +134,7 @@ object DatabaseServer {
           val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
           complete(
             if (params.isEmpty) qp.getTableMetrics(databaseName, tableName)
-            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toTupleSet))
+            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toRowTuple))
           )
         }
       } ~
@@ -157,9 +157,9 @@ object DatabaseServer {
    */
   private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String): Route = {
     val dataFile = format.toLowerCase() match {
-      case "csv" => QweryFiles.getTableFile(databaseName, tableName).exportAsCSV
-      case "json" => QweryFiles.getTableFile(databaseName, tableName).exportAsJSON
-      case "binary" => QweryFiles.getTableDataFile(databaseName, tableName)
+      case "csv" => TableFile.getTableFile(databaseName, tableName).exportAsCSV
+      case "json" => TableFile.getTableFile(databaseName, tableName).exportAsJSON
+      case "binary" => TableFile.getTableDataFile(databaseName, tableName)
       case other => die(s"Unsupported file format '$other'")
     }
     logger.info(s"Exporting '$fileName' (as ${format.toUpperCase()}) <~ ${dataFile.getAbsolutePath}")
@@ -199,7 +199,7 @@ object DatabaseServer {
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
         parameters('__contentType.?) { contentType_? =>
-          val column = QweryFiles.getTableFile(databaseName, tableName).device.columns(columnID)
+          val column = TableFile.getTableFile(databaseName, tableName).device.columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
           complete(qp.getField(databaseName, tableName, rowID, columnID) map { field =>
             val fieldBytes = field.typedValue.encode(column)
@@ -218,7 +218,7 @@ object DatabaseServer {
       put {
         // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
         entity(as[String]) { value =>
-          val device = QweryFiles.getTableFile(databaseName, tableName).device
+          val device = TableFile.getTableFile(databaseName, tableName).device
           assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
           val columnType = device.columns(columnID).metadata.`type`
           complete(qp.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
@@ -244,7 +244,7 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toTupleSet)))
+        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toRowTuple)))
       }
   }
 
@@ -283,7 +283,7 @@ object DatabaseServer {
         parameters('__metadata.?) { metadata_? =>
           val isMetadata = metadata_?.contains("true")
           complete(qp.getRow(databaseName, tableName, rowID) map {
-            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toTupleSet.toJson
+            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toRowTuple.toJson
             case None => JsObject()
           })
         }
@@ -324,8 +324,8 @@ object DatabaseServer {
     }
   }
 
-  private def toValues(params: Uri.Query): TupleSet = TupleSet(params.filterNot(_._1.name.startsWith("__")): _*)
+  private def toValues(params: Uri.Query): RowTuple = RowTuple(params.filterNot(_._1.name.startsWith("__")): _*)
 
-  private def toValues(jsObject: JsObject): TupleSet = TupleSet(jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) })
+  private def toValues(jsObject: JsObject): RowTuple = RowTuple(jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) })
 
 }

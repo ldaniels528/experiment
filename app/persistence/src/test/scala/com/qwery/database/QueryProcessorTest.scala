@@ -22,7 +22,7 @@ class QueryProcessorTest extends AnyFunSpec {
 
       val databaseName = "test"
       val tableName = "stocks_test"
-      val newQuote = () => TupleSet("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastTradeTime" -> randomDate)
+      val newQuote = () => RowTuple("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastTradeTime" -> randomDate)
 
       val startTime = System.nanoTime()
       val outcomes = for {

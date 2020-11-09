@@ -1,21 +1,18 @@
 package com.qwery.database
-package server
 
-import java.io.File
+import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.ColumnTypes.IntType
-import com.qwery.database.InvokableProcessor.implicits.InvokableFacade
+import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.QweryFiles._
+import com.qwery.database.TableFile._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
-import com.qwery.database.server.TableFile._
 import com.qwery.database.types.QxInt
-import com.qwery.language.SQLLanguageParser
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{AllFields, BasicField, Expression}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -24,7 +21,7 @@ import scala.io.Source
 import scala.language.postfixOps
 
 /**
- * Represents a database table
+ * Represents a database table file
  * @param databaseName the name of the database
  * @param tableName    the name of the table
  * @param config       the [[TableConfig table configuration]]
@@ -77,9 +74,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def count(): ROWID = device.countRows(_.isActive)
 
-  def countRows(condition: TupleSet, limit: Option[Int] = None): Int = {
-    _iterate(condition, limit) { (_, _) => }
-  }
+  def countRows(condition: RowTuple, limit: Option[Int] = None): Int = _iterate(condition, limit) { (_, _) => }
 
   /**
    * Creates a new binary search index
@@ -129,14 +124,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     out
   }
 
-  def deleteRow(rowID: ROWID): Int = {
-    device.updateRowMetaData(rowID)(_.copy(isActive = false))
-    1
-  }
-
   def deleteField(rowID: ROWID, columnID: Int): Boolean = {
     device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false))
     true
+  }
+
+  def deleteRow(rowID: ROWID): Int = {
+    device.updateRowMetaData(rowID)(_.copy(isActive = false))
+    1
   }
 
   def deleteRange(start: ROWID, length: Int): Int = {
@@ -150,7 +145,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     total
   }
 
-  def deleteRows(condition: TupleSet, limit: Option[Int] = None): Int = {
+  def deleteRows(condition: RowTuple, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, _) => deleteRow(rowID) }
   }
 
@@ -166,7 +161,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    */
   def exportAsJSON: File = device.exportAsJSON
 
-  def findRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
+  def findRows(condition: RowTuple, limit: Option[Int] = None): List[Row] = {
     // check all available indices for the table
     val tableIndices = for {
       (searchColumn, searchValue) <- condition.toList
@@ -179,11 +174,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
         logger.info(s"Using index '$tableName.$indexName' for column '${indexColumn.name}'...")
         for {
           indexedRow <- binarySearch(tableIndex, Option(searchValue)).toList
-          rowID <- indexedRow.fields.collectFirst { case Field("rowID", _, QxInt(Some(rowID))) => rowID: ROWID }
-          row <- get(rowID)
-        } yield row
+          dataRowID <- indexedRow.fields.collectFirst { case Field("rowID", _, QxInt(Some(rowID))) => rowID: ROWID }
+          dataRow <- get(dataRowID)
+        } yield dataRow
       // otherwise perform a table scan
-      case _ => scanRows(condition, limit)
+      case _ =>
+        var rows: List[Row] = Nil
+        _iterate(condition, limit) { (_, row) => rows = row :: rows }
+        rows
     }
   }
 
@@ -213,13 +211,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length
   )
 
-  def insertRow(row: Row): ROWID = {
-    val rowID = device.length
-    replaceRow(rowID, row.toTupleSet)
-    rowID
-  }
-
-  def insertRow(values: TupleSet): ROWID = {
+  def insertRow(values: RowTuple): ROWID = {
     val rowID = device.length
     replaceRow(rowID, values)
     rowID
@@ -228,14 +220,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   def insertRows(columns: Seq[String], valueList: List[List[Any]]): Int = {
     for {
       values <- valueList
-      row = TupleSet(columns zip values map { case (column, value) => column -> value }: _*)
+      row = RowTuple(columns zip values map { case (column, value) => column -> value }: _*)
     } replaceRow(device.length, row)
     valueList.length
   }
 
-  def load(file: File)(transform: String => TupleSet): LoadMetrics = {
+  def load(file: File)(transform: String => RowTuple): LoadMetrics = {
     var records: Long = 0
-    val startTime = System.nanoTime()
+    val clock = stopWatch
     Source.fromFile(file).use(_.getLines() foreach { line =>
       val values = transform(line)
       if (values.nonEmpty) {
@@ -243,12 +235,12 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
         records += 1
       }
     })
-    val ingestTime = (System.nanoTime() - startTime) / 1e+6
-    val recordsPerSec = records / (ingestTime/1000)
+    val ingestTime = clock()
+    val recordsPerSec = records / (ingestTime / 1000)
     LoadMetrics(records, ingestTime, recordsPerSec)
   }
 
-  def replaceRow(rowID: ROWID, values: TupleSet): Unit = {
+  def replaceRow(rowID: ROWID, values: RowTuple): Unit = {
     val buf = allocate(device.recordSize)
     buf.putRowMetadata(RowMetadata())
     device.columns zip device.columnOffsets foreach { case (col, offset) =>
@@ -259,19 +251,33 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     device.writeRow(rowID, buf)
   }
 
-  def scanRows(condition: TupleSet, limit: Option[Int] = None): List[Row] = {
-    var rows: List[Row] = Nil
-    _iterate(condition, limit) { (_, row) => rows = row :: rows }
-    rows
+  def replaceRange(start: ROWID, length: Int, values: RowTuple): Int = {
+    var total = 0
+    val limit: ROWID = Math.min(device.length, start + length)
+    var rowID: ROWID = start
+    while (rowID < limit) {
+      replaceRow(rowID, values)
+      total += 1
+      rowID += 1
+    }
+    total
   }
 
-  def selectRows(fields: Seq[Expression], where: TupleSet, limit: Option[Int] = None): QueryResult = {
+  /**
+   * Resizes the table; removing or adding rows
+   */
+  def resize(newSize: ROWID): Unit = device.shrinkTo(newSize)
+
+  def selectRows(fields: Seq[Expression], where: RowTuple, limit: Option[Int] = None): QueryResult = {
     val rows = findRows(where, limit)
     val columns = device.columns.map(_.toTableColumn)
-    val fieldNames: Set[String] = {
-      val selectFields = fields.collect { case f: BasicField => f.name } // TODO resolve computed fields too
-      if (selectFields.isEmpty) columns.map(_.name) else selectFields
-    }.toSet
+    val fieldNames: Set[String] = (fields flatMap {
+      case AllFields => columns.map(_.name)
+      case f: BasicField => List(f.name)
+      case expression =>
+        logger.error(s"Unconverted expression: $expression")
+        Nil
+    }).toSet
 
     QueryResult(databaseName, tableName, columns, __ids = rows.map(_.rowID), rows = rows map { row =>
       val mapping = row.toMap.filter { case (name, _) => fieldNames.contains(name) } // TODO properly handle field projection
@@ -279,24 +285,24 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     })
   }
 
-  def updateRow(rowID: ROWID, values: TupleSet): Boolean = {
+  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Unit = {
+    assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+    device.updateField(rowID, columnID, value)
+  }
+
+  def updateRow(rowID: ROWID, values: RowTuple): Boolean = {
     get(rowID) exists { row =>
-      val updatedValues = row.toTupleSet ++ values
+      val updatedValues = row.toRowTuple ++ values
       replaceRow(rowID, updatedValues)
       true
     }
   }
 
-  def updateRows(values: TupleSet, condition: TupleSet, limit: Option[Int] = None): Int = {
+  def updateRows(values: RowTuple, condition: RowTuple, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { (rowID, row) =>
-      val updatedValues = row.toTupleSet ++ values
+      val updatedValues = row.toRowTuple ++ values
       replaceRow(rowID, updatedValues)
     }
-  }
-
-  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Unit = {
-    assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
-    device.updateField(rowID, columnID, value)
   }
 
   /**
@@ -310,7 +316,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def isSatisfied(result: TupleSet, condition: TupleSet): Boolean = {
+  private def isSatisfied(result: RowTuple, condition: RowTuple): Boolean = {
     condition.forall { case (name, value) => result.get(name).contains(value) }
   }
 
@@ -320,14 +326,14 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def _iterate(condition: TupleSet, limit: Option[Int] = None)(f: (ROWID, Row) => Unit): Int = {
+  private def _iterate(condition: RowTuple, limit: Option[Int] = None)(f: (ROWID, Row) => Unit): Int = {
     var matches: Int = 0
     var rowID: ROWID = 0
     val eof = device.length
     while (rowID < eof && !limit.exists(matches >= _)) {
       val row_? = get(rowID)
       row_?.foreach { row =>
-        val result = TupleSet((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)
+        val result = RowTuple((for {field <- row.fields; value <- field.value} yield field.name -> value): _*)
         if (isSatisfied(result, condition) || condition.isEmpty) {
           f(rowID, row)
           matches += 1
@@ -396,6 +402,38 @@ object TableFile {
     files.forall(_.delete())
   }
 
-  def executeQuery(databaseName: String, sql: String): QueryResult = SQLLanguageParser.parse(sql).invoke(databaseName)
+  //////////////////////////////////////////////////////////////////////////////////////
+  //  TABLE CONFIG
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  def getTableConfigFile(databaseName: String, tableName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
+  }
+
+  def getTableFile(databaseName: String, tableName: String): TableFile = TableFile(databaseName, tableName)
+
+  def getTableRootDirectory(databaseName: String, tableName: String): File = {
+    new File(new File(getServerRootDirectory, databaseName), tableName)
+  }
+
+  def getTableDataFile(databaseName: String, tableName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.qdb")
+  }
+
+  def getTableColumnFile(databaseName: String, tableName: String, columnID: Int): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName-$columnID.qdb")
+  }
+
+  def getTableIndexFile(databaseName: String, tableName: String, indexName: String): File = {
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$indexName.qdb")
+  }
+
+  def readTableConfig(databaseName: String, tableName: String): TableConfig = {
+    Source.fromFile(getTableConfigFile(databaseName, tableName)).use(src => src.mkString.fromJSON[TableConfig])
+  }
+
+  def writeTableConfig(databaseName: String, tableName: String, config: TableConfig): Unit = {
+    new PrintWriter(getTableConfigFile(databaseName, tableName)).use(_.println(config.toJSONPretty))
+  }
 
 }

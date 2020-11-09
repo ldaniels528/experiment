@@ -1,11 +1,11 @@
 package com.qwery.database
 
 /**
- * Represents a row; a collection of tuples
+ * Represents a row; a collection of key-value pairs
  */
-case class TupleSet(items: (String, Any)*) {
+case class RowTuple(items: (String, Any)*) {
 
-  def ++(that: TupleSet): TupleSet = TupleSet(this.toMap ++ that.toMap)
+  def ++(that: RowTuple): RowTuple = RowTuple(this.toMap ++ that.toMap)
 
   def exists(f: ((String, Any)) => Boolean): Boolean = items.exists(f)
 
@@ -34,13 +34,9 @@ case class TupleSet(items: (String, Any)*) {
 }
 
 /**
- * TupleSet Companion
+ * RowTuple Companion
  */
-object TupleSet {
-  def apply(mapping: Map[String, Any]) = new TupleSet(mapping.toSeq: _*)
-
-  //implicit def map2TupleSet(mapping: Map[String, Any]): TupleSet = TupleSet(mapping)
-
-  //implicit def tuples2TupleSet(items: Seq[(String, Any)]): TupleSet = TupleSet(items: _*)
+object RowTuple {
+  def apply(mapping: Map[String, Any]) = new RowTuple(mapping.toSeq: _*)
 
 }

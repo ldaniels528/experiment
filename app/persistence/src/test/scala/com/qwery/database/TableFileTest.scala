@@ -1,12 +1,12 @@
 package com.qwery.database
-package server
 
 import java.io.File
 import java.nio.ByteBuffer
 import java.util.Date
 
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models.TableIndexRef
+import com.qwery.database.models.{LoadMetrics, TableIndexRef}
+import com.qwery.models.expressions.AllFields
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -30,25 +30,19 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
           Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         )) use { table =>
-        TableFile.executeQuery(databaseName, s"TRUNCATE $tableName")
+        table.truncate()
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
 
-        table.insertRow(TupleSet("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
-        table.insertRow(TupleSet("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
-        table.insertRow(TupleSet("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
-        table.insertRow(TupleSet("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
-        table.insertRow(TupleSet("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
-        table.insertRow(TupleSet("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
-
-        TableFile.executeQuery(databaseName,
-          s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
-              |VALUES ('MSFT', 'NYSE', 167.55, 1601064578145)
-              |""".stripMargin
-        )
+        table.insertRow(RowTuple("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
 
         val count = table.count()
         logger.info(s"$databaseName.$tableName: inserted $count records")
-        assert(count == 7)
+        assert(count == 6)
       }
     }
 
@@ -61,30 +55,31 @@ class TableFileTest extends AnyFunSpec {
 
     it("should count the number of rows in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val count = table.countRows(condition = TupleSet("exchange" -> "NYSE"))
+        val count = table.countRows(condition = RowTuple("exchange" -> "NYSE"))
         logger.info(s"NYSE => $count")
       }
     }
 
     it("should find rows via a condition in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val results = table.findRows(limit = None, condition = TupleSet("exchange" -> "NASDAQ"))
+        val results = table.findRows(limit = None, condition = RowTuple("exchange" -> "NASDAQ"))
         results.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
       }
     }
 
     it("should query rows via a condition from a table") {
-         val results = TableFile.executeQuery(databaseName, s"SELECT * FROM $tableName WHERE exchange = 'NASDAQ'")
-         for {
-           row <- results.rows
-         } {
-           row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
-         }
+      TableFile(databaseName, tableName) use { table =>
+        val results = table.selectRows(fields = List(AllFields), where = RowTuple("exchange" -> "NASDAQ"))
+        for {
+          row <- results.rows
+          (result, index) <- row.zipWithIndex
+        } logger.info(s"[$index] $result")
+      }
     }
 
     it("should update rows in a table") {
       TableFile(databaseName, tableName) use { table =>
-        val count = table.updateRows(values = TupleSet("lastSale" -> 0.50), condition = TupleSet("symbol" -> "PEREZ"))
+        val count = table.updateRows(values = RowTuple("lastSale" -> 0.50), condition = RowTuple("symbol" -> "PEREZ"))
         logger.info(s"update count => $count")
       }
     }
@@ -92,12 +87,11 @@ class TableFileTest extends AnyFunSpec {
     it("should delete a row from a table") {
       TableFile(databaseName, tableName) use { table =>
         table.deleteRow(0)
-        val results = TableFile.executeQuery(databaseName, s"SELECT * FROM $tableName")
+        val results = table.selectRows(fields = List(AllFields), where = RowTuple())
         for {
           row <- results.rows
-        } {
-          row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
-        }
+          (result, index) <- row.zipWithIndex
+        } logger.info(s"[$index] $result")
       }
     }
 
@@ -119,12 +113,13 @@ class TableFileTest extends AnyFunSpec {
       ))
 
       // populate the table
-      copyInto(databaseName, tableName, new File("./stocks.csv"))
+      val metrics = copyInto(databaseName, tableName, new File("./stocks.csv"))
+      assert(metrics.records == 10001)
 
       // open the table file for read/write
       TableFile(databaseName, tableName) use { table =>
         // insert the MSFT record
-        table.insertRow(TupleSet("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 98.55, "lastTradeTime" -> new Date()))
+        table.insertRow(RowTuple("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 98.55, "lastTradeTime" -> new Date()))
 
         // create the table index
         val (indexDevice, indexCreationTime) = time(table.createIndex(indexName, indexColumn))
@@ -136,75 +131,32 @@ class TableFileTest extends AnyFunSpec {
         // search for a row (e.g. find value via the index)
         val (row_?, processedTime) = time(for {
           indexRow <- table.binarySearch(TableIndexRef(indexName, indexColumn), searchValue = Option(searchSymbol))
-          rowID <- indexRow.fields.find(_.name == "rowID").flatMap(_.value.map(_.asInstanceOf[ROWID]))
-        } yield table.get(rowID))
-        logger.info(f"Retrieved row ${row_?} via index '$indexName' in $processedTime%.2f msec")
+          dataRowID <- indexRow.fields.find(_.name == "rowID").flatMap(_.value.map(_.asInstanceOf[ROWID]))
+          dataRow <- table.get(dataRowID)
+        } yield dataRow)
+        logger.info(f"Retrieved row #${row_?.map(_.rowID).getOrElse("[none]")} via index '$indexName' in $processedTime%.2f msec")
 
         assert(row_?.nonEmpty)
         row_?.foreach(row => logger.info(f"row: $row"))
       }
     }
 
-    it("should build an index and find a row using it (SQL)") {
-      val tableName = "stocks_abc"
-      val indexColumn = "symbol"
-      val indexName = s"${tableName}_$indexColumn"
-      val searchSymbol = "MSFT"
-
-      // drop the previous table (if it exists)
-      TableFile.executeQuery(databaseName, sql = s"DROP TABLE $tableName")
-
-      // create the table
-      TableFile.executeQuery(databaseName, sql =
-        s"""|CREATE TABLE $tableName (
-            |  symbol STRING(8) comment 'the ticker symbol',
-            |  exchange STRING(8) comment 'the stock exchange',
-            |  lastSale DOUBLE comment 'the latest sale price',
-            |  lastTradeTime DATE comment 'the latest sale date/time'
-            |)
-            |LOCATION '/$databaseName/$tableName/'
-            |""".stripMargin
-      )
-
-      // populate the table
-      copyInto(databaseName, tableName, new File("./stocks.csv"))
-
-      // insert the MSFT record
-      TableFile.executeQuery(databaseName, sql =
-        s"""|INSERT INTO $tableName (symbol, exchange, lastSale, lastTradeTime)
-            |VALUES ("MSFT", "NYSE", 98.55, ${System.currentTimeMillis()})
-            |""".stripMargin
-      )
-
-      // create the table index
-      val (_, indexCreationTime) = time(TableFile.executeQuery(databaseName, sql = s"CREATE INDEX $indexName ON $tableName ($indexColumn)"))
-      logger.info(f"Created index '$indexName' in $indexCreationTime%.2f msec")
-
-      // retrieve the row
-      val results = TableFile.executeQuery(databaseName, sql = s"SELECT * FROM $tableName WHERE $indexColumn = '$searchSymbol'")
-      assert(results.rows.nonEmpty)
-      for {
-        row <- results.rows
-      } {
-        row.zipWithIndex foreach { case (result, index) => logger.info(s"[$index] $result") }
-      }
-    }
-
   }
 
-  def copyInto(databaseName: String, tableName: String, file: File): Unit = {
+  def copyInto(databaseName: String, tableName: String, file: File): LoadMetrics = {
     TableFile(databaseName, tableName) use { table =>
-      val count = table.load(file)(_.split("[,]") match {
+      val metrics = table.load(file)(_.split("[,]") match {
         case Array(symbol, exchange, price, date) =>
-          TupleSet("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong))
-        case _ => TupleSet()
+          RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong))
+        case _ => RowTuple()
       })
-      logger.info(s"Loaded $count items")
+      logger.info(s"metrics: $metrics")
+      metrics
     }
   }
 
   def showBuffer(rowID: ROWID, buf: ByteBuffer)(implicit indexDevice: BlockDevice): Unit = {
-    val row = TupleSet(indexDevice.columns.zipWithIndex flatMap { case (column, idx) =>
+    val row = RowTuple(indexDevice.columns.zipWithIndex flatMap { case (column, idx) =>
       buf.position(indexDevice.columnOffsets(idx))
       val (_, value_?) = Codec.decode(column, buf)
       value_?.map(value => column.name -> value)

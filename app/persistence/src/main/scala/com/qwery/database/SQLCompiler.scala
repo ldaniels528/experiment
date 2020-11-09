@@ -87,14 +87,14 @@ object SQLCompiler {
         case mx.Truncate(TableRef(tableName)) =>
           cx.TruncateTable(databaseName, tableName)
         case mx.Update(TableRef(tableName), changes, where, limit) =>
-          cx.UpdateRows(databaseName, tableName, changes = TupleSet(changes.map { case (k, v) => k -> v.translate }: _*), condition = toCriteria(where), limit)
+          cx.UpdateRows(databaseName, tableName, changes = RowTuple(changes.map { case (k, v) => k -> v.translate }: _*), condition = toCriteria(where), limit)
         case unknown => die(s"Unsupported operation $unknown")
       }
 
-      private def toCriteria(condition_? : Option[Condition]): TupleSet = condition_? match {
-        case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => TupleSet(name -> value.translate)
+      private def toCriteria(condition_? : Option[Condition]): RowTuple = condition_? match {
+        case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => RowTuple(name -> value.translate)
         case Some(condition) => die(s"Unsupported condition $condition")
-        case None => TupleSet()
+        case None => RowTuple()
       }
 
     }

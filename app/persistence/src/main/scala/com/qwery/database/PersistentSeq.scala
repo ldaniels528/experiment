@@ -455,8 +455,8 @@ object PersistentSeq {
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](databaseName: String, tableName: String): PersistentSeq[A] = {
-    val persistenceFile = QweryFiles.getTableDataFile(databaseName, tableName)
-    val config = QweryFiles.readTableConfig(databaseName, tableName)
+    val persistenceFile = TableFile.getTableDataFile(databaseName, tableName)
+    val config = TableFile.readTableConfig(databaseName, tableName)
     val `class`: Class[A] = classTag[A].runtimeClass.asInstanceOf[Class[A]]
     new PersistentSeq[A](new RowOrientedFileBlockDevice(config.columns.map(_.toColumn), persistenceFile), `class`)
   }
@@ -583,12 +583,12 @@ object PersistentSeq {
     }
 
     def withTable(databaseName: String, tableName: String): this.type = {
-      this.persistenceFile = QweryFiles.getTableDataFile(databaseName, tableName)
+      this.persistenceFile = TableFile.getTableDataFile(databaseName, tableName)
       // create the table
       val tableDirectory = persistenceFile.getParentFile
       if (!tableDirectory.exists()) {
         tableDirectory.mkdirs()
-        QweryFiles.writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), indices = Nil))
+        TableFile.writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), indices = Nil))
       }
       this
     }

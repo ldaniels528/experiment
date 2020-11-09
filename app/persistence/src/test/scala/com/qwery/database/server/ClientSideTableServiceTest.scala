@@ -1,11 +1,11 @@
-package com.qwery.database.server
+package com.qwery.database
+package server
 
 import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
 import com.qwery.database.models.TableCreation
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, QueryProcessor, TupleSet, time}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -64,17 +64,17 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     }
 
     it("should append a record to the end of a table") {
-      val record = TupleSet("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
+      val record = RowTuple("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
       invoke(label = s"service.appendRow($databaseName, $tableNameA, $record)", service.insertRow(databaseName, tableNameA, record))
     }
 
     it("should replace a record at a specfic index") {
-      val record = TupleSet("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
+      val record = RowTuple("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
       invoke(label = s"service.replaceRow($databaseName, $tableNameA,  rowID = 1, $record)", service.replaceRow(databaseName, tableNameA, rowID = 1, values = record))
     }
 
     it("should update a record at a specfic index") {
-      val record = TupleSet("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 56.78, "lastSaleTime" -> System.currentTimeMillis())
+      val record = RowTuple("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 56.78, "lastSaleTime" -> System.currentTimeMillis())
       invoke(label = s"service.updateRow($databaseName, $tableNameA,  rowID = 1, $record)", service.updateRow(databaseName, tableNameA, rowID = 1, values = record))
     }
 
@@ -127,7 +127,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     }
 
     it("should search for a row via criteria from the server") {
-      val condition = TupleSet("symbol" -> "MSFT")
+      val condition = RowTuple("symbol" -> "MSFT")
       invoke(
         label = s"service.findRows($databaseName, $tableNameA, $condition, limit = Some(5))",
         block = service.findRows(databaseName, tableNameA, condition, limit = Some(5)))
@@ -135,7 +135,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
     it("should search for rows via criteria from the server") {
       val limit = Some(5)
-      val condition = TupleSet("exchange" -> "NASDAQ")
+      val condition = RowTuple("exchange" -> "NASDAQ")
       invoke(
         label = s"service.findRows($databaseName, $tableNameA, $condition, $limit)",
         block = service.findRows(databaseName, tableNameA, condition, limit))
@@ -160,8 +160,8 @@ class ClientSideTableServiceTest extends AnyFunSpec {
       block = TableFile(databaseName, tableName) use { table =>
         table.load(file)(_.split("[,]") match {
           case Array(symbol, exchange, price, date) =>
-            TupleSet("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong))
-          case _ => TupleSet()
+            RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong))
+          case _ => RowTuple()
         })
       })
   }

@@ -34,7 +34,7 @@ class SQLCompilerTest extends AnyFunSpec {
            |""".stripMargin)
       assert(result == SelectRows(databaseName = "test", tableName = "Customers",
         fields = List(m.Field("Symbol"), m.Field("Name"), m.Field("Sector"), m.Field("Industry")),
-        where = TupleSet("Industry" -> "Oil/Gas Transmission"),
+        where = RowTuple("Industry" -> "Oil/Gas Transmission"),
         limit = Some(100))
       )
     }

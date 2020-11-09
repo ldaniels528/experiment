@@ -21,6 +21,16 @@ package object database {
   val ROW_ID_BYTES = 4
   val SHORT_BYTES = 2
 
+  //////////////////////////////////////////////////////////////////////////////////////
+  //  SERVER CONFIG
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  def getServerRootDirectory: File = {
+    val directory = new File(sys.env.getOrElse("QWERY_DB", "qwery_db"))
+    assert(directory.mkdirs() || directory.exists(), throw DataDirectoryNotFoundException(directory))
+    directory
+  }
+
   /////////////////////////////////////////////////////////////////////////////////////////////////
   //      UTILITIES
   /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,6 +112,23 @@ package object database {
           if (n % m == 0) return false
         }
         true
+    }
+
+  }
+
+  /**
+   * Recursive File List Enrichment
+   * @param theFile the [[File file]]
+   */
+  final implicit class RecursiveFileList(val theFile: File) extends AnyVal {
+
+    /**
+     * Recursively retrieves all files
+     * @return the list of [[File files]]
+     */
+    def listFilesRecursively: List[File] = theFile match {
+      case directory if directory.isDirectory => directory.listFiles().toList.flatMap(_.listFilesRecursively)
+      case file => file :: Nil
     }
 
   }

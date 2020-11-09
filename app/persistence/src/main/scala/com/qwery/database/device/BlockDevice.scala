@@ -350,7 +350,7 @@ trait BlockDevice {
     buf
   }
 
-  def toRowBuffer(values: Map[String, Any]): ByteBuffer = {
+  def toRowBuffer(values: RowTuple): ByteBuffer = {
     val buf = allocate(recordSize)
     buf.putRowMetadata(RowMetadata())
     columns zip columnOffsets foreach { case (col, offset) =>

@@ -1,9 +1,7 @@
 package com.qwery.database
 
-import java.io.File
-
 import net.liftweb.json.JsonAST.JField
-import net.liftweb.json.{JArray, JBool, JDouble, JInt, JNothing, JNull, JObject, JString, JValue}
+import net.liftweb.json._
 import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
 
 /**
@@ -72,23 +70,6 @@ package object server {
       case s: String => JsString(s)
       case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
-  }
-
-  /**
-   * Qwery File
-   * @param theFile the [[File file]]
-   */
-  final implicit class QweryFile(val theFile: File) extends AnyVal {
-
-    /**
-     * Recursively retrieves all files
-     * @return the list of [[File files]]
-     */
-    def listFilesRecursively: List[File] = theFile match {
-      case directory if directory.isDirectory => directory.listFiles().toList.flatMap(_.listFilesRecursively)
-      case file => file :: Nil
-    }
-
   }
 
 }
