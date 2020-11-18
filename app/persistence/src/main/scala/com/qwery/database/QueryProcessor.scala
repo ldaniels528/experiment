@@ -1,11 +1,13 @@
 package com.qwery.database
 
+import java.util.UUID
+
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Scheduler}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.qwery.database.QueryProcessor.{CommandRoutingActor, logger}
 import com.qwery.database.QueryProcessor.commands._
+import com.qwery.database.QueryProcessor.{CommandRoutingActor, logger}
 import com.qwery.database.models._
 import com.qwery.models.expressions.Expression
 import org.slf4j.LoggerFactory
@@ -20,7 +22,7 @@ import scala.util.{Failure, Success}
  * @param routingActors  the number of command routing actors
  * @param requestTimeout the [[FiniteDuration request timeout]]
  */
-class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.seconds) {
+class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 5.seconds) {
   private val actorSystem: ActorSystem = ActorSystem(name = "QueryProcessor")
   private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingActor(requestTimeout))
     .withRouter(RoundRobinPool(nrOfInstances = routingActors)))
@@ -31,34 +33,93 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
 
   def ?(message: DatabaseIORequest): Future[DatabaseIOResponse] = (actorPool ? message).mapTo[DatabaseIOResponse]
 
+  /**
+   * Creates a new column index on a database table
+   * @param databaseName    the database name
+   * @param tableName       the table name
+   * @param indexName       the index name
+   * @param indexColumnName the index column name
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def createIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String): Future[UpdateCount] = {
     asUpdateCount { CreateIndex(databaseName, tableName, indexName, indexColumnName) }
   }
 
+  /**
+   * Creates a new table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param columns      the table columns
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn]): Future[UpdateCount] = {
     asUpdateCount { CreateTable(databaseName, tableName, columns) }
   }
 
+  /**
+   * Deletes the contents of a field; rending it null.
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param rowID        the row ID of the field
+   * @param columnID     the column ID of the field
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Future[UpdateCount] = {
     asUpdateCount { DeleteField(databaseName, tableName, rowID, columnID) }
   }
 
+  /**
+   * Deletes a range of rows in the database
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param start        the initial row ID
+   * @param length       the number of rows to delete
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int): Future[UpdateCount] = {
     asUpdateCount { DeleteRange(databaseName, tableName, start, length) }
   }
 
+  /**
+   * Deletes a row by ID
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param rowID        the ID of the row to delete
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def deleteRow(databaseName: String, tableName: String, rowID: ROWID): Future[UpdateCount] = {
     asUpdateCount { DeleteRow(databaseName, tableName, rowID) }
   }
 
+  /**
+   * Deletes rows matching the given criteria (up to the optionally specified limit)
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param condition    the deletion criteria
+   * @param limit        the maximum number of records to delete
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def deleteRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int]): Future[UpdateCount] = {
     asUpdateCount { DeleteRows(databaseName, tableName, condition, limit) }
   }
 
+  /**
+   * Drops a database table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param ifExists     indicates whether an existence check should be performed
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def dropTable(databaseName: String, tableName: String, ifExists: Boolean): Future[UpdateCount] = {
     asUpdateCount { DropTable(databaseName, tableName, ifExists) }
   }
 
+  /**
+   * Executes a SQL statement or query
+   * @param databaseName the database name
+   * @param sql the SQL statement or query
+   * @return the promise of a [[QueryResult]]
+   */
   def executeQuery(databaseName: String, sql: String): Future[QueryResult] = {
     val command = SQLCompiler.compile(databaseName, sql)
     val tableName = command match {
@@ -68,22 +129,47 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
         ""
     }
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case QueryResultRetrieved(queryResult) => queryResult
-      case RowUpdated(rowID) => QueryResult(databaseName, tableName, count = 1, __ids = List(rowID))
+      case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
       case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count)
       case response => throw UnhandledCommandException(command, response)
     }
   }
 
+  /**
+   * Atomically retrieves and replaces a row by ID
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param rowID        the row ID
+   * @param f            the update function to execute
+   * @return the promise of the updated [[Row row]]
+   */
+  def fetchAndReplace(databaseName: String, tableName: String, rowID: ROWID)(f: RowTuple => RowTuple): Future[Row] = {
+    asRows { FetchAndReplace(databaseName, tableName, rowID, f) } map(_.head)
+  }
+
+  /**
+   * Retrieves rows matching the given criteria (up to the optionally specified limit)
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param condition    the deletion criteria
+   * @param limit        the maximum number of records to delete
+   * @return the promise of the updated [[Row row]]
+   */
   def findRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int] = None): Future[Seq[Row]] = {
     asRows { FindRows(databaseName, tableName, condition, limit) }
   }
 
+  /**
+   * Retrieves the metrics for the specified database
+   * @param databaseName the specified database
+   * @return the promise of [[DatabaseMetrics]]
+   */
   def getDatabaseMetrics(databaseName: String): Future[DatabaseMetrics] = {
     val command = GetDatabaseMetrics(databaseName)
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case DatabaseMetricsRetrieved(metrics) => metrics
       case response => throw UnhandledCommandException(command, response)
     }
@@ -92,7 +178,7 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
   def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Future[Field] = {
     val command = GetField(databaseName, tableName, rowID, columnID)
     this ? command map {
-      case FailureOccurred(cause, _) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case FieldRetrieved(field) => field
       case response => throw UnhandledCommandException(command, response)
     }
@@ -102,11 +188,18 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
     asRows { GetRange(databaseName, tableName, start, length) }
   }
 
+  /**
+   * Retrieves a row by ID
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param rowID        the row ID
+   * @return the promise of the option of a [[Row]]
+   */
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Future[Option[Row]] = {
     val command = GetRow(databaseName, tableName, rowID)
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
-      case RowRetrieved(row_?) => row_?
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case RowsRetrieved(rows) => rows.headOption
       case response => throw UnhandledCommandException(command, response)
     }
   }
@@ -115,21 +208,46 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
     asUpdateCount { GetTableLength(databaseName, tableName) }
   }
 
+  /**
+   * Retrieves the metrics for the specified table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @return the promise of [[TableMetrics]]
+   */
   def getTableMetrics(databaseName: String, tableName: String): Future[TableMetrics] = {
     val command = GetTableMetrics(databaseName, tableName)
     this ? command map {
-      case FailureOccurred(cause, _) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case TableMetricsRetrieved(metrics) => metrics
       case response => throw UnhandledCommandException(command, response)
     }
   }
 
+  /**
+   * Appends a new row to the specified database table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param values       the update [[RowTuple values]]
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def insertRow(databaseName: String, tableName: String, values: RowTuple): Future[UpdateCount] = {
     asUpdateCount { InsertRow(databaseName, tableName, values) }
   }
 
+  /**
+   * Appends a collection of new rows to the specified database table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param columns      the table column names
+   * @param values       the collection of update [[RowTuple values]]
+   * @return the promise of an [[UpdateCount update count]]
+   */
   def insertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[List[Any]]): Future[UpdateCount] = {
     asUpdateCount { InsertRows(databaseName, tableName, columns, values) }
+  }
+
+  def lockRow(databaseName: String, tableName: String, rowID: ROWID): Future[String] = {
+    asLockUpdated { LockRow(databaseName, tableName, rowID) } map(_.lockID)
   }
 
   def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: RowTuple): Future[UpdateCount] = {
@@ -148,6 +266,10 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
     asUpdateCount { TruncateTable(databaseName, tableName) }
   }
 
+  def unlockRow(databaseName: String, tableName: String, rowID: ROWID, lockID: String): Future[UpdateCount] = {
+    asLockUpdated { UnlockRow(databaseName, tableName, rowID, lockID) } map(lu => UpdateCount(count = (!lu.isLocked).toInt, __id = Some(rowID)))
+  }
+
   def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): Future[UpdateCount] = {
     asUpdateCount { UpdateField(databaseName, tableName, rowID, columnID, value) }
   }
@@ -160,18 +282,17 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
     asUpdateCount { UpdateRows(databaseName, tableName, values, condition, limit) }
   }
 
-  private def asUpdateCount(command: DatabaseIORequest): Future[UpdateCount] = {
+  private def asLockUpdated(command: DatabaseIORequest): Future[LockUpdated] = {
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
-      case RowUpdated(rowID) => UpdateCount(count = 1, __id = Some(rowID))
-      case RowsUpdated(count) => UpdateCount(count = count)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case cmd: LockUpdated => cmd
       case response => throw UnhandledCommandException(command, response)
     }
   }
 
   private def asResultSet(command: DatabaseIORequest): Future[QueryResult] = {
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case QueryResultRetrieved(queryResult) => queryResult
       case response => throw UnhandledCommandException(command, response)
     }
@@ -179,8 +300,17 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
 
   private def asRows(command: DatabaseIORequest): Future[Seq[Row]] = {
     this ? command map {
-      case FailureOccurred(cause, command) => throw FailedCommandException(command, cause)
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case RowsRetrieved(rows) => rows
+      case response => throw UnhandledCommandException(command, response)
+    }
+  }
+
+  private def asUpdateCount(command: DatabaseIORequest): Future[UpdateCount] = {
+    this ? command map {
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case RowUpdated(rowID, isSuccess) => UpdateCount(count = isSuccess.toInt, __id = Some(rowID))
+      case RowsUpdated(count) => UpdateCount(count = count)
       case response => throw UnhandledCommandException(command, response)
     }
   }
@@ -192,6 +322,25 @@ class QueryProcessor(routingActors: Int = 5, requestTimeout: FiniteDuration = 5.
  */
 object QueryProcessor {
   private val logger = LoggerFactory.getLogger(getClass)
+  private val databaseWorkers = TrieMap[String, ActorRef]()
+  private val tableWorkers = TrieMap[(String, String), ActorRef]()
+  private val locks = TrieMap[ROWID, String]()
+
+  /**
+   * Sends the command to the caller
+   * @param command the [[DatabaseIORequest command]]
+   * @param caller  the [[ActorRef caller]]
+   * @param block   the executable code block
+   * @param f       the transformation function
+   * @tparam A the response object type
+   */
+  def invoke[A](command: DatabaseIORequest, caller: ActorRef)(block: => A)(f: (ActorRef, A) => Unit): Unit = {
+    try f(caller, block) catch {
+      case e: Throwable =>
+        caller ! FailureOccurred(command, e)
+        None
+    }
+  }
 
   /**
    * Command Routing Actor
@@ -199,8 +348,6 @@ object QueryProcessor {
    */
   class CommandRoutingActor(requestTimeout: FiniteDuration) extends Actor {
     import context.{dispatcher, system}
-    private val databaseWorkers = TrieMap[String, ActorRef]()
-    private val tableWorkers = TrieMap[(String, String), ActorRef]()
     private implicit val timeout: Timeout = requestTimeout
 
     override def receive: Receive = {
@@ -237,14 +384,31 @@ object QueryProcessor {
         // perform the remote command
         val promise = (worker ? command).mapTo[DatabaseIOResponse]
         promise onComplete {
-          case Success(response) => caller ! response
-          case Failure(cause) => caller ! FailureOccurred(cause, command)
+          case Success(response) =>
+            // perform special handling for select response types
+            specialHandling(response)
+
+            // send the response to the caller
+            caller ! response
+          case Failure(cause) => caller ! FailureOccurred(command, cause)
         }
         promise
       } catch {
         case e: Throwable =>
-          caller ! FailureOccurred(e, command)
+          caller ! FailureOccurred(command, e)
           Future.failed(e)
+      }
+    }
+
+    private def specialHandling(response: DatabaseIOResponse): Unit = {
+      response match {
+        case LockUpdated(rowID, lockID, true) =>
+          //if (locks.get(rowID).exists(_ != lockID)) throw RowIsLockedException(rowID)
+          locks(rowID) = lockID
+        case LockUpdated(rowID, lockID, false) =>
+          //if (locks.get(rowID).exists(_ != lockID)) throw RowIsLockedException(rowID)
+          locks.remove(rowID)
+        case _ =>
       }
     }
 
@@ -264,14 +428,6 @@ object QueryProcessor {
         logger.error(s"Unhandled processing message $message")
         unhandled(message)
     }
-
-    private def invoke[A](command: DatabaseIORequest, caller: ActorRef)(block: => A)(f: (ActorRef, A) => Unit): Unit = {
-      try f(caller, block) catch {
-        case e: Throwable =>
-          caller ! FailureOccurred(e, command)
-          None
-      }
-    }
   }
 
   /**
@@ -280,23 +436,26 @@ object QueryProcessor {
    * @param tableName    the table name
    */
   class TableCPU(databaseName: String, tableName: String) extends Actor {
+    private val locks = TrieMap[ROWID, String]()
     private lazy val table: TableFile = TableFile.getTableFile(databaseName, tableName)
 
     override def receive: Receive = {
       case cmd@CreateIndex(_, _, indexName, indexColumn) =>
-        invoke(cmd, sender())(table.createIndex(indexName, indexColumn)) { case (caller, n) => caller ! RowsUpdated(n.length) }
+        invoke(cmd, sender())(table.createIndex(indexName, indexColumn)) { case (caller, indexFile) => caller ! RowsUpdated(1) }
       case cmd@CreateTable(_, tableName, columns) =>
         invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn))) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
-        invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, b) => caller ! RowsUpdated(if (b) 1 else 0) }
+        invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, b) => caller ! RowsUpdated(b.toInt) }
       case cmd@DeleteRange(_, _, start, length) =>
-        invoke(cmd, sender())(table.deleteRange(start, length)) { case (caller, n) => caller ! RowUpdated(n) }
+        invoke(cmd, sender())(table.deleteRange(start, length)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@DeleteRow(_, _, rowID) =>
-        invoke(cmd, sender())(table.deleteRow(rowID)) { case (caller, _id) => caller ! RowUpdated(_id) }
+        invoke(cmd, sender())(table.deleteRow(rowID)) { case (caller, _id) => caller ! RowUpdated(_id, isSuccess = true) }
       case cmd@DeleteRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.deleteRows(condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@DropTable(_, tableName, ifExists) =>
-        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)){ case (caller, isDropped) => caller ! RowsUpdated(count = if (isDropped) 1 else 0) }
+        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)){ case (caller, isDropped) => caller ! RowsUpdated(count = isDropped.toInt) }
+      case cmd@FetchAndReplace(_, _, rowID, f) =>
+        invoke(cmd, sender())(table.fetchAndReplace(rowID)(f)) { case (caller, row) => caller ! RowsRetrieved(Seq(row)) }
       case cmd@FindRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.findRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows) }
       case cmd@GetField(_, _, rowID, columnID) =>
@@ -304,27 +463,29 @@ object QueryProcessor {
       case cmd@GetRange(_, _, start, length) =>
         invoke(cmd, sender())(table.getRange(start, length)) { case (caller, rows) => caller ! RowsRetrieved(rows) }
       case cmd@GetRow(_, _, rowID) =>
-        invoke(cmd, sender())(table.get(rowID)) { case (caller, row_?) => caller ! RowRetrieved(row_?) }
+        invoke(cmd, sender())(table.getRow(rowID)) { case (caller, row_?) => caller ! RowsRetrieved(row_?.toSeq) }
       case cmd: GetTableLength =>
         invoke(cmd, sender())(table.device.length) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd: GetTableMetrics =>
         invoke(cmd, sender())(table.getTableMetrics) { case (caller, metrics) => caller ! TableMetricsRetrieved(metrics) }
       case cmd@InsertRow(_, _, row) =>
-        invoke(cmd, sender())(table.insertRow(row)) { case (caller, _id) => caller ! RowUpdated(_id) }
+        invoke(cmd, sender())(table.insertRow(row)) { case (caller, _id) => caller ! RowUpdated(_id, isSuccess = true) }
       case cmd@InsertRows(_, _, columns, rows) =>
         invoke(cmd, sender())(table.insertRows(columns, rows)) { case (caller, n) => caller ! RowsUpdated(n) }
+      case cmd@LockRow(_, _, rowID) => lockRow(cmd, rowID)
       case cmd@ReplaceRange(_, _, start, length, row) =>
         invoke(cmd, sender())(table.replaceRange(start, length, row)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@ReplaceRow(_, _, rowID, row) =>
-        invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID) }
+        invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
       case cmd@SelectRows(_, _, fields, where, limit) =>
         invoke(cmd, sender())(table.selectRows(fields, where, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
+      case cmd@UnlockRow(_, _, rowID, lockID) => unlockRow(cmd, rowID, lockID)
       case cmd@UpdateField(_, _, rowID, columnID, value) =>
-        invoke(cmd, sender())(table.updateField(rowID, columnID, value)) { case (caller, _) => caller ! RowUpdated(rowID) }
+        invoke(cmd, sender())(table.updateField(rowID, columnID, value)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
       case cmd@UpdateRow(_, _, rowID, row) =>
-        invoke(cmd, sender())(table.updateRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID) }
+        invoke(cmd, sender())(table.updateRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
       case cmd@UpdateRows(_, _, values, condition, limit) =>
         invoke(cmd, sender())(table.updateRows(values, condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
       case message =>
@@ -333,15 +494,22 @@ object QueryProcessor {
     }
 
     override def postStop(): Unit = {
-      super.postStop()
       logger.info(s"Table actor '$databaseName.$tableName' was shutdown")
+      super.postStop()
     }
 
-    private def invoke[A](command: TableIORequest, caller: ActorRef)(block: => A)(f: (ActorRef, A) => Unit): Unit = {
-      try f(caller, block) catch {
-        case e: Throwable =>
-          caller ! FailureOccurred(e, command)
-          None
+    private def lockRow(cmd: LockRow, rowID: ROWID): Unit = {
+      val newLockID = UUID.randomUUID().toString
+      invoke(cmd, sender())(table.lockRow(rowID)) { case (caller, _) =>
+        locks(rowID) = newLockID
+        caller ! LockUpdated(rowID, newLockID, isLocked = true)
+      }
+    }
+
+    private def unlockRow(cmd: UnlockRow, rowID: ROWID, lockID: String): Unit = {
+      invoke(cmd, sender())(table.unlockRow(rowID)) { case (caller, _) =>
+        locks.remove(rowID)
+        caller ! LockUpdated(rowID, lockID, isLocked = false)
       }
     }
 
@@ -350,40 +518,52 @@ object QueryProcessor {
   object commands {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //      REQUESTS
+    //      COMMAND PROTOTYPES
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
      * Represents a Database I/O Request
      */
     sealed trait DatabaseIORequest {
-
       def databaseName: String
-
     }
 
     /**
      * Represents a Table I/O Request
      */
     sealed trait TableIORequest extends DatabaseIORequest {
-
       def tableName: String
-
     }
 
-    case class CreateIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String) extends TableIORequest
+    /**
+     * Represents a Table Update Request
+     */
+    sealed trait TableUpdateRequest extends TableIORequest
 
-    case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends TableIORequest
+    /**
+     * Represents a Database I/O Response
+     */
+    sealed trait DatabaseIOResponse
 
-    case class DeleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableIORequest
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //      REQUEST COMMANDS
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class DeleteRange(databaseName: String, tableName: String, start: ROWID, length: Int) extends TableIORequest
+    case class CreateIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String) extends TableUpdateRequest
 
-    case class DeleteRow(databaseName: String, tableName: String, rowID: ROWID) extends TableIORequest
+    case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends TableUpdateRequest
 
-    case class DeleteRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int]) extends TableIORequest
+    case class DeleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableUpdateRequest
 
-    case class DropTable(databaseName: String, tableName: String, ifExists: Boolean) extends TableIORequest
+    case class DeleteRange(databaseName: String, tableName: String, start: ROWID, length: Int) extends TableUpdateRequest
+
+    case class DeleteRow(databaseName: String, tableName: String, rowID: ROWID) extends TableUpdateRequest
+
+    case class DeleteRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int]) extends TableUpdateRequest
+
+    case class DropTable(databaseName: String, tableName: String, ifExists: Boolean) extends TableUpdateRequest
+
+    case class FetchAndReplace(databaseName: String, tableName: String, rowID: ROWID, f: RowTuple => RowTuple) extends TableUpdateRequest
 
     case class FindRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int] = None) extends TableIORequest
 
@@ -399,13 +579,15 @@ object QueryProcessor {
 
     case class GetTableMetrics(databaseName: String, tableName: String) extends TableIORequest
 
-    case class InsertRow(databaseName: String, tableName: String, row: RowTuple) extends TableIORequest
+    case class InsertRow(databaseName: String, tableName: String, row: RowTuple) extends TableUpdateRequest
 
-    case class InsertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[List[Any]]) extends TableIORequest
+    case class InsertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[List[Any]]) extends TableUpdateRequest
 
-    case class ReplaceRow(databaseName: String, tableName: String, rowID: ROWID, row: RowTuple) extends TableIORequest
+    case class LockRow(databaseName: String, tableName: String, rowID: ROWID) extends TableUpdateRequest
 
-    case class ReplaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: RowTuple) extends TableIORequest
+    case class ReplaceRow(databaseName: String, tableName: String, rowID: ROWID, row: RowTuple) extends TableUpdateRequest
+
+    case class ReplaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: RowTuple) extends TableUpdateRequest
 
     case class SelectRows(databaseName: String,
                           tableName: String,
@@ -413,50 +595,37 @@ object QueryProcessor {
                           where: RowTuple,
                           limit: Option[Int]) extends TableIORequest
 
-    case class TruncateTable(databaseName: String, tableName: String) extends TableIORequest
+    case class TruncateTable(databaseName: String, tableName: String) extends TableUpdateRequest
 
-    case class UpdateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]) extends TableIORequest
+    case class UnlockRow(databaseName: String, tableName: String, rowID: ROWID, lockID: String) extends TableUpdateRequest
 
-    case class UpdateRow(databaseName: String, tableName: String, rowID: ROWID, changes: RowTuple) extends TableIORequest
+    case class UpdateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]) extends TableUpdateRequest
 
-    case class UpdateRows(databaseName: String, tableName: String, changes: RowTuple, condition: RowTuple, limit: Option[Int]) extends TableIORequest
+    case class UpdateRow(databaseName: String, tableName: String, rowID: ROWID, changes: RowTuple) extends TableUpdateRequest
+
+    case class UpdateRows(databaseName: String, tableName: String, changes: RowTuple, condition: RowTuple, limit: Option[Int]) extends TableUpdateRequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //      RESPONSES
+    //      RESPONSE COMMANDS
     /////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Represents a Database I/O Response
-     */
-    sealed trait DatabaseIOResponse
 
     case class DatabaseMetricsRetrieved(metrics: DatabaseMetrics) extends DatabaseIOResponse
 
-    case class FailureOccurred(cause: Throwable, command: DatabaseIORequest) extends DatabaseIOResponse
+    case class FailureOccurred(command: DatabaseIORequest, cause: Throwable) extends DatabaseIOResponse
 
     case class FieldRetrieved(field: Field) extends DatabaseIOResponse
 
-    case class QueryResultRetrieved(result: QueryResult) extends DatabaseIOResponse
+    case class LockUpdated(rowID: ROWID, lockID: String, isLocked: Boolean) extends DatabaseIOResponse
 
-    case class RowRetrieved(row: Option[Row]) extends DatabaseIOResponse
+    case class QueryResultRetrieved(result: QueryResult) extends DatabaseIOResponse
 
     case class RowsRetrieved(rows: Seq[Row]) extends DatabaseIOResponse
 
     case class RowsUpdated(count: Int) extends DatabaseIOResponse
 
-    case class RowUpdated(rowID: ROWID) extends DatabaseIOResponse
+    case class RowUpdated(rowID: ROWID, isSuccess: Boolean) extends DatabaseIOResponse
 
     case class TableMetricsRetrieved(metrics: TableMetrics) extends DatabaseIOResponse
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-    //      EXCEPTIONS
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-
-    case class FailedCommandException(command: DatabaseIORequest, cause: Throwable)
-      extends RuntimeException(s"Request '$command' failed", cause)
-
-    case class UnhandledCommandException(command: DatabaseIORequest, response: DatabaseIOResponse)
-      extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
 
   }
 

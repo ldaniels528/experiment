@@ -1,9 +1,7 @@
 package com.qwery.database.device
 
-import java.nio.ByteBuffer
-
 import com.qwery.database.device.BlockDevice.RowStatistics
-import com.qwery.database.{Column, ROWID, RowMetadata}
+import com.qwery.database.{BinaryRow, Column, ROWID, RowMetadata}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -31,7 +29,7 @@ class ParallelPartitionedBlockDevice(columns: Seq[Column],
     }), Duration.Inf).reduce(_ + _)
   }
 
-  override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[(ROWID, ByteBuffer)] = {
+  override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[BinaryRow] = {
     // determine the partitions we need to read from
     val mappings = getReadPartitionMappings(rowID, numberOfRows)
 
@@ -48,21 +46,21 @@ class ParallelPartitionedBlockDevice(columns: Seq[Column],
     }), Duration.Inf)
   }
 
-  override def writeRows(blocks: Seq[(ROWID, ByteBuffer)]): Unit = {
-    case class Datum(partition: BlockDevice, offset: ROWID, buf: ByteBuffer)
+  override def writeRows(rows: Seq[BinaryRow]): Unit = {
+    case class Datum(partition: BlockDevice, row: BinaryRow)
 
     // determine the partitions we need to write to
     val results =
       (for {
-        (globalOffset, buf) <- blocks
+        BinaryRow(globalOffset, rmd, buf) <- rows
         index = toPartitionIndex(globalOffset)
         partition = partitions(index)
         localOffset = toLocalOffset(globalOffset, index)
-      } yield Datum(partition, localOffset, buf)).groupBy(_.partition).toSeq
+      } yield Datum(partition, BinaryRow(localOffset, rmd, buf))).groupBy(_.partition).toSeq
 
     // asynchronously write the blocks
     val outcome = Future.sequence(results map { case (partition, datum) =>
-      Future(partition.writeRows(datum.map { case Datum(_, offset, buf) => (offset, buf) }))
+      Future(partition.writeRows(datum.map { case Datum(_, row) => row }))
     })
     Await.ready(outcome, Duration.Inf)
   }

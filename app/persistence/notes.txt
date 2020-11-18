@@ -8,49 +8,19 @@ Chimera
 
 Incoming Features
 -----------------
-1. Add isExternal flag to FieldMetadata for BLOBs & Arrays - TINY -> DONE
-2. Remove data type information from field metadata - SMALL/MEDIUM -> DONE
-3. GET/PUT/DELETE images (or columns) - MEDIUM
+1. add isExternal flag to FieldMetadata for BLOBs & Arrays - TINY -> DONE
+2. remove data type information from field metadata - SMALL/MEDIUM -> DONE
+3. GET/PUT/DELETE images (or columns) - MEDIUM -> DONE
     a. GET - SMALL
     b. PUT - SMALL
     c. DELETE - TINY
-4. BLOBs in separate file [columnar] - MEDIUM
+4. BLOBs in separate file [columnar] - MEDIUM -> DONE
 5. indexed fields vs payload (event sourcing) - MEDIUM
 6. allocatable blocks for TEXT string types (all variable sized types) - MEDIUM/LARGE
-7. COMPRESS/DECOMPRESS columns - SMALL
+7. COMPRESS/DECOMPRESS columns - SMALL -> DONE
 8. Persistent collections should use the database table structure instead of individual files - MEDIUM -> DONE
 9. Circular tables - MEDIUM
-
-
-instruction set
----------------
-0.000.0000 = 0x00 - read byte
-0.000.0001 = 0x01 - read byte <deviceUUID>
-0.000.0010 = 0x02 - read byte <offset64>
-0.000.0011 = 0x03 - read byte <deviceUUID> <offset64>
-
-0.001.0000 = 0x10 - read bytes <count32>
-0.001.0001 = 0x11 - read bytes <deviceUUID> <count32>
-0.001.0010 = 0x12 - read bytes <offset64> <count32>
-0.001.0011 = 0x13 - read bytes <deviceUUID> <offset64> <count32>
-
-0.010.0000 = 0x20 - read block <deviceUUID> <offset64>
-0.011.0000 = 0x30 - read columns <deviceUUID>
-0.100.0000 = 0x40 - open device <name> ~> <deviceUUID>
-0.101.0000 = 0x50 - read length <deviceUUID>
-0.110.0000 = 0x60 - read metadata <deviceUUID> <offset64>
-0.111.0000 = 0x70 - create device <name> <columns> ~> <deviceUUID>
-
-1.000.0000 = 0x80 - write byte <deviceUUID> <offset64>
-1.000.1000 = 0x80 - swap byte <deviceUUID> <offset64>
-1.001.0000 = 0x90 - write bytes <deviceUUID> <offset64> [... bytes]
-1.001.1001 = 0x99 - swap bytes <deviceUUID> <count32>
-1.010.0000 = 0xA0 - write block <deviceUUID> <offset64> [... bytes]
-1.010.1000 = 0xA8 - swap block <deviceUUID> <offset64>
-1.011.0000 = 0xB0 - ???? (write columns)
-1.100.0000 = 0xC0 - close device <deviceUUID>
-1.101.0000 = 0xD0 - write length <deviceUUID> <offset64> (shrink)
-1.110.0000 = 0xE0 - write metadata <deviceUUID> <offset64> <value8>
-1.111.0000 = 0xF0 - delete device <deviceUUID>
+10. implement: TableFile.onRowUpdate { (row:  BinaryRow) => ... } | onDelete/onInsert - MEDIUM
+11. To support large gaps in RIDs, we could use offset translation to localized offsets/files like partition device (hashmap)
 
 

@@ -158,10 +158,10 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     invoke(
       label = s"copyInto($databaseName, $tableName, ${file.getName})",
       block = TableFile(databaseName, tableName) use { table =>
-        table.load(file)(_.split("[,]") match {
+        table.ingestTextFile(file)(_.split("[,]") match {
           case Array(symbol, exchange, price, date) =>
-            RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong))
-          case _ => RowTuple()
+            Option(RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong)))
+          case _ => None
         })
       })
   }
@@ -183,7 +183,7 @@ class ClientSideTableServiceTest extends AnyFunSpec {
 
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 5.seconds)
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 5.seconds)
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

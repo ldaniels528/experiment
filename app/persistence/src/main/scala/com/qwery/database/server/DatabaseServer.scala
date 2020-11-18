@@ -44,7 +44,7 @@ object DatabaseServer {
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 15.seconds)
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 15.seconds)
     import system.dispatcher
 
     // start the server

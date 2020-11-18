@@ -184,7 +184,7 @@ class QweryDriverTest extends AnyFunSpec {
 
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(routingActors = 5, requestTimeout = 5.seconds)
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 5.seconds)
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

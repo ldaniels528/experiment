@@ -2,10 +2,10 @@ package com.qwery.database
 
 import java.io.{File, PrintWriter}
 
-import com.qwery.util.ResourceHelper._
 import com.qwery.database.DatabaseFile.getDatabaseRootDirectory
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.models.{DatabaseConfig, DatabaseMetrics}
+import com.qwery.util.ResourceHelper._
 
 import scala.io.Source
 
@@ -57,7 +57,11 @@ object DatabaseFile {
   }
 
   def readDatabaseConfig(databaseName: String): DatabaseConfig = {
-    Source.fromFile(getDatabaseConfigFile(databaseName)).use(src => src.mkString.fromJSON[DatabaseConfig])
+    val file = getDatabaseConfigFile(databaseName)
+    if (file.exists())
+      Source.fromFile(file).use(src => src.mkString.fromJSON[DatabaseConfig])
+    else
+      DatabaseConfig(types = Nil)
   }
 
   def writeDatabaseConfig(databaseName: String, config: DatabaseConfig): Unit = {

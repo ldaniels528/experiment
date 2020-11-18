@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 
 import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, MathUtilsLong, ROWID, Row, RowMetadata}
 
 /**
  * Row-Oriented File Block Device
@@ -35,19 +35,19 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends R
     FieldMetadata.decode(raf.read().toByte)
   }
 
-  override def readRow(rowID: ROWID): ByteBuffer = {
+  override def readRowAsBinary(rowID: ROWID): ByteBuffer = {
     val payload = new Array[Byte](recordSize)
     raf.seek(toOffset(rowID))
     raf.read(payload)
     wrap(payload)
   }
 
-  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+  override def readRow(rowID: ROWID): BinaryRow = {
     val payload = new Array[Byte](recordSize)
     raf.seek(toOffset(rowID))
     raf.read(payload)
     val buf = wrap(payload)
-    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = toFieldBuffers(buf))
+    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = Row.toFieldBuffers(buf)(this))
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
@@ -59,7 +59,7 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends R
     if (newSize >= 0 && newSize < raf.length()) raf.setLength(toOffset(newSize))
   }
 
-  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRowAsBinary(rowID: ROWID, buf: ByteBuffer): Unit = {
     raf.seek(toOffset(rowID))
     raf.write(buf.array())
   }

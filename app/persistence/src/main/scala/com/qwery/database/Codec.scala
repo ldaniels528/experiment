@@ -66,14 +66,28 @@ object Codec extends Compression {
     }
   }
 
+  /**
+   * Decodes the buffer as a value based on the given column
+   * @param column the given [[Column column]]
+   * @param buf    the [[ByteBuffer buffer]]
+   * @return a tuple of [[FieldMetadata]] and the option of a value
+   * @see [[QxAny.decode]]
+   */
   def decode(column: Column, buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
     (fmd, decodeValue(column, buf))
   }
 
-  def encode(column: Column, value_? : Option[Any]): Array[Byte] = {
+  /**
+   * Encodes the given value into a byte array
+   * @param column the given [[Column column]]
+   * @param value  the option of a value
+   * @return the byte array
+   * @see [[QxAny.encode]]
+   */
+  def encode(column: Column, value: Option[Any]): Array[Byte] = {
     implicit val fmd: FieldMetadata = FieldMetadata(column.metadata)
-    encodeValue(column, value_?) match {
+    encodeValue(column, value) match {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
         assert(bytes.length <= column.maxPhysicalSize, throw ColumnCapacityExceededException(column, bytes.length))

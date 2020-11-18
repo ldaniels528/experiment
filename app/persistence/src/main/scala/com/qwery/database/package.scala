@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.ByteBuffer
 
 import com.qwery.database.ColumnTypes.ColumnType
+import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse}
 
 /**
  * Qwery database package object
@@ -12,7 +13,6 @@ package object database {
   type Block = (ROWID, ByteBuffer)
   type KeyValue = (String, Option[Any])
   type RECORD_ID = Int
-  type ROWID = Int
 
   // byte quantities
   val ONE_BYTE = 1
@@ -20,6 +20,10 @@ package object database {
   val LONG_BYTES = 8
   val ROW_ID_BYTES = 4
   val SHORT_BYTES = 2
+
+  // row ID-related
+  type ROWID = Int
+  val ROWID_NAME = "__id"
 
   //////////////////////////////////////////////////////////////////////////////////////
   //  SERVER CONFIG
@@ -72,11 +76,17 @@ package object database {
   case class ColumnCapacityExceededException(column: Column, fieldLength: Int)
     extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
 
+  case class ColumnNotFoundException(tableName: String, columnName: String)
+    extends RuntimeException(s"Column '$columnName' does not exist in $tableName")
+
   case class ColumnOutOfRangeException(columnIndex: Int)
     extends RuntimeException(s"Column index is out of range: $columnIndex")
 
   case class DataDirectoryNotFoundException(directory: File)
     extends RuntimeException(s"Could not create or find the data directory: ${directory.getAbsolutePath}")
+
+  case class FailedCommandException(command: DatabaseIORequest, cause: Throwable)
+    extends RuntimeException(s"Request '$command' failed", cause)
 
   case class OffsetOutOfRangeException(offset: RECORD_ID, limit: RECORD_ID)
     extends RuntimeException(s"Maximum capacity exceeded: $offset > $limit")
@@ -84,21 +94,33 @@ package object database {
   case class PartitionSizeException(partitionSize: Int)
     extends RuntimeException(s"Partition size must be greater than zero: $partitionSize")
 
+  case class RowIsLockedException(rowIndex: ROWID)
+    extends RuntimeException(s"Row ID is locked for write: $rowIndex")
+
   case class RowOutOfRangeException(rowIndex: ROWID)
     extends RuntimeException(s"Row ID is out of range: $rowIndex")
 
   case class TypeConversionException(value: Any, toType: ColumnType)
     extends RuntimeException(s"Failed to convert '$value' to $toType")
 
+  case class UnhandledCommandException(command: DatabaseIORequest, response: DatabaseIOResponse)
+    extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
+
   /////////////////////////////////////////////////////////////////////////////////////////////////
   //      IMPLICIT CLASSES
   /////////////////////////////////////////////////////////////////////////////////////////////////
+
+  final implicit class RicherBoolean(val boolean: Boolean) extends AnyVal {
+    @inline def toInt: Int = if (boolean) 1 else 0
+  }
 
   /**
    * Math Utilities for Long integers
    * @param number the long integer
    */
   final implicit class MathUtilsLong(val number: Long) extends AnyVal {
+
+    def toBoolean: Boolean = number != 0
 
     def toRowID: ROWID = number.toInt
 

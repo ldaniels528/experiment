@@ -3,7 +3,7 @@ package com.qwery.database.device
 import java.util.Date
 
 import com.qwery.database.ColumnTypes.{DateType, DoubleType, StringType}
-import com.qwery.database.{Column, ColumnMetadata, RowTuple, TableFile}
+import com.qwery.database.{Column, ColumnMetadata, Row, RowTuple, TableFile}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -29,19 +29,19 @@ class RowOrientedFileBlockDeviceTest extends AnyFunSpec {
       file.getParentFile.mkdir()
 
       // create a row-oriented file device
-      new RowOrientedFileBlockDevice(columns, file) use { device =>
+      new RowOrientedFileBlockDevice(columns, file) use { implicit device =>
         // truncate the file
         device.shrinkTo(0)
 
         // write a record to the table
-        val buf0 = device.toRowBuffer(RowTuple("symbol" -> "AAPL", "exchange" -> "NASDAQ", "lastSale" -> 99.98, "lastSaleTime" -> new Date))
-        device.writeRow(rowID = 0, buf0)
+        val buf0 = RowTuple("symbol" -> "AAPL", "exchange" -> "NASDAQ", "lastSale" -> 99.98, "lastSaleTime" -> new Date).toRowBuffer
+        device.writeRowAsBinary(rowID = 0, buf0)
 
         // retrieve the record from the table
-        val buf1 = device.readRow(0)
+        val buf1 = device.readRowAsBinary(0)
 
         // show the fields
-        val fields = device.toFields(buf1)
+        val fields = Row.toFields(buf1)(device)
         fields foreach { field =>
           logger.info(field.typedValue.toString)
         }

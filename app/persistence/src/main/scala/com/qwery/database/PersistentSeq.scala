@@ -25,7 +25,6 @@ import scala.reflect.{ClassTag, classTag}
  * @tparam T the [[Product product]] type
  */
 class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) extends Traversable[T] {
-
   // cache the class information for type T
   private val declaredFields = `class`.getDeclaredFields.toList
   private val declaredFieldNames = declaredFields.map(_.getName)
@@ -51,7 +50,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
    * @return [[PersistentSeq self]]
    */
   def append(item: T): PersistentSeq[T] = {
-    device.writeRow(device.length, toBytes(item))
+    device.writeRowAsBinary(device.length, toBytes(item))
     this
   }
 
@@ -61,7 +60,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
    * @return [[PersistentSeq self]]
    */
   def append(items: Traversable[T]): PersistentSeq[T] = {
-    device.writeRows(toBlocks(device.length, items))
+    device.writeRows(toBinaryRows(device.length, items))
     this
   }
 
@@ -71,8 +70,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
    * @return the [[T item]]
    */
   def apply(rowID: ROWID): T = {
-    toItem(rowID, buf = device.readRow(rowID), evenDeletes = true)
-      .getOrElse(throw new IllegalStateException("No record found"))
+    toItem(row = device.readRow(rowID), evenDeletes = true).getOrElse(die("No record found"))
   }
 
   /**
@@ -100,7 +98,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
     var n: Int = 0
     for {
       rowID <- start until (start + len)
-      row = device.readRowAsFields(rowID)
+      row = device.readRow(rowID)
       item <- toItem(row, evenDeletes = false)
     } {
       array(n) = item
@@ -152,10 +150,10 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
   def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = toStream.flatMap(predicate)
 
   override def foreach[U](callback: T => U): Unit = {
-    device.foreachBuffer { case (rowID, buf) => toItem(rowID, buf, evenDeletes = false).foreach(callback) }
+    device.foreachBuffer { row => toItem(row, evenDeletes = false).foreach(callback) }
   }
 
-  def get(rowID: ROWID): Option[T] = toItem(rowID, device.readRow(rowID), evenDeletes = false)
+  def get(rowID: ROWID): Option[T] = toItem(row = device.readRow(rowID), evenDeletes = false)
 
   override def headOption: Option[T] = device.firstIndexOption.flatMap(get)
 
@@ -189,8 +187,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 
     override def next: T = item_? match {
       case Some(item) => item_? = None; item
-      case None =>
-        throw new IllegalStateException("Iterator is empty")
+      case None => die("Iterator is empty")
     }
   }
 
@@ -266,7 +263,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
   def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2, evenDeletes = false))
 
   override def slice(start: ROWID, end: ROWID): Stream[T] = {
-    device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { case (rowID, buf) => toItem(rowID, buf, evenDeletes = false) } toStream
+    device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { row => toItem(row, evenDeletes = false) } toStream
   }
 
   /**
@@ -342,7 +339,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
     array
   }
 
-  def toBinaryRow(offset: ROWID, items: Traversable[T]): Stream[BinaryRow] = {
+  def toBinaryRows(offset: ROWID, items: Traversable[T]): Stream[BinaryRow] = {
     items.toStream.zipWithIndex.map { case (item, index) => BinaryRow(id = offset + index, buf = toBytes(item))(device) }
   }
 
@@ -366,17 +363,17 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
     buf
   }
 
-  def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(item => toBytes(item))
+  def toBytes(items: Seq[T]): Seq[ByteBuffer] = items.map(toBytes)
 
-  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.toStream.map(item => toBytes(item))
+  def toBytes(items: Traversable[T]): Stream[ByteBuffer] = items.toStream.map(toBytes)
 
   def toItem(id: ROWID, buf: ByteBuffer, evenDeletes: Boolean): Option[T] = {
     val metadata = buf.getRowMetadata
-    if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: device.toFields(buf).toList)) else None
+    if (metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(id).toList ::: Row.toFields(buf)(device).toList)) else None
   }
 
   def toItem(row: BinaryRow, evenDeletes: Boolean): Option[T] = {
-    if (row.metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(row.id).toList ::: device.toFields(row).toList)) else None
+    if (row.metadata.isActive || evenDeletes) Some(createItem(items = device.toRowIdField(row.id).toList ::: row.toFields(device).toList)) else None
   }
 
   override def toIterator: Iterator[T] = iterator
@@ -388,7 +385,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 
   override def toTraversable: Traversable[T] = this
 
-  def update(rowID: ROWID, item: T): Unit = device.writeRow(rowID, toBytes(item))
+  def update(rowID: ROWID, item: T): Unit = device.writeRowAsBinary(rowID, toBytes(item))
 
   def zip[U](that: GenIterable[U]): Iterator[(T, U)] = this.iterator zip that.iterator
 
@@ -455,10 +452,8 @@ object PersistentSeq {
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](databaseName: String, tableName: String): PersistentSeq[A] = {
-    val persistenceFile = TableFile.getTableDataFile(databaseName, tableName)
-    val config = TableFile.readTableConfig(databaseName, tableName)
     val `class`: Class[A] = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-    new PersistentSeq[A](new RowOrientedFileBlockDevice(config.columns.map(_.toColumn), persistenceFile), `class`)
+    new PersistentSeq[A](TableFile(databaseName, tableName).device, `class`)
   }
 
   /**

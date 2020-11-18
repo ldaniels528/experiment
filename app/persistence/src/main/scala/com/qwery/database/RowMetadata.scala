@@ -47,7 +47,7 @@ case class RowMetadata(isActive: Boolean = true,
         |isCompressed=$isCompressed,
         |isEncrypted=$isEncrypted,
         |isLocked=$isLocked,
-        |isReplicated=$isReplicated,
+        |isReplicated=$isReplicated
         |)""".stripMargin.split("\n").mkString
 
 }

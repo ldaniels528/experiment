@@ -89,11 +89,18 @@ package object models {
     def create(tableName: String, columns: Seq[Column]) = new TableCreation(tableName, columns.map(_.toTableColumn))
   }
 
-  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]){
+  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]) {
     override def toString: String = this.toJSON
   }
 
-  case class TableIndexRef(indexName: String, indexColumn: String){
+  /**
+   * Represents a reference to a Table Index
+   * @param databaseName    the name of the database
+   * @param tableName       the name of the host table
+   * @param indexName       the name of the index
+   * @param indexColumnName the name of the index column
+   */
+  case class TableIndexRef(databaseName: String, tableName: String, indexName: String, indexColumnName: String) {
     override def toString: String = this.toJSON
   }
 

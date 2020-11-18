@@ -3,7 +3,7 @@ package com.qwery.database.device
 import java.nio.ByteBuffer
 
 import com.qwery.database.PersistentSeq.newTempFile
-import com.qwery.database.{Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata}
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata}
 
 /**
  * Represents a partitioned block device
@@ -28,26 +28,10 @@ class PartitionedBlockDevice(val columns: Seq[Column],
 
   override def length: ROWID = partitions.map(_.length).sum
 
-  override def readRow(rowID: ROWID): ByteBuffer = {
+  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
-    partition.readRow(toLocalOffset(rowID, index))
-  }
-
-  override def readRowAsFields(rowID: ROWID): BinaryRow = {
-    val index = toPartitionIndex(rowID)
-    val partition = partitions(index)
-    partition.readRowAsFields(toLocalOffset(rowID, index))
-  }
-
-  override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[(ROWID, ByteBuffer)] = {
-    for {
-      globalOffset <- rowID until rowID + numberOfRows
-      index = toPartitionIndex(globalOffset)
-      partition = partitions(index)
-      blocks <- partition.readRows(toLocalOffset(globalOffset, index))
-        .map { case (_id, buf) => toGlobalOffset(_id, index) -> buf }
-    } yield blocks
+    partition.readField(toLocalOffset(rowID, index), columnID)
   }
 
   override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
@@ -55,15 +39,31 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     partitions(index).readFieldMetaData(toLocalOffset(rowID, index), columnID)
   }
 
+  override def readRow(rowID: ROWID): BinaryRow = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.readRow(toLocalOffset(rowID, index))
+  }
+
+  override def readRowAsBinary(rowID: ROWID): ByteBuffer = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.readRowAsBinary(toLocalOffset(rowID, index))
+  }
+
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
     val index = toPartitionIndex(rowID)
     partitions(index).readRowMetaData(toLocalOffset(rowID, index))
   }
 
-  override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
-    val index = toPartitionIndex(rowID)
-    val partition = partitions(index)
-    partition.readField(toLocalOffset(rowID, index), columnID)
+  override def readRows(rowID: ROWID, numberOfRows: ROWID): Seq[BinaryRow] = {
+    for {
+      globalOffset <- rowID until rowID + numberOfRows
+      index = toPartitionIndex(globalOffset)
+      partition = partitions(index)
+      blocks <- partition.readRows(toLocalOffset(globalOffset, index))
+        .map { case BinaryRow(_id, rmd, buf) => BinaryRow(toGlobalOffset(_id, index), rmd, buf) }
+    } yield blocks
   }
 
   override def shrinkTo(newSize: ROWID): Unit = {
@@ -80,12 +80,6 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     } partition.shrinkTo(0)
   }
 
-  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
-    val index = toPartitionIndex(rowID)
-    val partition = partitions(index)
-    partition.writeRow(toLocalOffset(rowID, index), buf)
-  }
-
   override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
     val index = toPartitionIndex(rowID)
     val partition = partitions(index)
@@ -95,6 +89,12 @@ class PartitionedBlockDevice(val columns: Seq[Column],
   override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
     val index = toPartitionIndex(rowID)
     partitions(index).writeFieldMetaData(toLocalOffset(rowID, index), columnID, metadata)
+  }
+
+  override def writeRowAsBinary(rowID: ROWID, buf: ByteBuffer): Unit = {
+    val index = toPartitionIndex(rowID)
+    val partition = partitions(index)
+    partition.writeRowAsBinary(toLocalOffset(rowID, index), buf)
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {

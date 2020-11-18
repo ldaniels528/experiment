@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
 
 import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
 
 import scala.language.postfixOps
 
@@ -48,8 +48,8 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
     FieldMetadata.decode(raf.read().toByte)
   }
 
-  override def readRow(rowID: ROWID): ByteBuffer = {
-    val BinaryRow(_, rmd, fieldBufs) = readRowAsFields(rowID)
+  override def readRowAsBinary(rowID: ROWID): ByteBuffer = {
+    val BinaryRow(_, rmd, fieldBufs) = readRow(rowID)
     val payload = allocate(recordSize)
     payload.putRowMetadata(rmd)
     fieldBufs.zipWithIndex foreach { case (fieldBuf, columnIndex) =>
@@ -60,7 +60,7 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
     payload
   }
 
-  override def readRowAsFields(rowID: ROWID): BinaryRow = {
+  override def readRow(rowID: ROWID): BinaryRow = {
     val rmd = readRowMetaData(rowID)
     BinaryRow(rowID, rmd, fields = rafN map { case (raf, column) =>
       val columnBytes = new Array[Byte](column.maxPhysicalSize)
@@ -94,7 +94,7 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
     raf.write(metadata.encode)
   }
 
-  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
+  override def writeRowAsBinary(rowID: ROWID, buf: ByteBuffer): Unit = {
     writeRowMetaData(rowID, RowMetadata())
     rafN.zipWithIndex foreach { case ((raf, column), columnIndex) =>
       val columnBytes = new Array[Byte](column.maxPhysicalSize)

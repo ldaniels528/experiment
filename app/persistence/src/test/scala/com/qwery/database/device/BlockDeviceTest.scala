@@ -34,7 +34,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
       coll ++= stocks
-      val field = eval(f"device.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnIndex = 0))
+      val field = eval(f"device.getField(rowID = 0, columnIndex = 0)", coll.device.getField(rowID = 0, columnID = 0))
       assert(field.value.contains("BXXG"))
     }
 
@@ -53,7 +53,7 @@ class BlockDeviceTest extends AnyFunSpec {
       val rowID = randomURID(coll)
       val row = eval(f"device.getRow($rowID)", coll.device.getRow(rowID))
 
-      logger.info(s"rowID: \t ${row.rowID}")
+      logger.info(s"rowID: \t ${row.id}")
       logger.info(s"metadata: \t ${row.metadata}")
       row.fields.zipWithIndex foreach { case (field, index) =>
         logger.info(f"[$index%02d]: \t ${field.name} - ${field.metadata}")

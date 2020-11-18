@@ -32,6 +32,12 @@ sealed trait QxAny {
 
   def +(that: QxAny): QxString = QxString(for {a <- this.toQxString.value; b <- that.value} yield a + b)
 
+  /**
+   * Encodes this value into a byte array
+   * @param column  the given [[Column column]]
+   * @return the byte array
+   * @see [[Codec.encode]]
+   */
   def encode(column: Column): Array[Byte] = Codec.encode(column, value)
 
   def isNumeric: Boolean = this.isInstanceOf[QxNumber]
@@ -128,6 +134,13 @@ object QxAny {
     case x => die(s"Unhandled value '$x' (${x.getClass.getName})")
   }
 
+  /**
+   * Decodes the buffer as a value based on the given column
+   * @param column the given [[Column column]]
+   * @param buf    the [[ByteBuffer buffer]]
+   * @return a tuple of [[FieldMetadata]] and the [[QxAny value]]
+   * @see [[Codec.decode]]
+   */
   def decode(column: Column, buf: ByteBuffer): (FieldMetadata, QxAny) = {
     import Codec.CodecByteBuffer
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
@@ -219,9 +232,9 @@ object QxAny {
   }
 
   final implicit class RichByteBuffer(val buf: ByteBuffer) extends AnyVal {
-    def toBlob: Blob = new SerialBlob(buf.array())
+    @inline def toBlob: Blob = new SerialBlob(buf.array())
 
-    def toClob: Clob = new SerialClob(new String(buf.array()).toCharArray)
+    @inline def toClob: Clob = new SerialClob(new String(buf.array()).toCharArray)
   }
 
   final implicit class RichInputStream(val in: InputStream) extends AnyVal {
@@ -280,15 +293,25 @@ object QxAny {
 
 }
 
-case class QxArray(value: Option[ArrayBlock]) extends QxAny
+case class QxArray(value: Option[ArrayBlock]) extends QxAny {
+  def this(value: ArrayBlock) = this(Some(value))
+}
 
-case class QxBigDecimal(value: Option[BigDecimal]) extends QxNumber
+case class QxBigDecimal(value: Option[BigDecimal]) extends QxNumber {
+  def this(value: BigDecimal) = this(Some(value))
+}
 
-case class QxBigInt(value: Option[BigInt]) extends QxNumber
+case class QxBigInt(value: Option[BigInt]) extends QxNumber {
+  def this(value: BigInt) = this(Some(value))
+}
 
-case class QxBinary(value: Option[Array[Byte]]) extends QxAny
+case class QxBinary(value: Option[Array[Byte]]) extends QxAny {
+  def this(value: Array[Byte]) = this(Some(value))
+}
 
-case class QxBlob(value: Option[Blob]) extends QxAny
+case class QxBlob(value: Option[Blob]) extends QxAny {
+  def this(value: Blob) = this(Some(value))
+}
 
 class QxBoolean(val value: Option[Boolean]) extends QxAny
 
@@ -304,7 +327,9 @@ object QxBoolean {
   def unapply(bool: QxBoolean): Option[Option[Boolean]] = Some(bool.value)
 }
 
-case class QxByte(value: Option[Byte]) extends QxNumber
+case class QxByte(value: Option[Byte]) extends QxNumber {
+  def this(value: Byte) = this(Some(value))
+}
 
 case class QxChar(value: Option[Char]) extends QxAny {
 
@@ -320,17 +345,29 @@ case class QxChar(value: Option[Char]) extends QxAny {
 
 }
 
-case class QxClob(value: Option[Clob]) extends QxAny
+case class QxClob(value: Option[Clob]) extends QxAny {
+  def this(value: Clob) = this(Some(value))
+}
 
-case class QxDate(value: Option[java.util.Date]) extends QxNumber
+case class QxDate(value: Option[java.util.Date]) extends QxNumber {
+  def this(value: java.util.Date) = this(Some(value))
+}
 
-case class QxDouble(value: Option[Double]) extends QxNumber
+case class QxDouble(value: Option[Double]) extends QxNumber {
+  def this(value: Double) = this(Some(value))
+}
 
-case class QxFloat(value: Option[Float]) extends QxNumber
+case class QxFloat(value: Option[Float]) extends QxNumber {
+  def this(value: Float) = this(Some(value))
+}
 
-case class QxInt(value: Option[Int]) extends QxNumber
+case class QxInt(value: Option[Int]) extends QxNumber {
+  def this(value: Int) = this(Some(value))
+}
 
-case class QxLong(value: Option[Long]) extends QxNumber
+case class QxLong(value: Option[Long]) extends QxNumber {
+  def this(value: Long) = this(Some(value))
+}
 
 trait QxNumber extends QxAny {
 
@@ -467,12 +504,18 @@ trait QxNumber extends QxAny {
 }
 
 case class QxSerializable(value: Option[Serializable]) extends QxAny {
+  def this(value: Serializable) = this(Some(value))
+
   override def encode(column: Column): Array[Byte] = Codec.encodeObject(value)
 }
 
-case class QxShort(value: Option[Short]) extends QxNumber
+case class QxShort(value: Option[Short]) extends QxNumber {
+  def this(value: Short) = this(Some(value))
+}
 
 case class QxString(value: Option[String]) extends QxAny {
+
+  def this(value: String) = this(Some(value))
 
   def +(that: QxString): QxString = QxString(for {s0 <- value; s1 <- that.value} yield s0 + s1)
 

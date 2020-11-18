@@ -2,7 +2,7 @@ package com.qwery.database.device
 
 import java.nio.ByteBuffer
 
-import com.qwery.database.{Column, FieldMetadata, ROWID, RowMetadata}
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, ROWID, RowMetadata}
 
 /**
  * Hybrid Block Device
@@ -22,8 +22,8 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
 
   override def length: ROWID = mem.length + disk.length
 
-  override def readRow(rowID: ROWID): ByteBuffer = {
-    if (rowID < capacity) mem.readRow(rowID) else disk.readRow(rowID - capacity)
+  override def readRowAsBinary(rowID: ROWID): ByteBuffer = {
+    if (rowID < capacity) mem.readRowAsBinary(rowID) else disk.readRowAsBinary(rowID - capacity)
   }
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
@@ -34,8 +34,8 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     if (rowID < capacity) mem.readFieldMetaData(rowID, columnID) else disk.readFieldMetaData(rowID - capacity, columnID)
   }
 
-  override def readRowAsFields(rowID: ROWID): BinaryRow = {
-    if (rowID < capacity) mem.readRowAsFields(rowID) else disk.readRowAsFields(rowID - capacity)
+  override def readRow(rowID: ROWID): BinaryRow = {
+    if (rowID < capacity) mem.readRow(rowID) else disk.readRow(rowID - capacity)
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {
@@ -50,8 +50,8 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     else disk.shrinkTo(newSize - capacity)
   }
 
-  override def writeRow(rowID: ROWID, buf: ByteBuffer): Unit = {
-    if (rowID < capacity) mem.writeRow(rowID, buf) else disk.writeRow(rowID - capacity, buf)
+  override def writeRowAsBinary(rowID: ROWID, buf: ByteBuffer): Unit = {
+    if (rowID < capacity) mem.writeRowAsBinary(rowID, buf) else disk.writeRowAsBinary(rowID - capacity, buf)
   }
 
   override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
