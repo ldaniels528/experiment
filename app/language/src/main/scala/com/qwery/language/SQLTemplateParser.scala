@@ -85,6 +85,10 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     // I/O format? (e.g. "%f:format" => "INPUTFORMAT 'CSV'" | "OUTPUTFORMAT 'JSON'")
     case tag if tag.startsWith("%f:") => extractStorageFormat(tag drop 3)
 
+    // if [not] exists? (e.g. "%IFE:exists" => "IF EXISTS" | "IF NOT EXISTS")
+    case tag if tag.startsWith("%IFE:") => extractIfExists(tag drop 5)
+    case tag if tag.startsWith("%IFNE:") => extractIfNotExists(tag drop 6)
+
     // joins? (e.g. "%J:joins" => "INNER JOIN 'stocks.csv' ON A.symbol = B.ticker")
     case tag if tag.startsWith("%J:") => extractJoins(tag drop 3, params)
 
@@ -211,6 +215,20 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     val value = stream.peek.map(_.text).getOrElse(stream.die(s"'$name' identifier expected"))
     stream.next()
     SQLTemplateParams(atoms = Map(name -> value))
+  }
+
+  private def extractIfExists(name: String): Try[SQLTemplateParams] = Try {
+    stream match {
+      case ts if ts nextIf "IF EXISTS" => SQLTemplateParams(indicators = Map(name -> true))
+      case ts => ts.die("IF EXISTS expected")
+    }
+  }
+
+  private def extractIfNotExists(name: String): Try[SQLTemplateParams] = Try {
+    stream match {
+      case ts if ts nextIf "IF NOT EXISTS" => SQLTemplateParams(indicators = Map(name -> true))
+      case ts => ts.die("IF NOT EXISTS expected")
+    }
   }
 
   /**

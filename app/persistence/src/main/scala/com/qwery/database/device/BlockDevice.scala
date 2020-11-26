@@ -11,7 +11,6 @@ import com.qwery.database.PersistentSeq.newTempFile
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.types._
 import com.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
@@ -19,7 +18,6 @@ import scala.collection.mutable
  * Represents a raw block device
  */
 trait BlockDevice {
-  private val logger = LoggerFactory.getLogger(getClass)
   val columnOffsets: List[ROWID] = {
     case class Accumulator(agg: Int = 0, var last: Int = FieldMetadata.BYTES_LENGTH, var list: List[Int] = Nil)
     columns.filterNot(_.isLogical).map(_.maxPhysicalSize).foldLeft(Accumulator()) { (acc, maxLength) =>
@@ -144,7 +142,7 @@ trait BlockDevice {
     }
   }
 
-  def foreachBuffer[U](callback: BinaryRow => U): Unit = {
+  def foreachBinary[U](callback: BinaryRow => U): Unit = {
     var rowID: ROWID = 0
     val eof: ROWID = length
     while (rowID < eof) {
@@ -152,6 +150,22 @@ trait BlockDevice {
       if (row.metadata.isActive) callback(row)
       rowID += 1
     }
+  }
+
+  /**
+   * Retrieves a column by ID
+   * @param columnID the column ID
+   * @return the [[Column column]]
+   */
+  def getColumnByID(columnID: Int): Column = columns(columnID)
+
+  /**
+   * Retrieves a column by name
+   * @param name the column name
+   * @return the [[Column column]]
+   */
+  def getColumnByName(name: String): Column = {
+    columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(tableName = "???", columnName = name))
   }
 
   def getField(rowID: ROWID, column: Symbol): Field = {

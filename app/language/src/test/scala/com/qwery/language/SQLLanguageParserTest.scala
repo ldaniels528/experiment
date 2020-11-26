@@ -84,22 +84,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE EXTERNAL TABLE statements") {
-      val results1 = SQLLanguageParser.parse(
-        """|CREATE EXTERNAL TABLE Customers (customer_id STRING, name STRING, address STRING, ingestion_date LONG)
-           |PARTITIONED BY (year STRING, month STRING, day STRING)
-           |STORED AS INPUTFORMAT 'PARQUET' OUTPUTFORMAT 'PARQUET'
-           |LOCATION './dataSets/customers/parquet/'
-           |""".stripMargin)
-      assert(results1 == Create(Table(name = "Customers",
-        columns = List("customer_id STRING", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
-        partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
-        inputFormat = StorageFormats.PARQUET,
-        outputFormat = StorageFormats.PARQUET,
-        location = LocationRef("./dataSets/customers/parquet/")
-      )))
-    }
-
     it("should support CREATE TABLE statements") {
       val results2 = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
@@ -191,7 +175,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support complex CREATE TABLE statements") {
       val results = SQLLanguageParser.parse(
-        """|CREATE EXTERNAL TABLE `kbb_mart.kbb_rev_per_page`(
+        """|CREATE TABLE `kbb_mart.kbb_rev_per_page`(
            |  `rank` string COMMENT 'from deserializer',
            |  `section` string COMMENT 'from deserializer',
            |  `super_section` string COMMENT 'from deserializer',
@@ -233,9 +217,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE TEMPORARY FUNCTION") {
+    it("should support CREATE FUNCTION") {
       val results = SQLLanguageParser.parse(
-        """|CREATE TEMPORARY FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
+        """|CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
            |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
            |""".stripMargin)
       assert(results == Create(UserDefinedFunction(

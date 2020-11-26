@@ -81,7 +81,7 @@ object StorageFormats extends Enumeration {
  */
 case class Table(name: String,
                  columns: List[Column],
-                 location: Location,
+                 location: Option[Location] = None,
                  fieldTerminator: Option[String] = None,
                  lineTerminator: Option[String] = None,
                  headersIncluded: Option[Boolean] = None,

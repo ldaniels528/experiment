@@ -119,7 +119,7 @@ trait SparkCodeCompiler {
     case other => die(s"Variable '$other' is not supported in this context")
   }
 
-  def generatePath(table: Table): String = generatePath(table.location)
+  def generatePath(table: Table): Option[String] = table.location.map(generatePath)
 
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
@@ -135,7 +135,7 @@ trait SparkCodeCompiler {
             CodeBuilder(prepend = ".")
               .append(s"spark.read")
               .append(generateTableOptions(table))
-              .append(s"""$format(${generatePath(table)})""")
+              .append(s"""$format(${generatePath(table).orNull})""")
               .append(generateCode(table.columns))
               .append(withGlobalTempView(table.name))
               .build()
@@ -247,7 +247,7 @@ trait SparkCodeCompiler {
           .append("write")
           .append(generateTableOptions(table))
           .append(s"""mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})""")
-          .append(s"""$writer(${generatePath(table)})""")
+          .append(s"""$writer(${generatePath(table).orNull})""")
           .build()
       case view: View => die(s"View '${view.name}' is read-only")
     }

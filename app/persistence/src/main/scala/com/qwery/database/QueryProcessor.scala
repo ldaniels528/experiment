@@ -27,22 +27,19 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 5.
   private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingActor(requestTimeout))
     .withRouter(RoundRobinPool(nrOfInstances = routingActors)))
 
-  private implicit val _timeout: Timeout = requestTimeout
   implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
-  implicit val scheduler: Scheduler = actorSystem.scheduler
-
-  def ?(message: DatabaseIORequest): Future[DatabaseIOResponse] = (actorPool ? message).mapTo[DatabaseIOResponse]
+  private implicit val scheduler: Scheduler = actorSystem.scheduler
+  private implicit val timeout: Timeout = requestTimeout
 
   /**
    * Creates a new column index on a database table
    * @param databaseName    the database name
    * @param tableName       the table name
-   * @param indexName       the index name
    * @param indexColumnName the index column name
    * @return the promise of an [[UpdateCount update count]]
    */
-  def createIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String): Future[UpdateCount] = {
-    asUpdateCount { CreateIndex(databaseName, tableName, indexName, indexColumnName) }
+  def createIndex(databaseName: String, tableName: String, indexColumnName: String): Future[UpdateCount] = {
+    asUpdateCount { CreateIndex(databaseName, tableName, indexColumnName) }
   }
 
   /**
@@ -282,6 +279,10 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 5.
     asUpdateCount { UpdateRows(databaseName, tableName, values, condition, limit) }
   }
 
+  private def ?(message: DatabaseIORequest): Future[DatabaseIOResponse] = {
+    (actorPool ? message).mapTo[DatabaseIOResponse]
+  }
+
   private def asLockUpdated(command: DatabaseIORequest): Future[LockUpdated] = {
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -338,7 +339,17 @@ object QueryProcessor {
     try f(caller, block) catch {
       case e: Throwable =>
         caller ! FailureOccurred(command, e)
-        None
+    }
+  }
+
+  private def findWorker(command: DatabaseIORequest)(implicit system: ActorSystem): ActorRef = {
+    command match {
+      case cmd: TableIORequest =>
+        import cmd.{databaseName, tableName}
+        tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
+      case cmd =>
+        import cmd.databaseName
+        databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
     }
   }
 
@@ -356,40 +367,19 @@ object QueryProcessor {
           // kill the actor whom is responsible for the table
           tableWorkers.remove(command.databaseName -> command.tableName).foreach(_ ! PoisonPill)
         }
-      case command: TableIORequest => processRequest(caller = sender(), command)
       case command: DatabaseIORequest => processRequest(caller = sender(), command)
       case message =>
         logger.error(s"Unhandled routing message $message")
         unhandled(message)
     }
 
-    private def findDatabaseWorker(command: DatabaseIORequest): ActorRef = {
-      import command.databaseName
-      databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
-    }
-
-    private def findTableWorker(command: TableIORequest): ActorRef = {
-      import command.{databaseName, tableName}
-      tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
-    }
-
     private def processRequest(caller: ActorRef, command: DatabaseIORequest): Future[DatabaseIOResponse] = {
       try {
-        // lookup the appropriate worker for the command
-        val worker = command match {
-          case cmd: TableIORequest => findTableWorker(cmd)
-          case cmd => findDatabaseWorker(cmd)
-        }
-
         // perform the remote command
+        val worker = findWorker(command)
         val promise = (worker ? command).mapTo[DatabaseIOResponse]
         promise onComplete {
-          case Success(response) =>
-            // perform special handling for select response types
-            specialHandling(response)
-
-            // send the response to the caller
-            caller ! response
+          case Success(response) => caller ! response
           case Failure(cause) => caller ! FailureOccurred(command, cause)
         }
         promise
@@ -397,18 +387,6 @@ object QueryProcessor {
         case e: Throwable =>
           caller ! FailureOccurred(command, e)
           Future.failed(e)
-      }
-    }
-
-    private def specialHandling(response: DatabaseIOResponse): Unit = {
-      response match {
-        case LockUpdated(rowID, lockID, true) =>
-          //if (locks.get(rowID).exists(_ != lockID)) throw RowIsLockedException(rowID)
-          locks(rowID) = lockID
-        case LockUpdated(rowID, lockID, false) =>
-          //if (locks.get(rowID).exists(_ != lockID)) throw RowIsLockedException(rowID)
-          locks.remove(rowID)
-        case _ =>
       }
     }
 
@@ -437,11 +415,11 @@ object QueryProcessor {
    */
   class TableCPU(databaseName: String, tableName: String) extends Actor {
     private val locks = TrieMap[ROWID, String]()
-    private lazy val table: TableFile = TableFile.getTableFile(databaseName, tableName)
+    private lazy val table = TableFile.getTableFile(databaseName, tableName)
 
     override def receive: Receive = {
-      case cmd@CreateIndex(_, _, indexName, indexColumn) =>
-        invoke(cmd, sender())(table.createIndex(indexName, indexColumn)) { case (caller, indexFile) => caller ! RowsUpdated(1) }
+      case cmd@CreateIndex(_, _, indexColumn) =>
+        invoke(cmd, sender())(table.createIndex(indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@CreateTable(_, tableName, columns) =>
         invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn))) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
@@ -449,11 +427,11 @@ object QueryProcessor {
       case cmd@DeleteRange(_, _, start, length) =>
         invoke(cmd, sender())(table.deleteRange(start, length)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@DeleteRow(_, _, rowID) =>
-        invoke(cmd, sender())(table.deleteRow(rowID)) { case (caller, _id) => caller ! RowUpdated(_id, isSuccess = true) }
+        invoke(cmd, sender())(table.deleteRow(rowID)) { case (caller, b) => caller ! RowUpdated(rowID, isSuccess = b) }
       case cmd@DeleteRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.deleteRows(condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@DropTable(_, tableName, ifExists) =>
-        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)){ case (caller, isDropped) => caller ! RowsUpdated(count = isDropped.toInt) }
+        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)) { case (caller, isDropped) => caller ! RowsUpdated(count = isDropped.toInt) }
       case cmd@FetchAndReplace(_, _, rowID, f) =>
         invoke(cmd, sender())(table.fetchAndReplace(rowID)(f)) { case (caller, row) => caller ! RowsRetrieved(Seq(row)) }
       case cmd@FindRows(_, _, condition, limit) =>
@@ -471,7 +449,7 @@ object QueryProcessor {
       case cmd@InsertRow(_, _, row) =>
         invoke(cmd, sender())(table.insertRow(row)) { case (caller, _id) => caller ! RowUpdated(_id, isSuccess = true) }
       case cmd@InsertRows(_, _, columns, rows) =>
-        invoke(cmd, sender())(table.insertRows(columns, rows)) { case (caller, n) => caller ! RowsUpdated(n) }
+        invoke(cmd, sender())(table.insertRows(columns, rows)) { case (caller, n) => caller ! RowsUpdated(n.length) }
       case cmd@LockRow(_, _, rowID) => lockRow(cmd, rowID)
       case cmd@ReplaceRange(_, _, start, length, row) =>
         invoke(cmd, sender())(table.replaceRange(start, length, row)) { case (caller, n) => caller ! RowsUpdated(n) }
@@ -536,20 +514,47 @@ object QueryProcessor {
     }
 
     /**
-     * Represents a Table Update Request
-     */
-    sealed trait TableUpdateRequest extends TableIORequest
-
-    /**
      * Represents a Database I/O Response
      */
     sealed trait DatabaseIOResponse
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
-    //      REQUEST COMMANDS
+    //      READ-ONLY COMMANDS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class CreateIndex(databaseName: String, tableName: String, indexName: String, indexColumnName: String) extends TableUpdateRequest
+    case class FindRows(databaseName: String,
+                        tableName: String,
+                        condition: RowTuple,
+                        limit: Option[Int] = None) extends TableIORequest
+
+    case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
+
+    case class GetField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableIORequest
+
+    case class GetRange(databaseName: String, tableName: String, start: ROWID, length: Int) extends TableIORequest
+
+    case class GetRow(databaseName: String, tableName: String, rowID: ROWID) extends TableIORequest
+
+    case class GetTableLength(databaseName: String, tableName: String) extends TableIORequest
+
+    case class GetTableMetrics(databaseName: String, tableName: String) extends TableIORequest
+
+    case class SelectRows(databaseName: String,
+                          tableName: String,
+                          fields: Seq[Expression],
+                          where: RowTuple,
+                          limit: Option[Int] = None) extends TableIORequest
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //      TABLE MUTATION COMMANDS
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Represents a Table Update Request
+     */
+    sealed trait TableUpdateRequest extends TableIORequest
+
+    case class CreateIndex(databaseName: String, tableName: String, indexColumnName: String) extends TableUpdateRequest
 
     case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends TableUpdateRequest
 
@@ -565,20 +570,6 @@ object QueryProcessor {
 
     case class FetchAndReplace(databaseName: String, tableName: String, rowID: ROWID, f: RowTuple => RowTuple) extends TableUpdateRequest
 
-    case class FindRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int] = None) extends TableIORequest
-
-    case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
-
-    case class GetField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableIORequest
-
-    case class GetRange(databaseName: String, tableName: String, start: ROWID, length: Int) extends TableIORequest
-
-    case class GetRow(databaseName: String, tableName: String, rowID: ROWID) extends TableIORequest
-
-    case class GetTableLength(databaseName: String, tableName: String) extends TableIORequest
-
-    case class GetTableMetrics(databaseName: String, tableName: String) extends TableIORequest
-
     case class InsertRow(databaseName: String, tableName: String, row: RowTuple) extends TableUpdateRequest
 
     case class InsertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[List[Any]]) extends TableUpdateRequest
@@ -588,12 +579,6 @@ object QueryProcessor {
     case class ReplaceRow(databaseName: String, tableName: String, rowID: ROWID, row: RowTuple) extends TableUpdateRequest
 
     case class ReplaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: RowTuple) extends TableUpdateRequest
-
-    case class SelectRows(databaseName: String,
-                          tableName: String,
-                          fields: Seq[Expression],
-                          where: RowTuple,
-                          limit: Option[Int]) extends TableIORequest
 
     case class TruncateTable(databaseName: String, tableName: String) extends TableUpdateRequest
 

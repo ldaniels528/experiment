@@ -16,6 +16,20 @@ import com.qwery.database.types.{QxAny, QxInt}
 case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
 
   /**
+   * Retrieves a field by column ID
+   * @param columnID the column ID
+   * @return the [[Field]]
+   */
+  def getField(columnID: Int): Field = fields(columnID)
+
+  /**
+   * Retrieves a field by column ID
+   * @param name the name of the field
+   * @return the option of a [[Field]]
+   */
+  def getField(name: String): Option[Field] = fields.find(_.name == name)
+
+  /**
    * Returns the referenced row ID (if read from an index)
    * @return an option of the referenced row ID
    */

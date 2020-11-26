@@ -5,7 +5,7 @@ import java.io.{File, PrintWriter}
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.PersistentSeq.newTempFile
 import com.qwery.database.TableFile._
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
 import com.qwery.models.expressions.{AllFields, BasicField, Expression}
@@ -25,8 +25,7 @@ import scala.language.postfixOps
  */
 case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val indexDefNs = TrieMap[String, TableIndexRef]()
-  private val indexFiles = TrieMap[TableIndexRef, TableIndexFile]()
+  private val indexFiles = TrieMap[String, TableIndexDevice]()
 
   // load the indices for this table
   config.indices foreach registerIndex
@@ -44,11 +43,11 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
                     projection: Seq[Expression],
                     limit: Option[Int] = None): BlockDevice = {
     // determine the group by columns
-    val groupByColumns = groupBy.map(getColumn).distinct
+    val groupByColumns = groupBy.map(getColumnByName).distinct
 
     // determine the column projection
     val projectionColumns = (groupByColumns ++ projection.map {
-      case field: BasicField => getColumn(name = field.name)
+      case field: BasicField => getColumnByName(name = field.name)
       case unknown => die(s"Unhandled projection expression: $unknown")
     }).distinct
 
@@ -73,38 +72,45 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   /**
    * Creates a new binary search index
-   * @param indexName       the name of the index
    * @param indexColumnName the name of the index [[Column column]]
-   * @return a new binary search [[TableIndexFile index]]
+   * @return a new binary search [[TableIndexDevice index]]
    */
-  def createIndex(indexName: String, indexColumnName: String): TableIndexFile = {
-    val indexRef = TableIndexRef(databaseName, tableName, indexName, indexColumnName)
-    val indexColumn = getColumn(indexRef.indexColumnName)
-    val tableIndex = TableIndexFile.createIndex(indexRef, indexColumn)(device)
+  def createIndex(indexColumnName: String): TableIndexDevice = {
+    val indexRef = TableIndexRef(databaseName, tableName, indexColumnName)
+    val indexColumn = getColumnByName(indexRef.indexColumnName)
+    val tableIndex = TableIndexDevice.createIndex(indexRef, indexColumn)(device)
     registerIndex(indexRef)
     writeTableConfig(databaseName, tableName, config.copy(indices = (indexRef :: config.indices.toList).distinct))
     tableIndex
   }
 
   def deleteField(rowID: ROWID, columnID: Int): Boolean = {
-    device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false))
-    true
+    _indexed(rowID, columnID) { _ =>
+      device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false))
+      true
+    } { (indexDevice, searchValue) =>
+      indexDevice.deleteRow(rowID, searchValue)
+    }
   }
+
+  def deleteField(rowID: ROWID, columnName: String): Boolean = deleteField(rowID, getColumnID(columnName))
 
   def deleteRange(start: ROWID, length: Int): Int = {
     var total = 0
     val limit: ROWID = Math.min(device.length, start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
-      total += deleteRow(rowID)
+      total += deleteRow(rowID).toInt
       rowID += 1
     }
     total
   }
 
-  def deleteRow(rowID: ROWID): Int = {
-    device.updateRowMetaData(rowID)(_.copy(isActive = false))
-    1
+  def deleteRow(rowID: ROWID): Boolean = {
+    _indexed(rowID) { _ =>
+      device.updateRowMetaData(rowID)(_.copy(isActive = false))
+      true
+    } { (indexDevice, searchValue) => indexDevice.deleteRow(rowID, searchValue) }
   }
 
   def deleteRows(condition: RowTuple, limit: Option[Int] = None): Int = {
@@ -149,20 +155,19 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    * @param limit     the optional limit
    * @return the list of matched [[Row rows]]
    */
-  def findRows(condition: RowTuple, limit: Option[Int] = None): List[Row] = {
+  def findRows(condition: RowTuple, limit: Option[Int] = None): Seq[Row] = {
     // check all available indices for the table
     val tableIndices = (for {
       (searchColumn, searchValue) <- condition.toSeq
-      tableIndex <- indexDefNs.get(searchColumn).toSeq
-    } yield (tableIndex, searchValue)).headOption
+      indexDevice <- indexFiles.get(searchColumn).toSeq
+    } yield (indexDevice, searchColumn, searchValue)).headOption
 
     tableIndices match {
       // if an index was found use it
-      case Some((tableIndexRef@TableIndexRef(_, _, indexName, indexColumn), searchValue)) =>
-        logger.info(s"Using index '$databaseName/$tableName/$indexName' for column '${indexColumn.name}'...")
-        val tableIndex = indexFiles.getOrElseUpdate(tableIndexRef, TableIndexFile(tableIndexRef))
+      case Some((indexDevice, indexColumn, searchValue)) =>
+        logger.info(s"Using index '$databaseName/$tableName/$indexColumn'...")
         for {
-          indexedRow <- tableIndex.binarySearch(Option(searchValue)).toList
+          indexedRow <- indexDevice.binarySearch(Option(searchValue))
           dataRowID <- indexedRow.getReferencedRowID
           dataRow <- getRow(dataRowID)
         } yield dataRow
@@ -174,9 +179,26 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     }
   }
 
-  def getColumn(name: String): Column = {
-    device.columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(tableName, columnName = name))
-  }
+  /**
+   * Retrieves a column by ID
+   * @param columnID the column ID
+   * @return the [[Column column]]
+   */
+  def getColumnByID(columnID: Int): Column = device.getColumnByID(columnID)
+
+  /**
+   * Retrieves a column by name
+   * @param name the column name
+   * @return the [[Column column]]
+   */
+  def getColumnByName(name: String): Column = device.getColumnByName(name)
+
+  /**
+   * Retrieves a column ID
+   * @param name the column name
+   * @return the [[Column column]]
+   */
+  def getColumnID(name: String): Int = device.columns.indexWhere(_.name == name)
 
   def getField(rowID: ROWID, columnID: Int): Field = device.getField(rowID, columnID)
 
@@ -222,23 +244,24 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     LoadMetrics(records, ingestTime, recordsPerSec = records / (ingestTime / 1000))
   }
 
-  def insertRow(rowTuple: RowTuple): ROWID = {
+  def insertRow(values: RowTuple): ROWID = {
     val rowID = device.length
-    replaceRow(rowID, rowTuple)
-    rowID
+    _indexed(rowID, values) { _ =>
+      device.writeRowAsBinary(rowID, values.toRowBuffer(device))
+      rowID
+    } { (indexDevice, _, newValue) => indexDevice.insertRow(rowID, newValue) }
   }
 
-  def insertRows(columns: Seq[String], valueList: List[List[Any]]): Int = {
+  def insertRows(columns: Seq[String], valueLists: List[List[Any]]): Seq[ROWID] = {
     for {
-      values <- valueList
+      values <- valueLists
       row = RowTuple(columns zip values map { case (column, value) => column -> value }: _*)
-    } replaceRow(device.length, row)
-    valueList.length
+    } yield insertRow(row)
   }
 
   def lockRow(rowID: ROWID): Unit = {
     device.updateRowMetaData(rowID) { rmd =>
-      if (rmd.isLocked) die(s"Row #$rowID is already locked") else rmd.copy(isLocked = true)
+      if (rmd.isLocked) throw RowIsLockedException(rowID) else rmd.copy(isLocked = true)
     }
   }
 
@@ -255,8 +278,10 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     total
   }
 
-  def replaceRow(rowID: ROWID, rowTuple: RowTuple): Unit = {
-    device.writeRowAsBinary(rowID, rowTuple.toRowBuffer(device))
+  def replaceRow(rowID: ROWID, values: RowTuple): Unit = {
+    _indexed(rowID, values) { _ =>
+      device.writeRowAsBinary(rowID, values.toRowBuffer(device))
+    } { (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
   }
 
   /**
@@ -283,20 +308,24 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def unlockRow(rowID: ROWID): Unit = {
     device.updateRowMetaData(rowID) { rmd =>
-      if (rmd.isLocked) rmd.copy(isLocked = false) else die(s"Row #$rowID is not locked")
+      if (rmd.isLocked) rmd.copy(isLocked = false) else throw RowIsLockedException(rowID)
     }
   }
 
-  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Boolean = {
-    device.updateField(rowID, columnID, value)
+  def updateField(rowID: ROWID, columnID: Int, newValue: Option[Any]): Boolean = {
+    _indexed(rowID, columnID) { _ =>
+      device.updateField(rowID, columnID, newValue)
+    } { (indexDevice, oldValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
   }
 
   def updateRow(rowID: ROWID, values: RowTuple): Boolean = {
-    getRow(rowID) exists { row =>
-      val updatedValues = row.toRowTuple ++ values
-      replaceRow(rowID, updatedValues)
-      true
-    }
+    _indexed(rowID, values) { row_? =>
+      row_? exists { row =>
+        val updatedValues = row.toRowTuple ++ values
+        replaceRow(rowID, updatedValues)
+        true
+      }
+    } { (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
   }
 
   def updateRows(values: RowTuple, condition: RowTuple, limit: Option[Int] = None): Int = {
@@ -311,31 +340,100 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    * @return the number of rows removed
    */
   def truncate(): ROWID = {
+    // shrink the table to zero
     val oldSize = device.length
     device.shrinkTo(newSize = 0)
     oldSize
   }
 
   @inline
-  private def isSatisfied(result: RowTuple, condition: RowTuple): Boolean = {
+  private def isSatisfied(result: => RowTuple, condition: => RowTuple): Boolean = {
     condition.forall { case (name, value) => result.get(name).contains(value) }
   }
 
   @inline
   private def registerIndex(indexRef: TableIndexRef): Unit = {
-    indexDefNs(indexRef.indexColumnName) = indexRef
+    indexFiles(indexRef.indexColumnName) = TableIndexDevice(indexRef)
+  }
+
+  @inline
+  private def _indexed[A](rowID: Int, columnID: Int)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
+    // first get the pre-updated value
+    val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
+
+    // execute the update operation
+    val result = mutation(row_?)
+
+    // update the affected indices
+    if (indexFiles.nonEmpty) {
+      val oldValue = row_?.flatMap(_.fields(columnID).value)
+      val columnName = getColumnByID(columnID).name
+      indexFiles foreach {
+        case (indexColumn, indexDevice) if columnName == indexColumn => f(indexDevice, oldValue)
+        case _ =>
+      }
+    }
+    result
+  }
+
+  @inline
+  private def _indexed[A](rowID: Int)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
+    // first get the pre-updated value
+    val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
+
+    // execute the update operation
+    val result = mutation(row_?)
+
+    // update the affected indices
+    if (indexFiles.nonEmpty) {
+      val oldValues: Seq[(TableIndexDevice, Option[Any])] = {
+        indexFiles.toSeq map { case (indexColumn, indexDevice) =>
+          val indexColumnID = getColumnID(indexColumn)
+          val oldValue = row_?.flatMap(_.fields(indexColumnID).value)
+          (indexDevice, oldValue)
+        }
+      }
+      oldValues foreach {
+        case (indexDevice, oldValue) => f(indexDevice, oldValue)
+        case _ =>
+      }
+    }
+    result
+  }
+
+  @inline
+  private def _indexed[A](rowID: Int, values: RowTuple)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any], Option[Any]) => Unit): A = {
+    // first get the pre-updated values
+    val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
+
+    // execute the update operation
+    val result = mutation(row_?)
+
+    // update the affected indices
+    if (indexFiles.nonEmpty) {
+      val oldAndNewValues: Seq[(TableIndexDevice, Option[Any], Option[Any])] = {
+        indexFiles.toSeq map { case (indexColumn, indexDevice) =>
+          val indexColumnID = getColumnID(indexColumn)
+          val oldValue = row_?.flatMap(_.fields(indexColumnID).value)
+          val newValue = values.get(indexColumn)
+          (indexDevice, oldValue, newValue)
+        }
+      }
+      oldAndNewValues foreach {
+        case (indexDevice, oldValue, newValue) => f(indexDevice, oldValue, newValue)
+        case _ =>
+      }
+    }
+    result
   }
 
   @inline
   private def _iterate(condition: RowTuple, limit: Option[Int] = None)(f: Row => Unit): Int = {
-    var matches: Int = 0
-    var rowID: ROWID = 0
+    var (matches: Int, rowID: ROWID) = (0, 0)
     val eof = device.length
     while (rowID < eof && !limit.exists(matches >= _)) {
-      val row_? = getRow(rowID)
-      row_?.foreach { row =>
-        val result = row.toRowTuple
-        if (isSatisfied(result, condition) || condition.isEmpty) {
+      getRow(rowID) foreach { row =>
+        if (condition.isEmpty || isSatisfied(row.toRowTuple, condition)) {
           f(row)
           matches += 1
         }
@@ -396,7 +494,7 @@ object TableFile {
    * @param ifExists     indicates whether an existence check before attempting to delete
    * @return true, if the table was deleted
    */
-  def dropTable(databaseName: String, tableName: String, ifExists: Boolean = true): Boolean = {
+  def dropTable(databaseName: String, tableName: String, ifExists: Boolean = false): Boolean = {
     val directory = getTableRootDirectory(databaseName, tableName)
     val files = directory.listFilesRecursively
     files.forall(_.delete())
@@ -422,6 +520,10 @@ object TableFile {
 
   def getTableDataFile(databaseName: String, tableName: String): File = {
     new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.qdb")
+  }
+
+  def getTableIndices(databaseName: String, tableName: String): Seq[TableIndexRef] = {
+    readTableConfig(databaseName, tableName).indices
   }
 
   def readTableConfig(databaseName: String, tableName: String): TableConfig = {

@@ -23,7 +23,7 @@ package object models {
                          columns: Seq[TableColumn] = Nil,
                          rows: Seq[Seq[Option[Any]]] = Nil,
                          count: Int = 0,
-                         __ids: List[Int] = Nil) {
+                         __ids: Seq[Int] = Nil) {
     override def toString: String = this.toJSON
   }
 
@@ -97,10 +97,9 @@ package object models {
    * Represents a reference to a Table Index
    * @param databaseName    the name of the database
    * @param tableName       the name of the host table
-   * @param indexName       the name of the index
    * @param indexColumnName the name of the index column
    */
-  case class TableIndexRef(databaseName: String, tableName: String, indexName: String, indexColumnName: String) {
+  case class TableIndexRef(databaseName: String, tableName: String, indexColumnName: String) {
     override def toString: String = this.toJSON
   }
 

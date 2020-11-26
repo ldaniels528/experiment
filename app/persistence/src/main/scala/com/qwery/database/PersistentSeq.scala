@@ -150,7 +150,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
   def flatMap[U](predicate: T => TraversableOnce[U]): Stream[U] = toStream.flatMap(predicate)
 
   override def foreach[U](callback: T => U): Unit = {
-    device.foreachBuffer { row => toItem(row, evenDeletes = false).foreach(callback) }
+    device.foreachBinary { row => toItem(row, evenDeletes = false).foreach(callback) }
   }
 
   def get(rowID: ROWID): Option[T] = toItem(row = device.readRow(rowID), evenDeletes = false)

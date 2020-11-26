@@ -13,6 +13,7 @@ import com.qwery.util.StringHelper._
   * @param assignables   the named collection of singular expressions (e.g. "SET X = 1+(2*x)")
   * @param expressions   the named collection of key-value pair assignments (e.g. "X" -> "1+(2*x)")
   * @param fields        the named collection of field references (e.g. "INSERT INTO (symbol, exchange, lastSale)")
+ *  @param indicators    the named collection of indicator references (e.g. "IF NOT EXISTS")
   * @param joins         the named collection of join references (e.g. "INNER JOIN './stocks.csv' ON A.symbol = B.symbol")
   * @param keyValuePairs the named collection of key-value pairs (e.g. "key = 'Hello', value = 123")
   * @param keywords      the named collection of key words
@@ -30,6 +31,7 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
                              conditions: Map[String, Condition] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
                              fields: Map[String, List[Field]] = Map.empty,
+                             indicators: Map[String, Boolean] = Map.empty,
                              joins: Map[String, List[Join]] = Map.empty,
                              keyValuePairs: Map[String, List[(String, Expression)]] = Map.empty,
                              keywords: Set[String] = Set.empty,
@@ -50,6 +52,7 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
       conditions = this.conditions ++ that.conditions,
       expressions = this.expressions ++ that.expressions,
       fields = this.fields ++ that.fields,
+      indicators = this.indicators ++ that.indicators,
       joins = this.joins ++ that.joins,
       keyValuePairs = this.keyValuePairs ++ that.keyValuePairs,
       keywords = this.keywords ++ that.keywords,
@@ -73,8 +76,9 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
     * Indicates whether at least one of the template mappings is not empty
     * @return true, if at least one of the template mappings is not empty
     */
-  def nonEmpty: Boolean = keywords.nonEmpty || Seq(assignables, atoms, columns, conditions, expressions, fields, joins, keyValuePairs,
-    locations, numerics, orderedFields, properties, repeatedSets, sources, variables).exists(_.nonEmpty)
+  def nonEmpty: Boolean = keywords.nonEmpty || Seq(assignables, atoms, columns, conditions, expressions, fields,
+    indicators, joins, keyValuePairs, locations, numerics, orderedFields, properties, repeatedSets, sources, variables
+  ).exists(_.nonEmpty)
 
 }
 

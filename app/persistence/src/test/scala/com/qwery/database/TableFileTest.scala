@@ -18,7 +18,7 @@ class TableFileTest extends AnyFunSpec {
     val tableName = "stocks_test"
 
     it("should create a new table and insert new rows into it") {
-      TableFile.dropTable(databaseName, tableName)
+      TableFile.dropTable(databaseName, tableName, ifExists = true)
       TableFile.createTable(databaseName, tableName,
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),

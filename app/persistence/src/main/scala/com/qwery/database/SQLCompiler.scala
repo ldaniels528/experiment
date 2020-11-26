@@ -73,7 +73,7 @@ object SQLCompiler {
         case mx.Create(table: mx.Table) =>
           cx.CreateTable(databaseName, table.name, columns = table.columns.map(_.toColumn.toTableColumn))
         case mx.Create(TableIndex(indexName, TableRef(tableName), columns)) =>
-          cx.CreateIndex(databaseName, tableName, indexName, indexColumnName = columns.map(_.name).onlyOne())
+          cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Delete(TableRef(tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
         case mx.DropTable(TableRef(tableName), ifExists) =>

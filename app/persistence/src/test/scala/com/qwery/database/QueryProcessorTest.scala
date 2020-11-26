@@ -1,5 +1,7 @@
 package com.qwery.database
 
+import java.util.Date
+
 import com.qwery.database.StockQuote._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -19,10 +21,25 @@ class QueryProcessorTest extends AnyFunSpec {
     import queryProcessor.dispatcher
 
     val databaseName = "test"
-    val tableName = "stocks_test"
+    val tableName = "stocks_qp_test"
     val newQuote = () => RowTuple("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastTradeTime" -> randomDate)
 
-    it(s"should insert rows into a table") {
+    it("should drop the existing table") {
+      Await.result(queryProcessor.dropTable(databaseName, tableName, ifExists = true), Duration.Inf)
+    }
+
+    it("should create a new table") {
+      Await.result(queryProcessor.executeQuery(databaseName, sql =
+        s"""|CREATE TABLE IF NOT EXISTS $tableName (
+            |   symbol VARCHAR(8) COMMENT "the ticker symbol",
+            |   exchange VARCHAR(8) COMMENT "the stock exchange",
+            |   lastSale DOUBLE COMMENT "the latest sale price",
+            |   lastTradeTime DATETIME COMMENT "the latest sale date/time"
+            |)
+            |""".stripMargin), Duration.Inf)
+    }
+
+    it("should insert rows into the table") {
       val clock = stopWatch
       val outcomes = for {
         _ <- queryProcessor.truncateTable(databaseName, tableName)
@@ -53,12 +70,16 @@ class QueryProcessorTest extends AnyFunSpec {
         //u1 <- queryProcessor.unlockRow(databaseName, tableName, rowID, lockID)
         //_ = logger.info(f"Updated ${u1.count} records after ${clock()}%.1f msec")
 
-      } yield lockID, 30.seconds)
+      } yield lockID, Duration.Inf)
 
       val elapsedTime = clock()
       logger.info(f"Lock/replace/unlock => '$myLockID' in $elapsedTime%.1f msec")
     }
 
+  }
+
+  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): RowTuple = {
+    RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
   }
 
 }

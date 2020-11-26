@@ -72,7 +72,7 @@ object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupp
 
   implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat2(TableConfig.apply)
 
-  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat4(TableIndexRef.apply)
+  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 
   implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat6(TableMetrics.apply)
 

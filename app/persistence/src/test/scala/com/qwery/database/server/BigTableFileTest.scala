@@ -17,7 +17,7 @@ class BigTableFileTest extends AnyFunSpec {
 
     it("should handle ingesting large data sets") {
       val expected = 1e+5.toInt
-      TableFile.dropTable(databaseName, tableName)
+      TableFile.dropTable(databaseName, tableName, ifExists = true)
       TableFile.createTable(databaseName, tableName,
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", metadata = ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
@@ -41,7 +41,7 @@ class BigTableFileTest extends AnyFunSpec {
 
     it("should handle indexing large data sets") {
       TableFile(databaseName, tableName) use { table =>
-        table.createIndex(indexName = s"${tableName}_symbol", indexColumnName = "symbol")
+        table.createIndex(indexColumnName = "symbol")
       }
     }
 

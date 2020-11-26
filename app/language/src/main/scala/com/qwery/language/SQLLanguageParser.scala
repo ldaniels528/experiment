@@ -146,7 +146,7 @@ trait SQLLanguageParser {
     * @return an [[Create executable]]
     */
   def parseCreateFunction(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY FUNCTION %a:name AS %a:class ?USING +?JAR +?%a:jar")
+    val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %a:name AS %a:class ?USING +?JAR +?%a:jar")
     Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
 
@@ -156,7 +156,7 @@ trait SQLLanguageParser {
     * @return an [[Create executable]]
     */
   def parseCreateInlineTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE INLINE TABLE %t:name ( %P:columns ) FROM %V:source")
+    val params = SQLTemplateParams(ts, "CREATE INLINE TABLE ?%IFNE:exists %t:name ( %P:columns ) FROM %V:source")
     Create(InlineTable(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
@@ -170,7 +170,7 @@ trait SQLLanguageParser {
     * @return the resulting [[Create]]
     */
   def parseCreateProcedure(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY PROCEDURE %a:name ( ?%P:params ) ?AS %N:code")
+    val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %a:name ( ?%P:params ) ?AS %N:code")
     Create(Procedure(name = params.atoms("name"), params = params.columns("params"), code = params.sources("code")))
   }
 
@@ -180,23 +180,21 @@ trait SQLLanguageParser {
     * @return an [[Create executable]]
     */
   def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE %t:name ( %P:columns ) %w:props")
+    val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
 
     def escapeChars(string: String): String = {
-      /*
-      val chars = Seq("\\n" -> "\n", "\\r" -> "\r", "\\t" -> "\t") // TODO \u0000
-      chars.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }*/
-      string
+      val replacements = Seq("\\n" -> "\n", "\\r" -> "\r", "\\t" -> "\t") // TODO \u0000
+      replacements.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }
     }
 
-    def getLocation: Location = {
-      if (params.atoms.contains("path")) LocationRef(params.atoms("path"))
+    def getLocation: Option[Location] = {
+      if (params.atoms.contains("path")) Option(LocationRef(params.atoms("path")))
       else if (params.variables.contains("path"))
         params.variables("path") match {
-          case v: LocalVariableRef => VariableLocationRef(v)
+          case v: LocalVariableRef => Option(VariableLocationRef(v))
           case _ => ts.die("Only scalar variables can be used")
         }
-      else ts.die("No location specified")
+      else None
     }
 
     Create(Table(
@@ -224,7 +222,7 @@ trait SQLLanguageParser {
    * }}}
    */
   def parseCreateTableIndex(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE INDEX %a:name ON %L:table ( %F:columns )")
+    val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %a:name ON %L:table ( %F:columns )")
     Create(TableIndex(name = params.atoms("name"), columns = params.fields("columns"), table = params.locations("table")))
   }
 
@@ -237,7 +235,7 @@ trait SQLLanguageParser {
    * }}}
    */
   def parseCreateTypeAsEnum(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE TYPE %t:name AS ENUM ( %E:values )")
+    val params = SQLTemplateParams(ts, "CREATE TYPE ?%IFNE:exists %t:name AS ENUM ( %E:values )")
     Create(TypeAsEnum(name = params.atoms("name"), values = params.expressions("values") map {
       case Literal(value: String) => value
       case other => throw SyntaxException(s"String constant expected near '$other'", ts)
@@ -257,7 +255,7 @@ trait SQLLanguageParser {
    * }}}
     */
   def parseCreateView(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?TEMPORARY VIEW %t:name ?AS %Q:query")
+    val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?AS %Q:query")
     Create(View(name = params.atoms("name"), query = params.sources("query")))
   }
 
@@ -294,8 +292,8 @@ trait SQLLanguageParser {
    * @return an [[Invokable invokable]]
    */
   def parseDropTable(ts: TokenStream): DropTable = {
-    val params = SQLTemplateParams(ts, "DROP ?EXTERNAL TABLE %t:name")
-    DropTable(Table(name = params.atoms("name")), ifExists = true)
+    val params = SQLTemplateParams(ts, "DROP TABLE ?%IFE:exists %t:name")
+    DropTable(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
 
   /**
