@@ -577,7 +577,7 @@ trait SQLLanguageParser {
     val params = SQLTemplateParams(ts, "UPDATE %t:name SET %U:assignments ?WHERE +?%c:condition ?LIMIT +?%n:limit")
     Update(
       table = Table(params.atoms("name")),
-      assignments = params.keyValuePairs("assignments"),
+      changes = params.keyValuePairs("assignments"),
       where = params.conditions.get("condition"),
       limit = params.numerics.get("limit").map(_.toInt))
   }

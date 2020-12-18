@@ -1,6 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.QueryProcessor.commands.{InsertRows, SelectRows}
+import com.qwery.models.expressions.implicits._
 import com.qwery.models.{expressions => m}
 import org.scalatest.funspec.AnyFunSpec
 
@@ -34,7 +35,7 @@ class SQLCompilerTest extends AnyFunSpec {
            |""".stripMargin)
       assert(result == SelectRows(databaseName = "test", tableName = "Customers",
         fields = List(m.Field("Symbol"), m.Field("Name"), m.Field("Sector"), m.Field("Industry")),
-        where = RowTuple("Industry" -> "Oil/Gas Transmission"),
+        where = KeyValues("Industry" -> "Oil/Gas Transmission"),
         limit = Some(100))
       )
     }

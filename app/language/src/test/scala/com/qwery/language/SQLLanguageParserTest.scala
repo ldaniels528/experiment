@@ -935,7 +935,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |""".stripMargin)
       assert(results == Update(
         table = Table("Companies"),
-        assignments = Seq(
+        changes = Seq(
           "Symbol" -> "AAPL", "Name" -> "Apple, Inc.",
           "Sector" -> "Technology", "Industry" -> "Computers", "LastSale" -> 203.45
         ),

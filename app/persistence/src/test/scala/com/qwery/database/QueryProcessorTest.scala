@@ -22,7 +22,7 @@ class QueryProcessorTest extends AnyFunSpec {
 
     val databaseName = "test"
     val tableName = "stocks_qp_test"
-    val newQuote = () => RowTuple("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastTradeTime" -> randomDate)
+    val newQuote = () => KeyValues("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastTradeTime" -> randomDate)
 
     it("should drop the existing table") {
       Await.result(queryProcessor.dropTable(databaseName, tableName, ifExists = true), Duration.Inf)
@@ -76,10 +76,29 @@ class QueryProcessorTest extends AnyFunSpec {
       logger.info(f"Lock/replace/unlock => '$myLockID' in $elapsedTime%.1f msec")
     }
 
+    it("should perform aggregations") {
+      val outcome = queryProcessor.executeQuery(databaseName,
+        s"""|SELECT
+            |   exchange,
+            |   COUNT(*) AS total,
+            |   AVG(lastSale) AS avgLastSale,
+            |   MIN(lastSale) AS minLastSale,
+            |   MAX(lastSale) AS maxLastSale
+            |FROM $tableName
+            |GROUP BY exchange
+            |""".stripMargin
+      )
+
+      val results = Await.result(outcome, Duration.Inf)
+      results foreachKVP { kvp =>
+        logger.info(s"kvp: $kvp")
+      }
+    }
+
   }
 
-  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): RowTuple = {
-    RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
+  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): KeyValues = {
+    KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
   }
 
 }

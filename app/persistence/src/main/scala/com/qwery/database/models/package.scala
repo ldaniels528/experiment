@@ -1,7 +1,8 @@
 package com.qwery.database
 
+import com.qwery.database.JSONSupport.JSONProductConversion
+import com.qwery.database.device.BlockDevice
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
-import JSONSupport.JSONProductConversion
 import com.qwery.models.TypeAsEnum
 
 package object models {
@@ -24,7 +25,27 @@ package object models {
                          rows: Seq[Seq[Option[Any]]] = Nil,
                          count: Int = 0,
                          __ids: Seq[Int] = Nil) {
+
+    def foreachKVP(f: KeyValues => Unit): Unit = {
+      val columnNames = columns.map(_.name)
+      rows foreach { values =>
+        val kvp = KeyValues((columnNames zip values).flatMap { case (key, value_?) => value_?.map(value => key -> value) }:_*)
+        f(kvp)
+      }
+    }
+
     override def toString: String = this.toJSON
+  }
+
+  object QueryResult {
+    def toQueryResult(databaseName: String, tableName: String, out: BlockDevice): QueryResult = {
+      val rows = out.toList
+      val dstFieldNames: Set[String] = out.columns.map(_.name).toSet
+      QueryResult(databaseName, tableName, columns = out.columns.map(_.toTableColumn), __ids = rows.map(_.id), rows = rows map { row =>
+        val mapping = row.toMap.filter { case (name, _) => dstFieldNames.contains(name) } // TODO properly handle field projection
+        out.columns map { column => mapping.get(column.name) }
+      })
+    }
   }
 
   case class TableColumn(name: String,
@@ -89,7 +110,7 @@ package object models {
     def create(tableName: String, columns: Seq[Column]) = new TableCreation(tableName, columns.map(_.toTableColumn))
   }
 
-  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef]) {
+  case class TableConfig(columns: Seq[TableColumn], indices: Seq[TableIndexRef] = Nil) {
     override def toString: String = this.toJSON
   }
 

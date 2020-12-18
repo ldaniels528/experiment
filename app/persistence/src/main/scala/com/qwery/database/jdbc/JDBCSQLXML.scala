@@ -3,8 +3,6 @@ package jdbc
 
 import java.io._
 import java.sql.SQLXML
-
-import com.qwery.database.PersistentSeq.newTempFile
 import javax.xml.transform.{Result, Source}
 
 /**
@@ -82,7 +80,7 @@ class JDBCSQLXML(raf: RandomAccessFile) extends SQLXML {
  */
 object JDBCSQLXML {
 
-  def create(): JDBCSQLXML = new JDBCSQLXML(new RandomAccessFile(newTempFile(), "rw"))
+  def create(): JDBCSQLXML = new JDBCSQLXML(new RandomAccessFile(createTempFile(), "rw"))
 
   def load(file: File): JDBCSQLXML = new JDBCSQLXML(new RandomAccessFile(file, "rw"))
 

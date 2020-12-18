@@ -143,10 +143,10 @@ class JDBCRowSet(connection: JDBCConnection,
     matrix(getOffset(columnIndex = index + 1)) = None
   }
 
-  private def constructRow: RowTuple = {
+  private def constructRow: KeyValues = {
     val p0 = rowIndex * columns.length
     val p1 = (rowIndex + 1) * columns.length
-    RowTuple((for {
+    KeyValues((for {
       n <- p0 until p1
       name = columns(n - p0).name
       value <- matrix(n)

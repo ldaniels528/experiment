@@ -7,7 +7,6 @@ import java.text.SimpleDateFormat
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.PersistentSeq.newTempFile
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.types._
 import com.qwery.util.ResourceHelper._
@@ -64,10 +63,9 @@ trait BlockDevice {
 
   /**
    * Exports the contents of this device as Comma Separated Values (CSV)
-   * @return a new CSV [[File file]]
+   * @param file the destination [[File file]]
    */
-  def exportAsCSV: File = {
-    val file = newTempFile()
+  def exportAsCSV(file: File): Unit = {
     new PrintWriter(file) use { out =>
       // write the header
       val columnNames = columns.map(_.name)
@@ -75,8 +73,8 @@ trait BlockDevice {
 
       // write all rows
       val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ")
-      foreach { row =>
-        // get the key-value pairs
+      exportTo(out) { row =>
+        // convert the row to key-value pairs
         val mappings = Map(row.fields.map {
           case Field(name, _, QxAny(None)) => name -> ""
           case Field(name, _, QxDate(Some(value))) => name -> s""""${sdf.format(value)}""""
@@ -85,37 +83,45 @@ trait BlockDevice {
           case Field(name, _, QxAny(Some(value))) => name -> value.toString
         }: _*)
 
-        // build the line and write it
+        // build the line as CSV
         val line = (for {name <- columnNames; value <- mappings.get(name)} yield value).mkString(",")
-        out.println(line)
+        Some(line)
       }
     }
-    file
   }
 
   /**
    * Exports the contents of this device as JSON
-   * @return a new JSON [[File file]]
+   * @param file the destination [[File file]]
    */
-  def exportAsJSON: File = {
-    val file = newTempFile()
+  def exportAsJSON(file: File): Unit = {
     new PrintWriter(file) use { out =>
-      // write all rows
-      foreach { row =>
-        // get the key-value pairs
+      exportTo(out) { row =>
+        // convert the row to key-value pairs
         val mappings = Map(row.fields collect {
+          case Field(name, _, QxAny(None)) => name -> "null"
           case Field(name, _, QxDate(Some(value))) => name -> value.getTime
           case Field(name, _, QxString(Some(value))) => name -> s""""$value""""
           case Field(name, _, QxUUID(Some(value))) => name -> s""""$value""""
           case Field(name, _, QxAny(Some(value))) => name -> value.toString
         }: _*)
 
-        // build the line and write it
+        // build the line as JSON
         val line = s"{ ${mappings map { case (k, v) => s""""$k":$v""" } mkString ","} }"
-        out.println(line)
+        Some(line)
       }
     }
-    file
+  }
+
+  /**
+   * Exports the contents of this device to a stream
+   * @param out the [[PrintWriter stream]]
+   * @param f   the transformation function
+   */
+  def exportTo(out: PrintWriter)(f: Row => Option[String]): Unit = {
+    foreach { row =>
+      f(row) foreach out.println
+    }
   }
 
   def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetadata => Boolean): Option[ROWID] = {
@@ -152,6 +158,16 @@ trait BlockDevice {
     }
   }
 
+  def foreachKVP[U](callback: KeyValues => U): Unit = {
+    var rowID: ROWID = 0
+    val eof: ROWID = length
+    while (rowID < eof) {
+      val row = getRow(rowID)
+      if (row.metadata.isActive) callback(row.toKeyValues)
+      rowID += 1
+    }
+  }
+
   /**
    * Retrieves a column by ID
    * @param columnID the column ID
@@ -179,6 +195,8 @@ trait BlockDevice {
     val (fmd, value_?) = QxAny.decode(column, buf)
     Field(name = column.name, fmd, typedValue = value_?)
   }
+
+  def getKeyValues(rowID: ROWID): Option[KeyValues] = KeyValues(buf = readRowAsBinary(rowID))(this)
 
   def getPhysicalSize: Option[Long]
 
@@ -241,7 +259,7 @@ trait BlockDevice {
   /**
    * @return the record length in bytes
    */
-  val recordSize: Int = FieldMetadata.BYTES_LENGTH + physicalColumns.map(_.maxPhysicalSize).sum
+  val recordSize: Int = RowMetadata.BYTES_LENGTH + physicalColumns.map(_.maxPhysicalSize).sum
 
   /**
    * Remove an item from the collection via its record offset
@@ -332,14 +350,23 @@ trait BlockDevice {
     newLength
   }
 
-  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Boolean = {
+  def toList: List[Row] = {
+    var list: List[Row] = Nil
+    var rowID: ROWID = 0
+    val eof: ROWID = length
+    while (rowID < eof) {
+      val row = getRow(rowID)
+      if (row.metadata.isActive) list = row :: list
+      rowID += 1
+    }
+    list
+  }
+
+  def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Unit = {
     assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
     val column = columns(columnID)
     val fmd = FieldMetadata(column.metadata)
-    Codec.encodeValue(column, value)(fmd) exists { buf =>
-      writeField(rowID, columnID, buf)
-      true
-    }
+    Codec.encodeValue(column, value)(fmd).foreach(writeField(rowID, columnID, _))
   }
 
   def updateFieldMetaData(rowID: ROWID, columnID: Int)(update: FieldMetadata => FieldMetadata): Unit = {

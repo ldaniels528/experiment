@@ -1,20 +1,19 @@
 package com.qwery.database
 
-import java.io.{File, PrintWriter}
-
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
-import com.qwery.database.PersistentSeq.newTempFile
 import com.qwery.database.TableFile._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
-import com.qwery.models.expressions.{AllFields, BasicField, Expression}
+import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
+import java.io.{File, PrintWriter}
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
 import scala.language.postfixOps
+import scala.reflect.ClassTag
 
 /**
  * Represents a database table file
@@ -26,40 +25,10 @@ import scala.language.postfixOps
 case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) {
   private val logger = LoggerFactory.getLogger(getClass)
   private val indexFiles = TrieMap[String, TableIndexDevice]()
+  private val selector = new Selector(this)
 
   // load the indices for this table
-  config.indices foreach registerIndex
-
-  /**
-   * Performs an aggregation
-   * @param condition  the [[RowTuple inclusion criteria]]
-   * @param groupBy    the columns to group by
-   * @param projection the desired [[Expression projection]]
-   * @param limit      the maximum number of rows for which to return
-   * @return the [[BlockDevice results]]
-   */
-  def aggregateRows(condition: RowTuple,
-                    groupBy: Seq[String],
-                    projection: Seq[Expression],
-                    limit: Option[Int] = None): BlockDevice = {
-    // determine the group by columns
-    val groupByColumns = groupBy.map(getColumnByName).distinct
-
-    // determine the column projection
-    val projectionColumns = (groupByColumns ++ projection.map {
-      case field: BasicField => getColumnByName(name = field.name)
-      case unknown => die(s"Unhandled projection expression: $unknown")
-    }).distinct
-
-    // create and populate the temporary table
-    val results = new RowOrientedFileBlockDevice(projectionColumns, file = newTempFile())
-    _iterate(condition, limit) { row =>
-      val values = row.copy(id = device.length).toRowTuple
-      results.writeRow(values.toBinaryRow(results))
-    }
-    // TODO perform the aggregation
-    results
-  }
+  config.indices.foreach(ref => registerIndex(ref, TableIndexDevice(ref)))
 
   /**
    * Closes the underlying file handle
@@ -68,7 +37,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def count(): ROWID = device.countRows(_.isActive)
 
-  def countRows(condition: RowTuple, limit: Option[Int] = None): Int = _iterate(condition, limit) { _ => }
+  def countRows(condition: KeyValues, limit: Option[Int] = None): Int = _iterate(condition, limit) { _ => }
 
   /**
    * Creates a new binary search index
@@ -79,41 +48,36 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     val indexRef = TableIndexRef(databaseName, tableName, indexColumnName)
     val indexColumn = getColumnByName(indexRef.indexColumnName)
     val tableIndex = TableIndexDevice.createIndex(indexRef, indexColumn)(device)
-    registerIndex(indexRef)
+    registerIndex(indexRef, tableIndex)
     writeTableConfig(databaseName, tableName, config.copy(indices = (indexRef :: config.indices.toList).distinct))
     tableIndex
   }
 
-  def deleteField(rowID: ROWID, columnID: Int): Boolean = {
-    _indexed(rowID, columnID) { _ =>
-      device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false))
-      true
-    } { (indexDevice, searchValue) =>
-      indexDevice.deleteRow(rowID, searchValue)
+  def deleteField(rowID: ROWID, columnID: Int): Unit = {
+    _indexed(rowID, columnID) { _ => device.updateFieldMetaData(rowID, columnID)(_.copy(isActive = false)) } {
+      (indexDevice, searchValue) => indexDevice.deleteRow(rowID, searchValue)
     }
   }
 
-  def deleteField(rowID: ROWID, columnName: String): Boolean = deleteField(rowID, getColumnID(columnName))
+  def deleteField(rowID: ROWID, columnName: String): Unit = deleteField(rowID, getColumnIdByName(columnName))
 
   def deleteRange(start: ROWID, length: Int): Int = {
-    var total = 0
-    val limit: ROWID = Math.min(device.length, start + length)
+    val limit: ROWID = device.length min (start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
-      total += deleteRow(rowID).toInt
+      deleteRow(rowID)
       rowID += 1
     }
-    total
+    limit - start
   }
 
-  def deleteRow(rowID: ROWID): Boolean = {
-    _indexed(rowID) { _ =>
-      device.updateRowMetaData(rowID)(_.copy(isActive = false))
-      true
-    } { (indexDevice, searchValue) => indexDevice.deleteRow(rowID, searchValue) }
+  def deleteRow(rowID: ROWID): Unit = {
+    _indexed(rowID) { _ => device.updateRowMetaData(rowID)(_.copy(isActive = false)) } {
+      (indexDevice, searchValue) => indexDevice.deleteRow(rowID, searchValue)
+    }
   }
 
-  def deleteRows(condition: RowTuple, limit: Option[Int] = None): Int = {
+  def deleteRows(condition: KeyValues, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { row => deleteRow(row.id) }
   }
 
@@ -121,62 +85,50 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    * Exports the contents of this device as Comma Separated Values (CSV)
    * @return a new CSV [[File file]]
    */
-  def exportAsCSV: File = device.exportAsCSV
+  def exportAsCSV(file: File): Unit = device.exportAsCSV(file)
 
   /**
    * Exports the contents of this device as JSON
    * @return a new JSON [[File file]]
    */
-  def exportAsJSON: File = device.exportAsJSON
+  def exportAsJSON(file: File): Unit = device.exportAsJSON(file)
 
   /**
    * Atomically retrieves and replaces a row by ID
    * @param rowID the row ID
    * @param f     the update function to execute
-   * @return the [[Row]] representing the updated record
+   * @return the [[Row]] representing the replaced record
    */
-  def fetchAndReplace(rowID: ROWID)(f: RowTuple => RowTuple): Row = {
-    val input = getRow(rowID).map(_.toRowTuple).getOrElse(RowTuple(ROWID_NAME -> rowID))
+  def fetchAndReplace(rowID: ROWID)(f: KeyValues => KeyValues): Row = {
+    val input = getRow(rowID).map(_.toKeyValues).getOrElse(KeyValues(ROWID_NAME -> rowID))
     val output = f(input)
     replaceRow(rowID, output)
-    output.toBinaryRow(device).toRow(device).copy(id = rowID)
+    output.toBinaryRow(rowID)(device).toRow(device)
   }
 
   /**
-   * Retrieves the first row matching the given condition
-   * @param condition the given [[RowTuple condition]]
-   * @return the option of a [[Row row]]
+   * Atomically retrieves and updates a row by ID
+   * @param rowID the row ID
+   * @param f     the update function to execute
+   * @return the option of a [[Row]] representing the updated record
    */
-  def findRow(condition: RowTuple): Option[Row] = findRows(condition, limit = Some(1)).headOption
+  def fetchAndUpdate(rowID: ROWID)(f: KeyValues => KeyValues): Option[Row] = {
+    getRow(rowID).map(_.toKeyValues).map(f) foreach(updateRow(rowID, _))
+    getRow(rowID)
+  }
 
   /**
-   * Retrieves rows matching the given condition up to the optional limit
-   * @param condition the given [[RowTuple condition]]
-   * @param limit     the optional limit
-   * @return the list of matched [[Row rows]]
+   * Atomically retrieves and updates rows that satisfy the given condition
+   * @param condition the inclusion condition
+   * @param f     the update function to execute
+   * @return the [[BlockDevice]] containing the updated rows
    */
-  def findRows(condition: RowTuple, limit: Option[Int] = None): Seq[Row] = {
-    // check all available indices for the table
-    val tableIndices = (for {
-      (searchColumn, searchValue) <- condition.toSeq
-      indexDevice <- indexFiles.get(searchColumn).toSeq
-    } yield (indexDevice, searchColumn, searchValue)).headOption
-
-    tableIndices match {
-      // if an index was found use it
-      case Some((indexDevice, indexColumn, searchValue)) =>
-        logger.info(s"Using index '$databaseName/$tableName/$indexColumn'...")
-        for {
-          indexedRow <- indexDevice.binarySearch(Option(searchValue))
-          dataRowID <- indexedRow.getReferencedRowID
-          dataRow <- getRow(dataRowID)
-        } yield dataRow
-      // otherwise perform a table scan
-      case _ =>
-        var rows: List[Row] = Nil
-        _iterate(condition, limit) { row => rows = row :: rows }
-        rows
+  def fetchAndUpdate(condition: KeyValues)(f: KeyValues => KeyValues): BlockDevice = {
+    val rows = getRows(condition)
+    rows foreachKVP { kvp =>
+      rows.writeRow(f(kvp).toBinaryRow(rows))
     }
+    rows
   }
 
   /**
@@ -198,21 +150,76 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    * @param name the column name
    * @return the [[Column column]]
    */
-  def getColumnID(name: String): Int = device.columns.indexWhere(_.name == name)
+  def getColumnIdByName(name: String): Int = device.columns.indexWhere(_.name == name)
 
+  /**
+   * Retrieves a field by row and column IDs
+   * @param rowID    the row ID
+   * @param columnID the column ID
+   * @return the [[Field field]]
+   */
   def getField(rowID: ROWID, columnID: Int): Field = device.getField(rowID, columnID)
 
+  /**
+   * Retrieves key-values by row ID
+   * @param rowID the row ID
+   * @return the option of [[KeyValues key-values]]
+   */
+  def getKeyValues(rowID: ROWID): Option[KeyValues] = device.getKeyValues(rowID)
+
+  /**
+   * Retrieves a row by ID
+   * @param rowID the row ID
+   * @return the option of a [[Row row]]
+   */
   def getRow(rowID: ROWID): Option[Row] = {
     val row = device.getRow(rowID)
     if (row.metadata.isActive) Some(row) else None
   }
 
-  def getRange(start: ROWID, length: Int): Seq[Row] = {
-    var rows: List[Row] = Nil
-    val limit = Math.min(device.length, start + length)
+  /**
+   * Retrieves rows matching the given condition up to the optional limit
+   * @param condition the given [[KeyValues condition]]
+   * @param limit     the optional limit
+   * @return the [[BlockDevice results]]
+   */
+  def getRows(condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
+    implicit val results: BlockDevice = createTempTable(device.columns)
+
+    // check all available indices for the table
+    val tableIndex_? = (for {
+      (searchColumn, searchValue) <- condition.items
+      indexDevice <- indexFiles.get(searchColumn)
+    } yield (indexDevice, searchValue)).headOption
+
+    tableIndex_? match {
+      // if an index was found use it
+      case Some((indexDevice, searchValue)) =>
+        for {
+          indexedRow <- indexDevice.binarySearch(Option(searchValue))
+          dataRowID <- indexedRow.getReferencedRowID
+          dataRow <- getRow(dataRowID)
+        } results.writeRow(dataRow.toBinaryRow)
+
+      // otherwise perform a table scan
+      case _ => _iterate(condition, limit) { row => results.writeRow(row.toBinaryRow) }
+    }
+    results
+  }
+
+  /**
+   * Retrieves a range of rows
+   * @param start the initial row ID of the range
+   * @param length the number of rows to retrieve
+   * @return a [[BlockDevice]] containing the rows
+   */
+  def getRange(start: ROWID, length: Int): BlockDevice = {
+    val rows = createTempTable(device.columns)
+    val limit = device.length min (start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
-      getRow(rowID).foreach(row => rows = row :: rows)
+      val row = device.readRow(rowID)
+      if (row.metadata.isActive) rows.writeRow(row)
       rowID += 1
     }
     rows
@@ -226,36 +233,45 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   /**
    * Facilitates a line-by-line ingestion of a text file
    * @param file      the text [[File file]]
-   * @param transform the [[String line]]-to-[[RowTuple record]] transformation function
+   * @param transform the [[String line]]-to-[[KeyValues record]] transformation function
    * @return the [[LoadMetrics]]
    */
-  def ingestTextFile(file: File)(transform: String => Option[RowTuple]): LoadMetrics = {
+  def ingestTextFile(file: File)(transform: String => Option[KeyValues]): LoadMetrics = {
     var records: Long = 0
     val clock = stopWatch
     Source.fromFile(file).use(src =>
       for {
         line <- src.getLines() if line.nonEmpty
-        rowTuple <- transform(line) if rowTuple.nonEmpty
+        row <- transform(line) if row.nonEmpty
       } {
-        insertRow(rowTuple)
+        insertRow(row)
         records += 1
       })
     val ingestTime = clock()
     LoadMetrics(records, ingestTime, recordsPerSec = records / (ingestTime / 1000))
   }
 
-  def insertRow(values: RowTuple): ROWID = {
+  def insertRow(values: KeyValues): ROWID = {
     val rowID = device.length
-    _indexed(rowID, values) { _ =>
-      device.writeRowAsBinary(rowID, values.toRowBuffer(device))
-      rowID
-    } { (indexDevice, _, newValue) => indexDevice.insertRow(rowID, newValue) }
+    _indexed(rowID, values) { _ => device.writeRowAsBinary(rowID, values.toRowBuffer(device)) } {
+      (indexDevice, _, newValue) => indexDevice.insertRow(rowID, newValue)
+    }
+    rowID
   }
 
-  def insertRows(columns: Seq[String], valueLists: List[List[Any]]): Seq[ROWID] = {
+  def insertRows(rows: BlockDevice): Int = {
+    var inserted = 0
+    rows foreach { row =>
+      insertRow(row.toKeyValues)
+      inserted += 1
+    }
+    inserted
+  }
+
+  def insertRows(columns: Seq[String], rowValues: Seq[Seq[Any]]): Seq[ROWID] = {
     for {
-      values <- valueLists
-      row = RowTuple(columns zip values map { case (column, value) => column -> value }: _*)
+      values <- rowValues
+      row = KeyValues(columns zip values map { case (column, value) => column -> value }: _*)
     } yield insertRow(row)
   }
 
@@ -265,23 +281,19 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     }
   }
 
-  def replaceRange(start: ROWID, length: Int, rowTuple: RowTuple): Int = {
-    var total = 0
-    val rowBuf = rowTuple.toRowBuffer(device)
-    val limit: ROWID = Math.min(device.length, start + length)
+  def replaceRange(start: ROWID, length: Int, values: KeyValues): Unit = {
+    val limit: ROWID = start + length
     var rowID: ROWID = start
     while (rowID < limit) {
-      device.writeRowAsBinary(rowID, rowBuf)
-      total += 1
+      replaceRow(rowID, values)
       rowID += 1
     }
-    total
   }
 
-  def replaceRow(rowID: ROWID, values: RowTuple): Unit = {
-    _indexed(rowID, values) { _ =>
-      device.writeRowAsBinary(rowID, values.toRowBuffer(device))
-    } { (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
+  def replaceRow(rowID: ROWID, values: KeyValues): Unit = {
+    _indexed(rowID, values) { _ => device.writeRowAsBinary(rowID, values.toRowBuffer(device)) } {
+      (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue)
+    }
   }
 
   /**
@@ -289,21 +301,19 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    */
   def resize(newSize: ROWID): Unit = device.shrinkTo(newSize)
 
-  def selectRows(fields: Seq[Expression], where: RowTuple, limit: Option[Int] = None): QueryResult = {
-    val rows = findRows(where, limit)
-    val columns = device.columns.map(_.toTableColumn)
-    val fieldNames: Set[String] = (fields flatMap {
-      case AllFields => columns.map(_.name)
-      case f: BasicField => List(f.name)
-      case expression =>
-        logger.error(s"Unconverted expression: $expression")
-        Nil
-    }).toSet
-
-    QueryResult(databaseName, tableName, columns, __ids = rows.map(_.id), rows = rows map { row =>
-      val mapping = row.toMap.filter { case (name, _) => fieldNames.contains(name) } // TODO properly handle field projection
-      columns map { column => mapping.get(column.name) }
-    })
+  /**
+   * Executes a query
+   * @param fields  the [[Expression field projection]]
+   * @param where   the condition which determines which records are included
+   * @param groupBy the optional aggregation columns
+   * @param limit   the optional limit
+   * @return a [[BlockDevice]] containing the rows
+   */
+  def selectRows(fields: Seq[Expression],
+                 where: KeyValues,
+                 groupBy: Seq[SQLField] = Nil,
+                 limit: Option[Int] = None): BlockDevice = {
+    selector.select(fields, where, groupBy, limit)
   }
 
   def unlockRow(rowID: ROWID): Unit = {
@@ -312,28 +322,47 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     }
   }
 
-  def updateField(rowID: ROWID, columnID: Int, newValue: Option[Any]): Boolean = {
-    _indexed(rowID, columnID) { _ =>
-      device.updateField(rowID, columnID, newValue)
-    } { (indexDevice, oldValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
+  def updateField(rowID: ROWID, columnID: Int, newValue: Option[Any]): Unit = {
+    _indexed(rowID, columnID) { _ => device.updateField(rowID, columnID, newValue) } {
+      (indexDevice, oldValue) => indexDevice.updateRow(rowID, oldValue, newValue)
+    }
   }
 
-  def updateRow(rowID: ROWID, values: RowTuple): Boolean = {
+  def updateField(rowID: ROWID, columnName: String, newValue: Option[Any]): Unit = {
+    updateField(rowID, getColumnIdByName(columnName), newValue)
+  }
+
+  def updateRange(start: ROWID, length: Int, values: KeyValues): Int = {
+    val limit: ROWID = (start + length) min device.length
+    var rowID: ROWID = start
+    while (rowID < limit) {
+      updateRow(rowID, values)
+      rowID += 1
+    }
+    limit - start
+  }
+
+  def updateRow(rowID: ROWID, values: KeyValues): Unit = {
     _indexed(rowID, values) { row_? =>
-      row_? exists { row =>
-        val updatedValues = row.toRowTuple ++ values
+      row_? foreach { row =>
+        val updatedValues = row.toKeyValues ++ values
         replaceRow(rowID, updatedValues)
-        true
       }
     } { (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
   }
 
-  def updateRows(values: RowTuple, condition: RowTuple, limit: Option[Int] = None): Int = {
+  def updateRows(values: KeyValues, condition: KeyValues, limit: Option[Int] = None): Int = {
     _iterate(condition, limit) { row =>
-      val updatedValues = row.toRowTuple ++ values
+      val updatedValues = row.toKeyValues ++ values
       replaceRow(row.id, updatedValues)
     }
   }
+
+  /**
+   * @tparam A the [[Product product type]] that represents the table structure
+   * @return a mutable [[PersistentSeq persistent sequence]]
+   */
+  def toPersistentSeq[A <: Product : ClassTag]: PersistentSeq[A] = PersistentSeq[A](databaseName, tableName)
 
   /**
    * Truncates the table; removing all rows
@@ -347,17 +376,17 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def isSatisfied(result: => RowTuple, condition: => RowTuple): Boolean = {
+  def isSatisfied(result: => KeyValues, condition: => KeyValues): Boolean = {
     condition.forall { case (name, value) => result.get(name).contains(value) }
   }
 
   @inline
-  private def registerIndex(indexRef: TableIndexRef): Unit = {
-    indexFiles(indexRef.indexColumnName) = TableIndexDevice(indexRef)
+  private def registerIndex(indexRef: TableIndexRef, device: TableIndexDevice): Unit = {
+    indexFiles(indexRef.indexColumnName) = device
   }
 
   @inline
-  private def _indexed[A](rowID: Int, columnID: Int)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
+  private def _indexed[A](rowID: ROWID, columnID: Int)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
     // first get the pre-updated value
     val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
 
@@ -377,7 +406,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def _indexed[A](rowID: Int)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
+  private def _indexed[A](rowID: ROWID)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any]) => Unit): A = {
     // first get the pre-updated value
     val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
 
@@ -388,7 +417,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     if (indexFiles.nonEmpty) {
       val oldValues: Seq[(TableIndexDevice, Option[Any])] = {
         indexFiles.toSeq map { case (indexColumn, indexDevice) =>
-          val indexColumnID = getColumnID(indexColumn)
+          val indexColumnID = getColumnIdByName(indexColumn)
           val oldValue = row_?.flatMap(_.fields(indexColumnID).value)
           (indexDevice, oldValue)
         }
@@ -402,7 +431,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def _indexed[A](rowID: Int, values: RowTuple)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any], Option[Any]) => Unit): A = {
+  private def _indexed[A](rowID: ROWID, values: KeyValues)(mutation: Option[Row] => A)(f: (TableIndexDevice, Option[Any], Option[Any]) => Unit): A = {
     // first get the pre-updated values
     val row_? = if (indexFiles.nonEmpty) getRow(rowID) else None
 
@@ -413,7 +442,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     if (indexFiles.nonEmpty) {
       val oldAndNewValues: Seq[(TableIndexDevice, Option[Any], Option[Any])] = {
         indexFiles.toSeq map { case (indexColumn, indexDevice) =>
-          val indexColumnID = getColumnID(indexColumn)
+          val indexColumnID = getColumnIdByName(indexColumn)
           val oldValue = row_?.flatMap(_.fields(indexColumnID).value)
           val newValue = values.get(indexColumn)
           (indexDevice, oldValue, newValue)
@@ -428,12 +457,12 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   @inline
-  private def _iterate(condition: RowTuple, limit: Option[Int] = None)(f: Row => Unit): Int = {
+  private def _iterate(condition: KeyValues, limit: Option[Int] = None)(f: Row => Unit): Int = {
     var (matches: Int, rowID: ROWID) = (0, 0)
     val eof = device.length
     while (rowID < eof && !limit.exists(matches >= _)) {
       getRow(rowID) foreach { row =>
-        if (condition.isEmpty || isSatisfied(row.toRowTuple, condition)) {
+        if (condition.isEmpty || isSatisfied(row.toKeyValues, condition)) {
           f(row)
           matches += 1
         }

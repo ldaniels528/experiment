@@ -2,9 +2,9 @@ package com.qwery
 
 import java.io.File
 import java.nio.ByteBuffer
-
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse}
+import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 
 /**
  * Qwery database package object
@@ -33,6 +33,24 @@ package object database {
     val directory = new File(sys.env.getOrElse("QWERY_DB", "qwery_db"))
     assert(directory.mkdirs() || directory.exists(), throw DataDirectoryNotFoundException(directory))
     directory
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////
+  //  TEMPORARY FILES AND TABLES
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  def createTempFile(): File = {
+    val file = File.createTempFile("qwery", ".lldb")
+    file.deleteOnExit()
+    file
+  }
+
+  def createTempTable(columns: Seq[Column]): BlockDevice = {
+    new RowOrientedFileBlockDevice(columns, createTempFile())
+  }
+
+  def createTempTable(device: BlockDevice): BlockDevice = {
+    new RowOrientedFileBlockDevice(device.columns, createTempFile())
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,6 +123,9 @@ package object database {
 
   case class UnhandledCommandException(command: DatabaseIORequest, response: DatabaseIOResponse)
     extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
+
+  case class UnsupportedFeature(featureName: String)
+    extends RuntimeException(s"Feature '$featureName' is not supported")
 
   /////////////////////////////////////////////////////////////////////////////////////////////////
   //      IMPLICIT CLASSES

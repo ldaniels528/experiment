@@ -1,9 +1,8 @@
 package com.qwery.database.device
 
-import java.nio.ByteBuffer
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata, createTempTable}
 
-import com.qwery.database.PersistentSeq.newTempFile
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata}
+import java.nio.ByteBuffer
 
 /**
  * Represents a partitioned block device
@@ -107,16 +106,16 @@ class PartitionedBlockDevice(val columns: Seq[Column],
   }
 
   protected def newPartition: BlockDevice = {
-    if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else new RowOrientedFileBlockDevice(columns, newTempFile())
+    if (isInMemory) new ByteArrayBlockDevice(columns, capacity = partitionSize) else createTempTable(columns)
   }
 
   protected def toGlobalOffset(rowID: ROWID, index: Int): ROWID = rowID + index * partitionSize
 
-  protected def toLocalOffset(rowID: ROWID, index: Int): ROWID = Math.min(rowID - index * partitionSize, partitionSize)
+  protected def toLocalOffset(rowID: ROWID, index: Int): ROWID = (rowID - index * partitionSize) min partitionSize
 
   protected def toPartitionIndex(offset: RECORD_ID, isLimit: Boolean = false): Int = {
     val index = offset / partitionSize
-    val normalizedIndex = if (isLimit && offset == partitionSize) Math.min(0, index - 1) else index
+    val normalizedIndex = if (isLimit && offset == partitionSize) (index - 1) min 0 else index
     ensurePartitions(normalizedIndex)
     normalizedIndex
   }

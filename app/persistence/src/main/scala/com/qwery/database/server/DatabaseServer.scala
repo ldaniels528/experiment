@@ -9,8 +9,10 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.JSONSupport._
+import com.qwery.database.createTempFile
 import com.qwery.database.models._
 import com.qwery.database.server.DatabaseServerJsonProtocol._
+import com.qwery.models.expressions.Expression
 import org.slf4j.LoggerFactory
 import spray.json._
 
@@ -134,7 +136,7 @@ object DatabaseServer {
           val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
           complete(
             if (params.isEmpty) qp.getTableMetrics(databaseName, tableName)
-            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toRowTuple))
+            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toKeyValues))
           )
         }
       } ~
@@ -157,10 +159,18 @@ object DatabaseServer {
    */
   private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String): Route = {
     val dataFile = format.toLowerCase() match {
-      case "csv" => TableFile.getTableFile(databaseName, tableName).exportAsCSV
-      case "json" => TableFile.getTableFile(databaseName, tableName).exportAsJSON
-      case "binary" => TableFile.getTableDataFile(databaseName, tableName)
-      case other => die(s"Unsupported file format '$other'")
+      case "bin" | "binary" | "raw" =>
+        TableFile.getTableDataFile(databaseName, tableName)
+      case "csv" =>
+        val csvFile = createTempFile()
+        TableFile.getTableFile(databaseName, tableName).exportAsCSV(csvFile)
+        csvFile
+      case "json" =>
+        val jsonFile = createTempFile()
+        TableFile.getTableFile(databaseName, tableName).exportAsJSON(jsonFile)
+        jsonFile
+      case other =>
+        die(s"Unsupported file format '$other'")
     }
     logger.info(s"Exporting '$fileName' (as ${format.toUpperCase()}) <~ ${dataFile.getAbsolutePath}")
     getFromFile(dataFile)
@@ -244,7 +254,7 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toRowTuple)))
+        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toKeyValues)))
       }
   }
 
@@ -283,7 +293,7 @@ object DatabaseServer {
         parameters('__metadata.?) { metadata_? =>
           val isMetadata = metadata_?.contains("true")
           complete(qp.getRow(databaseName, tableName, rowID) map {
-            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toRowTuple.toJson
+            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toKeyValues.toJson
             case None => JsObject()
           })
         }
@@ -292,7 +302,7 @@ object DatabaseServer {
         // partially update the row by ID
         // (e.g. "POST /d/portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          complete(qp.updateRow(databaseName, tableName, rowID, toValues(jsObject)))
+          complete(qp.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)))
         }
       } ~
       put {
@@ -324,8 +334,12 @@ object DatabaseServer {
     }
   }
 
-  private def toValues(params: Uri.Query): RowTuple = RowTuple(params.filterNot(_._1.name.startsWith("__")): _*)
+  private def toValues(params: Uri.Query): KeyValues = KeyValues(params.filterNot(_._1.name.startsWith("__")): _*)
 
-  private def toValues(jsObject: JsObject): RowTuple = RowTuple(jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) })
+  private def toValues(jsObject: JsObject): KeyValues = KeyValues(jsObject.fields.map { case (k, js) => (k, js.unwrapJSON) })
+
+  private def toExpressions(jsObject: JsObject): Seq[(String, Expression)] = {
+    jsObject.fields.toSeq.map { case (k, js) => (k, js.toExpression) }
+  }
 
 }

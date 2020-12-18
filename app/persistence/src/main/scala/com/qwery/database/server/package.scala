@@ -1,5 +1,7 @@
 package com.qwery.database
 
+import com.qwery.models.expressions.{Expression, Null}
+import com.qwery.models.expressions.implicits._
 import net.liftweb.json.JsonAST.JField
 import net.liftweb.json._
 import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
@@ -23,6 +25,17 @@ package object server {
       case JsBoolean(value) => value
       case JsNull => null
       case JsNumber(value) => value
+      case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
+      case JsString(value) => value
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
+    }
+
+    @inline
+    def toExpression: Expression = jsValue match {
+      case js: JsArray => js.elements.map(_.unwrapJSON)
+      case JsBoolean(value) => value
+      case JsNull => Null
+      case JsNumber(value) => value.toDouble
       case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
       case JsString(value) => value
       case x => die(s"Unsupported type $x (${x.getClass.getName})")

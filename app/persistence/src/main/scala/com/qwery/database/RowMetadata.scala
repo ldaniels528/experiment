@@ -41,6 +41,8 @@ case class RowMetadata(isActive: Boolean = true,
 
   def isDeleted: Boolean = !isActive
 
+  def isUnlocked: Boolean = !isLocked
+
   override def toString: String =
     f"""|${getClass.getSimpleName}(
         |isActive=$isActive,

@@ -1,6 +1,5 @@
-package com.qwery.models.expressions
-
-import com.qwery.models.{Aliasable, ColumnSpec}
+package com.qwery.models
+package expressions
 
 /**
   * Represents an expression; which in its simplest form is a value (boolean, double or string)
@@ -9,7 +8,13 @@ import com.qwery.models.{Aliasable, ColumnSpec}
 trait Expression extends Aliasable
 
 /**
-  * Casts the value expr to the target data type type.
+ * Represents an array
+ * @param values the values within the array
+ */
+case class ArrayExpression(values: Any*) extends Expression
+
+/**
+  * Casts the value `expr` to the target data type type.
   * @example cast(expr AS type)
   */
 case class Cast(value: Expression, toType: ColumnSpec) extends Expression
@@ -31,6 +36,12 @@ case class If(condition: Condition, trueValue: Expression, falseValue: Expressio
   * @param value the given value
   */
 case class Literal(value: Any) extends Expression
+
+/**
+ * Represents an hash map
+ * @param values the values within the hash map
+ */
+case class MapExpression(values: Map[String, Any]) extends Expression
 
 /**
   * Represents a mathematical expression

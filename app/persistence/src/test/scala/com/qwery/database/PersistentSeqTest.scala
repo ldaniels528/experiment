@@ -3,7 +3,7 @@ package com.qwery.database
 import java.io.File
 
 import com.qwery.database.StockQuote._
-import com.qwery.util.ServicingTools._
+import com.qwery.database.types.QxString
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
@@ -57,11 +57,11 @@ class PersistentSeqTest extends AnyFunSpec {
       val ps = PersistentSeq[GenericData]()
       val fmd = FieldMetadata()
       val data = ps.createItem(Seq(
-        Field.create(name = "_id", fmd, value = 1087L),
-        Field.create(name = "idValue", fmd, value = "Hello"),
-        Field.create(name = "idType", fmd, value = "World"),
-        Field.create(name = "responseTime", fmd, value = 307),
-        Field.create(name = "reportDate", fmd, value = java.sql.Date.valueOf("2020-06-15").getTime)
+        Field(name = "_id", fmd, typedValue = 1087L),
+        Field(name = "idValue", fmd, typedValue = "Hello": QxString),
+        Field(name = "idType", fmd, typedValue = "World": QxString),
+        Field(name = "responseTime", fmd, typedValue = 307),
+        Field(name = "reportDate", fmd, typedValue = java.sql.Date.valueOf("2020-06-15").getTime)
       ))
       assert(data == GenericData(idValue = "Hello", idType = "World", responseTime = 307, reportDate = 1592204400000L, _id = 1087))
     }

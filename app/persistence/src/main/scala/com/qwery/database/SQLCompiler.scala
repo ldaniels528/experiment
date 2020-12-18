@@ -1,5 +1,6 @@
 package com.qwery.database
 
+import com.qwery.database.ExpressionVM._
 import com.qwery.database.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.QueryProcessor.{commands => cx}
 import com.qwery.database.SQLCompiler.implicits.InvokableFacade
@@ -57,9 +58,17 @@ object SQLCompiler {
      * @param expression the [[Expression]]
      */
     final implicit class ExpressionFacade(val expression: Expression) extends AnyVal {
+
       def translate: Any = expression match {
         case Literal(value) => value
         case unknown => die(s"Unsupported value $unknown")
+      }
+
+      def toColumn: Column = expression match {
+        case ex.CurrentRow =>
+          Column(name = "CurrentRow", metadata = ColumnMetadata(`type` = ColumnTypes.IntType), maxSize = Some(ROW_ID_BYTES))
+        case expr =>
+          Column(name = expr.alias getOrElse nextID, metadata = ColumnMetadata(`type` = ColumnTypes.DoubleType), maxSize = Some(LONG_BYTES))
       }
     }
 
@@ -72,29 +81,39 @@ object SQLCompiler {
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
           cx.CreateTable(databaseName, table.name, columns = table.columns.map(_.toColumn.toTableColumn))
-        case mx.Create(TableIndex(indexName, TableRef(tableName), columns)) =>
+        case mx.Create(TableIndex(_, TableRef(tableName), columns)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Delete(TableRef(tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
         case mx.DropTable(TableRef(tableName), ifExists) =>
           cx.DropTable(databaseName, tableName, ifExists)
-        case mx.Insert(Into(TableRef(tableName)), mx.Insert.Values(expressionValues), fields) =>
-          cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values = expressionValues.map(_.map(_.translate)))
-        case mx.Insert(Overwrite(TableRef(tableName)), mx.Insert.Values(expressionValues), fields) =>
-          cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values = expressionValues.map(_.map(_.translate)))
+        case mx.Insert(Into(TableRef(tableName)), mx.Insert.Values(values), fields) =>
+          cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values)
+        case mx.Insert(Into(TableRef(tableName)), queryable: mx.Queryable, fields) =>
+          cx.InsertSelect(databaseName, tableName, queryable.compile(databaseName) match {
+            case select: cx.SelectRows => select
+            case other => die(s"Unhandled sub-command $other for INSERT INTO")
+          })
+        case mx.Insert(Overwrite(TableRef(tableName)), mx.Insert.Values(values), fields) =>
+          cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values)
+        case mx.Insert(Overwrite(TableRef(tableName)), select: mx.Select, fields) =>
+          cx.InsertSelect(databaseName, tableName, select.compile(databaseName) match {
+            case select: cx.SelectRows => select
+            case other => die(s"Unhandled sub-command $other for INSERT OVERWRITE")
+          })
         case mx.Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-          cx.SelectRows(databaseName, tableName, fields, toCriteria(where), limit)
+          cx.SelectRows(databaseName, tableName, fields, toCriteria(where), groupBy, limit)
         case mx.Truncate(TableRef(tableName)) =>
           cx.TruncateTable(databaseName, tableName)
         case mx.Update(TableRef(tableName), changes, where, limit) =>
-          cx.UpdateRows(databaseName, tableName, changes = RowTuple(changes.map { case (k, v) => k -> v.translate }: _*), condition = toCriteria(where), limit)
+          cx.UpdateRows(databaseName, tableName, changes = changes, condition = toCriteria(where), limit)
         case unknown => die(s"Unsupported operation $unknown")
       }
 
-      private def toCriteria(condition_? : Option[Condition]): RowTuple = condition_? match {
-        case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => RowTuple(name -> value.translate)
+      private def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
+        case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => KeyValues(name -> value.translate)
         case Some(condition) => die(s"Unsupported condition $condition")
-        case None => RowTuple()
+        case None => KeyValues()
       }
 
     }

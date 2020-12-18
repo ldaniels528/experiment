@@ -2,7 +2,7 @@ package com.qwery.database.server
 
 import java.util.Date
 
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote, TableFile, RowTuple}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote, TableFile, KeyValues}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 
@@ -31,7 +31,7 @@ class BigTableFileTest extends AnyFunSpec {
         // populate the table with random quotes
         (1 to expected) foreach { _ =>
           val q = StockQuote.randomQuote
-          table.insertRow(RowTuple("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
+          table.insertRow(KeyValues("symbol" -> q.symbol, "exchange" -> q.exchange, "lastSale" -> q.lastSale, "lastSaleTime" -> new Date(q.lastSaleTime)))
         }
 
         // ensure the data was inserted

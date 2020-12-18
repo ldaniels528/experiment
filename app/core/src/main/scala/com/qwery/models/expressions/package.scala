@@ -12,6 +12,13 @@ package object expressions {
   object implicits {
 
     /**
+     * Array to Expression conversion
+     * @param values the given collection of values
+     * @return the equivalent [[ArrayExpression]]
+     */
+    final implicit def array2Expr(values: Seq[Any]): ArrayExpression = ArrayExpression(values: _*)
+
+    /**
       * Boolean to Expression conversion
       * @param value the given Boolean value
       * @return the equivalent [[Literal]]
@@ -59,6 +66,13 @@ package object expressions {
       * @return the equivalent [[Literal]]
       */
     final implicit def long2Expr(value: Long): Literal = Literal(value)
+
+    /**
+     * Map to Expression conversion
+     * @param values the given map of values
+     * @return the equivalent [[ArrayExpression]]
+     */
+    final implicit def map2Expr(values: Map[String, Any]): MapExpression = MapExpression(values)
 
     /**
       * Short Integer to Expression conversion

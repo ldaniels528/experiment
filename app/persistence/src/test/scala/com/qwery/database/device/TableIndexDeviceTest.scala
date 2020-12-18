@@ -5,7 +5,7 @@ import java.util.Date
 
 import com.qwery.database.models.{LoadMetrics, TableIndexRef}
 import com.qwery.util.ResourceHelper._
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, RowTuple, TableFile, time}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues, TableFile, time}
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
@@ -52,17 +52,17 @@ class TableIndexDeviceTest extends AnyFunSpec {
         assert(indexDevice.length == 6)
 
         // search for the row containing "AAPL" (e.g. find value via the index)
-        val (rows, processedTime) = time(table.findRows(condition = RowTuple("symbol" -> "AAPL")))
-        logger.info(f"Retrieved ${rows.size} rows via index in $processedTime%.2f msec")
-        rows.foreach(row => logger.info(row.toRowTuple.toString))
-        assert(rows.size == 1)
+        val (rows, processedTime) = time(table.getRows(condition = KeyValues("symbol" -> "AAPL")))
+        logger.info(f"Retrieved ${rows.length} rows via index in $processedTime%.2f msec")
+        rows.foreach(row => logger.info(row.toKeyValues.toString))
+        assert(rows.length == 1)
       }
     }
 
     it("should update the index when updating a record") {
       TableFile(databaseName, tableName).use { table =>
         // update some rows
-        val (count, updateTime) = time(table.updateRows(values = RowTuple("symbol" -> "AMDX"), condition = RowTuple("symbol" -> "AMD")))
+        val (count, updateTime) = time(table.updateRows(values = KeyValues("symbol" -> "AMDX"), condition = KeyValues("symbol" -> "AMD")))
         logger.info(f"Updated $count rows via index in $updateTime%.2f msec")
 
         val indexDevice = TableIndexDevice(TableIndexRef(databaseName, tableName, indexColumn))
@@ -73,7 +73,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
     it("should update the index when deleting a record") {
       TableFile(databaseName, tableName).use { table =>
         // update some rows
-        val (count, updateTime) = time(table.deleteRows(condition = RowTuple("symbol" -> "AMDX")))
+        val (count, updateTime) = time(table.deleteRows(condition = KeyValues("symbol" -> "AMDX")))
         logger.info(f"Deleted $count rows via index in $updateTime%.2f msec")
 
         val indexDevice = TableIndexDevice(TableIndexRef(databaseName, tableName, indexColumn))
@@ -87,7 +87,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
     TableFile(databaseName, tableName) use { table =>
       val metrics = table.ingestTextFile(file)(_.split("[,]") match {
         case Array(symbol, exchange, price, date) =>
-          Option(RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong)))
+          Option(KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong)))
         case _ => None
       })
       logger.info(s"metrics: $metrics")
@@ -98,13 +98,13 @@ class TableIndexDeviceTest extends AnyFunSpec {
   def dump(device: BlockDevice): Unit = {
     logger.info(s"show the contents of the index: [length = ${device.length}]")
     device foreach { row =>
-      logger.info(f"[${row.id}%04d] ${row.toRowTuple}")
+      logger.info(f"[${row.id}%04d] ${row.toKeyValues}")
     }
     logger.info("")
   }
 
-  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): RowTuple = {
-    RowTuple("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
+  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): KeyValues = {
+    KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
   }
 
 }

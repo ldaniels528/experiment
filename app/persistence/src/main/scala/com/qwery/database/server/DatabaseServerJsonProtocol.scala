@@ -138,13 +138,13 @@ object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupp
   //      TupleSet Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  implicit object TupleSetJsonFormat extends JsonFormat[RowTuple] {
-    override def read(jsValue: JsValue): RowTuple = jsValue match {
-      case js: JsObject => RowTuple(js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON })
+  implicit object TupleSetJsonFormat extends JsonFormat[KeyValues] {
+    override def read(jsValue: JsValue): KeyValues = jsValue match {
+      case js: JsObject => KeyValues(js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON })
       case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
 
-    override def write(m: RowTuple): JsValue = {
+    override def write(m: KeyValues): JsValue = {
       JsObject(m.toMap.mapValues {
         case b: Boolean => if (b) JsTrue else JsFalse
         case d: java.util.Date => JsNumber(d.getTime)

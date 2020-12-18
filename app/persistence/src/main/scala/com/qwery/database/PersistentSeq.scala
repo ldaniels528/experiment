@@ -220,7 +220,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
    */
   def min(predicate: T => Double): Double = {
     var minValue: Double = Double.MaxValue
-    _gather() { item => minValue = Math.min(minValue, predicate(item)) }
+    _gather() { item => minValue = minValue min predicate(item) }
     minValue
   }
 
@@ -498,12 +498,6 @@ object PersistentSeq {
     (columns, `class`.asInstanceOf[Class[T]])
   }
 
-  protected[database] def newTempFile(): File = {
-    val file = File.createTempFile("persistent", ".lldb")
-    file.deleteOnExit()
-    file
-  }
-
   /**
    * PersistentSeq Builder
    * @tparam A the product type
@@ -519,7 +513,7 @@ object PersistentSeq {
     def build: PersistentSeq[A] = {
       // is it column-oriented?
       if (isColumnModel) {
-        val file = if (persistenceFile != null) persistenceFile else newTempFile()
+        val file = if (persistenceFile != null) persistenceFile else createTempFile()
         new PersistentSeq(ColumnOrientedFileBlockDevice(columns, file), theClass)
       }
 
@@ -540,7 +534,7 @@ object PersistentSeq {
 
       // must be a simple disk-based collection
       else {
-        val file = if (persistenceFile != null) persistenceFile else newTempFile()
+        val file = if (persistenceFile != null) persistenceFile else createTempFile()
         new PersistentSeq(new RowOrientedFileBlockDevice(columns, file), theClass)
       }
     }

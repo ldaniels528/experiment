@@ -160,7 +160,7 @@ case class TokenStream(tokens: List[Token]) extends PeekableIterator[Token](toke
     * @param count the given number of positions to advance
     */
   def skip(count: Int): this.type = {
-    position = Math.min(position + count, tokens.length)
+    position = (position + count) min tokens.length
     this
   }
 

@@ -23,7 +23,7 @@ case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
   def getField(columnID: Int): Field = fields(columnID)
 
   /**
-   * Retrieves a field by column ID
+   * Retrieves a field by column name
    * @param name the name of the field
    * @return the option of a [[Field]]
    */
@@ -46,7 +46,12 @@ case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
   }
 
   /**
-   * @return a [[Map]] representation of the row
+   * @return a [[KeyValues key-value pairs representation]] of the row
+   */
+  def toKeyValues: KeyValues = KeyValues(toMap)
+
+  /**
+   * @return a [[Map hashMap representation]] of the row
    */
   def toMap: Map[String, Any] = Map((ROWID_NAME -> id) :: fields.flatMap(f => f.value.map(f.name -> _)).toList: _*)
 
@@ -60,11 +65,6 @@ case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
     buf.flip()
     buf
   }
-
-  /**
-   * @return a [[RowTuple]] representation of the row
-   */
-  def toRowTuple: RowTuple = RowTuple(toMap)
 
 }
 

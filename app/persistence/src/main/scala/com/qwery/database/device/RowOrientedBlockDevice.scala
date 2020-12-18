@@ -8,7 +8,7 @@ import com.qwery.database.{MathUtilsLong, RECORD_ID, ROWID}
 trait RowOrientedBlockDevice extends BlockDevice {
 
   def fromOffset(offset: RECORD_ID): ROWID = {
-    ((offset / recordSize) + Math.min(1, offset % recordSize)).toRowID
+    ((offset / recordSize) + ((offset % recordSize) min 1)).toRowID
   }
 
   def toOffset(rowID: ROWID): RECORD_ID = rowID * recordSize

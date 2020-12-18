@@ -1,15 +1,13 @@
 package com.qwery.database
 package device
 
-import java.io.File
+import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
-
 import com.qwery.database.ColumnTypes.IntType
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.device.TableIndexDevice.{rowIDColumn, toRowIDField}
+import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.models.TableIndexRef
-import com.qwery.database.types.QxInt
 
 import scala.collection.mutable
 
@@ -20,8 +18,8 @@ import scala.collection.mutable
  */
 class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
   extends RowOrientedFileBlockDevice(columns, TableIndexDevice.getTableIndexFile(ref)) {
-  private val indexColumnID = columns.indexWhere(_.name == ref.indexColumnName)
-  private val indexColumn = columns(indexColumnID)
+  private val indexColumnID: ROWID = columns.indexWhere(_.name == ref.indexColumnName)
+  private val indexColumn: Column = columns(indexColumnID)
   private var isDirty: Boolean = false
 
   /**
@@ -29,7 +27,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
    * @param searchValue the specified search value
    * @return a collection of matching [[Row rows]]
    */
-  def binarySearch(searchValue: Option[Any]): Seq[Row] = {
+  def binarySearch(searchValue: Option[Any]): List[Row] = {
     // sort the index if necessary
     refresh()
 
@@ -48,7 +46,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     }
 
     // determine whether matches were found
-    for {rowID <- p0 to p1 if valueAt(rowID) == searchValue} yield getRow(rowID)
+    for {rowID <- (p0 to p1).toList if valueAt(rowID) == searchValue} yield getRow(rowID)
   }
 
   /**
@@ -58,18 +56,23 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
    */
   def deleteRow(rowID: ROWID, searchValue: Option[Any]): Unit = {
     binarySearch(searchValue) collectFirst { case row if row.getReferencedRowID.contains(rowID) =>
-      writeRow(BinaryRow(row.id, RowMetadata(isActive = false), fields = Seq(wrap(Codec.encode(rowIDColumn, row.getReferencedRowID)), wrap(Codec.encode(indexColumn, value = None)))))
+      writeRow(BinaryRow(row.id, RowMetadata(isActive = false), fields = Seq(toRowIDField(row.getReferencedRowID), toIndexField(value = None))))
     } foreach { _ => isDirty = true }
   }
 
-  override def exportAsCSV: File = {
+  override def exportAsCSV(file: File): Unit = {
     refresh()
-    super.exportAsCSV
+    super.exportAsCSV(file)
   }
 
-  override def exportAsJSON: File = {
+  override def exportAsJSON(file: File): Unit = {
     refresh()
-    super.exportAsJSON
+    super.exportAsJSON(file)
+  }
+
+  override def exportTo(out: PrintWriter)(f: Row => Option[String]): Unit = {
+    refresh()
+    super.exportTo(out)(f)
   }
 
   override def findRow(fromPos: ROWID = 0, forward: Boolean = true)(f: RowMetadata => Boolean): Option[ROWID] = {
@@ -77,10 +80,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     super.findRow(fromPos, forward)(f)
   }
 
-  override def firstIndexOption: Option[ROWID] = {
-    refresh()
-    super.firstIndexOption
-  }
+  override def firstIndexOption: Option[ROWID] = throw UnsupportedFeature("firstIndexOption")
 
   override def foreach[U](callback: Row => U): Unit = {
     refresh()
@@ -92,6 +92,11 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     super.foreachBinary(callback)
   }
 
+  override def foreachKVP[U](callback: KeyValues => U): Unit = {
+    refresh()
+    super.foreachKVP(callback)
+  }
+
   /**
    * Inserts a new index row
    * @param rowID    the row ID
@@ -100,13 +105,10 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
   def insertRow(rowID: ROWID, newValue: Option[Any]): Unit = {
     refresh()
     isDirty = true
-    writeRow(BinaryRow(rowID, fields = Seq(toRowIDField(rowID), wrap(Codec.encode(indexColumn, newValue)))))
+    writeRow(BinaryRow(rowID, fields = Seq(toRowIDField(rowID), toIndexField(newValue))))
   }
 
-  override def lastIndexOption: Option[ROWID] = {
-    refresh()
-    super.lastIndexOption
-  }
+  override def lastIndexOption: Option[ROWID] = throw UnsupportedFeature("lastIndexOption")
 
   /**
    * Creates a new binary search index
@@ -150,6 +152,8 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     }
   }
 
+  override def reverseIterator: Iterator[(ROWID, ByteBuffer)] = throw UnsupportedFeature("reverseIterator")
+
   /**
    * Replaces the old value with the new value
    * @param rowID    the row ID
@@ -158,14 +162,23 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
    */
   def updateRow(rowID: ROWID, oldValue: Option[Any], newValue: Option[Any]): Unit = {
     binarySearch(oldValue) collectFirst { case row if row.getReferencedRowID.contains(rowID) =>
-      writeRow(BinaryRow(row.id, fields = Seq(wrap(Codec.encode(rowIDColumn, row.getReferencedRowID)), wrap(Codec.encode(indexColumn, newValue)))))
-    } foreach { _ => isDirty = true }
+      writeRow(BinaryRow(row.id, fields = Seq(toRowIDField(row.getReferencedRowID), toIndexField(newValue))))
+    } foreach (_ => isDirty = true)
   }
 
   /**
    * Sorts the index
    */
-  private def sortIndex(): Unit = sortInPlace { rowID => getField(rowID, indexColumnID).value }
+  @inline
+  private def sortIndex(): Unit = sortInPlace(getField(_, indexColumnID).value)
+
+  /**
+   * Encodes the optional index value to binary
+   * @param value the index value
+   * @return the [[ByteBuffer binary representation]] of the index value
+   */
+  @inline
+  private def toIndexField(value: Option[Any]): ByteBuffer = _encode(indexColumn, value)
 
 }
 
@@ -188,7 +201,6 @@ object TableIndexDevice {
     new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn))
   }
 
-
   /**
    * Creates a new binary search index
    * @param ref         the [[TableIndexRef]]
@@ -197,20 +209,40 @@ object TableIndexDevice {
    * @return a new [[TableIndexDevice binary search index]]
    */
   def createIndex(ref: TableIndexRef, indexColumn: Column)(implicit source: BlockDevice): TableIndexDevice = {
-    // create the index device
-    val indexDevice = new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn))
-    indexDevice.rebuild()
+    new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn)).rebuild()
   }
 
-  @inline def toRowIDField(rowID: ROWID): ByteBuffer = wrap((rowID: QxInt).encode(rowIDColumn))
+  /**
+   * Encodes the given indexed row ID to binary
+   * @param rowID the indexed row ID
+   * @return the [[ByteBuffer binary representation]] of the indexed row ID
+   */
+  @inline
+  private def toRowIDField(rowID: ROWID): ByteBuffer = _encode(rowIDColumn, value = Some(rowID))
+
+  /**
+   * Encodes the optional indexed row ID to binary
+   * @param rowID the indexed row ID
+   * @return the [[ByteBuffer binary representation]] of the indexed row ID
+   */
+  @inline
+  private def toRowIDField(rowID: Option[ROWID]): ByteBuffer = _encode(rowIDColumn, value = rowID)
+
+  /**
+   * Encodes the given value to binary
+   * @param value the value
+   * @return the [[ByteBuffer binary representation]] of the value
+   */
+  @inline
+  private def _encode(column: Column, value: Option[Any]): ByteBuffer = wrap(Codec.encode(column, value))
 
   //////////////////////////////////////////////////////////////////////////////////////
   //  TABLE INDEX CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
   def getTableIndexFile(databaseName: String, tableName: String, indexColumnName: String): File = {
-    val indexName = s"${tableName}_$indexColumnName"
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$indexName.qdb")
+    val indexFileName = s"${tableName}_$indexColumnName.qdb"
+    new File(new File(new File(getServerRootDirectory, databaseName), tableName), indexFileName)
   }
 
   def getTableIndexFile(ref: TableIndexRef): File = {

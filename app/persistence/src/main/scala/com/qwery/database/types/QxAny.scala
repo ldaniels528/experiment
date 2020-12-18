@@ -6,8 +6,9 @@ import java.nio.ByteBuffer
 import java.sql.{Blob, Clob}
 import java.text.SimpleDateFormat
 import java.util.UUID
-
 import com.qwery.database.ColumnTypes._
+import com.qwery.models.expressions.Null
+
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import org.apache.commons.io.IOUtils
 
@@ -31,6 +32,8 @@ sealed trait QxAny {
   def <=(that: QxAny): Boolean = (for {a <- this.toDouble; b <- that.toDouble} yield a <= b).contains(true)
 
   def +(that: QxAny): QxString = QxString(for {a <- this.toQxString.value; b <- that.value} yield a + b)
+
+  def dataType: ColumnType
 
   /**
    * Encodes this value into a byte array
@@ -126,6 +129,8 @@ object QxAny {
     case n: Float => QxFloat(Some(n))
     case n: Int => QxInt(Some(n))
     case n: Long => QxLong(Some(n))
+    case null | Null => QxNull
+    case o: Option[_] => o.map(apply).getOrElse(QxNull)
     case q: QxAny => q
     case n: Short => QxShort(Some(n))
     case s: String => QxString(Some(s))
@@ -215,6 +220,12 @@ object QxAny {
 
   final implicit def uuidToQx(value: Option[UUID]): QxUUID = QxUUID(value)
 
+  final implicit class RichByteBuffer(val buf: ByteBuffer) extends AnyVal {
+    @inline def toBlob: Blob = new SerialBlob(buf.array())
+
+    @inline def toClob: Clob = new SerialClob(new String(buf.array()).toCharArray)
+  }
+
   final implicit class QxRichDouble(val value: Double) extends AnyVal {
     @inline def toQxDouble: QxDouble = value: QxDouble
 
@@ -229,12 +240,6 @@ object QxAny {
     @inline def toQxLong: QxLong = value: QxLong
 
     @inline def toQxShort: QxShort = value.toShort: QxShort
-  }
-
-  final implicit class RichByteBuffer(val buf: ByteBuffer) extends AnyVal {
-    @inline def toBlob: Blob = new SerialBlob(buf.array())
-
-    @inline def toClob: Clob = new SerialClob(new String(buf.array()).toCharArray)
   }
 
   final implicit class RichInputStream(val in: InputStream) extends AnyVal {
@@ -295,25 +300,37 @@ object QxAny {
 
 case class QxArray(value: Option[ArrayBlock]) extends QxAny {
   def this(value: ArrayBlock) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.ArrayType
 }
 
 case class QxBigDecimal(value: Option[BigDecimal]) extends QxNumber {
   def this(value: BigDecimal) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.BigDecimalType
 }
 
 case class QxBigInt(value: Option[BigInt]) extends QxNumber {
   def this(value: BigInt) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.BigDecimalType
 }
 
 case class QxBinary(value: Option[Array[Byte]]) extends QxAny {
   def this(value: Array[Byte]) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.BinaryType
 }
 
 case class QxBlob(value: Option[Blob]) extends QxAny {
   def this(value: Blob) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.BlobType
 }
 
-class QxBoolean(val value: Option[Boolean]) extends QxAny
+class QxBoolean(val value: Option[Boolean]) extends QxAny {
+  override def dataType: ColumnType = ColumnTypes.BooleanType
+}
 
 case object QxFalse extends QxBoolean(Some(false))
 
@@ -329,6 +346,8 @@ object QxBoolean {
 
 case class QxByte(value: Option[Byte]) extends QxNumber {
   def this(value: Byte) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.ByteType
 }
 
 case class QxChar(value: Option[Char]) extends QxAny {
@@ -343,30 +362,52 @@ case class QxChar(value: Option[Char]) extends QxAny {
 
   def %(that: QxChar): QxChar = for {a <- this.toChar; b <- that.toChar} yield (a % b).toChar
 
+  override def dataType: ColumnType = ColumnTypes.CharType
+
 }
 
 case class QxClob(value: Option[Clob]) extends QxAny {
   def this(value: Clob) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.ClobType
 }
 
 case class QxDate(value: Option[java.util.Date]) extends QxNumber {
   def this(value: java.util.Date) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.DateType
 }
 
 case class QxDouble(value: Option[Double]) extends QxNumber {
   def this(value: Double) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.DoubleType
 }
 
 case class QxFloat(value: Option[Float]) extends QxNumber {
   def this(value: Float) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.FloatType
 }
 
 case class QxInt(value: Option[Int]) extends QxNumber {
   def this(value: Int) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.IntType
 }
 
 case class QxLong(value: Option[Long]) extends QxNumber {
   def this(value: Long) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.LongType
+}
+
+object QxNull extends QxAny {
+  override def dataType: ColumnType = ColumnTypes.StringType // TODO create a special type for NULL
+
+  override def value: Option[Any] = None
+
+  override def toString: String = "null"
 }
 
 trait QxNumber extends QxAny {
@@ -503,14 +544,35 @@ trait QxNumber extends QxAny {
 
 }
 
+object QxNumber {
+
+  def unapply(number: QxNumber): Option[Option[Double]] = Option(number match {
+    case QxBigDecimal(value) => value.map(_.toDouble)
+    case QxBigInt(value) => value.map(_.toDouble)
+    case QxByte(value) => value.map(_.toDouble)
+    case QxDate(value) => value.map(_.getTime.toDouble)
+    case QxDouble(value) => value
+    case QxFloat(value) => value.map(_.toDouble)
+    case QxInt(value) => value.map(_.toDouble)
+    case QxLong(value) => value.map(_.toDouble)
+    case QxShort(value) => value.map(_.toDouble)
+  })
+
+}
+
 case class QxSerializable(value: Option[Serializable]) extends QxAny {
+
   def this(value: Serializable) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.SerializableType
 
   override def encode(column: Column): Array[Byte] = Codec.encodeObject(value)
 }
 
 case class QxShort(value: Option[Short]) extends QxNumber {
   def this(value: Short) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.ShortType
 }
 
 case class QxString(value: Option[String]) extends QxAny {
@@ -521,6 +583,32 @@ case class QxString(value: Option[String]) extends QxAny {
 
   def *(that: QxInt): QxString = QxString(for {s <- value; n <- that.value} yield s * n)
 
+  def contains(string: String): Boolean = value.contains(string)
+
+  def contains(string: QxString): Boolean = {
+    (for {
+      text <- value
+      subtext <- string.value
+    } yield text.contains(subtext)).contains(true)
+  }
+
+  def matches(regex: String): Boolean = value.exists(_.matches(regex))
+
+  def matches(regex: QxString): Boolean = {
+    (for {
+      text <- value
+      regexString <- regex.value
+    } yield text.matches(regexString)).contains(true)
+  }
+
+  override def dataType: ColumnType = ColumnTypes.StringType
 }
 
-case class QxUUID(value: Option[UUID]) extends QxAny
+case class QxUUID(value: Option[UUID]) extends QxAny {
+
+  def this(value: String) = this(Some(UUID.fromString(value)))
+
+  def this(value: UUID) = this(Some(value))
+
+  override def dataType: ColumnType = ColumnTypes.UUIDType
+}

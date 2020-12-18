@@ -41,9 +41,9 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
     $http.post(toQueryUrl(databaseName), body = sql.getBytes("utf-8")).toSprayJs.convertTo[QueryResult]
   }
 
-  def findRows(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int] = None): Seq[RowTuple] = {
+  def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Seq[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, condition, limit)) match {
-      case js: JArray => js.values.map(m => RowTuple(m.asInstanceOf[Map[String, Any]]))
+      case js: JArray => js.values.map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
@@ -60,16 +60,16 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
     $http.get(url = s"${toUrl(databaseName, tableName)}/length").as[UpdateCount]
   }
 
-  def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[RowTuple] = {
+  def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[KeyValues] = {
     $http.get(url = s"${toRangeUrl(databaseName, tableName)}/$start/$length") match {
-      case js: JArray => js.values.map(m => RowTuple(m.asInstanceOf[Map[String, Any]]))
+      case js: JArray => js.values.map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
 
-  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[RowTuple] = {
+  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, rowID)) match {
-      case js: JObject => Option(RowTuple(js.values))
+      case js: JObject => Option(KeyValues(js.values))
       case js => die(s"Unexpected type returned $js")
     }
   }
@@ -82,11 +82,11 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
     $http.get(toUrl(databaseName, tableName)).as[TableMetrics]
   }
 
-  def insertRow(databaseName: String, tableName: String, values: RowTuple): UpdateCount = {
+  def insertRow(databaseName: String, tableName: String, values: KeyValues): UpdateCount = {
     $http.post(toUrl(databaseName, tableName), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
   }
 
-  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: RowTuple): UpdateCount = {
+  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): UpdateCount = {
     $http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8"))
     UpdateCount(count = 1, __id = Some(rowID))
   }
@@ -96,17 +96,17 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
     UpdateCount(count = 1, __id = Some(rowID))
   }
 
-  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: RowTuple): UpdateCount = {
+  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): UpdateCount = {
     $http.post(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
   }
 
-  def toIterator(databaseName: String, tableName: String): Iterator[RowTuple] = new Iterator[RowTuple] {
+  def toIterator(databaseName: String, tableName: String): Iterator[KeyValues] = new Iterator[KeyValues] {
     private var rowID: ROWID = 0
     private val eof: ROWID = getLength(databaseName, tableName).__id.getOrElse(0: ROWID)
 
     def hasNext: Boolean = rowID < eof
 
-    def next(): RowTuple = {
+    def next(): KeyValues = {
       if (!hasNext) throw new IndexOutOfBoundsException()
       val row = getRow(databaseName, tableName, rowID)
       rowID += 1
@@ -122,7 +122,7 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
 
   private def toUrl(databaseName: String, tableName: String): String = s"http://$host:$port/d/$databaseName/$tableName"
 
-  private def toUrl(databaseName: String, tableName: String, condition: RowTuple, limit: Option[Int]): String = {
+  private def toUrl(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int]): String = {
     val keyValues = limit.toList.map(n => s"__limit=$n") ::: condition.toList.map { case (k, v) => s"$k=$v" }
     s"${toUrl(databaseName, tableName)}?${keyValues.mkString("&")}"
   }
