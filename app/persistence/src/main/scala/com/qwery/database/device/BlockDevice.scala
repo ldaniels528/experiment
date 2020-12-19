@@ -4,8 +4,8 @@ package device
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-
 import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.types._
@@ -388,6 +388,43 @@ trait BlockDevice {
   def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit
 
   def writeRows(rows: Seq[BinaryRow]): Unit = rows foreach writeRow
+
+  //////////////////////////////////////////////////////////////////
+  //      UTILITIES
+  //////////////////////////////////////////////////////////////////
+
+  def whileKV(condition: KeyValues)(f: KeyValues => Boolean): Int = {
+    var (matches: Int, rowID: ROWID) = (0, 0)
+    val eof = length
+    var proceed = true
+    while (rowID < eof && proceed) {
+      getKeyValues(rowID) foreach { row =>
+        if (condition.isEmpty || isSatisfied(row, condition)) {
+          proceed = f(row)
+          if (proceed) matches += 1
+        }
+      }
+      rowID += 1
+    }
+    matches
+  }
+
+  def whileRow(condition: KeyValues)(f: Row => Boolean): Int = {
+    var (matches: Int, rowID: ROWID) = (0, 0)
+    val eof = length
+    var proceed = true
+    while (rowID < eof && proceed) {
+      val row = getRow(rowID)
+      if (row.metadata.isActive) {
+        if (condition.isEmpty || isSatisfied(row.toKeyValues, condition)) {
+          proceed = f(row)
+          if (proceed) matches += 1
+        }
+      }
+      rowID += 1
+    }
+    matches
+  }
 
 }
 

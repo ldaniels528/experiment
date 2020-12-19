@@ -89,4 +89,9 @@ object KeyValues {
     }
   }
 
+  @inline
+  def isSatisfied(result: => KeyValues, condition: => KeyValues): Boolean = {
+    condition.forall { case (name, value) => result.get(name).contains(value) }
+  }
+
 }

@@ -76,22 +76,43 @@ class QueryProcessorTest extends AnyFunSpec {
       logger.info(f"Lock/replace/unlock => '$myLockID' in $elapsedTime%.1f msec")
     }
 
-    it("should perform aggregations") {
+    it("should perform transformation queries") {
       val outcome = queryProcessor.executeQuery(databaseName,
         s"""|SELECT
-            |   exchange,
+            |   symbol AS ticker,
+            |   exchange AS market,
+            |   lastSale,
+            |   lastTradeTime AS lastSaleTime
+            |FROM $tableName
+            |LIMIT 5
+            |""".stripMargin
+      )
+
+      val results = Await.result(outcome, Duration.Inf)
+      assert(results.columns.map(_.name).toSet == Set("ticker", "market", "lastSale", "lastSaleTime"))
+      results foreachKVP { row =>
+        logger.info(s"row: $row")
+      }
+    }
+
+    it("should perform aggregate queries") {
+      val outcome = queryProcessor.executeQuery(databaseName,
+        s"""|SELECT
+            |   exchange AS market,
             |   COUNT(*) AS total,
             |   AVG(lastSale) AS avgLastSale,
             |   MIN(lastSale) AS minLastSale,
-            |   MAX(lastSale) AS maxLastSale
+            |   MAX(lastSale) AS maxLastSale,
+            |   SUM(lastSale) AS sumLastSale
             |FROM $tableName
             |GROUP BY exchange
             |""".stripMargin
       )
 
       val results = Await.result(outcome, Duration.Inf)
-      results foreachKVP { kvp =>
-        logger.info(s"kvp: $kvp")
+      assert(results.columns.map(_.name).toSet == Set("market", "total", "avgLastSale", "sumLastSale", "maxLastSale", "minLastSale"))
+      results foreachKVP { row =>
+        logger.info(s"row: $row")
       }
     }
 

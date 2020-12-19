@@ -1,13 +1,13 @@
 package com.qwery.database
 
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
+import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.TableFile._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
 
 import java.io.{File, PrintWriter}
 import scala.collection.concurrent.TrieMap
@@ -23,9 +23,8 @@ import scala.reflect.ClassTag
  * @param device       the [[BlockDevice block device]]
  */
 case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) {
-  private val logger = LoggerFactory.getLogger(getClass)
   private val indexFiles = TrieMap[String, TableIndexDevice]()
-  private val selector = new Selector(this)
+  private val selector = new TableQuery(device)
 
   // load the indices for this table
   config.indices.foreach(ref => registerIndex(ref, TableIndexDevice(ref)))
@@ -375,10 +374,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     oldSize
   }
 
-  @inline
-  def isSatisfied(result: => KeyValues, condition: => KeyValues): Boolean = {
-    condition.forall { case (name, value) => result.get(name).contains(value) }
-  }
+
 
   @inline
   private def registerIndex(indexRef: TableIndexRef, device: TableIndexDevice): Unit = {

@@ -4,7 +4,7 @@ import com.qwery.models.expressions.Expression
 
 package object functions {
 
-  val simpleFunctions: Map[String, (String, List[Expression]) => Function] = Map(
+  val transformationFunctions: Map[String, (String, List[Expression]) => Function] = Map(
     "avg" -> Avg,
     "count" -> Count,
     "distinct" -> Distinct,
