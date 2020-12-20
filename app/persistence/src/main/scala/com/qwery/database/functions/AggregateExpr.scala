@@ -9,8 +9,10 @@ trait AggregateExpr {
 
   def name: String
 
-  def execute: Any
+  def collect: Any
 
-  def update(keyValues: KeyValues): Unit
+  def append(keyValues: KeyValues): Unit
+
+  def +=(keyValues: KeyValues): Unit = append(keyValues)
 
 }

@@ -20,13 +20,13 @@ case class Avg(name: String, args: List[Expression]) extends AggregateFunction {
     case other => die(s"Too many argument near '$other'")
   }
 
-  override def execute: Double = {
+  override def collect: Double = {
     if (count > 0) sum / count else NaN
   }
 
   override def returnType: ColumnType = DoubleType
 
-  override def update(keyValues: KeyValues): Unit = {
+  override def append(keyValues: KeyValues): Unit = {
     count += 1
     expression match {
       case BasicField(fname) => QxAny(keyValues.get(fname)) match {

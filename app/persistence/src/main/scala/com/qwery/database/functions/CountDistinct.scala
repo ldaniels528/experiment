@@ -1,19 +1,18 @@
 package com.qwery.database.functions
 
-import com.qwery.database.ColumnTypes.{ArrayType, ColumnType}
+import com.qwery.database.ColumnTypes.{ColumnType, IntType}
 import com.qwery.database.{KeyValues, die}
 import com.qwery.models.expressions.{BasicField, Expression}
 
 import scala.collection.mutable
 
 /**
-  * Represents the SQL DISTINCT function
+  * Represents the SQL COUNT(DISTINCT(x)) function
   * @param name the output name of the result
   * @param args the function [[Expression arguments]] to compute
   */
-case class Distinct(name: String, args: List[Expression]) extends AggregateFunction {
-  // TODO use a device to store the values
-  private var values = mutable.HashSet[Any]()
+case class CountDistinct(name: String, args: List[Expression]) extends AggregateFunction {
+  private val values = mutable.Set[Any]()
   private val expression: Expression = args match {
     case expr :: Nil => expr
     case other => die(s"Too many argument near '$other'")
@@ -24,7 +23,7 @@ case class Distinct(name: String, args: List[Expression]) extends AggregateFunct
     case expression => die(s"Unconverted expression: $expression")
   }
 
-  override def collect: Array[Any] = values.toArray
+  override def collect: Int = values.size
 
-  override def returnType: ColumnType = ArrayType
+  override def returnType: ColumnType = IntType
 }

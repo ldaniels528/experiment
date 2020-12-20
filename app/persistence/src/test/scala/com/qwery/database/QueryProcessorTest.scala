@@ -82,6 +82,7 @@ class QueryProcessorTest extends AnyFunSpec {
             |   symbol AS ticker,
             |   exchange AS market,
             |   lastSale,
+            |   ROUND(lastSale, 1) AS roundedLastSale,
             |   lastTradeTime AS lastSaleTime
             |FROM $tableName
             |LIMIT 5
@@ -89,7 +90,7 @@ class QueryProcessorTest extends AnyFunSpec {
       )
 
       val results = Await.result(outcome, Duration.Inf)
-      assert(results.columns.map(_.name).toSet == Set("ticker", "market", "lastSale", "lastSaleTime"))
+      assert(results.columns.map(_.name).toSet == Set("ticker", "market", "lastSale", "roundedLastSale", "lastSaleTime"))
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
@@ -100,6 +101,7 @@ class QueryProcessorTest extends AnyFunSpec {
         s"""|SELECT
             |   exchange AS market,
             |   COUNT(*) AS total,
+            |   COUNT(DISTINCT(symbol)) AS tickers,
             |   AVG(lastSale) AS avgLastSale,
             |   MIN(lastSale) AS minLastSale,
             |   MAX(lastSale) AS maxLastSale,
@@ -110,7 +112,7 @@ class QueryProcessorTest extends AnyFunSpec {
       )
 
       val results = Await.result(outcome, Duration.Inf)
-      assert(results.columns.map(_.name).toSet == Set("market", "total", "avgLastSale", "sumLastSale", "maxLastSale", "minLastSale"))
+      assert(results.columns.map(_.name).toSet == Set("market", "total", "tickers", "avgLastSale", "sumLastSale", "maxLastSale", "minLastSale"))
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }

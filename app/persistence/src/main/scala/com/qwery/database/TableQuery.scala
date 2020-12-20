@@ -1,13 +1,14 @@
 package com.qwery.database
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.functions._
 import com.qwery.database.types.QxAny
-import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Field => SQLField}
+import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
-import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
 import scala.language.postfixOps
 
@@ -44,7 +45,7 @@ class TableQuery(tableDevice: BlockDevice) {
    */
   def aggregateQuery(projection: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField], limit: Option[Int]): BlockDevice = {
     // determine the projection, reference and group by columns
-    val projectionColumns: Seq[Column] = getTransformationColumns(projection)
+    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
     val referenceColumns: Seq[Column] = getReferencedColumns(projection)
     val referenceColumnNames: Set[String] = referenceColumns.map(_.name).toSet
     val groupByColumns: Seq[Column] = getColumnsByName(groupBy.map(_.name))
@@ -67,9 +68,14 @@ class TableQuery(tableDevice: BlockDevice) {
       // compile the projection into aggregators
       val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
       // update the aggregate expressions
-      groupDevice.use(_.foreachKVP(keyValues => aggExpressions.foreach(_.update(keyValues))))
+      groupDevice.use(_.foreachKVP(keyValues => aggExpressions.foreach(_.append(keyValues))))
       // create the aggregate key-values
-      val dstKV = KeyValues(aggExpressions.map(expr => expr.name -> expr.execute): _*)
+      val dstKV = KeyValues(aggExpressions map { expr =>
+        expr.collect match {
+          case results: List[Any] => expr.name -> results.mkString(",") // TODO fix this
+          case value => expr.name -> value
+        }
+      }: _*)
       // write the aggregated key-values as a row
       results.writeRow(dstKV.toBinaryRow(rowID = results.length)(results))
     }
@@ -80,9 +86,11 @@ class TableQuery(tableDevice: BlockDevice) {
     expressions map {
       case AllFields => die("Aggregation function or constant value expected")
       case f: BasicField => AggregateField(name = f.alias || f.name, srcName = f.name)
+      case fc@FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
+        CountDistinct(fc.alias || tempName(), args)
       case fc@FunctionCall(functionName, args) =>
-        val fx = aggregateFunctions.getOrElse(functionName, die(s"Function '$functionName' does not exist"))
-        fx(fc.alias || tempName(), args)
+        val fxTemplate = aggregateFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
+        fxTemplate(fc.alias || tempName(), args)
       case expression => die(s"Unconverted expression: $expression")
     }
   }
@@ -104,6 +112,8 @@ class TableQuery(tableDevice: BlockDevice) {
     expressions flatMap {
       case AllFields => tableDevice.columns
       case f: BasicField => tableDevice.columns.find(_.name == f.name).toSeq
+      case FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
+        getReferencedColumns(args.filterNot(_ == AllFields))
       case FunctionCall(_, args) => getReferencedColumns(args.filterNot(_ == AllFields))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
@@ -140,7 +150,7 @@ class TableQuery(tableDevice: BlockDevice) {
       case AllFields => tableDevice.columns
       case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
-        val fxTemplate = transformationFunctions.getOrElse(functionName, die(s"Function '$functionName' does not exist"))
+        val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
         val fx = fxTemplate(fc.alias || tempName(), args)
         Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
       case expression => die(s"Unconverted expression: $expression")
@@ -152,11 +162,41 @@ class TableQuery(tableDevice: BlockDevice) {
       case AllFields => srcRow.fields
       case f: BasicField => srcRow.fields.find(_.name == f.name).toSeq
       case fc@FunctionCall(functionName, args) =>
-        val fxTemplate = transformationFunctions.getOrElse(functionName, die(s"Function '$functionName' does not exist"))
+        val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
         val fx = fxTemplate(fc.alias || tempName(), args)
-        Seq(Field(name = fx.name, metadata = FieldMetadata(), QxAny(Option(fx.execute))))
+        Seq(Field(name = fx.name, metadata = FieldMetadata(), QxAny(Option(fx.execute(srcRow.toKeyValues)))))
       case expression => die(s"Unconverted expression: $expression")
     }
+  }
+
+  //////////////////////////////////////////////////////////////////
+  //      COMMON
+  //////////////////////////////////////////////////////////////////
+
+  private def getProjectionColumns(expressions: Seq[Expression]): Seq[Column] = {
+    expressions flatMap {
+      case AllFields => tableDevice.columns
+      case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
+      case fc@FunctionCall(_functionName, args) =>
+        val functionName = _functionName.toLowerCase
+        // is it an aggregation function?
+        if (aggregateFunctions.contains(functionName)) {
+          val fxTemplate = aggregateFunctions(functionName)
+          val fx = fxTemplate(fc.alias || tempName(), args)
+          Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+        }
+        // is it a transformation function?
+        else if (transformationFunctions.contains(functionName)) {
+          val fxTemplate = transformationFunctions(functionName)
+          val fx = fxTemplate(fc.alias || tempName(), args)
+          Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+        }
+        // is it a user-defined function?
+        // TODO implement user-defined function
+        // it's not a function ...
+        else die(s"Function '$functionName' does not exist")
+      case expression => die(s"Unconverted expression: $expression")
+    } distinct
   }
 
 }

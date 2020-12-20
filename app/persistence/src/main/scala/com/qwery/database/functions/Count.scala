@@ -16,15 +16,15 @@ case class Count(name: String, args: List[Expression]) extends AggregateFunction
     case other => die(s"Too many argument near '$other'")
   }
 
-  override def execute: Int = count
-
-  override def returnType: ColumnType = IntType
-
-  override def update(keyValues: KeyValues): Unit = {
+  override def append(keyValues: KeyValues): Unit = {
     count += (expression match {
       case AllFields => 1
       case BasicField(name) => keyValues.get(name).map(_ => 1).getOrElse(0)
       case expression => die(s"Unconverted expression: $expression")
     })
   }
+
+  override def collect: Int = count
+
+  override def returnType: ColumnType = IntType
 }

@@ -17,11 +17,11 @@ case class Sum(name: String, args: List[Expression]) extends AggregateFunction {
     case other => die(s"Too many argument near '$other'")
   }
 
-  override def execute: Double = sum
+  override def collect: Double = sum
 
   override def returnType: ColumnType = DoubleType
 
-  override def update(keyValues: KeyValues): Unit = {
+  override def append(keyValues: KeyValues): Unit = {
     expression match {
       case BasicField(name) => QxAny(keyValues.get(name)) match {
         case QxNumber(value_?) => value_?.foreach(sum += _)

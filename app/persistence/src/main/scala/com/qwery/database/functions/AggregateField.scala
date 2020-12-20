@@ -10,8 +10,8 @@ import com.qwery.database.KeyValues
 case class AggregateField(name: String, srcName: String) extends AggregateExpr {
   private var value: Any = _
 
-  override def execute: Any = value
+  override def collect: Any = value
 
-  override def update(keyValues: KeyValues): Unit = value = keyValues.get(srcName).orNull
+  override def append(keyValues: KeyValues): Unit = value = keyValues.get(srcName).orNull
 
 }
