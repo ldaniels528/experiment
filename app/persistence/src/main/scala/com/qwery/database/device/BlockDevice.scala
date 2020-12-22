@@ -298,9 +298,10 @@ trait BlockDevice {
   def shrinkTo(newSize: ROWID): Unit
 
   /**
-   * Performs an in-place sorting of the collection
-   * @param get the row ID to value extraction function
-   */
+    * Performs an in-place sorting of the collection
+    * @param get         the row ID to value extraction function
+    * @param isAscending indicates whether the sort order is ascending
+    */
   def sortInPlace[B](get: ROWID => Option[B], isAscending: Boolean = true): this.type = {
     val cache = mutable.Map[ROWID, Option[B]]()
 

@@ -92,6 +92,7 @@ class QueryProcessorTest extends AnyFunSpec {
 
       val results = Await.result(outcome, Duration.Inf)
       assert(results.columns.map(_.name).toSet == Set("ticker", "market", "lastSale", "roundedLastSale", "lastSaleTime"))
+      assert(results.rows.size == 5)
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
@@ -115,6 +116,7 @@ class QueryProcessorTest extends AnyFunSpec {
 
       val results = Await.result(outcome, Duration.Inf)
       assert(results.columns.map(_.name).toSet == Set("market", "total", "tickers", "avgLastSale", "sumLastSale", "maxLastSale", "minLastSale"))
+      assert(results.rows.size == 4)
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }

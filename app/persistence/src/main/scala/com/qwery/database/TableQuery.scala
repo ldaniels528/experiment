@@ -199,15 +199,9 @@ class TableQuery(tableDevice: BlockDevice) {
       case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(_functionName, args) =>
         val functionName = _functionName.toLowerCase
-        // is it an aggregation function?
-        if (aggregateFunctions.contains(functionName)) {
-          val fxTemplate = aggregateFunctions(functionName)
-          val fx = fxTemplate(fc.alias || tempName(), args)
-          Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
-        }
-        // is it a transformation function?
-        else if (transformationFunctions.contains(functionName)) {
-          val fxTemplate = transformationFunctions(functionName)
+        // is it a built-in function?
+        if (builtinFunctions.contains(functionName)) {
+          val fxTemplate = builtinFunctions(functionName)
           val fx = fxTemplate(fc.alias || tempName(), args)
           Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
         }
