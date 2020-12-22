@@ -85,6 +85,7 @@ class QueryProcessorTest extends AnyFunSpec {
             |   ROUND(lastSale, 1) AS roundedLastSale,
             |   lastTradeTime AS lastSaleTime
             |FROM $tableName
+            |ORDER BY lastSale DESC
             |LIMIT 5
             |""".stripMargin
       )
@@ -108,6 +109,7 @@ class QueryProcessorTest extends AnyFunSpec {
             |   SUM(lastSale) AS sumLastSale
             |FROM $tableName
             |GROUP BY exchange
+            |ORDER BY market DESC
             |""".stripMargin
       )
 

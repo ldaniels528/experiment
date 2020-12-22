@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.functions._
 import com.qwery.database.types.QxAny
+import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
@@ -20,15 +21,21 @@ class TableQuery(tableDevice: BlockDevice) {
   private val tempName = () => java.lang.Long.toString(System.currentTimeMillis(), 36)
 
   /**
-   * Executes aggregate and transformation queries
-   * @param projection the [[Expression field projection]]
-   * @param where      the condition which determines which records are included
-   * @param groupBy    the optional aggregation columns
-   * @param limit      the optional limit
-   * @return a [[BlockDevice device]] containing the rows
-   */
-  def select(projection: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField] = Nil, limit: Option[Int] = None): BlockDevice = {
-    if (groupBy.nonEmpty) aggregateQuery(projection, where, groupBy, limit) else transformationQuery(projection, where, limit)
+    * Executes aggregate and transformation queries
+    * @param projection the [[Expression field projection]]
+    * @param where      the condition which determines which records are included
+    * @param groupBy    the optional aggregation columns
+    * @param orderBy    the columns to order by
+    * @param limit      the optional limit
+    * @return a [[BlockDevice device]] containing the rows
+    */
+  def select(projection: Seq[Expression],
+             where: KeyValues,
+             groupBy: Seq[SQLField] = Nil,
+             orderBy: Seq[OrderColumn] = Nil,
+             limit: Option[Int] = None): BlockDevice = {
+    if (groupBy.nonEmpty) aggregateQuery(projection, where, groupBy, orderBy, limit)
+    else transformationQuery(projection, where, orderBy, limit)
   }
 
   //////////////////////////////////////////////////////////////////
@@ -36,14 +43,19 @@ class TableQuery(tableDevice: BlockDevice) {
   //////////////////////////////////////////////////////////////////
 
   /**
-   * Executes an aggregate query
-   * @param projection the [[Expression field projection]]
-   * @param where      the [[KeyValues inclusion criteria]]
-   * @param groupBy    the columns to group by
-   * @param limit      the maximum number of rows for which to return
-   * @return a [[BlockDevice device]] containing the rows
-   */
-  def aggregateQuery(projection: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField], limit: Option[Int]): BlockDevice = {
+    * Executes an aggregate query
+    * @param projection the [[Expression field projection]]
+    * @param where      the [[KeyValues inclusion criteria]]
+    * @param groupBy    the columns to group by
+    * @param orderBy    the columns to order by
+    * @param limit      the maximum number of rows for which to return
+    * @return a [[BlockDevice device]] containing the rows
+    */
+  def aggregateQuery(projection: Seq[Expression],
+                     where: KeyValues,
+                     groupBy: Seq[SQLField],
+                     orderBy: Seq[OrderColumn],
+                     limit: Option[Int]): BlockDevice = {
     // determine the projection, reference and group by columns
     val projectionColumns: Seq[Column] = getProjectionColumns(projection)
     val referenceColumns: Seq[Column] = getReferencedColumns(projection)
@@ -79,7 +91,9 @@ class TableQuery(tableDevice: BlockDevice) {
       // write the aggregated key-values as a row
       results.writeRow(dstKV.toBinaryRow(rowID = results.length)(results))
     }
-    results
+
+    // order the results?
+    sortResults(results, orderBy)
   }
 
   private def getAggregateProjection(expressions: Seq[Expression]): Seq[AggregateExpr] = {
@@ -124,13 +138,17 @@ class TableQuery(tableDevice: BlockDevice) {
   //////////////////////////////////////////////////////////////////
 
   /**
-   * Executes a transformation query
-   * @param projection the [[Expression field projection]]
-   * @param where      the condition which determines which records are included
-   * @param limit      the optional limit
-   * @return a [[BlockDevice device]] containing the rows
-   */
-  def transformationQuery(projection: Seq[Expression], where: KeyValues, limit: Option[Int]): BlockDevice = {
+    * Executes a transformation query
+    * @param projection the [[Expression field projection]]
+    * @param where      the condition which determines which records are included
+    * @param orderBy    the columns to order by
+    * @param limit      the optional limit
+    * @return a [[BlockDevice device]] containing the rows
+    */
+  def transformationQuery(projection: Seq[Expression],
+                          where: KeyValues,
+                          orderBy: Seq[OrderColumn],
+                          limit: Option[Int]): BlockDevice = {
     // determine the projection columns
     val projectionColumns = getTransformationColumns(projection)
 
@@ -142,7 +160,9 @@ class TableQuery(tableDevice: BlockDevice) {
       results.writeRow(dstRow.toBinaryRow)
       limit.isEmpty || limit.exists(counter.addAndGet(1) < _)
     }
-    results
+
+    // order the results?
+    sortResults(results, orderBy)
   }
 
   private def getTransformationColumns(expressions: Seq[Expression]): Seq[Column] = {
@@ -197,6 +217,18 @@ class TableQuery(tableDevice: BlockDevice) {
         else die(s"Function '$functionName' does not exist")
       case expression => die(s"Unconverted expression: $expression")
     } distinct
+  }
+
+  private def sortResults(results: BlockDevice, orderBy: Seq[OrderColumn]): BlockDevice = {
+    if (orderBy.nonEmpty) {
+      val orderByColumn = orderBy.headOption
+      val sortColumnID = results.columns.indexWhere(col => orderByColumn.exists(o => o.alias.contains(col.name) || o.name == col.name)) match {
+        case -1 => die(s"Column '${orderByColumn.map(_.name).orNull}' must exist within the projection")
+        case index => index
+      }
+      results.sortInPlace(results.getField(_, sortColumnID).value, isAscending = orderByColumn.exists(_.isAscending))
+    }
+    results
   }
 
 }

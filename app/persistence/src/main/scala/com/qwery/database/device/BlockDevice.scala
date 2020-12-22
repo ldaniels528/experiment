@@ -4,6 +4,7 @@ package device
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
+
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.OptionComparisonHelper.OptionComparator
@@ -300,14 +301,16 @@ trait BlockDevice {
    * Performs an in-place sorting of the collection
    * @param get the row ID to value extraction function
    */
-  def sortInPlace[B](get: ROWID => Option[B]): this.type = {
+  def sortInPlace[B](get: ROWID => Option[B], isAscending: Boolean = true): this.type = {
     val cache = mutable.Map[ROWID, Option[B]]()
 
     def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID))
 
+    def isLesser(n: Int, high: Int): Boolean = if(isAscending) fetch(n) > fetch(high) else fetch(n) < fetch(high)
+
     def partition(low: ROWID, high: ROWID): ROWID = {
       var m = low - 1 // index of lesser item
-      for (n <- low until high) if (fetch(n) < fetch(high)) {
+      for (n <- low until high) if (isLesser(n, high)) {
         m += 1 // increment the index of lesser item
         swap(m, n)
       }

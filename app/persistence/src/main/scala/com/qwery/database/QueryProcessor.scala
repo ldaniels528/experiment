@@ -1,6 +1,7 @@
 package com.qwery.database
 
 import java.util.UUID
+
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Scheduler}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
@@ -9,7 +10,7 @@ import com.qwery.database.ExpressionVM.evaluate
 import com.qwery.database.QueryProcessor.CommandRoutingActor
 import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.models._
-import com.qwery.models.Insert
+import com.qwery.models.{Insert, OrderColumn}
 import com.qwery.models.expressions.{Field => SQLField}
 import com.qwery.models.expressions.Expression
 import com.qwery.util.ResourceHelper._
@@ -256,8 +257,14 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 30
     asUpdateCount { ReplaceRow(databaseName, tableName, rowID, values) }
   }
 
-  def selectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField], limit: Option[Int]): Future[QueryResult] = {
-    asResultSet { SelectRows(databaseName, tableName, fields, where, groupBy, limit) }
+  def selectRows(databaseName: String,
+                 tableName: String,
+                 fields: Seq[Expression],
+                 where: KeyValues,
+                 groupBy: Seq[SQLField],
+                 orderBy: Seq[OrderColumn],
+                 limit: Option[Int]): Future[QueryResult] = {
+    asResultSet { SelectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit) }
   }
 
   def truncateTable(databaseName: String, tableName: String): Future[UpdateCount] = {
@@ -458,8 +465,8 @@ object QueryProcessor {
         invoke(cmd, sender())(table.replaceRange(start, length, row)) { case (caller, _) => caller ! RowsUpdated(length) }
       case cmd@ReplaceRow(_, _, rowID, row) =>
         invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
-      case cmd@SelectRows(_, _, fields, where, groupBy, limit) =>
-        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(QueryResult.toQueryResult(databaseName, tableName, _))) }
+      case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
+        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(QueryResult.toQueryResult(databaseName, tableName, _))) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@UnlockRow(_, _, rowID, lockID) => unlockRow(cmd, rowID, lockID)
@@ -551,6 +558,7 @@ object QueryProcessor {
                           fields: Seq[Expression],
                           where: KeyValues,
                           groupBy: Seq[SQLField] = Nil,
+                          orderBy: Seq[OrderColumn] = Nil,
                           limit: Option[Int] = None) extends TableIORequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////

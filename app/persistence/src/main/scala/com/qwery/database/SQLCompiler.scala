@@ -102,7 +102,7 @@ object SQLCompiler {
             case other => die(s"Unhandled sub-command $other for INSERT OVERWRITE")
           })
         case mx.Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-          cx.SelectRows(databaseName, tableName, fields, toCriteria(where), groupBy, limit)
+          cx.SelectRows(databaseName, tableName, fields, toCriteria(where), groupBy, orderBy, limit)
         case mx.Truncate(TableRef(tableName)) =>
           cx.TruncateTable(databaseName, tableName)
         case mx.Update(TableRef(tableName), changes, where, limit) =>

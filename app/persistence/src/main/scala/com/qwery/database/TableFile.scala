@@ -1,15 +1,17 @@
 package com.qwery.database
 
+import java.io.{File, PrintWriter}
+
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
 import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.TableFile._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
+import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
 
-import java.io.{File, PrintWriter}
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
 import scala.language.postfixOps
@@ -301,18 +303,20 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   def resize(newSize: ROWID): Unit = device.shrinkTo(newSize)
 
   /**
-   * Executes a query
-   * @param fields  the [[Expression field projection]]
-   * @param where   the condition which determines which records are included
-   * @param groupBy the optional aggregation columns
-   * @param limit   the optional limit
-   * @return a [[BlockDevice]] containing the rows
+    * Executes a query
+    * @param fields  the [[Expression field projection]]
+    * @param where   the condition which determines which records are included
+    * @param groupBy the optional aggregation columns
+    * @param orderBy the columns to order by
+    * @param limit   the optional limit
+    * @return a [[BlockDevice]] containing the rows
    */
   def selectRows(fields: Seq[Expression],
                  where: KeyValues,
                  groupBy: Seq[SQLField] = Nil,
+                 orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
-    selector.select(fields, where, groupBy, limit)
+    selector.select(fields, where, groupBy, orderBy, limit)
   }
 
   def unlockRow(rowID: ROWID): Unit = {
