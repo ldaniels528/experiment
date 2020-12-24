@@ -7,7 +7,7 @@ import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.qwery.database.ExpressionVM.evaluate
-import com.qwery.database.QueryProcessor.CommandRoutingActor
+import com.qwery.database.QueryProcessor.CommandRoutingCPU
 import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.models._
 import com.qwery.models.expressions.{Expression, Field => SQLField}
@@ -27,7 +27,7 @@ import scala.util.{Failure, Success}
  */
 class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors(), requestTimeout: FiniteDuration = 30.seconds) {
   private val actorSystem: ActorSystem = ActorSystem(name = "QueryProcessor")
-  private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingActor(requestTimeout))
+  private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingCPU(requestTimeout))
     .withRouter(RoundRobinPool(nrOfInstances = routingActors)))
 
   implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
@@ -61,10 +61,11 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param databaseName the database name
     * @param viewName     the view name
     * @param queryString  the SQL query
+    * @param ifNotExists  if true, the operation will not fail
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createView(databaseName: String, viewName: String, queryString: String): Future[UpdateCount] = {
-    asUpdateCount { CreateView(databaseName, viewName, queryString) }
+  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean = false): Future[UpdateCount] = {
+    asUpdateCount { CreateView(databaseName, viewName, queryString, ifNotExists) }
   }
 
   /**
@@ -260,7 +261,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     asLockUpdated { LockRow(databaseName, tableName, rowID) } map(_.lockID)
   }
 
-  def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: KeyValues): Future[UpdateCount] = {
+  def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: => KeyValues): Future[UpdateCount] = {
     asUpdateCount { ReplaceRange(databaseName, tableName, start, length, row) }
   }
 
@@ -272,8 +273,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
                  tableName: String,
                  fields: Seq[Expression],
                  where: KeyValues,
-                 groupBy: Seq[SQLField],
-                 orderBy: Seq[OrderColumn],
+                 groupBy: Seq[SQLField] = Nil,
+                 orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int]): Future[QueryResult] = {
     asResultSet { SelectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit) }
   }
@@ -394,10 +395,10 @@ object QueryProcessor {
   }
 
   /**
-   * Command Routing Actor
+   * Command Routing CPU
    * @param requestTimeout the [[FiniteDuration request timeout]]
    */
-  class CommandRoutingActor(requestTimeout: FiniteDuration) extends Actor {
+  class CommandRoutingCPU(requestTimeout: FiniteDuration) extends Actor {
     import context.{dispatcher, system}
     private implicit val timeout: Timeout = requestTimeout
 
@@ -553,8 +554,8 @@ object QueryProcessor {
     private lazy val vTable = VirtualTableFile(databaseName, viewName)
 
     override def receive: Receive = {
-      case cmd@CreateView(_, _, queryString) =>
-        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, queryString)) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@CreateView(_, _, queryString, ifNotExists) =>
+        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, queryString, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DropView(_, _, ifExists) =>
         invoke(cmd, sender())(VirtualTableFile.dropView(databaseName, viewName, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@FindRows(_, _, condition, limit) =>
@@ -682,7 +683,7 @@ object QueryProcessor {
     //      VIRTUAL TABLE MUTATIONS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class CreateView(databaseName: String, tableName: String, queryString: String) extends VirtualTableIORequest
+    case class CreateView(databaseName: String, tableName: String, queryString: String, ifNotExists: Boolean) extends VirtualTableIORequest
 
     case class DropView(databaseName: String, tableName: String, ifExists: Boolean) extends VirtualTableIORequest
 

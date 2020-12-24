@@ -3,6 +3,7 @@ package com.qwery.database
 import java.util.Date
 
 import com.qwery.database.StockQuote._
+import com.qwery.models.expressions.AllFields
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
@@ -122,7 +123,33 @@ class QueryProcessorTest extends AnyFunSpec {
       }
     }
 
-    it("should perform CREATE VIEW") {
+    it("should perform CREATE VIEW (API)") {
+      val outcome = for {
+        _ <- queryProcessor.dropView(databaseName, viewName = "tickers", ifExists = true)
+        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true, queryString =
+          s"""|SELECT
+              |   symbol AS ticker,
+              |   exchange AS market,
+              |   lastSale,
+              |   ROUND(lastSale, 1) AS roundedLastSale,
+              |   lastTradeTime AS lastSaleTime
+              |FROM $tableName
+              |ORDER BY lastSale DESC
+              |LIMIT 500
+              |""".stripMargin
+        )
+        results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), where = KeyValues("market" -> "AMEX"), limit = Some(5))
+      } yield results
+
+      val results = Await.result(outcome, Duration.Inf)
+      assert(results.rows.size == 5)
+      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
+      results foreachKVP { row =>
+        logger.info(s"row: $row")
+      }
+    }
+
+    it("should perform CREATE VIEW (SQL)") {
       val outcome = for {
         _ <- queryProcessor.executeQuery(databaseName, sql = "DROP VIEW IF EXISTS tickers")
         _ <- queryProcessor.executeQuery(databaseName, sql =
@@ -135,13 +162,15 @@ class QueryProcessorTest extends AnyFunSpec {
               |   lastTradeTime AS lastSaleTime
               |FROM $tableName
               |ORDER BY lastSale DESC
-              |LIMIT 25
+              |LIMIT 500
               |""".stripMargin
         )
         results <- queryProcessor.executeQuery(databaseName, sql = "SELECT * FROM tickers WHERE market = 'AMEX' LIMIT 5")
       } yield results
 
       val results = Await.result(outcome, Duration.Inf)
+      assert(results.rows.size == 5)
+      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }

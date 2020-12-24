@@ -256,7 +256,7 @@ trait SQLLanguageParser {
     */
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?AS %Q:query")
-    Create(View(name = params.atoms("name"), query = params.sources("query")))
+    Create(View(name = params.atoms("name"), query = params.sources("query"), ifNotExists = params.indicators.get("exists").contains(true)))
   }
 
   /**

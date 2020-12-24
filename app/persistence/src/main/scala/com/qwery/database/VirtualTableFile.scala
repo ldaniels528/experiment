@@ -64,15 +64,16 @@ object VirtualTableFile {
     new VirtualTableFile(databaseName, viewName, device = getViewDevice(databaseName, viewName))
   }
 
-  def createView(databaseName: String, viewName: String, queryString: String): VirtualTableFile = {
+  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean): VirtualTableFile = {
     val viewFile = getViewConfigFile(databaseName, viewName)
-    if (viewFile.exists()) die(s"View '$viewName' already exists")
+    if (viewFile.exists() && !ifNotExists) die(s"View '$viewName' already exists")
     else writeViewConfig(databaseName, viewName, queryString)
     VirtualTableFile(databaseName, viewName)
   }
 
   def dropView(databaseName: String, viewName: String, ifExists: Boolean): Boolean = {
     val viewFile = getViewConfigFile(databaseName, viewName)
+    if (!ifExists && !viewFile.exists()) die(s"View '$viewName' does not exist")
     viewFile.exists() && getViewConfigFile(databaseName, viewName).delete()
   }
 

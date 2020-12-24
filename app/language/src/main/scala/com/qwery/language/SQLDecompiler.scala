@@ -18,14 +18,14 @@ object SQLDecompiler {
   }
 
   def decompile(invokable: Invokable): String = invokable match {
-    case Create(View(name, query)) => decompileCreateView(name, query)
+    case Create(View(name, query, ifNotExists)) => decompileCreateView(name, query, ifNotExists)
     case select: Select => decompileSelect(select).withAlias(select.alias)
     case t@TableRef(name) => name.withAlias(t.alias)
     case other => die(s"Failed to decompile - $other")
   }
 
-  private def decompileCreateView(name: String, query: Invokable): String = {
-    s"create view $name as ${query.toSQL}"
+  private def decompileCreateView(name: String, query: Invokable, ifNotExists: Boolean): String = {
+    s"create view $name ${if (ifNotExists) "if not exists" else ""} as ${query.toSQL}".replaceAllLiterally("  ", " ")
   }
 
   private def decompileFunctionCall(name: String, args: List[Expression]): String = {
@@ -40,7 +40,7 @@ object SQLDecompiler {
         |${if (groupBy.nonEmpty) s"group by ${groupBy.map(_.toSQL).mkString(",")}" else ""}
         |${if (orderBy.nonEmpty) s"order by ${orderBy.map(_.toSQL).mkString(",")}" else ""}
         |${limit.map(n => s"limit $n").orBlank}
-        |""".stripMargin.replaceAllLiterally("\n", " ")
+        |""".stripMargin.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")
   }
 
   /**

@@ -239,12 +239,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support CREATE VIEW statements") {
       val results = SQLLanguageParser.parse(
-        """|CREATE VIEW OilAndGas AS
+        """|CREATE VIEW IF NOT EXISTS OilAndGas AS
            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == Create(View(name = "OilAndGas",
+      assert(results == Create(View(name = "OilAndGas", ifNotExists = true,
         query = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
