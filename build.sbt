@@ -129,6 +129,27 @@ lazy val persistence = (project in file("./app/persistence")).
       "net.liftweb" %% "lift-json" % "3.3.0"
     ))
 
+/**
+  * @example sbt "project jdbc" test
+  */
+lazy val jdbc = (project in file("./app/jdbc")).
+  dependsOn(persistence).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "qwery-jdbc",
+    organization := "com.qwery",
+    description := "Qwery JDBC Driver",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    mainClass in assembly := Some("com.qwery.database.QweryDriver"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value
+    ))
+
 /////////////////////////////////////////////////////////////////////////////////
 //      Platform Projects: Spark
 /////////////////////////////////////////////////////////////////////////////////

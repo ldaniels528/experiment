@@ -12,8 +12,9 @@ import scala.beans.BeanProperty
 /**
  * Qwery JDBC Driver
  */
-class QweryDriver() extends Driver {
-  private val urlPattern = "jdbc:qwery://(\\S+):(\\d+)/(\\S+)" // (e.g. "jdbc:qwery://localhost:12122/qwery")
+class QweryDriver extends Driver {
+  private val urlPattern = "jdbc:qwery://(\\S+):(\\d+)/(\\S+)" // (e.g. "jdbc:qwery://localhost:8233/qwery")
+  private val urlPatternRegex = urlPattern.r
 
   @BeanProperty val majorVersion: Int = 0
   @BeanProperty val minorVersion: Int = 1
@@ -22,9 +23,8 @@ class QweryDriver() extends Driver {
   override def acceptsURL(url: String): Boolean = urlPattern.matches(url)
 
   override def connect(url: String, info: Properties): Connection = {
-    val regex = urlPattern.r
     url match {
-      case regex(host, port, database) =>
+      case urlPatternRegex(host, port, database) =>
         new JDBCConnection(service = ClientSideTableService(host, port.toInt), database = database, url = url)
       case x => die(s"Invalid JDBC URL: $x")
     }
@@ -37,7 +37,7 @@ class QweryDriver() extends Driver {
     )
   }
 
-  override def jdbcCompliant(): Boolean = true
+  override def jdbcCompliant(): Boolean = false
 
 }
 

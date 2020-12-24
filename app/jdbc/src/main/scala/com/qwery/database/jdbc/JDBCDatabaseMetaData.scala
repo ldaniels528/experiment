@@ -92,7 +92,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
 
   override def nullsAreSortedAtEnd(): Boolean = !nullsAreSortedAtStart()
 
-  override def usesLocalFiles(): Boolean = false
+  override def usesLocalFiles(): Boolean = true
 
   override def usesLocalFilePerTable(): Boolean = true
 
