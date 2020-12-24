@@ -12,6 +12,10 @@ package object models {
     override def toString: String = this.toJSON
   }
 
+  case class DatabaseInfo(databaseName: String) {
+    override def toString: String = this.toJSON
+  }
+
   case class DatabaseMetrics(databaseName: String, tables: Seq[String]) {
     override def toString: String = this.toJSON
   }

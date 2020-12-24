@@ -173,6 +173,17 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
   }
 
   /**
+    * Retrieves the list of available databases
+    * @return the promise of a collection of [[DatabaseInfo]]
+    */
+  def getDatabases: Future[List[DatabaseInfo]] = {
+    this ? GetDatabases map {
+      case DatabaseListRetrieved(databases) => databases
+      case response => throw UnhandledCommandException(GetDatabases, response)
+    }
+  }
+
+  /**
    * Retrieves the metrics for the specified database
    * @param databaseName the specified database
    * @return the promise of [[DatabaseMetrics]]
@@ -299,7 +310,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     asUpdateCount { UpdateRows(databaseName, tableName, values, condition, limit) }
   }
 
-  private def ?(message: DatabaseIORequest): Future[DatabaseIOResponse] = {
+  private def ?(message: SystemIORequest): Future[DatabaseIOResponse] = {
     (actorPool ? message).mapTo[DatabaseIOResponse]
   }
 
@@ -344,6 +355,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
 object QueryProcessor {
   private val logger = LoggerFactory.getLogger(getClass)
   private val databaseWorkers = TrieMap[String, ActorRef]()
+  private val systemWorkers = TrieMap[Unit, ActorRef]()
   private val tableWorkers = TrieMap[(String, String), ActorRef]()
   private val vTableWorkers = TrieMap[(String, String), ActorRef]()
 
@@ -355,7 +367,7 @@ object QueryProcessor {
    * @param f       the transformation function
    * @tparam A the response object type
    */
-  def invoke[A](command: DatabaseIORequest, caller: ActorRef)(block: => A)(f: (ActorRef, A) => Unit): Unit = {
+  def invoke[A](command: SystemIORequest, caller: ActorRef)(block: => A)(f: (ActorRef, A) => Unit): Unit = {
     try f(caller, block) catch {
       case e: Throwable =>
         caller ! FailureOccurred(command, e)
@@ -364,15 +376,19 @@ object QueryProcessor {
 
   /**
     * Determine which type of actor (database, tables, views) should handle the request
-    * @param request the [[DatabaseIORequest request]]
+    * @param request the [[SystemIORequest request]]
     * @param system  the [[ActorSystem actor system]]
     * @return the [[ActorRef]]
     */
-  private def determineWorker(request: DatabaseIORequest)(implicit system: ActorSystem): ActorRef = {
+  private def determineWorker(request: SystemIORequest)(implicit system: ActorSystem): ActorRef = {
 
     def launchDW(command: DatabaseIORequest): ActorRef = {
       import command.databaseName
       databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
+    }
+
+    def launchSW(command: SystemIORequest): ActorRef = {
+      systemWorkers.getOrElseUpdate((), system.actorOf(Props(new SystemCPU())))
     }
 
     def launchTW(command: TableIORequest): ActorRef = {
@@ -390,7 +406,8 @@ object QueryProcessor {
       case cmd: SelectRows => if (VirtualTableFile.isVirtualTable(cmd)) launchVTW(cmd) else launchTW(cmd)
       case cmd: VirtualTableIORequest => launchVTW(cmd)
       case cmd: TableIORequest => launchTW(cmd)
-      case cmd => launchDW(cmd)
+      case cmd: DatabaseIORequest => launchDW(cmd)
+      case cmd => launchSW(cmd)
     }
   }
 
@@ -413,13 +430,13 @@ object QueryProcessor {
           // kill the actor whom is responsible for the virtual table
           vTableWorkers.remove(command.databaseName -> command.tableName).foreach(_ ! PoisonPill)
         }
-      case command: DatabaseIORequest => processRequest(caller = sender(), command)
+      case command: SystemIORequest => processRequest(caller = sender(), command)
       case message =>
         logger.error(s"Unhandled routing message $message")
         unhandled(message)
     }
 
-    private def processRequest(caller: ActorRef, command: DatabaseIORequest): Future[DatabaseIOResponse] = {
+    private def processRequest(caller: ActorRef, command: SystemIORequest): Future[DatabaseIOResponse] = {
       try {
         // perform the remote command
         val worker = determineWorker(command)
@@ -448,6 +465,19 @@ object QueryProcessor {
     override def receive: Receive = {
       case cmd: GetDatabaseMetrics =>
         invoke(cmd, sender())(databaseFile.getDatabaseMetrics) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
+      case message =>
+        logger.error(s"Unhandled D-CPU processing message $message")
+        unhandled(message)
+    }
+  }
+
+  /**
+    * System Command Processing Unit Actor
+    */
+  class SystemCPU() extends Actor {
+    override def receive: Receive = {
+      case cmd@GetDatabases =>
+        invoke(cmd, sender())(DatabaseFile.listDatabases) { case (caller, metrics) => caller ! DatabaseListRetrieved(metrics) }
       case message =>
         logger.error(s"Unhandled D-CPU processing message $message")
         unhandled(message)
@@ -580,9 +610,14 @@ object QueryProcessor {
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
+      * Represents a System I/O Request
+      */
+    sealed trait SystemIORequest
+
+    /**
      * Represents a Database I/O Request
      */
-    sealed trait DatabaseIORequest {
+    sealed trait DatabaseIORequest extends SystemIORequest {
       def databaseName: String
     }
 
@@ -611,6 +646,8 @@ object QueryProcessor {
                         tableName: String,
                         condition: KeyValues,
                         limit: Option[Int] = None) extends TableIORequest
+
+    case object GetDatabases extends SystemIORequest
 
     case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
 
@@ -691,9 +728,11 @@ object QueryProcessor {
     //      RESPONSE COMMANDS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
+    case class DatabaseListRetrieved(databases: List[DatabaseInfo]) extends DatabaseIOResponse
+
     case class DatabaseMetricsRetrieved(metrics: DatabaseMetrics) extends DatabaseIOResponse
 
-    case class FailureOccurred(command: DatabaseIORequest, cause: Throwable) extends DatabaseIOResponse
+    case class FailureOccurred(command: SystemIORequest, cause: Throwable) extends DatabaseIOResponse
 
     case class FieldRetrieved(field: Field) extends DatabaseIOResponse
 

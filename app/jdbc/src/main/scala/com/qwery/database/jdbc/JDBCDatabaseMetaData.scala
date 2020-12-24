@@ -32,7 +32,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
   @BeanProperty val driverName: String = s"Qwery v$driverVersion"
   @BeanProperty val extraNameCharacters: String = ""
   @BeanProperty val numericFunctions: String =
-    """|ABS
+    """|ABS COS ROUND SIN
        |""".stripMargin.trim.replaceAllLiterally("\n", " ")
   @BeanProperty val JDBCMajorVersion: Int = 0
   @BeanProperty val JDBCMinorVersion: Int = 1
@@ -64,18 +64,18 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
   @BeanProperty val schemaTerm: String = "SCHEMA"
   @BeanProperty val searchStringEscape: String = "\\"
   @BeanProperty val stringFunctions: String =
-    """|LEN TRIM
-       |""".stripMargin.trim.replaceAllLiterally("\n", " ")
+    """|LEN LTRIM RTRIM SUBSTR SUBSTRING TRIM
+       |""".stripMargin.trim.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")
   @BeanProperty val systemFunctions: String =
     """|NOW
-       |""".stripMargin.trim.replaceAllLiterally("\n", " ")
+       |""".stripMargin.trim.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")
   @BeanProperty val SQLKeywords: String =
-    """|AS BETWEEN ON SELECT UPDATE
-       |""".stripMargin.trim.replaceAllLiterally("\n", " ")
+    """|AND AS BETWEEN CAST DATABASE DELETE FROM IN INSERT INTO IS NOT NULL ON OR REPLACE SELECT TABLE UPDATE VALUES WHERE
+       |""".stripMargin.trim.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")
   @BeanProperty var SQLStateType: Int = _
   @BeanProperty val timeDateFunctions: String =
-    """|NOW
-       |""".stripMargin.trim.replaceAllLiterally("\n", " ")
+    """|NOW DATEDIFF
+       |""".stripMargin.trim.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")
   @BeanProperty val userName: String = ""
 
   override def allProceduresAreCallable(): Boolean = true
@@ -301,7 +301,10 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
 
   override def getCatalogs: ResultSet = {
     val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("catalog name")))
-    new JDBCResultSet(connection, databaseName, tableName = "Catalogs", columns = columns, data = Nil)
+    val databases = connection.service.getDatabases
+    new JDBCResultSet(connection, databaseName, tableName = "Catalogs", columns = columns, data = databases.map { db =>
+      Seq(Option(db.databaseName))
+    })
   }
 
   override def getClientInfoProperties: ResultSet = {

@@ -13,18 +13,17 @@ import scala.beans.BeanProperty
  * Qwery JDBC Driver
  */
 class QweryDriver extends Driver {
-  private val urlPattern = "jdbc:qwery://(\\S+):(\\d+)/(\\S+)" // (e.g. "jdbc:qwery://localhost:8233/qwery")
-  private val urlPatternRegex = urlPattern.r
+  private val urlPattern = "jdbc:qwery://(\\S+):(\\d+)/(\\S+)".r // (e.g. "jdbc:qwery://localhost:8233/qwery")
 
   @BeanProperty val majorVersion: Int = 0
   @BeanProperty val minorVersion: Int = 1
   @BeanProperty val parentLogger: Logger = Logger.getLogger(getClass.getName)
 
-  override def acceptsURL(url: String): Boolean = urlPattern.matches(url)
+  override def acceptsURL(url: String): Boolean = urlPattern.findAllIn(url).nonEmpty
 
   override def connect(url: String, info: Properties): Connection = {
     url match {
-      case urlPatternRegex(host, port, database) =>
+      case urlPattern(host, port, database) =>
         new JDBCConnection(service = ClientSideTableService(host, port.toInt), database = database, url = url)
       case x => die(s"Invalid JDBC URL: $x")
     }
@@ -32,8 +31,9 @@ class QweryDriver extends Driver {
 
   override def getPropertyInfo(url: String, info: Properties): Array[DriverPropertyInfo] = {
     Array(
-      new DriverPropertyInfo("majorVersion", majorVersion.toString),
-      new DriverPropertyInfo("minorVersion", minorVersion.toString)
+      new DriverPropertyInfo("database", "qwery"),
+      new DriverPropertyInfo("server", "localhost"),
+      new DriverPropertyInfo("port", "8233")
     )
   }
 

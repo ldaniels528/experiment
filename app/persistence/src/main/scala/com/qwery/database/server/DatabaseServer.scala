@@ -9,7 +9,6 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.JSONSupport._
-import com.qwery.database.createTempFile
 import com.qwery.database.models._
 import com.qwery.database.server.DatabaseServerJsonProtocol._
 import com.qwery.models.expressions.Expression
@@ -46,7 +45,7 @@ object DatabaseServer {
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 15.seconds)
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 2.minutes)
     import system.dispatcher
 
     // start the server
@@ -62,7 +61,6 @@ object DatabaseServer {
    * @param qp   the implicit [[QueryProcessor]]
    */
   def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor): Unit = {
-    // bind to the port
     Http().newServerAt(host, port).bindFlow(route()) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
@@ -78,6 +76,8 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   def route()(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+    // route: / (root)
+    pathSingleSlash(routesRoot) ~
     // route: /d/<database> (e.g. "/d/portfolio")
     path("d" / Segment)(routesByDatabase) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
@@ -94,6 +94,18 @@ object DatabaseServer {
       path("d" / Segment / Segment / "length")(routesByDatabaseTableLength) ~
       // route: /q/<database> (e.g. "/q/portfolio")
       path("q" / Segment)(routesByDatabaseTableQuery)
+  }
+
+  /**
+    * Database Root API routes (e.g. "/")
+    * @param qp the implicit [[QueryProcessor]]
+    * @return the [[Route]]
+    */
+  private def routesRoot(implicit qp: QueryProcessor): Route = {
+    get {
+      // retrieve the list of databases (e.g. "GET /")
+      complete(qp.getDatabases)
+    }
   }
 
   /**

@@ -48,6 +48,10 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
     }
   }
 
+  def getDatabases: List[DatabaseInfo] = {
+    $http.get(toUrl).as[List[DatabaseInfo]]
+  }
+
   def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
     $http.get(toUrl(databaseName)).as[DatabaseMetrics]
   }
@@ -117,6 +121,8 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
   private def toQueryUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"
 
   private def toRangeUrl(databaseName: String, tableName: String): String = s"http://$host:$port/r/$databaseName/$tableName"
+
+  private def toUrl: String = s"http://$host:$port/"
 
   private def toUrl(databaseName: String): String = s"http://$host:$port/d/$databaseName"
 

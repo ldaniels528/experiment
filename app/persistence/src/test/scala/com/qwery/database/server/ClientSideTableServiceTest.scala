@@ -29,6 +29,10 @@ class ClientSideTableServiceTest extends AnyFunSpec {
     val tableNameA = "stocks_client_test_0"
     val tableNameB = "stocks_client_test_1"
 
+    it("should list the databases on the server") {
+      invoke(label = "service.getDatabases", service.getDatabases)
+    }
+
     it("should drop an existing table") {
       invoke(label = s"service.dropTable($databaseName, $tableNameA)", service.dropTable(databaseName, tableNameA))
     }

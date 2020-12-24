@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 
 import com.qwery.database.DatabaseFile.getDatabaseRootDirectory
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
-import com.qwery.database.models.{DatabaseConfig, DatabaseMetrics}
+import com.qwery.database.models.{DatabaseConfig, DatabaseInfo, DatabaseMetrics}
 import com.qwery.util.ResourceHelper._
 
 import scala.io.Source
@@ -42,6 +42,12 @@ object DatabaseFile {
    */
   def apply(databaseName: String): DatabaseFile = {
     new DatabaseFile(databaseName, config = readDatabaseConfig(databaseName))
+  }
+
+  def listDatabases: List[DatabaseInfo] = {
+    getServerRootDirectory.listFiles().toList collect {
+      case directory if directory.isDirectory => DatabaseInfo(directory.getName)
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////////////

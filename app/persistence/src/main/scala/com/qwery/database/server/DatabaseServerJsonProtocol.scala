@@ -60,6 +60,8 @@ object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupp
 
   implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
+  implicit val databaseInfoJsonFormat: RootJsonFormat[DatabaseInfo] = jsonFormat1(DatabaseInfo.apply)
+
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat2(DatabaseMetrics.apply)
 
   implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)

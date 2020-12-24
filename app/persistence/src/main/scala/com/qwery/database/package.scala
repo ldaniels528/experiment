@@ -2,8 +2,9 @@ package com.qwery
 
 import java.io.File
 import java.nio.ByteBuffer
+
 import com.qwery.database.ColumnTypes.ColumnType
-import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse}
+import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse, SystemIORequest}
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 
 /**
@@ -103,7 +104,7 @@ package object database {
   case class DataDirectoryNotFoundException(directory: File)
     extends RuntimeException(s"Could not create or find the data directory: ${directory.getAbsolutePath}")
 
-  case class FailedCommandException(command: DatabaseIORequest, cause: Throwable)
+  case class FailedCommandException(command: SystemIORequest, cause: Throwable)
     extends RuntimeException(s"Request '$command' failed", cause)
 
   case class OffsetOutOfRangeException(offset: RECORD_ID, limit: RECORD_ID)
@@ -121,7 +122,7 @@ package object database {
   case class TypeConversionException(value: Any, toType: ColumnType)
     extends RuntimeException(s"Failed to convert '$value' to $toType")
 
-  case class UnhandledCommandException(command: DatabaseIORequest, response: DatabaseIOResponse)
+  case class UnhandledCommandException(command: SystemIORequest, response: DatabaseIOResponse)
     extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
 
   case class UnsupportedFeature(featureName: String)
