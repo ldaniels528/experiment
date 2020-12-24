@@ -284,16 +284,27 @@ trait SQLLanguageParser {
    */
   def parseDrop(ts: TokenStream): Invokable = ts.decode(tuples =
     "DROP TABLE" -> parseDropTable,
+    "DROP VIEW" -> parseDropView,
   )
 
   /**
    * Parses a DROP TABLE statement
    * @param ts the given [[TokenStream token stream]]
-   * @return an [[Invokable invokable]]
+   * @return a [[DropTable]]
    */
   def parseDropTable(ts: TokenStream): DropTable = {
     val params = SQLTemplateParams(ts, "DROP TABLE ?%IFE:exists %t:name")
     DropTable(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
+  }
+
+  /**
+    * Parses a DROP VIEW statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return a [[DropView]]
+    */
+  def parseDropView(ts: TokenStream): DropView = {
+    val params = SQLTemplateParams(ts, "DROP VIEW ?%IFE:exists %t:name")
+    DropView(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
 
   /**

@@ -10,9 +10,8 @@ import com.qwery.database.ExpressionVM.evaluate
 import com.qwery.database.QueryProcessor.CommandRoutingActor
 import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.models._
+import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.models.{Insert, OrderColumn}
-import com.qwery.models.expressions.{Field => SQLField}
-import com.qwery.models.expressions.Expression
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -26,7 +25,7 @@ import scala.util.{Failure, Success}
  * @param routingActors  the number of command routing actors
  * @param requestTimeout the [[FiniteDuration request timeout]]
  */
-class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 30.seconds) {
+class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors(), requestTimeout: FiniteDuration = 30.seconds) {
   private val actorSystem: ActorSystem = ActorSystem(name = "QueryProcessor")
   private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingActor(requestTimeout))
     .withRouter(RoundRobinPool(nrOfInstances = routingActors)))
@@ -55,6 +54,17 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 30
    */
   def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn]): Future[UpdateCount] = {
     asUpdateCount { CreateTable(databaseName, tableName, columns) }
+  }
+
+  /**
+    * Creates a new view (virtual table)
+    * @param databaseName the database name
+    * @param viewName     the view name
+    * @param queryString  the SQL query
+    * @return the promise of an [[UpdateCount update count]]
+    */
+  def createView(databaseName: String, viewName: String, queryString: String): Future[UpdateCount] = {
+    asUpdateCount { CreateView(databaseName, viewName, queryString) }
   }
 
   /**
@@ -116,6 +126,17 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 30
   }
 
   /**
+    * Drops a database view
+    * @param databaseName the database name
+    * @param viewName     the virtual table name
+    * @param ifExists     indicates whether an existence check should be performed
+    * @return the promise of an [[UpdateCount update count]]
+    */
+  def dropView(databaseName: String, viewName: String, ifExists: Boolean): Future[UpdateCount] = {
+    asUpdateCount { DropView(databaseName, viewName, ifExists) }
+  }
+
+  /**
    * Executes a SQL statement or query
    * @param databaseName the database name
    * @param sql the SQL statement or query
@@ -123,17 +144,7 @@ class QueryProcessor(routingActors: Int = 1, requestTimeout: FiniteDuration = 30
    */
   def executeQuery(databaseName: String, sql: String): Future[QueryResult] = {
     val command = SQLCompiler.compile(databaseName, sql)
-    val tableName = command match {
-      case cmd: TableIORequest => cmd.tableName
-      case cmd => throw new RuntimeException(s"Could not determine 'tableName' for $cmd")
-    }
-    this ? command map {
-      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
-      case QueryResultRetrieved(queryResult) => queryResult
-      case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
-      case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count)
-      case response => throw UnhandledCommandException(command, response)
-    }
+    (this ? command) map(_.toQueryResult(command))
   }
 
   /**
@@ -333,7 +344,7 @@ object QueryProcessor {
   private val logger = LoggerFactory.getLogger(getClass)
   private val databaseWorkers = TrieMap[String, ActorRef]()
   private val tableWorkers = TrieMap[(String, String), ActorRef]()
-  private val locks = TrieMap[ROWID, String]()
+  private val vTableWorkers = TrieMap[(String, String), ActorRef]()
 
   /**
    * Sends the command to the caller
@@ -350,14 +361,35 @@ object QueryProcessor {
     }
   }
 
-  private def findWorker(command: DatabaseIORequest)(implicit system: ActorSystem): ActorRef = {
-    command match {
-      case cmd: TableIORequest =>
-        import cmd.{databaseName, tableName}
-        tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
-      case cmd =>
-        import cmd.databaseName
-        databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
+  /**
+    * Determine which type of actor (database, tables, views) should handle the request
+    * @param request the [[DatabaseIORequest request]]
+    * @param system  the [[ActorSystem actor system]]
+    * @return the [[ActorRef]]
+    */
+  private def determineWorker(request: DatabaseIORequest)(implicit system: ActorSystem): ActorRef = {
+
+    def launchDW(command: DatabaseIORequest): ActorRef = {
+      import command.databaseName
+      databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
+    }
+
+    def launchTW(command: TableIORequest): ActorRef = {
+      import command.{databaseName, tableName}
+      tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
+    }
+
+    def launchVTW(command: TableIORequest): ActorRef = {
+      import command.{databaseName, tableName}
+      vTableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new VirtualTableCPU(databaseName, tableName))))
+    }
+
+    request match {
+      case cmd: FindRows => if (VirtualTableFile.isVirtualTable(cmd)) launchVTW(cmd) else launchTW(cmd)
+      case cmd: SelectRows => if (VirtualTableFile.isVirtualTable(cmd)) launchVTW(cmd) else launchTW(cmd)
+      case cmd: VirtualTableIORequest => launchVTW(cmd)
+      case cmd: TableIORequest => launchTW(cmd)
+      case cmd => launchDW(cmd)
     }
   }
 
@@ -375,6 +407,11 @@ object QueryProcessor {
           // kill the actor whom is responsible for the table
           tableWorkers.remove(command.databaseName -> command.tableName).foreach(_ ! PoisonPill)
         }
+      case command: DropView =>
+        processRequest(caller = sender(), command) onComplete { _ =>
+          // kill the actor whom is responsible for the virtual table
+          vTableWorkers.remove(command.databaseName -> command.tableName).foreach(_ ! PoisonPill)
+        }
       case command: DatabaseIORequest => processRequest(caller = sender(), command)
       case message =>
         logger.error(s"Unhandled routing message $message")
@@ -384,7 +421,7 @@ object QueryProcessor {
     private def processRequest(caller: ActorRef, command: DatabaseIORequest): Future[DatabaseIOResponse] = {
       try {
         // perform the remote command
-        val worker = findWorker(command)
+        val worker = determineWorker(command)
         val promise = (worker ? command).mapTo[DatabaseIOResponse]
         promise onComplete {
           case Success(response) => caller ! response
@@ -405,13 +442,13 @@ object QueryProcessor {
    * @param databaseName the database name
    */
   class DatabaseCPU(databaseName: String) extends Actor {
-    private lazy val databaseFile: DatabaseFile = DatabaseFile(databaseName)
+    private lazy val databaseFile = DatabaseFile(databaseName)
 
     override def receive: Receive = {
       case cmd: GetDatabaseMetrics =>
         invoke(cmd, sender())(databaseFile.getDatabaseMetrics) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
       case message =>
-        logger.error(s"Unhandled processing message $message")
+        logger.error(s"Unhandled D-CPU processing message $message")
         unhandled(message)
     }
   }
@@ -423,7 +460,7 @@ object QueryProcessor {
    */
   class TableCPU(databaseName: String, tableName: String) extends Actor {
     private val locks = TrieMap[ROWID, String]()
-    private lazy val table = TableFile.getTableFile(databaseName, tableName)
+    private lazy val table = TableFile(databaseName, tableName)
 
     override def receive: Receive = {
       case cmd@CreateIndex(_, _, indexColumn) =>
@@ -481,7 +518,7 @@ object QueryProcessor {
         val values = KeyValues(changes.map { case (name, expr) => (name, evaluate(expr)) }: _*)
         invoke(cmd, sender())(table.updateRows(values, condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
       case message =>
-        logger.error(s"Unhandled processing message $message")
+        logger.error(s"Unhandled T-CPU processing message $message")
         unhandled(message)
     }
 
@@ -507,6 +544,34 @@ object QueryProcessor {
 
   }
 
+  /**
+    * Virtual Table Command Processing Unit Actor
+    * @param databaseName the database name
+    * @param viewName     the view name
+    */
+  class VirtualTableCPU(databaseName: String, viewName: String) extends Actor {
+    private lazy val vTable = VirtualTableFile(databaseName, viewName)
+
+    override def receive: Receive = {
+      case cmd@CreateView(_, _, queryString) =>
+        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, queryString)) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@DropView(_, _, ifExists) =>
+        invoke(cmd, sender())(VirtualTableFile.dropView(databaseName, viewName, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@FindRows(_, _, condition, limit) =>
+        invoke(cmd, sender())(vTable.getRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows.use(_.toList)) }
+      case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
+        invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(QueryResult.toQueryResult(databaseName, viewName, _))) }
+      case message =>
+        logger.error(s"Unhandled VT-CPU processing message $message")
+        unhandled(message)
+    }
+
+    override def postStop(): Unit = {
+      logger.info(s"Virtual Table actor '$databaseName.$viewName' was shutdown")
+      super.postStop()
+    }
+  }
+
   object commands {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -526,6 +591,11 @@ object QueryProcessor {
     sealed trait TableIORequest extends DatabaseIORequest {
       def tableName: String
     }
+
+    /**
+      * Represents a Virtual Table I/O Request
+      */
+    sealed trait VirtualTableIORequest extends TableIORequest
 
     /**
      * Represents a Database I/O Response
@@ -607,6 +677,14 @@ object QueryProcessor {
     case class UpdateRow(databaseName: String, tableName: String, rowID: ROWID, changes: Seq[(String, Expression)]) extends TableUpdateRequest
 
     case class UpdateRows(databaseName: String, tableName: String, changes: Seq[(String, Expression)], condition: KeyValues, limit: Option[Int]) extends TableUpdateRequest
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //      VIRTUAL TABLE MUTATIONS
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    case class CreateView(databaseName: String, tableName: String, queryString: String) extends VirtualTableIORequest
+
+    case class DropView(databaseName: String, tableName: String, ifExists: Boolean) extends VirtualTableIORequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //      RESPONSE COMMANDS

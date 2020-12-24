@@ -122,6 +122,31 @@ class QueryProcessorTest extends AnyFunSpec {
       }
     }
 
+    it("should perform CREATE VIEW") {
+      val outcome = for {
+        _ <- queryProcessor.executeQuery(databaseName, sql = "DROP VIEW IF EXISTS tickers")
+        _ <- queryProcessor.executeQuery(databaseName, sql =
+          s"""|CREATE VIEW tickers AS
+              |SELECT
+              |   symbol AS ticker,
+              |   exchange AS market,
+              |   lastSale,
+              |   ROUND(lastSale, 1) AS roundedLastSale,
+              |   lastTradeTime AS lastSaleTime
+              |FROM $tableName
+              |ORDER BY lastSale DESC
+              |LIMIT 25
+              |""".stripMargin
+        )
+        results <- queryProcessor.executeQuery(databaseName, sql = "SELECT * FROM tickers WHERE market = 'AMEX' LIMIT 5")
+      } yield results
+
+      val results = Await.result(outcome, Duration.Inf)
+      results foreachKVP { row =>
+        logger.info(s"row: $row")
+      }
+    }
+
   }
 
   def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): KeyValues = {

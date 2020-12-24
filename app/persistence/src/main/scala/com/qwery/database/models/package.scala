@@ -1,6 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.JSONSupport.JSONProductConversion
+import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse, FailureOccurred, QueryResultRetrieved, RowUpdated, RowsUpdated, TableIORequest}
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.models.TypeAsEnum
@@ -135,6 +136,23 @@ package object models {
 
   case class UpdateCount(count: Int, __id: Option[Int] = None) {
     override def toString: String = this.toJSON
+  }
+
+  final implicit class DatabaseIOResponseEnriched(val response: DatabaseIOResponse) extends AnyVal {
+    def toQueryResult(request: DatabaseIORequest): QueryResult = {
+      val databaseName = request.databaseName
+      val tableName: String = request match {
+        case cmd: TableIORequest => cmd.tableName
+        case _ => ""
+      }
+      response match {
+        case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+        case QueryResultRetrieved(result) => result
+        case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
+        case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count) // TODO  fix me!
+        case response => throw UnhandledCommandException(request, response)
+      }
+    }
   }
 
 }

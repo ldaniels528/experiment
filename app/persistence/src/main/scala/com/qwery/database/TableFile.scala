@@ -18,7 +18,7 @@ import scala.language.postfixOps
 import scala.reflect.ClassTag
 
 /**
- * Represents a database table file
+ * Represents a physical table file
  * @param databaseName the name of the database
  * @param tableName    the name of the table
  * @param config       the [[TableConfig table configuration]]
@@ -377,8 +377,6 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     device.shrinkTo(newSize = 0)
     oldSize
   }
-
-
 
   @inline
   private def registerIndex(indexRef: TableIndexRef, device: TableIndexDevice): Unit = {
