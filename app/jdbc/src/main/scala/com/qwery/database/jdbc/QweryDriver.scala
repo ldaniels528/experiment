@@ -5,7 +5,7 @@ import java.sql.{Connection, Driver, DriverManager, DriverPropertyInfo}
 import java.util.Properties
 import java.util.logging.Logger
 
-import com.qwery.database.server.ClientSideTableService
+import com.qwery.database.server.DatabaseClient
 
 import scala.beans.BeanProperty
 
@@ -24,7 +24,7 @@ class QweryDriver extends Driver {
   override def connect(url: String, info: Properties): Connection = {
     url match {
       case urlPattern(host, port, database) =>
-        new JDBCConnection(service = ClientSideTableService(host, port.toInt), database = database, url = url)
+        new JDBCConnection(service = DatabaseClient(host, port.toInt), database = database, url = url)
       case x => die(s"Invalid JDBC URL: $x")
     }
   }

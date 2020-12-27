@@ -1,7 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.JSONSupport.JSONProductConversion
-import com.qwery.database.QueryProcessor.commands.{DatabaseIORequest, DatabaseIOResponse, FailureOccurred, QueryResultRetrieved, RowUpdated, RowsUpdated, TableIORequest}
+import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.models.TypeAsEnum
@@ -128,6 +128,8 @@ package object models {
   case class TableIndexRef(databaseName: String, tableName: String, indexColumnName: String) {
     override def toString: String = this.toJSON
   }
+
+  case class TableInfo(databaseName: String, tableName: String, column: TableColumn)
 
   case class TableMetrics(databaseName: String,
                           tableName: String,

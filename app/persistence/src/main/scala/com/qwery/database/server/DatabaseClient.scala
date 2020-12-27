@@ -3,22 +3,23 @@ package server
 
 import com.qwery.database.JSONSupport._
 import com.qwery.database.models._
-import com.qwery.database.server.DatabaseServerJsonProtocol._
+import com.qwery.database.server.DatabaseJsonProtocol._
 import com.qwery.database.server.QxWebServiceClient._
 import net.liftweb.json._
 import spray.json._
 
 /**
- * Client-Side Table Service
+ * Qwery Database Client
  * @param host the remote hostname
  * @param port the remote port
  */
-case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
+case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   private implicit val formats: DefaultFormats = DefaultFormats
+  private val charSetName = "utf-8"
   private val $http = new QxWebServiceClient()
 
   def createTable(databaseName: String, ref: TableCreation): UpdateCount = {
-    $http.post(toUrl(databaseName), ref.toJSON.getBytes("utf-8")).as[UpdateCount]
+    $http.post(toUrl(databaseName), ref.toJSON.getBytes(charSetName)).as[UpdateCount]
   }
 
   def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): UpdateCount = {
@@ -38,7 +39,7 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
   }
 
   def executeQuery(databaseName: String, sql: String): QueryResult = {
-    $http.post(toQueryUrl(databaseName), body = sql.getBytes("utf-8")).toSprayJs.convertTo[QueryResult]
+    $http.post(toQueryUrl(databaseName), body = sql.getBytes(charSetName)).toSprayJs.convertTo[QueryResult]
   }
 
   def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Seq[KeyValues] = {
@@ -46,6 +47,10 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
       case js: JArray => js.values.map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
+  }
+
+  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[TableInfo] = {
+    $http.get(toInfraUrl(databaseName, tableNamePattern, columnNamePattern)).as[List[TableInfo]]
   }
 
   def getDatabases: List[DatabaseInfo] = {
@@ -87,21 +92,21 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
   }
 
   def insertRow(databaseName: String, tableName: String, values: KeyValues): UpdateCount = {
-    $http.post(toUrl(databaseName, tableName), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
+    $http.post(toUrl(databaseName, tableName), values.toJson.toString().getBytes(charSetName)).as[UpdateCount]
   }
 
   def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): UpdateCount = {
-    $http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8"))
+    $http.put(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes(charSetName))
     UpdateCount(count = 1, __id = Some(rowID))
   }
 
   def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): UpdateCount = {
-    $http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes("utf-8"))
+    $http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes(charSetName))
     UpdateCount(count = 1, __id = Some(rowID))
   }
 
   def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): UpdateCount = {
-    $http.post(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes("utf-8")).as[UpdateCount]
+    $http.post(toUrl(databaseName, tableName, rowID), values.toJson.toString().getBytes(charSetName)).as[UpdateCount]
   }
 
   def toIterator(databaseName: String, tableName: String): Iterator[KeyValues] = new Iterator[KeyValues] {
@@ -116,6 +121,15 @@ case class ClientSideTableService(host: String = "0.0.0.0", port: Int) {
       rowID += 1
       row.orNull
     }
+  }
+
+  //////////////////////////////////////////////////////////////////////
+  //      URL GENERATORS
+  //////////////////////////////////////////////////////////////////////
+
+  private def toInfraUrl(databaseName: String, tablePattern: Option[String], columnPattern: Option[String]): String = {
+    val queryString = Seq("tablePattern" -> tablePattern, "columnPattern" -> columnPattern) flatMap { case (name, value) => value.map(name -> _)} mkString "&"
+    s"http://$host:$port/c/$databaseName?$queryString"
   }
 
   private def toQueryUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"

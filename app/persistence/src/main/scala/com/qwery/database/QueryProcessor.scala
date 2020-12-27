@@ -172,6 +172,15 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     asRows { FindRows(databaseName, tableName, condition, limit) }
   }
 
+  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): Future[List[TableInfo]] = {
+    val command = GetColumns(databaseName, tableNamePattern, columnNamePattern)
+    this ? command map {
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case TableInfoRetrieved(info) => info
+      case response => throw UnhandledCommandException(command, response)
+    }
+  }
+
   /**
     * Retrieves the list of available databases
     * @return the promise of a collection of [[DatabaseInfo]]
@@ -476,6 +485,8 @@ object QueryProcessor {
     */
   class SystemCPU() extends Actor {
     override def receive: Receive = {
+      case cmd@GetColumns(databaseName, tableNamePattern, columnNamePattern) =>
+        invoke(cmd, sender())(DatabaseFile.listColumns(databaseName, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! TableInfoRetrieved(data) }
       case cmd@GetDatabases =>
         invoke(cmd, sender())(DatabaseFile.listDatabases) { case (caller, metrics) => caller ! DatabaseListRetrieved(metrics) }
       case message =>
@@ -647,6 +658,8 @@ object QueryProcessor {
                         condition: KeyValues,
                         limit: Option[Int] = None) extends TableIORequest
 
+    case class GetColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]) extends SystemIORequest
+
     case object GetDatabases extends SystemIORequest
 
     case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
@@ -745,6 +758,8 @@ object QueryProcessor {
     case class RowsUpdated(count: Int) extends DatabaseIOResponse
 
     case class RowUpdated(rowID: ROWID, isSuccess: Boolean) extends DatabaseIOResponse
+
+    case class TableInfoRetrieved(tables: List[TableInfo]) extends DatabaseIOResponse
 
     case class TableMetricsRetrieved(metrics: TableMetrics) extends DatabaseIOResponse
 

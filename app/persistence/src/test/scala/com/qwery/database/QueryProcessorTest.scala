@@ -176,6 +176,14 @@ class QueryProcessorTest extends AnyFunSpec {
       }
     }
 
+    it("should list desired columns from all tables within a database") {
+      val list = Await.result(queryProcessor.getColumns(databaseName = "qwery", tableNamePattern = None, columnNamePattern = Some("symbol")), Duration.Inf)
+      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
+      list foreach { tableInfo =>
+        logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
+      }
+    }
+
   }
 
   def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): KeyValues = {

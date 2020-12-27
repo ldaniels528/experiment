@@ -4,10 +4,11 @@ import java.io.{File, PrintWriter}
 
 import com.qwery.database.DatabaseFile.getDatabaseRootDirectory
 import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
-import com.qwery.database.models.{DatabaseConfig, DatabaseInfo, DatabaseMetrics}
+import com.qwery.database.models.{DatabaseConfig, DatabaseInfo, DatabaseMetrics, TableInfo}
 import com.qwery.util.ResourceHelper._
 
 import scala.io.Source
+import scala.language.postfixOps
 
 /**
  * Represents a database file
@@ -42,6 +43,22 @@ object DatabaseFile {
    */
   def apply(databaseName: String): DatabaseFile = {
     new DatabaseFile(databaseName, config = readDatabaseConfig(databaseName))
+  }
+
+  def listColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[TableInfo] = {
+    val directory = getDatabaseRootDirectory(databaseName)
+    Option(directory.listFiles()).toList.flatMap(_.toList) flatMap { file =>
+      val tableName = file.getName
+      val isTableMatch = tableNamePattern.isEmpty || tableNamePattern.exists(_.isEmpty) || tableNamePattern.exists(_.contains(tableName))
+      if (isTableMatch && TableFile.getTableConfigFile(databaseName, file.getName).exists()) {
+        val config = TableFile.readTableConfig(databaseName, tableName)
+        config.columns.collect {
+          case column if columnNamePattern.isEmpty || columnNamePattern.exists(_.isEmpty) || columnNamePattern.exists(_.contains(column.name)) =>
+            TableInfo(databaseName, tableName, column)
+        }
+      }
+      else Nil
+    }
   }
 
   def listDatabases: List[DatabaseInfo] = {

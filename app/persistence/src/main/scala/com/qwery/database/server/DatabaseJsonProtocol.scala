@@ -12,9 +12,9 @@ import com.qwery.models.TypeAsEnum
 import spray.json._
 
 /**
- * Database Server JSON Protocol
+ * Database JSON Protocol
  */
-object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   import spray.json._
 
   ////////////////////////////////////////////////////////////////////////
@@ -73,6 +73,8 @@ object DatabaseServerJsonProtocol extends DefaultJsonProtocol with SprayJsonSupp
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
   implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat2(TableConfig.apply)
+
+  implicit val tableInfoJsonFormat: RootJsonFormat[TableInfo] = jsonFormat3(TableInfo.apply)
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 

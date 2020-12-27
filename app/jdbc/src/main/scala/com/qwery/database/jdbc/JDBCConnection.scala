@@ -5,7 +5,7 @@ import java.sql.{SQLWarning, Array => SQLArray, _}
 import java.util.concurrent.Executor
 import java.util.{Properties, UUID}
 
-import com.qwery.database.server.ClientSideTableService
+import com.qwery.database.server.DatabaseClient
 import com.qwery.database.types.SerialNClob
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 
@@ -14,10 +14,10 @@ import scala.collection.concurrent.TrieMap
 
 /**
  * Qwery JDBC Connection
- * @param service  the [[ClientSideTableService]]
+ * @param service  the [[DatabaseClient]]
  * @param database the database name
  */
-class JDBCConnection(val service: ClientSideTableService, val database: String, url: String) extends Connection with JDBCWrapper {
+class JDBCConnection(val service: DatabaseClient, val database: String, url: String) extends Connection with JDBCWrapper {
   private val clientInfoMap = TrieMap[String, String]()
   private val savePoints = TrieMap[String, Savepoint]()
   private var warnings: Option[SQLWarning] = None

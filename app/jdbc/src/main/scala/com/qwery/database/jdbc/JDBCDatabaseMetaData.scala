@@ -315,9 +315,39 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
       mkColumn(name = "DESCRIPTION", columnType = StringType, comment = Some("A description of the property. This will typically contain information as to where this property is stored in the database.")))
     new JDBCResultSet(connection, databaseName, tableName = "ClientInfo", columns = columns, data = Nil)
   }
-
+  
   override def getColumns(catalog: String, schemaPattern: String, tableNamePattern: String, columnNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "Columns", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog (may be null)")),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema (may be null)")),
+      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType, comment = Some("column type")),
+      mkColumn(name = "DATA_TYPE", columnType = IntType, comment = Some("SQL type from java.sql.Types")),
+      mkColumn(name = "TYPE_NAME", columnType = StringType, comment = Some("type name")),
+      mkColumn(name = "COLUMN_SIZE", columnType = IntType, comment = Some("column size")),
+      mkColumn(name = "BUFFER_LENGTH", columnType = StringType, comment = Some("is not used")),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType, comment = Some("the number of fractional digits. Null is returned for data types where DECIMAL_DIGITS is not applicable.")),
+      mkColumn(name = "NUM_PREC_RADIX", columnType = IntType, comment = Some("Radix (typically either 10 or 2)")),
+      mkColumn(name = "NULLABLE", columnType = IntType, comment = Some("is NULL allowed.")),
+      mkColumn(name = "REMARKS", columnType = StringType, comment = Some("comment describing column (may be null)")),
+      mkColumn(name = "COLUMN_DEF", columnType = StringType, comment = Some("default value for the column, which should be interpreted as a string when the value is enclosed in single quotes ")),
+      mkColumn(name = "SQL_DATA_TYPE", columnType = IntType, comment = Some("unused")),
+      mkColumn(name = "SQL_DATETIME_SUB", columnType = IntType, comment = Some("unused")),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType, comment = Some("for char types the maximum number of bytes in the column")),
+      mkColumn(name = "ORDINAL_POSITION", columnType = IntType, comment = Some("index of column in table (starting at 1)")),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType, comment = Some("ISO rules are used to determine the nullability for a column.")),
+      mkColumn(name = "SCOPE_CATALOG", columnType = StringType, comment = Some("catalog of table that is the scope of a reference attribute (null if DATA_TYPE isn't REF)")),
+      mkColumn(name = "SCOPE_SCHEMA", columnType = StringType, comment = Some("schema of table that is the scope of a reference attribute (null if the DATA_TYPE isn't REF)")),
+      mkColumn(name = "SCOPE_TABLE", columnType = StringType, comment = Some("table name that this the scope of a reference attribute (null if the DATA_TYPE isn't REF)")),
+      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType, comment = Some("source type of a distinct type or user-generated Ref type, SQL type from java.sql.Types (null if DATA_TYPE")),
+      mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType, comment = Some("Indicates whether this column is auto incremented")),
+      mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType, comment = Some("Indicates whether this is a generated column")))
+    val results = connection.service.getColumns(catalog, tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
+    new JDBCResultSet(connection, databaseName, tableName = "Columns", columns, data = results map { ti =>
+      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType(),
+        ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment, "", null, null, ti.column.sizeInBytes,
+        results.indexOf(ti), "YES",  null, null, null, 0.toShort, "NO", "NO").map(Option.apply)
+    })
   }
 
   override def getColumnPrivileges(catalog: String, schema: String, table: String, columnNamePattern: String): ResultSet = {
@@ -417,7 +447,19 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
   }
 
   override def getTablePrivileges(catalog: String, schemaPattern: String, tableNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "TablePrivileges", columns = Nil, data = Nil)
+    val rights = Seq("SELECT", "INSERT", "UPDATE", "DELETE", "DROP")
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog")),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema")),
+      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
+      mkColumn(name = "GRANTOR", columnType = StringType, comment = Some("grantor of access (may be null)")),
+      mkColumn(name = "GRANTEE", columnType = StringType, comment = Some("grantee of access")),
+      mkColumn(name = "PRIVILEGE", columnType = StringType, comment = Some("name of access (SELECT, INSERT, UPDATE, REFRENCES, ...)")),
+      mkColumn(name = "IS_GRANTABLE", columnType = StringType, comment = Some("\"YES\" if grantee is permitted to grant to others; \"NO\" if not; null if unknown.")))
+    val metrics = connection.service.getDatabaseMetrics(catalog)
+    new JDBCResultSet(connection, databaseName, tableName = "TablePrivileges", columns, data = metrics.tables map { tableName =>
+      Seq(databaseName, databaseName, tableName, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
+    })
   }
 
   override def getVersionColumns(catalog: String, schema: String, table: String): ResultSet = {

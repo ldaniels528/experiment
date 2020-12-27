@@ -55,6 +55,12 @@ class QweryDriverTest extends AnyFunSpec {
       }
     }
 
+    it("should retrieve the columns for a given database") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        iterateRows(conn.getMetaData.getColumns( "test", null, "stock", "symbol"))(row => logger.info(s"row: $row"))
+      }
+    }
+
     it("should execute a DROP TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val sql = s"DROP TABLE IF EXISTS $tableName"

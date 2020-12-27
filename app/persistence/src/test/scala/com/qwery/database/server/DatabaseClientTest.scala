@@ -13,18 +13,18 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration.DurationInt
 
 /**
- * Client-Side Table Service Test Suite
+ * Database Client Test Suite
  */
-class ClientSideTableServiceTest extends AnyFunSpec {
+class DatabaseClientTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val port = 12120
 
   // start the server
   startServer(port)
 
-  describe(classOf[ClientSideTableService].getName) {
+  describe(classOf[DatabaseClient].getName) {
     // create the client
-    val service = ClientSideTableService(port = port)
+    val service = DatabaseClient(port = port)
     val databaseName = DEFAULT_DATABASE
     val tableNameA = "stocks_client_test_0"
     val tableNameB = "stocks_client_test_1"
@@ -154,6 +154,14 @@ class ClientSideTableServiceTest extends AnyFunSpec {
       invoke(
         label = s"service.deleteRow($databaseName, $tableNameA, rowID = 999)",
         block = service.deleteRow(databaseName, tableNameA, rowID = 999))
+    }
+
+    it("should list desired columns from all tables within a database") {
+      val list = service.getColumns(databaseName = "qwery", tableNamePattern = None, columnNamePattern = Some("symbol"))
+      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
+      list foreach { tableInfo =>
+        logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
+      }
     }
 
   }

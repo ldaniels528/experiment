@@ -10,7 +10,7 @@ import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.JSONSupport._
 import com.qwery.database.models._
-import com.qwery.database.server.DatabaseServerJsonProtocol._
+import com.qwery.database.server.DatabaseJsonProtocol._
 import com.qwery.models.expressions.Expression
 import org.slf4j.LoggerFactory
 import spray.json._
@@ -21,7 +21,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 /**
- * Database Server
+ * Qwery Database Server
  */
 object DatabaseServer {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -35,7 +35,7 @@ object DatabaseServer {
 
     // display the application version
     val version = 0.1
-    logger.info(f"QWERY Database Server v$version%.1f")
+    logger.info(f"Qwery Database Server v$version%.1f")
 
     // get the bind/listen port
     val port = args match {
@@ -78,8 +78,10 @@ object DatabaseServer {
   def route()(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
     // route: / (root)
     pathSingleSlash(routesRoot) ~
-    // route: /d/<database> (e.g. "/d/portfolio")
-    path("d" / Segment)(routesByDatabase) ~
+      // route: /c/<database>?table=<value>&column=<value> (e.g. "/c/portfolio?table=stock&column=symbol")
+      path("c" / Segment)(routesByColumns) ~
+      // route: /d/<database> (e.g. "/d/portfolio")
+      path("d" / Segment)(routesByDatabase) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
       path("d" / Segment / Segment)(routesByDatabaseTable) ~
       // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
@@ -126,6 +128,23 @@ object DatabaseServer {
           complete(qp.createTable(databaseName, ref.tableName, ref.columns))
         }
       }
+  }
+
+  /**
+    * Database Column-search API routes (e.g. "/c/shocktrade?table=stock&column=symbol")
+    * @param databaseName the name of the database
+    * @param ec           the implicit [[ExecutionContext]]
+    * @param qp           the implicit [[QueryProcessor]]
+    * @return the [[Route]]
+    */
+  private def routesByColumns(databaseName: String)(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+    get {
+      // retrieve the table metrics (e.g. "GET /c/shocktrade?table=stock&column=symbol")
+      extract(_.request.uri.query()) { params =>
+        val (tablePattern_?, columnPattern_?) = (params.get("table"), params.get("column"))
+        complete(qp.getColumns(databaseName, tablePattern_?, columnPattern_?))
+      }
+    }
   }
 
   /**
@@ -303,7 +322,7 @@ object DatabaseServer {
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
         parameters('__metadata.?) { metadata_? =>
-          val isMetadata = metadata_?.contains("true")
+          val isMetadata = metadata_?.map(_.toLowerCase).contains("true")
           complete(qp.getRow(databaseName, tableName, rowID) map {
             case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toKeyValues.toJson
             case None => JsObject()
