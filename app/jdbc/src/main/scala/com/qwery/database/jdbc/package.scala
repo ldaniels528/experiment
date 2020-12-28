@@ -5,12 +5,31 @@ import java.sql.Types
 import com.qwery.database.ColumnTypes.{BinaryType, BlobType, BooleanType, ByteType, ClobType, ColumnType, DateType, IntType, LongType, ShortType, StringType}
 
 package object jdbc {
+  private val mapping = Map(
+    ColumnTypes.ArrayType -> Types.ARRAY,
+    ColumnTypes.BigDecimalType -> Types.DECIMAL,
+    ColumnTypes.BigIntType -> Types.BIGINT,
+    ColumnTypes.BinaryType -> Types.VARBINARY,
+    ColumnTypes.BlobType -> Types.BLOB,
+    ColumnTypes.BooleanType -> Types.BOOLEAN,
+    ColumnTypes.ByteType -> Types.TINYINT,
+    ColumnTypes.CharType -> Types.CHAR,
+    ColumnTypes.ClobType -> Types.CLOB,
+    ColumnTypes.DateType -> Types.DATE,
+    ColumnTypes.DoubleType -> Types.DOUBLE,
+    ColumnTypes.FloatType -> Types.FLOAT,
+    ColumnTypes.IntType -> Types.INTEGER,
+    ColumnTypes.SerializableType -> Types.BLOB,
+    ColumnTypes.LongType -> Types.BIGINT,
+    ColumnTypes.ShortType -> Types.SMALLINT,
+    ColumnTypes.StringType -> Types.VARCHAR,
+    ColumnTypes.UUIDType -> Types.VARBINARY)
 
   def convertSqlToColumnType(sqlType: Int): ColumnType = {
     import java.sql.Types._
     sqlType match {
       case BIGINT => LongType
-      case BINARY | VARBINARY  => BinaryType
+      case BINARY | VARBINARY => BinaryType
       case BOOLEAN => BooleanType
       case BLOB => BlobType
       case CLOB | NCLOB | SQLXML => ClobType
@@ -26,34 +45,11 @@ package object jdbc {
   }
 
   /**
-   * JDBC Column Types Extensions
-   * @param `type` the [[ColumnType]]
-   */
+    * JDBC Column Types Extensions
+    * @param `type` the [[ColumnType]]
+    */
   final implicit class JDBCColumnTypes(val `type`: ColumnType) extends AnyVal {
-
-    def getJDBCType: () => Int = {
-      val mapping = Map(
-        ColumnTypes.ArrayType -> Types.ARRAY,
-        ColumnTypes.BigDecimalType -> Types.DECIMAL,
-        ColumnTypes.BigIntType -> Types.BIGINT,
-        ColumnTypes.BinaryType -> Types.VARBINARY,
-        ColumnTypes.BlobType -> Types.BLOB,
-        ColumnTypes.BooleanType -> Types.BOOLEAN,
-        ColumnTypes.ByteType -> Types.TINYINT,
-        ColumnTypes.CharType -> Types.CHAR,
-        ColumnTypes.ClobType -> Types.CLOB,
-        ColumnTypes.DateType -> Types.DATE,
-        ColumnTypes.DoubleType -> Types.DOUBLE,
-        ColumnTypes.FloatType -> Types.FLOAT,
-        ColumnTypes.IntType -> Types.INTEGER,
-        ColumnTypes.SerializableType -> Types.BLOB,
-        ColumnTypes.LongType -> Types.BIGINT,
-        ColumnTypes.ShortType -> Types.SMALLINT,
-        ColumnTypes.StringType -> Types.VARCHAR,
-        ColumnTypes.UUIDType -> Types.VARBINARY)
-      () => mapping(`type`)
-    }
-
+    @inline def getJDBCType: Int = mapping(`type`)
   }
 
 }

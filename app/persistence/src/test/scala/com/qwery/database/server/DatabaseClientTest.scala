@@ -25,7 +25,7 @@ class DatabaseClientTest extends AnyFunSpec {
   describe(classOf[DatabaseClient].getName) {
     // create the client
     val service = DatabaseClient(port = port)
-    val databaseName = DEFAULT_DATABASE
+    val databaseName = "test"
     val tableNameA = "stocks_client_test_0"
     val tableNameB = "stocks_client_test_1"
 

@@ -1,6 +1,8 @@
 package com.qwery.database
 package server
 
+import java.net.URLEncoder
+
 import com.qwery.database.JSONSupport._
 import com.qwery.database.models._
 import com.qwery.database.server.DatabaseJsonProtocol._
@@ -128,7 +130,9 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   //////////////////////////////////////////////////////////////////////
 
   private def toInfraUrl(databaseName: String, tablePattern: Option[String], columnPattern: Option[String]): String = {
-    val queryString = Seq("tablePattern" -> tablePattern, "columnPattern" -> columnPattern) flatMap { case (name, value) => value.map(name -> _)} mkString "&"
+    val queryString = Seq("table" -> tablePattern, "column" -> columnPattern.map(URLEncoder.encode(_, charSetName))) flatMap {
+      case (name, value_?) => value_?.map(value => s"$name=$value")
+    } mkString "&"
     s"http://$host:$port/c/$databaseName?$queryString"
   }
 

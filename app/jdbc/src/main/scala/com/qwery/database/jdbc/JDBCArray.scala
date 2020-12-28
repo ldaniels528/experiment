@@ -10,7 +10,7 @@ case class JDBCArray(connection: JDBCConnection, typeName: String, elements: Arr
 
   override def getBaseTypeName: String = typeName
 
-  override def getBaseType: Int = ColumnTypes.withName(typeName).getJDBCType()
+  override def getBaseType: Int = ColumnTypes.withName(typeName).getJDBCType
 
   override def getArray: AnyRef = elements
 

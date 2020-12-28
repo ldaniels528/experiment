@@ -424,7 +424,7 @@ trait SQLLanguageParser {
     */
   def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
     // table (e.g. "Months" or "`Months of the Year`")?
-    case ts if ts.isBackticks | ts.isText => parseNextAlias(Table(ts.next().text), ts)
+    case ts if ts.isBackticks | ts.isDoubleQuoted | ts.isText => parseNextAlias(Table(ts.next().text), ts)
     // must be a sub-query or variable
     case ts => parseNextQueryOrVariable(ts)
   }

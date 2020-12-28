@@ -46,14 +46,15 @@ object DatabaseFile {
   }
 
   def listColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[TableInfo] = {
+    val search: String => String = _.replaceAllLiterally("%", ".*")
     val directory = getDatabaseRootDirectory(databaseName)
     Option(directory.listFiles()).toList.flatMap(_.toList) flatMap { file =>
       val tableName = file.getName
-      val isTableMatch = tableNamePattern.isEmpty || tableNamePattern.exists(_.isEmpty) || tableNamePattern.exists(_.contains(tableName))
+      val isTableMatch = tableNamePattern.isEmpty || tableNamePattern.exists(_.isEmpty) || tableNamePattern.map(search).exists(tableName.matches)
       if (isTableMatch && TableFile.getTableConfigFile(databaseName, file.getName).exists()) {
         val config = TableFile.readTableConfig(databaseName, tableName)
         config.columns.collect {
-          case column if columnNamePattern.isEmpty || columnNamePattern.exists(_.isEmpty) || columnNamePattern.exists(_.contains(column.name)) =>
+          case column if columnNamePattern.isEmpty || columnNamePattern.exists(_.isEmpty) || columnNamePattern.map(search).exists(column.name.matches) =>
             TableInfo(databaseName, tableName, column)
         }
       }

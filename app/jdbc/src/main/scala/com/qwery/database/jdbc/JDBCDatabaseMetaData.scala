@@ -18,6 +18,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
                            @BeanProperty val URL: String,
                            databaseName: String)
   extends DatabaseMetaData with JDBCWrapper {
+  private val rights = Seq("SELECT", "INSERT", "UPDATE", "DELETE", "DROP")
 
   @BeanProperty val catalogSeparator: String = "."
   @BeanProperty val catalogTerm: String = "DATABASE"
@@ -283,24 +284,50 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
   override def autoCommitFailureClosesAllResultSets(): Boolean = false
 
   override def getAttributes(catalog: String, schemaPattern: String, typeNamePattern: String, attributeNamePattern: String): ResultSet =  {
-    new JDBCResultSet(connection, databaseName, tableName = "Attributes", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "ATTR_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "ATTR_TYPE_NAME", columnType = StringType),
+      mkColumn(name = "ATTR_SIZE", columnType = IntType),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
+      mkColumn(name = "NUM_PREC_RADIX", columnType = IntType),
+      mkColumn(name = "NULLABLE", columnType = IntType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "ATTR_DEF", columnType = StringType),
+      mkColumn(name = "SQL_DATA_TYPE", columnType = IntType),
+      mkColumn(name = "SQL_DATETIME_SUB", columnType = IntType),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType),
+      mkColumn(name = "ORDINAL_POSITION", columnType = IntType),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType),
+      mkColumn(name = "SCOPE_CATALOG", columnType = StringType),
+      mkColumn(name = "SCOPE_SCHEMA", columnType = StringType),
+      mkColumn(name = "SCOPE_TABLE", columnType = StringType),
+      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType),
+      mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType),
+      mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "Attributes", columns, data = Nil)
   }
 
   override def getBestRowIdentifier(catalog: String, schema: String, table: String, scope: Int, nullable: Boolean): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "SCOPE", columnType = ShortType, comment = Some("actual scope of result")),
-      mkColumn(name = "COLUMN_NAME", columnType = StringType, comment = Some("column name")),
-      mkColumn(name = "DATA_TYPE", columnType = IntType, comment = Some("SQL data type from java.sql.Types")),
-      mkColumn(name = "TYPE_NAME", columnType = StringType, comment = Some("Data source dependent type name, for a UDT the type name is fully qualified")),
-      mkColumn(name = "COLUMN_SIZE", columnType = IntType, comment = Some("precision")),
-      mkColumn(name = "BUFFER_LENGTH", columnType = IntType, comment = Some("not used")),
-      mkColumn(name = "DECIMAL_DIGITS", columnType = ShortType, comment = Some("scale - Null is returned for data types where DECIMAL_DIGITS is not applicable.")),
-      mkColumn(name = "PSEUDO_COLUMN", columnType = ShortType, comment = Some("is this a pseudo column like an Oracle ROWID")))
-    new JDBCResultSet(connection, databaseName, tableName = "BestRowIdentifier", columns = columns, data = Nil)
+      mkColumn(name = "SCOPE", columnType = ShortType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_SIZE", columnType = IntType),
+      mkColumn(name = "BUFFER_LENGTH", columnType = IntType),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = ShortType),
+      mkColumn(name = "PSEUDO_COLUMN", columnType = ShortType))
+    new JDBCResultSet(connection, catalog, tableName = "BestRowIdentifier", columns = columns, data = Seq(
+      Seq(null, ROWID_NAME, IntType.getJDBCType, "IntType", INT_BYTES, null, 0.toShort, 1.toShort).map(Option.apply)
+    ))
   }
 
   override def getCatalogs: ResultSet = {
-    val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("catalog name")))
+    val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType))
     val databases = connection.service.getDatabases
     new JDBCResultSet(connection, databaseName, tableName = "Catalogs", columns = columns, data = databases.map { db =>
       Seq(Option(db.databaseName))
@@ -309,202 +336,352 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
 
   override def getClientInfoProperties: ResultSet = {
     val columns = Seq(
-      mkColumn(name = "NAME", columnType = StringType, comment = Some("The name of the client info property")),
-      mkColumn(name = "MAX_LEN", columnType = IntType, comment = Some("The maximum length of the value for the property")),
-      mkColumn(name = "DEFAULT_VALUE", columnType = StringType, comment = Some("The default value of the property")),
-      mkColumn(name = "DESCRIPTION", columnType = StringType, comment = Some("A description of the property. This will typically contain information as to where this property is stored in the database.")))
+      mkColumn(name = "NAME", columnType = StringType),
+      mkColumn(name = "MAX_LEN", columnType = IntType),
+      mkColumn(name = "DEFAULT_VALUE", columnType = StringType),
+      mkColumn(name = "DESCRIPTION", columnType = StringType))
     new JDBCResultSet(connection, databaseName, tableName = "ClientInfo", columns = columns, data = Nil)
   }
   
   override def getColumns(catalog: String, schemaPattern: String, tableNamePattern: String, columnNamePattern: String): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog (may be null)")),
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema (may be null)")),
-      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
-      mkColumn(name = "COLUMN_NAME", columnType = StringType, comment = Some("column type")),
-      mkColumn(name = "DATA_TYPE", columnType = IntType, comment = Some("SQL type from java.sql.Types")),
-      mkColumn(name = "TYPE_NAME", columnType = StringType, comment = Some("type name")),
-      mkColumn(name = "COLUMN_SIZE", columnType = IntType, comment = Some("column size")),
-      mkColumn(name = "BUFFER_LENGTH", columnType = StringType, comment = Some("is not used")),
-      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType, comment = Some("the number of fractional digits. Null is returned for data types where DECIMAL_DIGITS is not applicable.")),
-      mkColumn(name = "NUM_PREC_RADIX", columnType = IntType, comment = Some("Radix (typically either 10 or 2)")),
-      mkColumn(name = "NULLABLE", columnType = IntType, comment = Some("is NULL allowed.")),
-      mkColumn(name = "REMARKS", columnType = StringType, comment = Some("comment describing column (may be null)")),
-      mkColumn(name = "COLUMN_DEF", columnType = StringType, comment = Some("default value for the column, which should be interpreted as a string when the value is enclosed in single quotes ")),
-      mkColumn(name = "SQL_DATA_TYPE", columnType = IntType, comment = Some("unused")),
-      mkColumn(name = "SQL_DATETIME_SUB", columnType = IntType, comment = Some("unused")),
-      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType, comment = Some("for char types the maximum number of bytes in the column")),
-      mkColumn(name = "ORDINAL_POSITION", columnType = IntType, comment = Some("index of column in table (starting at 1)")),
-      mkColumn(name = "IS_NULLABLE", columnType = StringType, comment = Some("ISO rules are used to determine the nullability for a column.")),
-      mkColumn(name = "SCOPE_CATALOG", columnType = StringType, comment = Some("catalog of table that is the scope of a reference attribute (null if DATA_TYPE isn't REF)")),
-      mkColumn(name = "SCOPE_SCHEMA", columnType = StringType, comment = Some("schema of table that is the scope of a reference attribute (null if the DATA_TYPE isn't REF)")),
-      mkColumn(name = "SCOPE_TABLE", columnType = StringType, comment = Some("table name that this the scope of a reference attribute (null if the DATA_TYPE isn't REF)")),
-      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType, comment = Some("source type of a distinct type or user-generated Ref type, SQL type from java.sql.Types (null if DATA_TYPE")),
-      mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType, comment = Some("Indicates whether this column is auto incremented")),
-      mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType, comment = Some("Indicates whether this is a generated column")))
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_SIZE", columnType = IntType),
+      mkColumn(name = "BUFFER_LENGTH", columnType = StringType),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
+      mkColumn(name = "NUM_PREC_RADIX", columnType = IntType),
+      mkColumn(name = "NULLABLE", columnType = IntType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "COLUMN_DEF", columnType = StringType),
+      mkColumn(name = "SQL_DATA_TYPE", columnType = IntType),
+      mkColumn(name = "SQL_DATETIME_SUB", columnType = IntType),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType),
+      mkColumn(name = "ORDINAL_POSITION", columnType = IntType),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType),
+      mkColumn(name = "SCOPE_CATALOG", columnType = StringType),
+      mkColumn(name = "SCOPE_SCHEMA", columnType = StringType),
+      mkColumn(name = "SCOPE_TABLE", columnType = StringType),
+      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType),
+      mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType),
+      mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
     val results = connection.service.getColumns(catalog, tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
-    new JDBCResultSet(connection, databaseName, tableName = "Columns", columns, data = results map { ti =>
-      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType(),
-        ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment, "", null, null, ti.column.sizeInBytes,
+    new JDBCResultSet(connection, catalog, tableName = "Columns", columns, data = results map { ti =>
+      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType,
+        ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment.orNull, "", null, null, ti.column.sizeInBytes,
         results.indexOf(ti), "YES",  null, null, null, 0.toShort, "NO", "NO").map(Option.apply)
     })
   }
 
   override def getColumnPrivileges(catalog: String, schema: String, table: String, columnNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "ColumnPrivileges", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "GRANTOR", columnType = StringType),
+      mkColumn(name = "GRANTEE", columnType = StringType),
+      mkColumn(name = "PRIVILEGE", columnType = StringType),
+      mkColumn(name = "IS_GRANTABLE", columnType = StringType))
+    val results = connection.service.getColumns(catalog, tableNamePattern = Some(table), columnNamePattern = Some(columnNamePattern))
+    new JDBCResultSet(connection, catalog, tableName = "ColumnPrivileges", columns, data = results map { ti =>
+      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
+    })
   }
 
   override def getCrossReference(parentCatalog: String, parentSchema: String, parentTable: String, foreignCatalog: String, foreignSchema: String, foreignTable: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "CrossReference", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "PKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "PKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "PKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "PKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "FKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "FKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "KEY_SEQ", columnType = ShortType),
+      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
+      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "FK_NAME", columnType = StringType),
+      mkColumn(name = "PK_NAME", columnType = StringType),
+      mkColumn(name = "DEFERRABILITY", columnType = IntType))
+    new JDBCResultSet(connection, parentCatalog, tableName = "CrossReference", columns, data = Nil)
   }
 
   override def getExportedKeys(catalog: String, schema: String, table: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "ExportedKeys", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "PKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "PKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "PKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "PKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "FKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "FKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "KEY_SEQ", columnType = ShortType),
+      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
+      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "FK_NAME", columnType = StringType),
+      mkColumn(name = "PK_NAME", columnType = StringType),
+      mkColumn(name = "DEFERRABILITY", columnType = IntType))
+    new JDBCResultSet(connection, catalog, tableName = "ExportedKeys", columns, data = Nil)
   }
 
   override def getFunctionColumns(catalog: String, schemaPattern: String, functionNamePattern: String, columnNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "FunctionColumns", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "FUNCTION_CAT", columnType = StringType),
+      mkColumn(name = "FUNCTION_SCHEM", columnType = StringType),
+      mkColumn(name = "FUNCTION_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_TYPE", columnType = ShortType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "PRECISION", columnType = IntType),
+      mkColumn(name = "LENGTH", columnType = StringType),
+      mkColumn(name = "SCALE", columnType = IntType),
+      mkColumn(name = "RADIX", columnType = IntType),
+      mkColumn(name = "NULLABLE", columnType = IntType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType),
+      mkColumn(name = "ORDINAL_POSITION", columnType = IntType),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType),
+      mkColumn(name = "SPECIFIC_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "FunctionColumns", columns, data = Nil)
   }
 
   override def getFunctions(catalog: String, schemaPattern: String, functionNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "Functions", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "FUNCTION_CAT", columnType = StringType),
+      mkColumn(name = "FUNCTION_SCHEM", columnType = StringType),
+      mkColumn(name = "FUNCTION_NAME", columnType = StringType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "FUNCTION_TYPE", columnType = ShortType),
+      mkColumn(name = "SPECIFIC_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "Functions", columns, data = Nil)
   }
 
   override def getImportedKeys(catalog: String, schema: String, table: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "ImportedKeys", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "PKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "PKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "PKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "PKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "FKTABLE_CAT", columnType = StringType),
+      mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "FKTABLE_NAME", columnType = StringType),
+      mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
+      mkColumn(name = "KEY_SEQ", columnType = ShortType),
+      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
+      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "FK_NAME", columnType = StringType),
+      mkColumn(name = "PK_NAME", columnType = StringType),
+      mkColumn(name = "DEFERRABILITY", columnType = IntType))
+    new JDBCResultSet(connection, catalog, tableName = "ImportedKeys", columns, data = Nil)
   }
 
   override def getIndexInfo(catalog: String, schema: String, table: String, unique: Boolean, approximate: Boolean): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog (may be null)")),
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema (may be null)")),
-      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
-      mkColumn(name = "NON_UNIQUE", columnType = BooleanType, comment = Some("Can index values be non-unique. false when TYPE is tableIndexStatistic")),
-      mkColumn(name = "INDEX_QUALIFIER", columnType = BooleanType, comment = Some("index catalog (may be null); null when TYPE is tableIndexStatistic")),
-      mkColumn(name = "TYPE", columnType = StringType, comment = Some("index type")),
-      mkColumn(name = "ORDINAL_POSITION", columnType = StringType, comment = Some("column sequence number within index; zero when TYPE is tableIndexStatistic")),
-      mkColumn(name = "COLUMN_NAME", columnType = StringType, comment = Some("column name; null when TYPE is tableIndexStatistic")),
-      mkColumn(name = "ASC_OR_DESC", columnType = StringType, comment = Some("column sort sequence, \"A\" => ascending, \"D\" => descending, may be null if sort sequence is not supported; null when TYPE is tableIndexStatistic")),
-      mkColumn(name = "CARDINALITY", columnType = LongType, comment = Some("When TYPE is tableIndexStatistic, then this is the number of rows in the table; otherwise, it is the number of unique values in the index.")),
-      mkColumn(name = "PAGES", columnType = LongType, comment = Some("When TYPE is tableIndexStatisic then this is the number of pages used for the table, otherwise it is the number of pages used for the current index.")),
-      mkColumn(name = "FILTER_CONDITION", columnType = StringType, comment = Some("Filter condition, if any. (may be null)")))
-    new JDBCResultSet(connection, databaseName, tableName = "Indices", columns = columns, data = Nil)
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "NON_UNIQUE", columnType = BooleanType),
+      mkColumn(name = "INDEX_QUALIFIER", columnType = BooleanType),
+      mkColumn(name = "TYPE", columnType = StringType),
+      mkColumn(name = "ORDINAL_POSITION", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "ASC_OR_DESC", columnType = StringType),
+      mkColumn(name = "CARDINALITY", columnType = LongType),
+      mkColumn(name = "PAGES", columnType = LongType),
+      mkColumn(name = "FILTER_CONDITION", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "Indices", columns = columns, data = Nil)
   }
 
   override def getProcedures(catalog: String, schemaPattern: String, procedureNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "Procedures", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "PROCEDURE_CAT", columnType = StringType),
+      mkColumn(name = "PROCEDURE_SCHEM", columnType = StringType),
+      mkColumn(name = "PROCEDURE_NAME", columnType = StringType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "PROCEDURE_TYPE", columnType = StringType),
+      mkColumn(name = "SPECIFIC_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "Procedures", columns, data = Nil)
   }
 
   override def getProcedureColumns(catalog: String, schemaPattern: String, procedureNamePattern: String, columnNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "ProcedureColumns", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "PROCEDURE_CAT", columnType = StringType),
+      mkColumn(name = "PROCEDURE_SCHEM", columnType = StringType),
+      mkColumn(name = "PROCEDURE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_TYPE", columnType = ShortType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "PRECISION", columnType = IntType),
+      mkColumn(name = "LENGTH", columnType = StringType),
+      mkColumn(name = "SCALE", columnType = IntType),
+      mkColumn(name = "RADIX", columnType = IntType),
+      mkColumn(name = "NULLABLE", columnType = IntType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "COLUMN_DEF", columnType = StringType),
+      mkColumn(name = "SQL_DATA_TYPE", columnType = IntType),
+      mkColumn(name = "SQL_DATETIME_SUB", columnType = IntType),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = IntType),
+      mkColumn(name = "ORDINAL_POSITION", columnType = IntType),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType),
+      mkColumn(name = "SPECIFIC_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "ProcedureColumns", columns, data = Nil)
   }
 
   override def getSchemas: ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("schema name")),
-      mkColumn(name = "TABLE_CATALOG", columnType = StringType, comment = Some("catalog name (may be null)")))
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_CATALOG", columnType = StringType))
     new JDBCResultSet(connection, databaseName, tableName = "Schemas", columns = columns, data = Nil)
   }
 
   override def getTables(catalog: String, schemaPattern: String, tableNamePattern: String, types: Array[String]): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog")),
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema")),
-      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
-      mkColumn(name = "TABLE_TYPE", columnType = StringType, comment = Some("table type")),
-      mkColumn(name = "REMARKS", columnType = StringType, comment = Some("explanatory comment on the table")),
-      mkColumn(name = "TYPE_CAT", columnType = StringType, comment = Some("the types catalog")),
-      mkColumn(name = "TYPE_SCHEM", columnType = StringType, comment = Some("the types schema")),
-      mkColumn(name = "TYPE_NAME", columnType = StringType, comment = Some("type name")),
-      mkColumn(name = "SELF_REFERENCING_COL_NAME", columnType = StringType, comment = Some("name of the designated \"identifier\" column of a typed table")),
-      mkColumn(name = "REF_GENERATION", columnType = StringType, comment = Some("specifies how values in SELF_REFERENCING_COL_NAME are created.")))
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "TABLE_TYPE", columnType = StringType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "TYPE_CAT", columnType = StringType),
+      mkColumn(name = "TYPE_SCHEM", columnType = StringType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "SELF_REFERENCING_COL_NAME", columnType = StringType),
+      mkColumn(name = "REF_GENERATION", columnType = StringType))
     val metrics = connection.service.getDatabaseMetrics(catalog)
-    new JDBCResultSet(connection, databaseName, tableName = "Tables", columns = columns, data = metrics.tables map { tableName =>
-      Seq(databaseName, databaseName, tableName, "TABLE", "", null, null, "TABLE", null, null).map(Option(_))
+    new JDBCResultSet(connection, catalog, tableName = "Tables", columns = columns, data = metrics.tables map { tableName =>
+      Seq(catalog, tableName, tableName, "TABLE", "", null, null, "TABLE", null, null).map(Option(_))
     })
   }
 
   override def getTypeInfo: ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TYPE_NAME", columnType = StringType, comment = Some("Type name")),
-      mkColumn(name = "DATA_TYPE", columnType = IntType, comment = Some("SQL data type from java.sql.Types")),
-      mkColumn(name = "PRECISION", columnType = IntType, comment = Some("maximum precision")),
-      mkColumn(name = "LITERAL_PREFIX", columnType = StringType, comment = Some("prefix used to quote a literal (may be null)")),
-      mkColumn(name = "LITERAL_SUFFIX", columnType = StringType, comment = Some("suffix used to quote a literal (may be null)")),
-      mkColumn(name = "CREATE_PARAMS", columnType = StringType, comment = Some("parameters used in creating the type (may be null)")),
-      mkColumn(name = "NULLABLE", columnType = ShortType, comment = Some("can you use NULL for this type.")))
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "PRECISION", columnType = IntType),
+      mkColumn(name = "LITERAL_PREFIX", columnType = StringType),
+      mkColumn(name = "LITERAL_SUFFIX", columnType = StringType),
+      mkColumn(name = "CREATE_PARAMS", columnType = StringType),
+      mkColumn(name = "NULLABLE", columnType = ShortType))
     new JDBCResultSet(connection, databaseName, tableName = "Types", columns, data = values.toSeq.map { columnType =>
-      Seq(columnType.toString, columnType.getJDBCType(), columnType.getFixedLength.getOrElse(255), null, null, null, ResultSetMetaData.columnNullable).map(Option(_))
+      Seq(columnType.toString, columnType.getJDBCType, columnType.getFixedLength.getOrElse(255), null, null, null, ResultSetMetaData.columnNullable).map(Option(_))
     })
   }
 
   override def getTableTypes: ResultSet = {
-    val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("catalog name")))
-    val tableTypes = Seq("TABLE", "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM")
+    val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType))
+    val tableTypes = Seq("TABLE"/*, "VIEW"*/)
     new JDBCResultSet(connection, databaseName, tableName = "TableTypes", columns = columns, data = tableTypes map { tableType =>
       Seq(Option(tableType))
     })
   }
 
   override def getTablePrivileges(catalog: String, schemaPattern: String, tableNamePattern: String): ResultSet = {
-    val rights = Seq("SELECT", "INSERT", "UPDATE", "DELETE", "DROP")
     val columns = Seq(
-      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog")),
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema")),
-      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
-      mkColumn(name = "GRANTOR", columnType = StringType, comment = Some("grantor of access (may be null)")),
-      mkColumn(name = "GRANTEE", columnType = StringType, comment = Some("grantee of access")),
-      mkColumn(name = "PRIVILEGE", columnType = StringType, comment = Some("name of access (SELECT, INSERT, UPDATE, REFRENCES, ...)")),
-      mkColumn(name = "IS_GRANTABLE", columnType = StringType, comment = Some("\"YES\" if grantee is permitted to grant to others; \"NO\" if not; null if unknown.")))
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "GRANTOR", columnType = StringType),
+      mkColumn(name = "GRANTEE", columnType = StringType),
+      mkColumn(name = "PRIVILEGE", columnType = StringType),
+      mkColumn(name = "IS_GRANTABLE", columnType = StringType))
     val metrics = connection.service.getDatabaseMetrics(catalog)
-    new JDBCResultSet(connection, databaseName, tableName = "TablePrivileges", columns, data = metrics.tables map { tableName =>
-      Seq(databaseName, databaseName, tableName, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
+    new JDBCResultSet(connection, catalog, tableName = "TablePrivileges", columns, data = metrics.tables map { tableName =>
+      Seq(catalog, tableName, tableName, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
     })
   }
 
-  override def getVersionColumns(catalog: String, schema: String, table: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "VersionColumns", columns = Nil, data = Nil)
-  }
-
   override def getPrimaryKeys(catalog: String, schema: String, table: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "BestRowIdentifier", columns = Nil, data = Nil)
-  }
-
-  override def getSuperTypes(catalog: String, schemaPattern: String, typeNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "SuperTypes", columns = Nil, data = Nil)
-  }
-
-  override def getSuperTables(catalog: String, schemaPattern: String, tableNamePattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "SuperTables", columns = Nil, data = Nil)
-  }
-
-  override def getSchemas(catalog: String, schemaPattern: String): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "Schemas", columns = Nil, data = Nil)
-  }
-
-  override def getUDTs(catalog: String, schemaPattern: String, typeNamePattern: String, types: Array[Int]): ResultSet = {
-    new JDBCResultSet(connection, databaseName, tableName = "UDTs", columns = Nil, data = Nil)
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "KEY_SEQ", columnType = ShortType),
+      mkColumn(name = "PK_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "BestRowIdentifier", columns, data = Seq(
+      Seq(catalog, table, table, ROWID_NAME, 1.toShort, ROWID_NAME).map(Option.apply)
+    ))
   }
 
   override def getPseudoColumns(catalog: String, schemaPattern: String, tableNamePattern: String, columnNamePattern: String): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "TABLE_CAT", columnType = StringType, comment = Some("table catalog")),
-      mkColumn(name = "TABLE_SCHEM", columnType = StringType, comment = Some("table schema")),
-      mkColumn(name = "TABLE_NAME", columnType = StringType, comment = Some("table name")),
-      mkColumn(name = "COLUMN_NAME", columnType = StringType, comment = Some("column name")),
-      mkColumn(name = "DATA_TYPE", columnType = IntType, comment = Some("SQL data type from java.sql.Types")),
-      mkColumn(name = "COLUMN_SIZE", columnType = IntType, comment = Some("column size.")),
-      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType, comment = Some("the number of fractional digits. Null is returned for data types where DECIMAL_DIGITS is not applicable.")),
-      mkColumn(name = "NUM_PREC_RADIX", columnType = StringType, comment = Some("Radix (typically either 10 or 2)")),
-      mkColumn(name = "COLUMN_USAGE", columnType = StringType, comment = Some("The allowed usage for the column. The value returned will correspond to the enum name returned by PseudoColumnUsage.name()")),
-      mkColumn(name = "REMARKS", columnType = StringType, comment = Some("comment describing column (may be null)")),
-      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = StringType, comment = Some("for char types the maximum number of bytes in the column")),
-      mkColumn(name = "IS_NULLABLE", columnType = StringType, comment = Some("ISO rules are used to determine the nullability for a column.")))
-    new JDBCResultSet(connection, databaseName, tableName = "PseudoColumns", columns = columns, data = Nil)
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "COLUMN_SIZE", columnType = IntType),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
+      mkColumn(name = "NUM_PREC_RADIX", columnType = StringType),
+      mkColumn(name = "COLUMN_USAGE", columnType = StringType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "CHAR_OCTET_LENGTH", columnType = StringType),
+      mkColumn(name = "IS_NULLABLE", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "PseudoColumns", columns = columns, data = Nil)
   }
 
-  private def mkColumn(name: String, columnType: ColumnType, sizeInBytes: Int = 256, comment: Option[String] = None) = {
-    TableColumn(name = name, columnType = columnType.toString, comment = comment, sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
+  override def getSuperTypes(catalog: String, schemaPattern: String, typeNamePattern: String): ResultSet = {
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "SUPERTYPE_CAT", columnType = StringType),
+      mkColumn(name = "SUPERTYPE_SCHEM", columnType = StringType),
+      mkColumn(name = "SUPERTABLE_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "SuperTypes", columns, data = Nil)
+  }
+
+  override def getSuperTables(catalog: String, schemaPattern: String, tableNamePattern: String): ResultSet = {
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "SUPERTABLE_NAME", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "SuperTables", columns, data = Nil)
+  }
+
+  override def getSchemas(catalog: String, schemaPattern: String): ResultSet = {
+    val columns = Seq(
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_CATALOG", columnType = StringType))
+    new JDBCResultSet(connection, catalog, tableName = "Schemas", columns, data = Nil)
+  }
+
+  override def getUDTs(catalog: String, schemaPattern: String, typeNamePattern: String, types: Array[Int]): ResultSet = {
+    val columns = Seq(
+      mkColumn(name = "TABLE_CAT", columnType = StringType),
+      mkColumn(name = "TABLE_SCHEM", columnType = StringType),
+      mkColumn(name = "TABLE_NAME", columnType = StringType),
+      mkColumn(name = "CLASS_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "REMARKS", columnType = StringType),
+      mkColumn(name = "BASE_TYPE", columnType = IntType))
+    new JDBCResultSet(connection, catalog, tableName = "UDTs", columns, data = Nil)
+  }
+
+  override def getVersionColumns(catalog: String, schema: String, table: String): ResultSet = {
+    val columns = Seq(
+      mkColumn(name = "SCOPE", columnType = ShortType),
+      mkColumn(name = "COLUMN_NAME", columnType = StringType),
+      mkColumn(name = "DATA_TYPE", columnType = IntType),
+      mkColumn(name = "TYPE_NAME", columnType = StringType),
+      mkColumn(name = "COLUMN_SIZE", columnType = IntType),
+      mkColumn(name = "BUFFER_LENGTH", columnType = StringType),
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
+      mkColumn(name = "PSEUDO_COLUMN", columnType = ShortType))
+    new JDBCResultSet(connection, catalog, tableName = "VersionColumns", columns, data = Nil)
+  }
+
+  private def mkColumn(name: String, columnType: ColumnType, sizeInBytes: Int = 256) = {
+    TableColumn(name = name, columnType = columnType.toString, comment = None, sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
   }
 
 }

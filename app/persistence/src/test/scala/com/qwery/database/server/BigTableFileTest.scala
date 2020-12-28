@@ -10,7 +10,7 @@ import org.scalatest.funspec.AnyFunSpec
  * Big Table File Test Suite
  */
 class BigTableFileTest extends AnyFunSpec {
-  private val databaseName = DEFAULT_DATABASE
+  private val databaseName = "test"
   private val tableName = "big_stocks"
 
   describe(classOf[TableFile].getName) {

@@ -33,7 +33,7 @@ class JDBCParameterMetaData() extends ParameterMetaData with JDBCWrapper {
     }
   }
 
-  override def getParameterType(parameterNumber: Int): Int = determineValueType(parameters(parameterNumber)).getJDBCType()
+  override def getParameterType(parameterNumber: Int): Int = determineValueType(parameters(parameterNumber)).getJDBCType
 
   override def getParameterTypeName(parameterNumber: Int): String = determineValueType(parameters(parameterNumber)).toString
 

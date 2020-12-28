@@ -35,13 +35,13 @@ class JDBCResultSetMetaData(databaseName: String,
     ColumnTypes.withName(columns(column - 1).columnType).isSigned
   }
 
-  override def getColumnDisplaySize(column: Int): Int = columns(column).sizeInBytes
+  override def getColumnDisplaySize(column: Int): Int = columns(column - 1).sizeInBytes
 
-  override def getColumnLabel(column: Int): String = columns(column - 1).comment.getOrElse(columns(column).name)
+  override def getColumnLabel(column: Int): String = columns(column - 1).name
 
   override def getColumnName(column: Int): String = columns(column - 1).name
 
-  override def getSchemaName(column: Int): String = databaseName
+  override def getSchemaName(column: Int): String = tableName
 
   override def getPrecision(column: Int): Int = {
     assert(column > 0 && column <= columns.length, "Column index out of range")
@@ -59,7 +59,7 @@ class JDBCResultSetMetaData(databaseName: String,
 
   override def getColumnType(column: Int): Int = {
     assert(column > 0 && column <= columns.length, "Column index out of range")
-    ColumnTypes.withName(columns(column - 1).columnType).getJDBCType()
+    ColumnTypes.withName(columns(column - 1).columnType).getJDBCType
   }
 
   override def getColumnTypeName(column: Int): String = columns(column - 1).columnType

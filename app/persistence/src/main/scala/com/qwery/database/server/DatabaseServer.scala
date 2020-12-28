@@ -299,6 +299,7 @@ object DatabaseServer {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
+        logger.info(sql)
         complete(qp.executeQuery(databaseName, sql))
       }
     }
