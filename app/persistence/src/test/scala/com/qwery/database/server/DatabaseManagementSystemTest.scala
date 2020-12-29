@@ -12,16 +12,26 @@ class DatabaseManagementSystemTest extends AnyFunSpec {
 
   describe(DatabaseManagementSystem.getClass.getSimpleName) {
 
-    it("should list all databases") {
-      searchDatabases().zipWithIndex foreach { case (database, index) =>
+    it("should search for databases") {
+      val searchResults = searchDatabases(databaseNamePattern = Some("t%"))
+      logger.info(f"${"databaseName"}%-25s")
+      searchResults.zipWithIndex foreach { case (database, index) =>
         logger.info(f"[${index + 1}%02d] ${database.databaseName}")
       }
     }
 
-    it("should list desired columns from all tables within a database") {
-      val list = searchColumns(databaseNamePattern = Some("test"), tableNamePattern = None, columnNamePattern = Some("symbol"))
+    it("should search for tables within a database") {
+      val searchResults = searchTables(databaseNamePattern = Some("test"), tableNamePattern = Some("stock%"))
+      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s")
+      searchResults foreach { result =>
+        logger.info(f"${result.databaseName}%-25s ${result.tableName}%-25s")
+      }
+    }
+
+    it("should search for columns from all tables within a database") {
+      val searchResults = searchColumns(databaseNamePattern = Some("test"), tableNamePattern = None, columnNamePattern = Some("symbol"))
       logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
-      list foreach { tableInfo =>
+      searchResults foreach { tableInfo =>
         logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
       }
     }

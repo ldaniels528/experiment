@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.{HttpResponse, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
+import akka.util.Timeout
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.DatabaseFiles._
 import com.qwery.database.JSONSupport._
@@ -46,7 +47,8 @@ object DatabaseServer {
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 2.minutes)
+    implicit val timeout: Timeout = 2.minutes
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
     import system.dispatcher
 
     // start the server
@@ -57,11 +59,8 @@ object DatabaseServer {
    * Starts the server
    * @param host the server host (e.g. "0.0.0.0")
    * @param port the server port
-   * @param as   the implicit [[ActorSystem]]
-   * @param ec   the implicit [[ExecutionContext]]
-   * @param qp   the implicit [[QueryProcessor]]
    */
-  def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor): Unit = {
+  def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Unit = {
     Http().newServerAt(host, port).bindFlow(route()) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
@@ -72,11 +71,9 @@ object DatabaseServer {
 
   /**
    * Define the API routes
-   * @param ec the implicit [[ExecutionContext]]
-   * @param qp the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  def route()(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+  def route()(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     // route: / (root)
     pathSingleSlash(routesRoot) ~
       // route: /c/<database>?table=<value>&column=<value> (e.g. "/c/portfolio?table=stock&column=symbol")
@@ -101,10 +98,9 @@ object DatabaseServer {
 
   /**
     * Database Root API routes (e.g. "/")
-    * @param qp the implicit [[QueryProcessor]]
     * @return the [[Route]]
     */
-  private def routesRoot(implicit qp: QueryProcessor): Route = {
+  private def routesRoot(implicit qp: QueryProcessor, timeout: Timeout): Route = {
     get {
       // retrieve the list of databases (e.g. "GET /?database=test%")
       extract(_.request.uri.query()) { params =>
@@ -117,10 +113,9 @@ object DatabaseServer {
   /**
    * Database-specific API routes (e.g. "/d/portfolio")
    * @param databaseName the name of the database
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabase(databaseName: String)(implicit qp: QueryProcessor): Route = {
+  private def routesByDatabase(databaseName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
     get {
       // retrieve the database metrics (e.g. "GET /d/portfolio")
       complete(qp.getDatabaseMetrics(databaseName))
@@ -137,11 +132,9 @@ object DatabaseServer {
   /**
     * Database Column-search API routes (e.g. "/c/shocktrade?table=stock&column=symbol")
     * @param databaseName the name of the database
-    * @param ec           the implicit [[ExecutionContext]]
-    * @param qp           the implicit [[QueryProcessor]]
     * @return the [[Route]]
     */
-  private def routesByColumns(databaseName: String)(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+  private def routesByColumns(databaseName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     get {
       // retrieve the table metrics (e.g. "GET /c/shocktrade?table=stock&column=symbol")
       extract(_.request.uri.query()) { params =>
@@ -155,11 +148,9 @@ object DatabaseServer {
    * Database Table-specific API routes (e.g. "/d/portfolio/stocks")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
-   * @param ec           the implicit [[ExecutionContext]]
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+  private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks")
       complete(qp.dropTable(databaseName, tableName, ifExists = true))
@@ -215,10 +206,9 @@ object DatabaseServer {
    * Database Table Length-specific API routes (e.g. "/d/portfolio/stocks/length")
    * @param databaseName the name of the database
    * @param tableName    the name of the table
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit qp: QueryProcessor): Route = {
+  private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
     get {
       // retrieve the length of the table (e.g. "GET /d/portfolio/stocks/length")
       complete(qp.getTableLength(databaseName, tableName))
@@ -231,12 +221,10 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @param rowID        the desired row by ID
    * @param columnID     the desired column by index
-   * @param ec           the implicit [[ExecutionContext]]
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)
-                                           (implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+                                           (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // delete a field (e.g. "DELETE /d/portfolio/stocks/287/0")
       complete(qp.deleteField(databaseName, tableName, rowID, columnID))
@@ -277,12 +265,10 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @param start        the start of the range
    * @param length       the number of rows referenced
-   * @param ec           the implicit [[ExecutionContext]]
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int)
-                                        (implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
       complete(qp.deleteRange(databaseName, tableName, start, length))
@@ -296,10 +282,9 @@ object DatabaseServer {
   /**
    * Database Table Query-specific API routes (e.g. "/q/portfolio")
    * @param databaseName the name of the database
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableQuery(databaseName: String)(implicit qp: QueryProcessor): Route = {
+  private def routesByDatabaseTableQuery(databaseName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
@@ -314,12 +299,10 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @param tableName    the name of the table
    * @param rowID        the referenced row ID
-   * @param ec           the implicit [[ExecutionContext]]
-   * @param qp           the implicit [[QueryProcessor]]
    * @return the [[Route]]
    */
   private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: Int)
-                                        (implicit ec: ExecutionContext, qp: QueryProcessor): Route = {
+                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
       complete(qp.deleteRow(databaseName, tableName, rowID))

@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
 import akka.actor.ActorSystem
+import akka.util.Timeout
 import com.qwery.database.server.{DatabaseServer, QueryProcessor}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -196,7 +197,8 @@ class QweryDriverTest extends AnyFunSpec {
 
   def startServer(port: Int): Unit = {
     implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(requestTimeout = 5.seconds)
+    implicit val timeout: Timeout = 2.minutes
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
     import system.dispatcher
 
     logger.info(s"Starting Database Server on port $port...")

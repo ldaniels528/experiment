@@ -8,6 +8,8 @@ import com.qwery.database.{Column, KeyValues, ROWID}
 
 package object models {
 
+  case class ColumnSearchResult(databaseName: String, tableName: String, column: TableColumn)
+
   case class DatabaseSearchResult(databaseName: String) {
     override def toString: String = this.toJSON
   }
@@ -55,8 +57,6 @@ package object models {
     def create(tableName: String, columns: Seq[Column]) = new TableCreation(tableName, columns.map(_.toTableColumn))
   }
 
-  case class ColumnSearchResult(databaseName: String, tableName: String, column: TableColumn)
-
   case class TableMetrics(databaseName: String,
                           tableName: String,
                           columns: Seq[TableColumn],
@@ -65,6 +65,8 @@ package object models {
                           rows: ROWID) {
     override def toString: String = this.toJSON
   }
+
+  case class TableSearchResult(databaseName: String, tableName: String)
 
   case class UpdateCount(count: Int, __id: Option[Int] = None) {
     override def toString: String = this.toJSON

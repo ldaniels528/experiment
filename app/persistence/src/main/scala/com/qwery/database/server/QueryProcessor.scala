@@ -11,7 +11,7 @@ import com.qwery.database.DatabaseFiles._
 import com.qwery.database.ExpressionVM.evaluate
 import com.qwery.database.models._
 import com.qwery.database.server.DatabaseManagementSystem._
-import com.qwery.database.server.QueryProcessor.CommandRoutingCPU
+import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._
 import com.qwery.database.server.QueryProcessor.implicits._
@@ -22,23 +22,20 @@ import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 /**
   * Query Processor
   * @param routingActors  the number of command routing actors
-  * @param requestTimeout the [[FiniteDuration request timeout]]
   */
-class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors(), requestTimeout: FiniteDuration = 30.seconds) {
+class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
   private val actorSystem: ActorSystem = ActorSystem(name = "QueryProcessor")
-  private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingCPU(requestTimeout))
+  private val actorPool: ActorRef = actorSystem.actorOf(Props(new RouterCPU())
     .withRouter(RoundRobinPool(nrOfInstances = routingActors)))
 
   implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
   private implicit val scheduler: Scheduler = actorSystem.scheduler
-  private implicit val timeout: Timeout = requestTimeout
 
   /**
     * Creates a new column index on a database table
@@ -47,10 +44,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param indexColumnName the index column name
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createIndex(databaseName: String, tableName: String, indexColumnName: String): Future[UpdateCount] = {
-    asUpdateCount {
-      CreateIndex(databaseName, tableName, indexColumnName)
-    }
+  def createIndex(databaseName: String, tableName: String, indexColumnName: String)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateIndex(databaseName, tableName, indexColumnName))
   }
 
   /**
@@ -60,10 +55,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param columns      the table columns
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn]): Future[UpdateCount] = {
-    asUpdateCount {
-      CreateTable(databaseName, tableName, columns)
-    }
+  def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn])(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateTable(databaseName, tableName, columns))
   }
 
   /**
@@ -74,10 +67,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param ifNotExists  if true, the operation will not fail
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean = false): Future[UpdateCount] = {
-    asUpdateCount {
-      CreateView(databaseName, viewName, queryString, ifNotExists)
-    }
+  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateView(databaseName, viewName, queryString, ifNotExists))
   }
 
   /**
@@ -88,10 +79,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param columnID     the column ID of the field
     * @return the promise of an [[UpdateCount update count]]
     */
-  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Future[UpdateCount] = {
-    asUpdateCount {
-      DeleteField(databaseName, tableName, rowID, columnID)
-    }
+  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DeleteField(databaseName, tableName, rowID, columnID))
   }
 
   /**
@@ -102,10 +91,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param length       the number of rows to delete
     * @return the promise of an [[UpdateCount update count]]
     */
-  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int): Future[UpdateCount] = {
-    asUpdateCount {
-      DeleteRange(databaseName, tableName, start, length)
-    }
+  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DeleteRange(databaseName, tableName, start, length))
   }
 
   /**
@@ -115,10 +102,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param rowID        the ID of the row to delete
     * @return the promise of an [[UpdateCount update count]]
     */
-  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): Future[UpdateCount] = {
-    asUpdateCount {
-      DeleteRow(databaseName, tableName, rowID)
-    }
+  def deleteRow(databaseName: String, tableName: String, rowID: ROWID)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DeleteRow(databaseName, tableName, rowID))
   }
 
   /**
@@ -129,10 +114,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param limit        the maximum number of records to delete
     * @return the promise of an [[UpdateCount update count]]
     */
-  def deleteRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int]): Future[UpdateCount] = {
-    asUpdateCount {
-      DeleteRows(databaseName, tableName, condition, limit)
-    }
+  def deleteRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int])(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DeleteRows(databaseName, tableName, condition, limit))
   }
 
   /**
@@ -142,10 +125,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param ifExists     indicates whether an existence check should be performed
     * @return the promise of an [[UpdateCount update count]]
     */
-  def dropTable(databaseName: String, tableName: String, ifExists: Boolean): Future[UpdateCount] = {
-    asUpdateCount {
-      DropTable(databaseName, tableName, ifExists)
-    }
+  def dropTable(databaseName: String, tableName: String, ifExists: Boolean)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DropTable(databaseName, tableName, ifExists))
   }
 
   /**
@@ -155,10 +136,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param ifExists     indicates whether an existence check should be performed
     * @return the promise of an [[UpdateCount update count]]
     */
-  def dropView(databaseName: String, viewName: String, ifExists: Boolean): Future[UpdateCount] = {
-    asUpdateCount {
-      DropView(databaseName, viewName, ifExists)
-    }
+  def dropView(databaseName: String, viewName: String, ifExists: Boolean)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(DropView(databaseName, viewName, ifExists))
   }
 
   /**
@@ -167,7 +146,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param sql          the SQL statement or query
     * @return the promise of a [[QueryResult]]
     */
-  def executeQuery(databaseName: String, sql: String): Future[QueryResult] = {
+  def executeQuery(databaseName: String, sql: String)(implicit timeout: Timeout): Future[QueryResult] = {
     val command = SQLCompiler.compile(databaseName, sql)
     (this ? command) map (_.toQueryResult(command))
   }
@@ -180,10 +159,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param f            the update function to execute
     * @return the promise of the updated [[Row row]]
     */
-  def fetchAndReplace(databaseName: String, tableName: String, rowID: ROWID)(f: KeyValues => KeyValues): Future[Row] = {
-    asRows {
-      FetchAndReplace(databaseName, tableName, rowID, f)
-    } map (_.head)
+  def fetchAndReplace(databaseName: String, tableName: String, rowID: ROWID)(f: KeyValues => KeyValues)(implicit timeout: Timeout): Future[Row] = {
+    asRows(FetchAndReplace(databaseName, tableName, rowID, f)).map(_.head)
   }
 
   /**
@@ -194,10 +171,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param limit        the maximum number of records to delete
     * @return the promise of the updated [[Row row]]
     */
-  def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Future[Seq[Row]] = {
-    asRows {
-      FindRows(databaseName, tableName, condition, limit)
-    }
+  def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None)(implicit timeout: Timeout): Future[Seq[Row]] = {
+    asRows(FindRows(databaseName, tableName, condition, limit))
   }
 
   /**
@@ -205,7 +180,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param databaseName the specified database
     * @return the promise of [[DatabaseMetrics]]
     */
-  def getDatabaseMetrics(databaseName: String): Future[DatabaseMetrics] = {
+  def getDatabaseMetrics(databaseName: String)(implicit timeout: Timeout): Future[DatabaseMetrics] = {
     val command = GetDatabaseMetrics(databaseName)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -214,7 +189,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Future[Field] = {
+  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)(implicit timeout: Timeout): Future[Field] = {
     val command = GetField(databaseName, tableName, rowID, columnID)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -223,10 +198,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  def getRange(databaseName: String, tableName: String, start: ROWID, length: Int): Future[Seq[Row]] = {
-    asRows {
-      GetRange(databaseName, tableName, start, length)
-    }
+  def getRange(databaseName: String, tableName: String, start: ROWID, length: Int)(implicit timeout: Timeout): Future[Seq[Row]] = {
+    asRows(GetRange(databaseName, tableName, start, length))
   }
 
   /**
@@ -236,7 +209,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param rowID        the row ID
     * @return the promise of the option of a [[Row]]
     */
-  def getRow(databaseName: String, tableName: String, rowID: ROWID): Future[Option[Row]] = {
+  def getRow(databaseName: String, tableName: String, rowID: ROWID)(implicit timeout: Timeout): Future[Option[Row]] = {
     val command = GetRow(databaseName, tableName, rowID)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -245,10 +218,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  def getTableLength(databaseName: String, tableName: String): Future[UpdateCount] = {
-    asUpdateCount {
-      GetTableLength(databaseName, tableName)
-    }
+  def getTableLength(databaseName: String, tableName: String)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(GetTableLength(databaseName, tableName))
   }
 
   /**
@@ -257,7 +228,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param tableName    the table name
     * @return the promise of [[TableMetrics]]
     */
-  def getTableMetrics(databaseName: String, tableName: String): Future[TableMetrics] = {
+  def getTableMetrics(databaseName: String, tableName: String)(implicit timeout: Timeout): Future[TableMetrics] = {
     val command = GetTableMetrics(databaseName, tableName)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -273,10 +244,8 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param values       the update [[KeyValues values]]
     * @return the promise of an [[UpdateCount update count]]
     */
-  def insertRow(databaseName: String, tableName: String, values: KeyValues): Future[UpdateCount] = {
-    asUpdateCount {
-      InsertRow(databaseName, tableName, values)
-    }
+  def insertRow(databaseName: String, tableName: String, values: KeyValues)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(InsertRow(databaseName, tableName, values))
   }
 
   /**
@@ -287,28 +256,20 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param values       the collection of update [[KeyValues values]]
     * @return the promise of an [[UpdateCount update count]]
     */
-  def insertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[Insert.DataRow]): Future[UpdateCount] = {
-    asUpdateCount {
-      InsertRows(databaseName, tableName, columns, values)
-    }
+  def insertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[Insert.DataRow])(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(InsertRows(databaseName, tableName, columns, values))
   }
 
-  def lockRow(databaseName: String, tableName: String, rowID: ROWID): Future[String] = {
-    asLockUpdated {
-      LockRow(databaseName, tableName, rowID)
-    } map (_.lockID)
+  def lockRow(databaseName: String, tableName: String, rowID: ROWID)(implicit timeout: Timeout): Future[String] = {
+    asLockUpdated(LockRow(databaseName, tableName, rowID)).map(_.lockID)
   }
 
-  def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: => KeyValues): Future[UpdateCount] = {
-    asUpdateCount {
-      ReplaceRange(databaseName, tableName, start, length, row)
-    }
+  def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: => KeyValues)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(ReplaceRange(databaseName, tableName, start, length, row))
   }
 
-  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): Future[UpdateCount] = {
-    asUpdateCount {
-      ReplaceRow(databaseName, tableName, rowID, values)
-    }
+  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(ReplaceRow(databaseName, tableName, rowID, values))
   }
 
   /**
@@ -318,7 +279,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param columnNamePattern   the column name search pattern (e.g. "%symbol%")
     * @return the promise of a collection of [[ColumnSearchResult search results]]
     */
-  def searchColumns(databaseNamePattern: Option[String], tableNamePattern: Option[String], columnNamePattern: Option[String]): Future[List[ColumnSearchResult]] = {
+  def searchColumns(databaseNamePattern: Option[String], tableNamePattern: Option[String], columnNamePattern: Option[String])(implicit timeout: Timeout): Future[List[ColumnSearchResult]] = {
     val command = SearchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -332,7 +293,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @param databaseNamePattern the database name search pattern (e.g. "te%t")
     * @return the promise of a collection of [[DatabaseSearchResult search results]]
     */
-  def searchDatabases(databaseNamePattern: Option[String] = None): Future[List[DatabaseSearchResult]] = {
+  def searchDatabases(databaseNamePattern: Option[String] = None)(implicit timeout: Timeout): Future[List[DatabaseSearchResult]] = {
     val command = SearchDatabases(databaseNamePattern)
     this ? command map {
       case DatabaseSearchResponse(results) => results
@@ -340,41 +301,44 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  def selectRows(databaseName: String,
-                 tableName: String,
-                 fields: Seq[Expression],
-                 where: KeyValues = KeyValues(),
-                 groupBy: Seq[SQLField] = Nil,
-                 orderBy: Seq[OrderColumn] = Nil,
-                 limit: Option[Int]): Future[QueryResult] = {
-    asResultSet { SelectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit) }
+  def searchTables(databaseNamePattern: Option[String], tableNamePattern: Option[String])(implicit timeout: Timeout): Future[List[TableSearchResult]] = {
+    val command = SearchTables(databaseNamePattern, tableNamePattern)
+    this ? command map {
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case TableSearchResponse(results) => results
+      case response => throw UnhandledCommandException(command, response)
+    }
   }
 
-  def truncateTable(databaseName: String, tableName: String): Future[UpdateCount] = {
-    asUpdateCount { TruncateTable(databaseName, tableName) }
+  def selectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues = KeyValues(), groupBy: Seq[SQLField] = Nil, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int])(implicit timeout: Timeout): Future[QueryResult] = {
+    asResultSet(SelectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit))
   }
 
-  def unlockRow(databaseName: String, tableName: String, rowID: ROWID, lockID: String): Future[UpdateCount] = {
+  def truncateTable(databaseName: String, tableName: String)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(TruncateTable(databaseName, tableName))
+  }
+
+  def unlockRow(databaseName: String, tableName: String, rowID: ROWID, lockID: String)(implicit timeout: Timeout): Future[UpdateCount] = {
     asLockUpdated { UnlockRow(databaseName, tableName, rowID, lockID) } map(lu => UpdateCount(count = (!lu.isLocked).toInt, __id = Some(rowID)))
   }
 
-  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): Future[UpdateCount] = {
+  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any])(implicit timeout: Timeout): Future[UpdateCount] = {
     asUpdateCount { UpdateField(databaseName, tableName, rowID, columnID, value) }
   }
 
-  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: Seq[(String, Expression)]): Future[UpdateCount] = {
+  def updateRow(databaseName: String, tableName: String, rowID: ROWID, values: Seq[(String, Expression)])(implicit timeout: Timeout): Future[UpdateCount] = {
     asUpdateCount { UpdateRow(databaseName, tableName, rowID, values) }
   }
 
-  def updateRows(databaseName: String, tableName: String, values: Seq[(String, Expression)], condition: KeyValues, limit: Option[Int] = None): Future[UpdateCount] = {
+  def updateRows(databaseName: String, tableName: String, values: Seq[(String, Expression)], condition: KeyValues, limit: Option[Int] = None)(implicit timeout: Timeout): Future[UpdateCount] = {
     asUpdateCount { UpdateRows(databaseName, tableName, values, condition, limit) }
   }
 
-  private def ?(message: SystemIORequest): Future[DatabaseIOResponse] = {
+  private def ?(message: SystemIORequest)(implicit timeout: Timeout): Future[DatabaseIOResponse] = {
     (actorPool ? message).mapTo[DatabaseIOResponse]
   }
 
-  private def asLockUpdated(command: DatabaseIORequest): Future[LockUpdated] = {
+  private def asLockUpdated(command: DatabaseIORequest)(implicit timeout: Timeout): Future[LockUpdated] = {
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case cmd: LockUpdated => cmd
@@ -382,7 +346,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  private def asResultSet(command: DatabaseIORequest): Future[QueryResult] = {
+  private def asResultSet(command: DatabaseIORequest)(implicit timeout: Timeout): Future[QueryResult] = {
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case QueryResultRetrieved(queryResult) => queryResult
@@ -390,7 +354,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  private def asRows(command: DatabaseIORequest): Future[Seq[Row]] = {
+  private def asRows(command: DatabaseIORequest)(implicit timeout: Timeout): Future[Seq[Row]] = {
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case RowsRetrieved(rows) => rows
@@ -398,7 +362,7 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     }
   }
 
-  private def asUpdateCount(command: DatabaseIORequest): Future[UpdateCount] = {
+  private def asUpdateCount(command: DatabaseIORequest)(implicit timeout: Timeout): Future[UpdateCount] = {
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
       case RowUpdated(rowID, isSuccess) => UpdateCount(count = isSuccess.toInt, __id = Some(rowID))
@@ -435,13 +399,9 @@ object QueryProcessor {
 
   /**
    * Command Routing CPU
-   * @param requestTimeout the [[FiniteDuration request timeout]]
    */
-  class CommandRoutingCPU(requestTimeout: FiniteDuration) extends Actor {
-
+  class RouterCPU()(implicit timeout: Timeout) extends Actor {
     import context.{dispatcher, system}
-
-    private implicit val timeout: Timeout = requestTimeout
 
     override def receive: Receive = {
       case command: DropTable =>
@@ -527,6 +487,8 @@ object QueryProcessor {
         invoke(cmd, sender())(searchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! ColumnSearchResponse(data) }
       case cmd@SearchDatabases(pattern) =>
         invoke(cmd, sender())(searchDatabases(pattern)) { case (caller, metrics) => caller ! DatabaseSearchResponse(metrics) }
+      case cmd@SearchTables(databaseNamePattern, tableNamePattern) =>
+        invoke(cmd, sender())(searchTables(databaseNamePattern, tableNamePattern)) { case (caller, data) => caller ! TableSearchResponse(data) }
       case message =>
         logger.error(s"Unhandled D-CPU processing message $message")
         unhandled(message)
@@ -698,10 +660,7 @@ object QueryProcessor {
     //      READ-ONLY COMMANDS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class FindRows(databaseName: String,
-                        tableName: String,
-                        condition: KeyValues,
-                        limit: Option[Int] = None) extends TableIORequest
+    case class FindRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None) extends TableIORequest
 
     case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
 
@@ -719,13 +678,9 @@ object QueryProcessor {
 
     case class SearchDatabases(databaseNamePattern: Option[String]) extends SystemIORequest
 
-    case class SelectRows(databaseName: String,
-                          tableName: String,
-                          fields: Seq[Expression],
-                          where: KeyValues,
-                          groupBy: Seq[SQLField] = Nil,
-                          orderBy: Seq[OrderColumn] = Nil,
-                          limit: Option[Int] = None) extends TableIORequest
+    case class SearchTables(databaseNamePattern: Option[String], tableNamePattern: Option[String]) extends SystemIORequest
+
+    case class SelectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField] = Nil, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int] = None) extends TableIORequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //      TABLE MUTATION COMMANDS
@@ -807,6 +762,8 @@ object QueryProcessor {
     case class RowUpdated(rowID: ROWID, isSuccess: Boolean) extends DatabaseIOResponse
 
     case class TableMetricsRetrieved(metrics: TableMetrics) extends DatabaseIOResponse
+
+    case class TableSearchResponse(columns: List[TableSearchResult]) extends DatabaseIOResponse
 
   }
 

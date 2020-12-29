@@ -2,6 +2,7 @@ package com.qwery.database.server
 
 import java.util.Date
 
+import akka.util.Timeout
 import com.qwery.database.StockQuote._
 import com.qwery.database.{KeyValues, ROWID, stopWatch}
 import com.qwery.models.expressions.AllFields
@@ -17,9 +18,10 @@ import scala.concurrent.{Await, Future}
 class QueryProcessorTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val insertCount = 1e+5.toInt
+  private implicit val timeout: Timeout = 2.minutes
 
   describe(classOf[QueryProcessor].getName) {
-    val queryProcessor = new QueryProcessor(requestTimeout = 10.seconds)
+    val queryProcessor = new QueryProcessor()
     import queryProcessor.dispatcher
 
     val databaseName = "test"
