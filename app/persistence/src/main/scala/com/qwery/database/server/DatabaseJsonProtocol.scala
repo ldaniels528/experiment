@@ -59,9 +59,13 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   //      Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
+  implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
+
+  implicit val columnSearchResultJsonFormat: RootJsonFormat[ColumnSearchResult] = jsonFormat3(ColumnSearchResult.apply)
+
   implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
-  implicit val databaseInfoJsonFormat: RootJsonFormat[DatabaseSearchResult] = jsonFormat1(DatabaseSearchResult.apply)
+  implicit val databaseSearchResultJsonFormat: RootJsonFormat[DatabaseSearchResult] = jsonFormat1(DatabaseSearchResult.apply)
 
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat2(DatabaseMetrics.apply)
 
@@ -71,11 +75,9 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val tableCreationJsonFormat: RootJsonFormat[TableCreation] = jsonFormat2(TableCreation.apply)
 
-  implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
-
   implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat3(TableConfig.apply)
 
-  implicit val tableInfoJsonFormat: RootJsonFormat[ColumnSearchResult] = jsonFormat3(ColumnSearchResult.apply)
+  implicit val tableSearchResultJsonFormat: RootJsonFormat[TableSearchResult] = jsonFormat2(TableSearchResult.apply)
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 

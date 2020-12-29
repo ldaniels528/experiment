@@ -30,8 +30,16 @@ class DatabaseClientTest extends AnyFunSpec {
     val tableNameA = "stocks_client_test_0"
     val tableNameB = "stocks_client_test_1"
 
-    it("should list the databases on the server") {
-      invoke(label = "service.getDatabases", service.getDatabases)
+    it("should search for databases on the server") {
+      invoke(label = "service.searchDatabases(databaseNamePattern = \"t%\")", service.searchDatabases(databaseNamePattern = Some("t%")))
+    }
+
+    it("should search for tables on the server") {
+      invoke(label = "service.searchTables(databaseNamePattern = \"t%\", tableNamePattern = \"s%\")", service.searchTables(databaseNamePattern = Some("t%"), tableNamePattern = Some("s%")))
+    }
+
+    it("should search for columns on the server") {
+      invoke(label = "service.searchColumns(databaseNamePattern = \"test\", tableNamePattern = \"s%\", columnNamePattern = \"symbol\")", service.searchColumns(databaseNamePattern = Some("test"), tableNamePattern = Some("s%"), columnNamePattern = Some("symbol")))
     }
 
     it("should drop an existing table") {
@@ -155,14 +163,6 @@ class DatabaseClientTest extends AnyFunSpec {
       invoke(
         label = s"service.deleteRow($databaseName, $tableNameA, rowID = 999)",
         block = service.deleteRow(databaseName, tableNameA, rowID = 999))
-    }
-
-    it("should list desired columns from all tables within a database") {
-      val list = service.getColumns(databaseName, tableNamePattern = None, columnNamePattern = Some("symbol"))
-      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
-      list foreach { tableInfo =>
-        logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
-      }
     }
 
   }

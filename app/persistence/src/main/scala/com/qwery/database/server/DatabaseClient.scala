@@ -51,14 +51,6 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     }
   }
 
-  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[ColumnSearchResult] = {
-    $http.get(toInfraUrl(databaseName, tableNamePattern, columnNamePattern)).as[List[ColumnSearchResult]]
-  }
-
-  def getDatabases: List[DatabaseSearchResult] = {
-    $http.get(toUrl).as[List[DatabaseSearchResult]]
-  }
-
   def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
     $http.get(toUrl(databaseName)).as[DatabaseMetrics]
   }
@@ -102,6 +94,18 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     UpdateCount(count = 1, __id = Some(rowID))
   }
 
+  def searchColumns(databaseNamePattern: Option[String] = None, tableNamePattern: Option[String] = None, columnNamePattern: Option[String] = None): List[ColumnSearchResult] = {
+    $http.get(toSearchUrl(category = "columns", databaseNamePattern, tableNamePattern, columnNamePattern)).as[List[ColumnSearchResult]]
+  }
+
+  def searchDatabases(databaseNamePattern: Option[String] = None): List[DatabaseSearchResult] = {
+    $http.get(toSearchUrl(category = "databases", databaseNamePattern)).as[List[DatabaseSearchResult]]
+  }
+
+  def searchTables(databaseNamePattern: Option[String] = None, tableNamePattern: Option[String] = None): List[TableSearchResult] = {
+    $http.get(toSearchUrl(category = "tables", databaseNamePattern, tableNamePattern)).as[List[TableSearchResult]]
+  }
+
   def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, value: Option[Any]): UpdateCount = {
     $http.put(toUrl(databaseName, tableName, rowID, columnID), value.toJson.toString().getBytes(charSetName))
     UpdateCount(count = 1, __id = Some(rowID))
@@ -129,18 +133,16 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   //      URL GENERATORS
   //////////////////////////////////////////////////////////////////////
 
-  private def toInfraUrl(databaseName: String, tablePattern: Option[String], columnPattern: Option[String]): String = {
-    val queryString = Seq("table" -> tablePattern, "column" -> columnPattern.map(URLEncoder.encode(_, charSetName))) flatMap {
-      case (name, value_?) => value_?.map(value => s"$name=$value")
-    } mkString "&"
-    s"http://$host:$port/c/$databaseName?$queryString"
-  }
-
   private def toQueryUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"
 
   private def toRangeUrl(databaseName: String, tableName: String): String = s"http://$host:$port/r/$databaseName/$tableName"
 
-  private def toUrl: String = s"http://$host:$port/"
+  private def toSearchUrl(category: String, databasePattern: Option[String] = None, tablePattern: Option[String] = None, columnPattern: Option[String] = None): String = {
+    val queryString = Seq("database" -> databasePattern, "table" -> tablePattern, "column" -> columnPattern) flatMap {
+      case (name, value_?) => value_?.map(value => s"$name=${URLEncoder.encode(value, charSetName)}")
+    } mkString "&"
+    s"http://$host:$port/$category?$queryString"
+  }
 
   private def toUrl(databaseName: String): String = s"http://$host:$port/d/$databaseName"
 

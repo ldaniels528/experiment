@@ -74,12 +74,8 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   def route()(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
-    // route: / (root)
-    pathSingleSlash(routesRoot) ~
-      // route: /c/<database>?table=<value>&column=<value> (e.g. "/c/portfolio?table=stock&column=symbol")
-      path("c" / Segment)(routesByColumns) ~
-      // route: /d/<database> (e.g. "/d/portfolio")
-      path("d" / Segment)(routesByDatabase) ~
+    // route: /d/<database> (e.g. "/d/portfolio")
+    path("d" / Segment)(routesByDatabase) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
       path("d" / Segment / Segment)(routesByDatabaseTable) ~
       // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
@@ -93,21 +89,15 @@ object DatabaseServer {
       // route: /d/<database>/<table>/length (e.g. "/d/portfolio/stocks/length")
       path("d" / Segment / Segment / "length")(routesByDatabaseTableLength) ~
       // route: /q/<database> (e.g. "/q/portfolio")
-      path("q" / Segment)(routesByDatabaseTableQuery)
-  }
-
-  /**
-    * Database Root API routes (e.g. "/")
-    * @return the [[Route]]
-    */
-  private def routesRoot(implicit qp: QueryProcessor, timeout: Timeout): Route = {
-    get {
-      // retrieve the list of databases (e.g. "GET /?database=test%")
-      extract(_.request.uri.query()) { params =>
-        val databasePattern_? = params.get("database")
-        complete(qp.searchDatabases(databasePattern_?))
-      }
-    }
+      path("q" / Segment)(routesByDatabaseTableQuery) ~
+      //
+      // Search API routes
+      // route: /columns/?database=<pattern>&table=<pattern>&column=<pattern> (e.g. "/columns/?database=portfolios&table=stocks&column=symbol")
+      path("columns")(routesSearchColumns) ~
+      // route: /databases/?database=<pattern> (e.g. "/databases/?database=test%")
+      path("databases")(routesSearchDatabases) ~
+      // route: /tables/?database=<pattern>&table=<pattern> (e.g. "/tables/?database=test%&table=stocks")
+      path("tables")(routesSearchTables)
   }
 
   /**
@@ -127,21 +117,6 @@ object DatabaseServer {
           complete(qp.createTable(databaseName, ref.tableName, ref.columns))
         }
       }
-  }
-
-  /**
-    * Database Column-search API routes (e.g. "/c/shocktrade?table=stock&column=symbol")
-    * @param databaseName the name of the database
-    * @return the [[Route]]
-    */
-  private def routesByColumns(databaseName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
-    get {
-      // retrieve the table metrics (e.g. "GET /c/shocktrade?table=stock&column=symbol")
-      extract(_.request.uri.query()) { params =>
-        val (databasePattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("table"), params.get("column"))
-        complete(qp.searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
-      }
-    }
   }
 
   /**
@@ -331,6 +306,48 @@ object DatabaseServer {
           complete(qp.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       }
+  }
+
+  /**
+    * Column search API routes (e.g. "/columns?database=shocktrade&table=stock%&column=symbol")
+    * @return the [[Route]]
+    */
+  private def routesSearchColumns(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+    get {
+      // search for columns (e.g. "GET /columns?database=shocktrade&table=stock%&column=symbol")
+      extract(_.request.uri.query()) { params =>
+        val (databasePattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("table"), params.get("column"))
+        complete(qp.searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
+      }
+    }
+  }
+
+  /**
+    * Database search API routes (e.g. "/databases?database=test%")
+    * @return the [[Route]]
+    */
+  private def routesSearchDatabases(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+    get {
+      // search for databases (e.g. "GET /databases?database=test%")
+      extract(_.request.uri.query()) { params =>
+        val databasePattern_? = params.get("database")
+        complete(qp.searchDatabases(databasePattern_?))
+      }
+    }
+  }
+
+  /**
+    * Table search API routes (e.g. "/tables?database=test%&table=stock%")
+    * @return the [[Route]]
+    */
+  private def routesSearchTables(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+    get {
+      // search for tables (e.g. "GET /tables?database=test%&table=stock%"")
+      extract(_.request.uri.query()) { params =>
+        val (databasePattern_?, tablePattern_?) = (params.get("database"), params.get("table"))
+        complete(qp.searchTables(databasePattern_?, tablePattern_?))
+      }
+    }
   }
 
   private def toContentType(`type`: String): ContentType = {

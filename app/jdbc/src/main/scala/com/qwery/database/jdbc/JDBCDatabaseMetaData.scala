@@ -328,7 +328,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
 
   override def getCatalogs: ResultSet = {
     val columns = Seq(mkColumn(name = "TABLE_CAT", columnType = StringType))
-    val databases = connection.service.getDatabases
+    val databases = connection.service.searchDatabases
     new JDBCResultSet(connection, databaseName = "", tableName = "Catalogs", columns, data = databases.map { db =>
       Seq(Option(db.databaseName))
     })
@@ -369,7 +369,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
       mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType),
       mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType),
       mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
-    val results = connection.service.getColumns(catalog, tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
+    val results = connection.service.searchColumns(catalog, tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
     new JDBCResultSet(connection, catalog, tableName = "Columns", columns, data = results map { ti =>
       Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType,
         ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment.orNull, "", null, null, ti.column.sizeInBytes,
@@ -387,7 +387,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection,
       mkColumn(name = "GRANTEE", columnType = StringType),
       mkColumn(name = "PRIVILEGE", columnType = StringType),
       mkColumn(name = "IS_GRANTABLE", columnType = StringType))
-    val results = connection.service.getColumns(catalog, tableNamePattern = Some(table), columnNamePattern = Some(columnNamePattern))
+    val results = connection.service.searchColumns(catalog, tableNamePattern = Some(table), columnNamePattern = Some(columnNamePattern))
     new JDBCResultSet(connection, catalog, tableName = "ColumnPrivileges", columns, data = results map { ti =>
       Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
     })
