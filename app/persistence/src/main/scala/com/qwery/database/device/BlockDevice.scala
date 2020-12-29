@@ -4,6 +4,7 @@ package device
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.KeyValues.isSatisfied
@@ -397,15 +398,15 @@ trait BlockDevice {
   //      UTILITIES
   //////////////////////////////////////////////////////////////////
 
-  def whileKV(condition: KeyValues)(f: KeyValues => Boolean): Int = {
-    var (matches: Int, rowID: ROWID) = (0, 0)
+  def whileKV(condition: KeyValues, limit: Option[Int] = None)(f: KeyValues => Unit): Int = {
+    val counter = new AtomicInteger(0)
+    var (matches: ROWID, rowID: ROWID) = (0, 0)
     val eof = length
-    var proceed = true
-    while (rowID < eof && proceed) {
+    while (rowID < eof && (limit.isEmpty || limit.exists(counter.addAndGet(1) <= _))) {
       getKeyValues(rowID) foreach { row =>
         if (condition.isEmpty || isSatisfied(row, condition)) {
-          proceed = f(row)
-          if (proceed) matches += 1
+          f(row)
+          matches += 1
         }
       }
       rowID += 1
@@ -413,17 +414,15 @@ trait BlockDevice {
     matches
   }
 
-  def whileRow(condition: KeyValues)(f: Row => Boolean): Int = {
-    var (matches: Int, rowID: ROWID) = (0, 0)
+  def whileRow(condition: KeyValues, limit: Option[Int] = None)(f: Row => Unit): Int = {
+    val counter = new AtomicInteger(0)
+    var (matches: ROWID, rowID: ROWID) = (0, 0)
     val eof = length
-    var proceed = true
-    while (rowID < eof && proceed) {
+    while (rowID < eof && (limit.isEmpty || limit.exists(counter.addAndGet(1) <= _))) {
       val row = getRow(rowID)
-      if (row.metadata.isActive) {
-        if (condition.isEmpty || isSatisfied(row.toKeyValues, condition)) {
-          proceed = f(row)
-          if (proceed) matches += 1
-        }
+      if (row.metadata.isActive && (condition.isEmpty || isSatisfied(row.toKeyValues, condition))) {
+        f(row)
+        matches += 1
       }
       rowID += 1
     }

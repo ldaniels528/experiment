@@ -1,10 +1,11 @@
 package com.qwery.database
+package server
 
 import com.qwery.database.ExpressionVM._
-import com.qwery.database.QueryProcessor.commands.DatabaseIORequest
-import com.qwery.database.QueryProcessor.{commands => cx}
-import com.qwery.database.SQLCompiler.implicits.InvokableFacade
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
+import com.qwery.database.server.QueryProcessor.{commands => cx}
+import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal}

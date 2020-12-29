@@ -1,6 +1,8 @@
-package com.qwery.database
+package com.qwery.database.server
 
 import java.util.Date
+
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues, ROWID}
 import com.qwery.models.expressions.{AllFields, BasicField}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -52,7 +54,7 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         )) use { newTable =>
         newTable.truncate()
-        TableFile.getTableFile(databaseName, tableName) use { table =>
+        TableFile(databaseName, tableName) use { table =>
           newTable.insertRows(table.device)
         }
         val count = newTable.count()

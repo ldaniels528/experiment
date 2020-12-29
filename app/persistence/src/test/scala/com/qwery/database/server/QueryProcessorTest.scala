@@ -1,8 +1,9 @@
-package com.qwery.database
+package com.qwery.database.server
 
 import java.util.Date
 
 import com.qwery.database.StockQuote._
+import com.qwery.database.{KeyValues, ROWID, stopWatch}
 import com.qwery.models.expressions.AllFields
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -134,19 +135,20 @@ class QueryProcessorTest extends AnyFunSpec {
               |   ROUND(lastSale, 1) AS roundedLastSale,
               |   lastTradeTime AS lastSaleTime
               |FROM $tableName
+              |WHERE exchange = 'AMEX'
               |ORDER BY lastSale DESC
-              |LIMIT 500
+              |LIMIT 50
               |""".stripMargin
         )
-        results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), where = KeyValues("market" -> "AMEX"), limit = Some(5))
+        results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), limit = Some(5))
       } yield results
 
       val results = Await.result(outcome, Duration.Inf)
-      assert(results.rows.size == 5)
-      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
+      assert(results.rows.size == 5)
+      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
     }
 
     it("should perform CREATE VIEW (SQL)") {
@@ -161,23 +163,24 @@ class QueryProcessorTest extends AnyFunSpec {
               |   ROUND(lastSale, 1) AS roundedLastSale,
               |   lastTradeTime AS lastSaleTime
               |FROM $tableName
+              |WHERE exchange = 'AMEX'
               |ORDER BY lastSale DESC
-              |LIMIT 500
+              |LIMIT 50
               |""".stripMargin
         )
-        results <- queryProcessor.executeQuery(databaseName, sql = "SELECT * FROM tickers WHERE market = 'AMEX' LIMIT 5")
+        results <- queryProcessor.executeQuery(databaseName, sql = "SELECT * FROM tickers LIMIT 5")
       } yield results
 
       val results = Await.result(outcome, Duration.Inf)
-      assert(results.rows.size == 5)
-      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
+      assert(results.rows.size == 5)
+      assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
     }
 
     it("should list desired columns from all tables within a database") {
-      val list = Await.result(queryProcessor.getColumns(databaseName = "qwery", tableNamePattern = None, columnNamePattern = Some("symbol")), Duration.Inf)
+      val list = Await.result(queryProcessor.searchColumns(databaseNamePattern = Some(databaseName), tableNamePattern = None, columnNamePattern = Some("symbol")), Duration.Inf)
       logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
       list foreach { tableInfo =>
         logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")

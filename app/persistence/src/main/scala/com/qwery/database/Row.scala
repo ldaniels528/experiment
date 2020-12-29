@@ -46,6 +46,14 @@ case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
   }
 
   /**
+    * @param device the implicit [[BlockDevice]]
+    * @return a [[BinaryRow]] representation of the row
+    */
+  def toBinaryRow(id: ROWID)(implicit device: BlockDevice): BinaryRow = {
+    BinaryRow(id, metadata, fields = Row.toFieldBuffers(fields))
+  }
+
+  /**
    * @return a [[KeyValues key-value pairs representation]] of the row
    */
   def toKeyValues: KeyValues = KeyValues(toMap)

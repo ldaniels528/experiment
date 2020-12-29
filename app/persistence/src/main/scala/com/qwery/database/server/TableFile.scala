@@ -1,13 +1,13 @@
 package com.qwery.database
+package server
 
-import java.io.{File, PrintWriter}
+import java.io.File
 
-import com.qwery.database.JSONSupport.{JSONProductConversion, JSONStringConversion}
-import com.qwery.database.KeyValues.isSatisfied
-import com.qwery.database.TableFile._
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
+import com.qwery.database.server.models._
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
@@ -38,7 +38,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def count(): ROWID = device.countRows(_.isActive)
 
-  def countRows(condition: KeyValues, limit: Option[Int] = None): Int = _iterate(condition, limit) { _ => }
+  def countRows(condition: KeyValues, limit: Option[Int] = None): Int = device.whileRow(condition, limit) { _ => }
 
   /**
    * Creates a new binary search index
@@ -79,7 +79,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   def deleteRows(condition: KeyValues, limit: Option[Int] = None): Int = {
-    _iterate(condition, limit) { row => deleteRow(row.id) }
+    device.whileRow(condition, limit) { row => deleteRow(row.id) }
   }
 
   /**
@@ -203,7 +203,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
         } results.writeRow(dataRow.toBinaryRow)
 
       // otherwise perform a table scan
-      case _ => _iterate(condition, limit) { row => results.writeRow(row.toBinaryRow) }
+      case _ => device.whileRow(condition, limit) { row => results.writeRow(row.toBinaryRow) }
     }
     results
   }
@@ -355,7 +355,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   }
 
   def updateRows(values: KeyValues, condition: KeyValues, limit: Option[Int] = None): Int = {
-    _iterate(condition, limit) { row =>
+    device.whileRow(condition, limit) { row =>
       val updatedValues = row.toKeyValues ++ values
       replaceRow(row.id, updatedValues)
     }
@@ -454,22 +454,6 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     result
   }
 
-  @inline
-  private def _iterate(condition: KeyValues, limit: Option[Int] = None)(f: Row => Unit): Int = {
-    var (matches: Int, rowID: ROWID) = (0, 0)
-    val eof = device.length
-    while (rowID < eof && !limit.exists(matches >= _)) {
-      getRow(rowID) foreach { row =>
-        if (condition.isEmpty || isSatisfied(row.toKeyValues, condition)) {
-          f(row)
-          matches += 1
-        }
-      }
-      rowID += 1
-    }
-    matches
-  }
-
 }
 
 /**
@@ -484,11 +468,7 @@ object TableFile {
    * @return the [[TableFile]]
    */
   def apply(databaseName: String, tableName: String): TableFile = {
-    val (configFile, dataFile) = (getTableConfigFile(databaseName, tableName), getTableDataFile(databaseName, tableName))
-    assert(configFile.exists() && dataFile.exists(), s"Table '$databaseName.$tableName' does not exist")
-
-    val config = readTableConfig(databaseName, tableName)
-    val device = new RowOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+    val (config, device) = getTableDevice(databaseName, tableName)
     new TableFile(databaseName, tableName, config, device)
   }
 
@@ -525,40 +505,6 @@ object TableFile {
     val directory = getTableRootDirectory(databaseName, tableName)
     val files = directory.listFilesRecursively
     files.forall(_.delete())
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////
-  //  TABLE CONFIG
-  //////////////////////////////////////////////////////////////////////////////////////
-
-  def getTableConfigFile(databaseName: String, tableName: String): File = {
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
-  }
-
-  def getTableFile(databaseName: String, tableName: String): TableFile = TableFile(databaseName, tableName)
-
-  def getTableRootDirectory(databaseName: String, tableName: String): File = {
-    new File(new File(getServerRootDirectory, databaseName), tableName)
-  }
-
-  def getTableColumnFile(databaseName: String, tableName: String, columnID: Int): File = {
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName-$columnID.qdb")
-  }
-
-  def getTableDataFile(databaseName: String, tableName: String): File = {
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.qdb")
-  }
-
-  def getTableIndices(databaseName: String, tableName: String): Seq[TableIndexRef] = {
-    readTableConfig(databaseName, tableName).indices
-  }
-
-  def readTableConfig(databaseName: String, tableName: String): TableConfig = {
-    Source.fromFile(getTableConfigFile(databaseName, tableName)).use(src => src.mkString.fromJSON[TableConfig])
-  }
-
-  def writeTableConfig(databaseName: String, tableName: String, config: TableConfig): Unit = {
-    new PrintWriter(getTableConfigFile(databaseName, tableName)).use(_.println(config.toJSONPretty))
   }
 
 }

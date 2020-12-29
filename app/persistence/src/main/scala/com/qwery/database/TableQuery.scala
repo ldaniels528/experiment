@@ -9,6 +9,7 @@ import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -18,6 +19,7 @@ import scala.language.postfixOps
  * @param tableDevice the [[BlockDevice table device]] to query
  */
 class TableQuery(tableDevice: BlockDevice) {
+  private val logger = LoggerFactory.getLogger(getClass)
   private val tempName = () => java.lang.Long.toString(System.currentTimeMillis(), 36)
 
   /**
@@ -70,7 +72,7 @@ class TableQuery(tableDevice: BlockDevice) {
       val key = groupByColumnNames.flatMap(srcKV.get).mkString("\t")
       implicit val groupDevice: BlockDevice = tempTables.getOrElseUpdate(key, createTempTable(referenceColumns))
       val dstKV = srcKV.filter { case (name, _) => referenceColumnNames.contains(name) }
-      groupDevice.writeRow(dstKV.toBinaryRow)
+      groupDevice.writeRow(dstKV.toBinaryRow(groupDevice.length))
       limit.isEmpty || limit.exists(counter.addAndGet(1) < _)
     }
 
@@ -154,11 +156,9 @@ class TableQuery(tableDevice: BlockDevice) {
 
     // build the result set
     implicit val results: BlockDevice = createTempTable(projectionColumns)
-    val counter = new AtomicInteger(0)
-    tableDevice.whileRow(where) { srcRow =>
+    tableDevice.whileRow(where, limit) { srcRow =>
       val dstRow = Row(id = srcRow.id, metadata = srcRow.metadata, fields = getTransformationProjection(srcRow, projection))
-      results.writeRow(dstRow.toBinaryRow)
-      limit.isEmpty || limit.exists(counter.addAndGet(1) < _)
+      results.writeRow(dstRow.toBinaryRow(results.length))
     }
 
     // order the results?

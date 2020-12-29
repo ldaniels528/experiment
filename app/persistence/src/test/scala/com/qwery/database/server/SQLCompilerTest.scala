@@ -1,6 +1,7 @@
-package com.qwery.database
+package com.qwery.database.server
 
-import com.qwery.database.QueryProcessor.commands.{InsertRows, SelectRows}
+import com.qwery.database.KeyValues
+import com.qwery.database.server.QueryProcessor.commands.{InsertRows, SelectRows}
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.{expressions => m}
 import org.scalatest.funspec.AnyFunSpec

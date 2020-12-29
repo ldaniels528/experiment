@@ -12,8 +12,9 @@ object SQLDecompiler {
 
   def decompile(expression: Expression): String = expression match {
     case f@BasicField(name) => name.withAlias(f.alias)
+    case ConditionalOp(expr0, expr1, codeOp, sqlOp) => s"${expr0.toSQL} $sqlOp ${expr1.toSQL}"
     case f@FunctionCall(name, args) => decompileFunctionCall(name, args).withAlias(f.alias)
-    case l@Literal(value) => value.toString.withAlias(l.alias)
+    case l@Literal(value) => decompileLiteral(value).withAlias(l.alias)
     case other => die(s"Failed to decompile - $other")
   }
 
@@ -30,6 +31,13 @@ object SQLDecompiler {
 
   private def decompileFunctionCall(name: String, args: List[Expression]): String = {
     s"$name(${args.map(_.toSQL).mkString(",")})"
+  }
+
+  private def decompileLiteral(value: Any): String = {
+    value.asInstanceOf[AnyRef] match {
+      case n: Number => n.toString
+      case s => s"'$s'"
+    }
   }
 
   private def decompileSelect(select: Select): String = {

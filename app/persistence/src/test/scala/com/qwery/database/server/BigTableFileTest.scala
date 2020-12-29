@@ -2,7 +2,7 @@ package com.qwery.database.server
 
 import java.util.Date
 
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote, TableFile, KeyValues}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, StockQuote, KeyValues}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 

@@ -4,9 +4,9 @@ package server
 import java.net.URLEncoder
 
 import com.qwery.database.JSONSupport._
-import com.qwery.database.models._
 import com.qwery.database.server.DatabaseJsonProtocol._
 import com.qwery.database.server.QxWebServiceClient._
+import com.qwery.database.server.models._
 import net.liftweb.json._
 import spray.json._
 
@@ -51,12 +51,12 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     }
   }
 
-  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[TableInfo] = {
-    $http.get(toInfraUrl(databaseName, tableNamePattern, columnNamePattern)).as[List[TableInfo]]
+  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): List[ColumnSearchResult] = {
+    $http.get(toInfraUrl(databaseName, tableNamePattern, columnNamePattern)).as[List[ColumnSearchResult]]
   }
 
-  def getDatabases: List[DatabaseInfo] = {
-    $http.get(toUrl).as[List[DatabaseInfo]]
+  def getDatabases: List[DatabaseSearchResult] = {
+    $http.get(toUrl).as[List[DatabaseSearchResult]]
   }
 
   def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {

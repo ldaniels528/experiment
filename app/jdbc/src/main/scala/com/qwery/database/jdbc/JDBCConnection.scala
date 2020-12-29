@@ -42,9 +42,9 @@ class JDBCConnection(val service: DatabaseClient, val database: String, url: Str
 
   override def nativeSQL(sql: String): String = sql
 
-  override def commit(): Unit = ()
+  override def commit(): Unit = die("Transactions are not supported")
 
-  override def rollback(): Unit = ()
+  override def rollback(): Unit = die("Transactions are not supported")
 
   override def close(): Unit = closed = true
 

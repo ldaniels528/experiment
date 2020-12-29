@@ -1,4 +1,5 @@
 package com.qwery.database
+package server
 
 import java.util.UUID
 
@@ -6,10 +7,15 @@ import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Scheduler}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.ExpressionVM.evaluate
-import com.qwery.database.QueryProcessor.CommandRoutingCPU
-import com.qwery.database.QueryProcessor.commands._
 import com.qwery.database.models._
+import com.qwery.database.server.DatabaseManagementSystem._
+import com.qwery.database.server.QueryProcessor.CommandRoutingCPU
+import com.qwery.database.server.QueryProcessor.commands._
+import com.qwery.database.server.QueryProcessor.exceptions._
+import com.qwery.database.server.QueryProcessor.implicits._
+import com.qwery.database.server.models._
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.models.{Insert, OrderColumn}
 import com.qwery.util.ResourceHelper._
@@ -21,10 +27,10 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 /**
- * Query Processor
- * @param routingActors  the number of command routing actors
- * @param requestTimeout the [[FiniteDuration request timeout]]
- */
+  * Query Processor
+  * @param routingActors  the number of command routing actors
+  * @param requestTimeout the [[FiniteDuration request timeout]]
+  */
 class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors(), requestTimeout: FiniteDuration = 30.seconds) {
   private val actorSystem: ActorSystem = ActorSystem(name = "QueryProcessor")
   private val actorPool: ActorRef = actorSystem.actorOf(Props(new CommandRoutingCPU(requestTimeout))
@@ -35,25 +41,29 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
   private implicit val timeout: Timeout = requestTimeout
 
   /**
-   * Creates a new column index on a database table
-   * @param databaseName    the database name
-   * @param tableName       the table name
-   * @param indexColumnName the index column name
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Creates a new column index on a database table
+    * @param databaseName    the database name
+    * @param tableName       the table name
+    * @param indexColumnName the index column name
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def createIndex(databaseName: String, tableName: String, indexColumnName: String): Future[UpdateCount] = {
-    asUpdateCount { CreateIndex(databaseName, tableName, indexColumnName) }
+    asUpdateCount {
+      CreateIndex(databaseName, tableName, indexColumnName)
+    }
   }
 
   /**
-   * Creates a new table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param columns      the table columns
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Creates a new table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param columns      the table columns
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn]): Future[UpdateCount] = {
-    asUpdateCount { CreateTable(databaseName, tableName, columns) }
+    asUpdateCount {
+      CreateTable(databaseName, tableName, columns)
+    }
   }
 
   /**
@@ -65,65 +75,77 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @return the promise of an [[UpdateCount update count]]
     */
   def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean = false): Future[UpdateCount] = {
-    asUpdateCount { CreateView(databaseName, viewName, queryString, ifNotExists) }
+    asUpdateCount {
+      CreateView(databaseName, viewName, queryString, ifNotExists)
+    }
   }
 
   /**
-   * Deletes the contents of a field; rending it null.
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param rowID        the row ID of the field
-   * @param columnID     the column ID of the field
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Deletes the contents of a field; rending it null.
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param rowID        the row ID of the field
+    * @param columnID     the column ID of the field
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Future[UpdateCount] = {
-    asUpdateCount { DeleteField(databaseName, tableName, rowID, columnID) }
+    asUpdateCount {
+      DeleteField(databaseName, tableName, rowID, columnID)
+    }
   }
 
   /**
-   * Deletes a range of rows in the database
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param start        the initial row ID
-   * @param length       the number of rows to delete
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Deletes a range of rows in the database
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param start        the initial row ID
+    * @param length       the number of rows to delete
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int): Future[UpdateCount] = {
-    asUpdateCount { DeleteRange(databaseName, tableName, start, length) }
+    asUpdateCount {
+      DeleteRange(databaseName, tableName, start, length)
+    }
   }
 
   /**
-   * Deletes a row by ID
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param rowID        the ID of the row to delete
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Deletes a row by ID
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param rowID        the ID of the row to delete
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def deleteRow(databaseName: String, tableName: String, rowID: ROWID): Future[UpdateCount] = {
-    asUpdateCount { DeleteRow(databaseName, tableName, rowID) }
+    asUpdateCount {
+      DeleteRow(databaseName, tableName, rowID)
+    }
   }
 
   /**
-   * Deletes rows matching the given criteria (up to the optionally specified limit)
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param condition    the deletion criteria
-   * @param limit        the maximum number of records to delete
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Deletes rows matching the given criteria (up to the optionally specified limit)
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param condition    the deletion criteria
+    * @param limit        the maximum number of records to delete
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def deleteRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int]): Future[UpdateCount] = {
-    asUpdateCount { DeleteRows(databaseName, tableName, condition, limit) }
+    asUpdateCount {
+      DeleteRows(databaseName, tableName, condition, limit)
+    }
   }
 
   /**
-   * Drops a database table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param ifExists     indicates whether an existence check should be performed
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Drops a database table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param ifExists     indicates whether an existence check should be performed
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def dropTable(databaseName: String, tableName: String, ifExists: Boolean): Future[UpdateCount] = {
-    asUpdateCount { DropTable(databaseName, tableName, ifExists) }
+    asUpdateCount {
+      DropTable(databaseName, tableName, ifExists)
+    }
   }
 
   /**
@@ -134,69 +156,55 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
     * @return the promise of an [[UpdateCount update count]]
     */
   def dropView(databaseName: String, viewName: String, ifExists: Boolean): Future[UpdateCount] = {
-    asUpdateCount { DropView(databaseName, viewName, ifExists) }
+    asUpdateCount {
+      DropView(databaseName, viewName, ifExists)
+    }
   }
 
   /**
-   * Executes a SQL statement or query
-   * @param databaseName the database name
-   * @param sql the SQL statement or query
-   * @return the promise of a [[QueryResult]]
-   */
+    * Executes a SQL statement or query
+    * @param databaseName the database name
+    * @param sql          the SQL statement or query
+    * @return the promise of a [[QueryResult]]
+    */
   def executeQuery(databaseName: String, sql: String): Future[QueryResult] = {
     val command = SQLCompiler.compile(databaseName, sql)
-    (this ? command) map(_.toQueryResult(command))
+    (this ? command) map (_.toQueryResult(command))
   }
 
   /**
-   * Atomically retrieves and replaces a row by ID
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param rowID        the row ID
-   * @param f            the update function to execute
-   * @return the promise of the updated [[Row row]]
-   */
-  def fetchAndReplace(databaseName: String, tableName: String, rowID: ROWID)(f: KeyValues => KeyValues): Future[Row] = {
-    asRows { FetchAndReplace(databaseName, tableName, rowID, f) } map(_.head)
-  }
-
-  /**
-   * Retrieves rows matching the given criteria (up to the optionally specified limit)
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param condition    the deletion criteria
-   * @param limit        the maximum number of records to delete
-   * @return the promise of the updated [[Row row]]
-   */
-  def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Future[Seq[Row]] = {
-    asRows { FindRows(databaseName, tableName, condition, limit) }
-  }
-
-  def getColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]): Future[List[TableInfo]] = {
-    val command = GetColumns(databaseName, tableNamePattern, columnNamePattern)
-    this ? command map {
-      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
-      case TableInfoRetrieved(info) => info
-      case response => throw UnhandledCommandException(command, response)
-    }
-  }
-
-  /**
-    * Retrieves the list of available databases
-    * @return the promise of a collection of [[DatabaseInfo]]
+    * Atomically retrieves and replaces a row by ID
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param rowID        the row ID
+    * @param f            the update function to execute
+    * @return the promise of the updated [[Row row]]
     */
-  def getDatabases: Future[List[DatabaseInfo]] = {
-    this ? GetDatabases map {
-      case DatabaseListRetrieved(databases) => databases
-      case response => throw UnhandledCommandException(GetDatabases, response)
+  def fetchAndReplace(databaseName: String, tableName: String, rowID: ROWID)(f: KeyValues => KeyValues): Future[Row] = {
+    asRows {
+      FetchAndReplace(databaseName, tableName, rowID, f)
+    } map (_.head)
+  }
+
+  /**
+    * Retrieves rows matching the given criteria (up to the optionally specified limit)
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param condition    the deletion criteria
+    * @param limit        the maximum number of records to delete
+    * @return the promise of the updated [[Row row]]
+    */
+  def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Future[Seq[Row]] = {
+    asRows {
+      FindRows(databaseName, tableName, condition, limit)
     }
   }
 
   /**
-   * Retrieves the metrics for the specified database
-   * @param databaseName the specified database
-   * @return the promise of [[DatabaseMetrics]]
-   */
+    * Retrieves the metrics for the specified database
+    * @param databaseName the specified database
+    * @return the promise of [[DatabaseMetrics]]
+    */
   def getDatabaseMetrics(databaseName: String): Future[DatabaseMetrics] = {
     val command = GetDatabaseMetrics(databaseName)
     this ? command map {
@@ -216,16 +224,18 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
   }
 
   def getRange(databaseName: String, tableName: String, start: ROWID, length: Int): Future[Seq[Row]] = {
-    asRows { GetRange(databaseName, tableName, start, length) }
+    asRows {
+      GetRange(databaseName, tableName, start, length)
+    }
   }
 
   /**
-   * Retrieves a row by ID
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param rowID        the row ID
-   * @return the promise of the option of a [[Row]]
-   */
+    * Retrieves a row by ID
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param rowID        the row ID
+    * @return the promise of the option of a [[Row]]
+    */
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Future[Option[Row]] = {
     val command = GetRow(databaseName, tableName, rowID)
     this ? command map {
@@ -236,15 +246,17 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
   }
 
   def getTableLength(databaseName: String, tableName: String): Future[UpdateCount] = {
-    asUpdateCount { GetTableLength(databaseName, tableName) }
+    asUpdateCount {
+      GetTableLength(databaseName, tableName)
+    }
   }
 
   /**
-   * Retrieves the metrics for the specified table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @return the promise of [[TableMetrics]]
-   */
+    * Retrieves the metrics for the specified table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @return the promise of [[TableMetrics]]
+    */
   def getTableMetrics(databaseName: String, tableName: String): Future[TableMetrics] = {
     val command = GetTableMetrics(databaseName, tableName)
     this ? command map {
@@ -255,44 +267,83 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
   }
 
   /**
-   * Appends a new row to the specified database table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param values       the update [[KeyValues values]]
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Appends a new row to the specified database table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param values       the update [[KeyValues values]]
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def insertRow(databaseName: String, tableName: String, values: KeyValues): Future[UpdateCount] = {
-    asUpdateCount { InsertRow(databaseName, tableName, values) }
+    asUpdateCount {
+      InsertRow(databaseName, tableName, values)
+    }
   }
 
   /**
-   * Appends a collection of new rows to the specified database table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param columns      the table column names
-   * @param values       the collection of update [[KeyValues values]]
-   * @return the promise of an [[UpdateCount update count]]
-   */
+    * Appends a collection of new rows to the specified database table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param columns      the table column names
+    * @param values       the collection of update [[KeyValues values]]
+    * @return the promise of an [[UpdateCount update count]]
+    */
   def insertRows(databaseName: String, tableName: String, columns: Seq[String], values: List[Insert.DataRow]): Future[UpdateCount] = {
-    asUpdateCount { InsertRows(databaseName, tableName, columns, values) }
+    asUpdateCount {
+      InsertRows(databaseName, tableName, columns, values)
+    }
   }
 
   def lockRow(databaseName: String, tableName: String, rowID: ROWID): Future[String] = {
-    asLockUpdated { LockRow(databaseName, tableName, rowID) } map(_.lockID)
+    asLockUpdated {
+      LockRow(databaseName, tableName, rowID)
+    } map (_.lockID)
   }
 
   def replaceRange(databaseName: String, tableName: String, start: ROWID, length: Int, row: => KeyValues): Future[UpdateCount] = {
-    asUpdateCount { ReplaceRange(databaseName, tableName, start, length, row) }
+    asUpdateCount {
+      ReplaceRange(databaseName, tableName, start, length, row)
+    }
   }
 
   def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): Future[UpdateCount] = {
-    asUpdateCount { ReplaceRow(databaseName, tableName, rowID, values) }
+    asUpdateCount {
+      ReplaceRow(databaseName, tableName, rowID, values)
+    }
+  }
+
+  /**
+    * Searches for columns by name
+    * @param databaseNamePattern the database name search pattern (e.g. "te%t")
+    * @param tableNamePattern    the table name search pattern (e.g. "%stocks")
+    * @param columnNamePattern   the column name search pattern (e.g. "%symbol%")
+    * @return the promise of a collection of [[ColumnSearchResult search results]]
+    */
+  def searchColumns(databaseNamePattern: Option[String], tableNamePattern: Option[String], columnNamePattern: Option[String]): Future[List[ColumnSearchResult]] = {
+    val command = SearchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)
+    this ? command map {
+      case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+      case ColumnSearchResponse(results) => results
+      case response => throw UnhandledCommandException(command, response)
+    }
+  }
+
+  /**
+    * Searches for databases by name
+    * @param databaseNamePattern the database name search pattern (e.g. "te%t")
+    * @return the promise of a collection of [[DatabaseSearchResult search results]]
+    */
+  def searchDatabases(databaseNamePattern: Option[String] = None): Future[List[DatabaseSearchResult]] = {
+    val command = SearchDatabases(databaseNamePattern)
+    this ? command map {
+      case DatabaseSearchResponse(results) => results
+      case response => throw UnhandledCommandException(command, response)
+    }
   }
 
   def selectRows(databaseName: String,
                  tableName: String,
                  fields: Seq[Expression],
-                 where: KeyValues,
+                 where: KeyValues = KeyValues(),
                  groupBy: Seq[SQLField] = Nil,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int]): Future[QueryResult] = {
@@ -359,11 +410,10 @@ class QueryProcessor(routingActors: Int = Runtime.getRuntime.availableProcessors
 }
 
 /**
- * Query Processor Companion
- */
+  * Query Processor Companion
+  */
 object QueryProcessor {
-  private val logger = LoggerFactory.getLogger(getClass)
-  private val databaseWorkers = TrieMap[String, ActorRef]()
+  private[this] val logger = LoggerFactory.getLogger(getClass)
   private val systemWorkers = TrieMap[Unit, ActorRef]()
   private val tableWorkers = TrieMap[(String, String), ActorRef]()
   private val vTableWorkers = TrieMap[(String, String), ActorRef]()
@@ -384,48 +434,13 @@ object QueryProcessor {
   }
 
   /**
-    * Determine which type of actor (database, tables, views) should handle the request
-    * @param request the [[SystemIORequest request]]
-    * @param system  the [[ActorSystem actor system]]
-    * @return the [[ActorRef]]
-    */
-  private def determineWorker(request: SystemIORequest)(implicit system: ActorSystem): ActorRef = {
-
-    def launchDW(command: DatabaseIORequest): ActorRef = {
-      import command.databaseName
-      databaseWorkers.getOrElseUpdate(databaseName, system.actorOf(Props(new DatabaseCPU(databaseName))))
-    }
-
-    def launchSW(command: SystemIORequest): ActorRef = {
-      systemWorkers.getOrElseUpdate((), system.actorOf(Props(new SystemCPU())))
-    }
-
-    def launchTW(command: TableIORequest): ActorRef = {
-      import command.{databaseName, tableName}
-      tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
-    }
-
-    def launchVTW(command: TableIORequest): ActorRef = {
-      import command.{databaseName, tableName}
-      vTableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new VirtualTableCPU(databaseName, tableName))))
-    }
-
-    request match {
-      case cmd: FindRows => if (VirtualTableFile.isVirtualTable(cmd)) launchVTW(cmd) else launchTW(cmd)
-      case cmd: SelectRows => if (VirtualTableFile.isVirtualTable(cmd)) launchVTW(cmd) else launchTW(cmd)
-      case cmd: VirtualTableIORequest => launchVTW(cmd)
-      case cmd: TableIORequest => launchTW(cmd)
-      case cmd: DatabaseIORequest => launchDW(cmd)
-      case cmd => launchSW(cmd)
-    }
-  }
-
-  /**
    * Command Routing CPU
    * @param requestTimeout the [[FiniteDuration request timeout]]
    */
   class CommandRoutingCPU(requestTimeout: FiniteDuration) extends Actor {
+
     import context.{dispatcher, system}
+
     private implicit val timeout: Timeout = requestTimeout
 
     override def receive: Receive = {
@@ -445,6 +460,43 @@ object QueryProcessor {
         unhandled(message)
     }
 
+    /**
+      * Determine which type of actor (database, tables, views) should handle the request
+      * @param request the [[SystemIORequest request]]
+      * @param system  the [[ActorSystem actor system]]
+      * @return the [[ActorRef]]
+      */
+    private def determineWorker(request: SystemIORequest)(implicit system: ActorSystem): ActorRef = {
+
+      def launchSW(command: SystemIORequest): ActorRef = {
+        systemWorkers.getOrElseUpdate((), system.actorOf(Props(new SystemCPU())))
+      }
+
+      def launchTW(command: TableIORequest): ActorRef = {
+        import command.{databaseName, tableName}
+        tableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new TableCPU(databaseName, tableName))))
+      }
+
+      def launchVTW(command: TableIORequest): ActorRef = {
+        import command.{databaseName, tableName}
+        vTableWorkers.getOrElseUpdate(databaseName -> tableName, system.actorOf(Props(new VirtualTableCPU(databaseName, tableName))))
+      }
+
+      request match {
+        case cmd: FindRows => if (isVirtualTable(cmd.databaseName, cmd.tableName)) launchVTW(cmd) else launchTW(cmd)
+        case cmd: SelectRows => if (isVirtualTable(cmd.databaseName, cmd.tableName)) launchVTW(cmd) else launchTW(cmd)
+        case cmd: VirtualTableIORequest => launchVTW(cmd)
+        case cmd: TableIORequest => launchTW(cmd)
+        case cmd => launchSW(cmd)
+      }
+    }
+
+    /**
+      * Processes database commands
+      * @param caller  the calling [[ActorRef actor]]
+      * @param command the [[SystemIORequest database command]]
+      * @return the promise of a [[DatabaseIOResponse response]]
+      */
     private def processRequest(caller: ActorRef, command: SystemIORequest): Future[DatabaseIOResponse] = {
       try {
         // perform the remote command
@@ -465,30 +517,16 @@ object QueryProcessor {
   }
 
   /**
-   * Database Command Processing Unit Actor
-   * @param databaseName the database name
-   */
-  class DatabaseCPU(databaseName: String) extends Actor {
-    private lazy val databaseFile = DatabaseFile(databaseName)
-
-    override def receive: Receive = {
-      case cmd: GetDatabaseMetrics =>
-        invoke(cmd, sender())(databaseFile.getDatabaseMetrics) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
-      case message =>
-        logger.error(s"Unhandled D-CPU processing message $message")
-        unhandled(message)
-    }
-  }
-
-  /**
     * System Command Processing Unit Actor
     */
   class SystemCPU() extends Actor {
     override def receive: Receive = {
-      case cmd@GetColumns(databaseName, tableNamePattern, columnNamePattern) =>
-        invoke(cmd, sender())(DatabaseFile.listColumns(databaseName, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! TableInfoRetrieved(data) }
-      case cmd@GetDatabases =>
-        invoke(cmd, sender())(DatabaseFile.listDatabases) { case (caller, metrics) => caller ! DatabaseListRetrieved(metrics) }
+      case cmd@GetDatabaseMetrics(databaseName) =>
+        invoke(cmd, sender())(getDatabaseMetrics(databaseName)) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
+      case cmd@SearchColumns(databaseNamePattern, tableNamePattern, columnNamePattern) =>
+        invoke(cmd, sender())(searchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! ColumnSearchResponse(data) }
+      case cmd@SearchDatabases(pattern) =>
+        invoke(cmd, sender())(searchDatabases(pattern)) { case (caller, metrics) => caller ! DatabaseSearchResponse(metrics) }
       case message =>
         logger.error(s"Unhandled D-CPU processing message $message")
         unhandled(message)
@@ -614,6 +652,13 @@ object QueryProcessor {
     }
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  //      EXCEPTIONS
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+    * Database commands
+    */
   object commands {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -658,10 +703,6 @@ object QueryProcessor {
                         condition: KeyValues,
                         limit: Option[Int] = None) extends TableIORequest
 
-    case class GetColumns(databaseName: String, tableNamePattern: Option[String], columnNamePattern: Option[String]) extends SystemIORequest
-
-    case object GetDatabases extends SystemIORequest
-
     case class GetDatabaseMetrics(databaseName: String) extends DatabaseIORequest
 
     case class GetField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableIORequest
@@ -673,6 +714,10 @@ object QueryProcessor {
     case class GetTableLength(databaseName: String, tableName: String) extends TableIORequest
 
     case class GetTableMetrics(databaseName: String, tableName: String) extends TableIORequest
+
+    case class SearchColumns(databaseNamePattern: Option[String], tableNamePattern: Option[String], columnNamePattern: Option[String]) extends SystemIORequest
+
+    case class SearchDatabases(databaseNamePattern: Option[String]) extends SystemIORequest
 
     case class SelectRows(databaseName: String,
                           tableName: String,
@@ -741,7 +786,9 @@ object QueryProcessor {
     //      RESPONSE COMMANDS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class DatabaseListRetrieved(databases: List[DatabaseInfo]) extends DatabaseIOResponse
+    case class ColumnSearchResponse(columns: List[ColumnSearchResult]) extends DatabaseIOResponse
+
+    case class DatabaseSearchResponse(databases: List[DatabaseSearchResult]) extends DatabaseIOResponse
 
     case class DatabaseMetricsRetrieved(metrics: DatabaseMetrics) extends DatabaseIOResponse
 
@@ -759,9 +806,48 @@ object QueryProcessor {
 
     case class RowUpdated(rowID: ROWID, isSuccess: Boolean) extends DatabaseIOResponse
 
-    case class TableInfoRetrieved(tables: List[TableInfo]) extends DatabaseIOResponse
-
     case class TableMetricsRetrieved(metrics: TableMetrics) extends DatabaseIOResponse
+
+  }
+
+  /**
+    * Processor exceptions
+    */
+  object exceptions {
+
+    case class FailedCommandException(command: SystemIORequest, cause: Throwable)
+      extends RuntimeException(s"Request '$command' failed", cause)
+
+    case class UnhandledCommandException(command: SystemIORequest, response: DatabaseIOResponse)
+      extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
+
+  }
+
+  /**
+    * Implicit definitions
+    */
+  object implicits {
+
+    /**
+      * Database I/O Response Enriched
+      * @param response the [[DatabaseIOResponse response]]
+      */
+    final implicit class DatabaseIOResponseEnriched(val response: DatabaseIOResponse) extends AnyVal {
+      def toQueryResult(request: DatabaseIORequest): QueryResult = {
+        val databaseName = request.databaseName
+        val tableName: String = request match {
+          case cmd: TableIORequest => cmd.tableName
+          case _ => ""
+        }
+        response match {
+          case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
+          case QueryResultRetrieved(result) => result
+          case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
+          case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count) // TODO  fix me!
+          case response => throw UnhandledCommandException(request, response)
+        }
+      }
+    }
 
   }
 

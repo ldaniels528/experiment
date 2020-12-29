@@ -1,15 +1,11 @@
 package com.qwery.database
+package server
 
-import java.io.{File, PrintWriter}
-import java.util.concurrent.atomic.AtomicInteger
-
-import com.qwery.database.QueryProcessor.commands.{SelectRows, TableIORequest}
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.server.QueryProcessor.commands.SelectRows
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
-import com.qwery.util.ResourceHelper._
-
-import scala.io.Source
 
 /**
   * Represents a virtual table file (e.g. view)
@@ -28,10 +24,8 @@ case class VirtualTableFile(databaseName: String, viewName: String, device: Bloc
     */
   def getRows(condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
     implicit val results: BlockDevice = createTempTable(device.columns)
-    val count = new AtomicInteger()
-    device.whileRow(condition) { row =>
+    device.whileRow(condition, limit) { row =>
       results.writeRow(row.toBinaryRow)
-      limit.isEmpty || limit.exists(_ > count.addAndGet(1))
     }
     results
   }
@@ -77,37 +71,12 @@ object VirtualTableFile {
     viewFile.exists() && getViewConfigFile(databaseName, viewName).delete()
   }
 
-  //////////////////////////////////////////////////////////////////////////////////////
-  //  VIEW CONFIG
-  //////////////////////////////////////////////////////////////////////////////////////
-
-  def getViewConfigFile(databaseName: String, viewName: String): File = {
-    new File(new File(getServerRootDirectory, databaseName), s"$viewName.sql")
-  }
-
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {
     SQLCompiler.compile(databaseName, sql = readViewConfig(databaseName, viewName)) match {
       case SelectRows(_, tableName, fields, where, groupBy, orderBy, limit) =>
         TableFile(databaseName, tableName).selectRows(fields, where, groupBy, orderBy, limit)
       case other => die(s"Unhandled view query model - $other")
     }
-  }
-
-  def isVirtualTable(databaseName: String, viewName: String): Boolean = {
-    getViewConfigFile(databaseName, viewName).exists()
-  }
-
-  def isVirtualTable(command: TableIORequest): Boolean = {
-    getViewConfigFile(command.databaseName, command.tableName).exists()
-  }
-
-  def readViewConfig(databaseName: String, viewName: String): String = {
-    val file = getViewConfigFile(databaseName, viewName)
-    if (!file.exists()) die(s"Table '$viewName' does not exist") else Source.fromFile(file).use(_.mkString)
-  }
-
-  def writeViewConfig(databaseName: String, viewName: String, queryString: String): Unit = {
-    new PrintWriter(getViewConfigFile(databaseName, viewName)).use(_.println(queryString))
   }
 
 }

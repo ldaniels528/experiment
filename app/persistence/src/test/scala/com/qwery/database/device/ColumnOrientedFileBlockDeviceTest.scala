@@ -3,7 +3,8 @@ package com.qwery.database.device
 import java.util.Date
 
 import com.qwery.database.ColumnTypes.{DateType, DoubleType, StringType}
-import com.qwery.database.{Column, ColumnMetadata, Row, KeyValues, TableFile}
+import com.qwery.database.DatabaseFiles._
+import com.qwery.database.{Column, ColumnMetadata, KeyValues, Row}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -25,7 +26,7 @@ class ColumnOrientedFileBlockDeviceTest extends AnyFunSpec {
       )
 
       // get a reference to the file
-      val file = TableFile.getTableDataFile("test", "stocks_columns")
+      val file = getTableDataFile("test", "stocks_columns")
       file.getParentFile.mkdirs()
 
       // create a column-oriented file device

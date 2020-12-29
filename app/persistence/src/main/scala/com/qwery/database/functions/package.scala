@@ -23,6 +23,7 @@ package object functions {
     * System-defined transformation functions
     */
   val transformationFunctions: Map[String, (String, List[Expression]) => TransformationFunction] = Map(
+    "count" -> Count,
     "round" -> Round
   )
 

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
 import akka.actor.ActorSystem
-import com.qwery.database.server.DatabaseServer
+import com.qwery.database.server.{DatabaseServer, QueryProcessor}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory

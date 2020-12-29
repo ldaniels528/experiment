@@ -8,9 +8,10 @@ import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.JSONSupport._
-import com.qwery.database.models._
 import com.qwery.database.server.DatabaseJsonProtocol._
+import com.qwery.database.server.models._
 import com.qwery.models.expressions.Expression
 import org.slf4j.LoggerFactory
 import spray.json._
@@ -105,8 +106,11 @@ object DatabaseServer {
     */
   private def routesRoot(implicit qp: QueryProcessor): Route = {
     get {
-      // retrieve the list of databases (e.g. "GET /")
-      complete(qp.getDatabases)
+      // retrieve the list of databases (e.g. "GET /?database=test%")
+      extract(_.request.uri.query()) { params =>
+        val databasePattern_? = params.get("database")
+        complete(qp.searchDatabases(databasePattern_?))
+      }
     }
   }
 
@@ -141,8 +145,8 @@ object DatabaseServer {
     get {
       // retrieve the table metrics (e.g. "GET /c/shocktrade?table=stock&column=symbol")
       extract(_.request.uri.query()) { params =>
-        val (tablePattern_?, columnPattern_?) = (params.get("table"), params.get("column"))
-        complete(qp.getColumns(databaseName, tablePattern_?, columnPattern_?))
+        val (databasePattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("table"), params.get("column"))
+        complete(qp.searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
       }
     }
   }
@@ -191,14 +195,14 @@ object DatabaseServer {
   private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String): Route = {
     val dataFile = format.toLowerCase() match {
       case "bin" | "binary" | "raw" =>
-        TableFile.getTableDataFile(databaseName, tableName)
+        getTableDataFile(databaseName, tableName)
       case "csv" =>
         val csvFile = createTempFile()
-        TableFile.getTableFile(databaseName, tableName).exportAsCSV(csvFile)
+        TableFile(databaseName, tableName).exportAsCSV(csvFile)
         csvFile
       case "json" =>
         val jsonFile = createTempFile()
-        TableFile.getTableFile(databaseName, tableName).exportAsJSON(jsonFile)
+        TableFile(databaseName, tableName).exportAsJSON(jsonFile)
         jsonFile
       case other =>
         die(s"Unsupported file format '$other'")
@@ -240,7 +244,7 @@ object DatabaseServer {
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
         parameters('__contentType.?) { contentType_? =>
-          val column = TableFile.getTableFile(databaseName, tableName).device.columns(columnID)
+          val column = TableFile(databaseName, tableName).device.columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
           complete(qp.getField(databaseName, tableName, rowID, columnID) map { field =>
             val fieldBytes = field.typedValue.encode(column)
@@ -259,7 +263,7 @@ object DatabaseServer {
       put {
         // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
         entity(as[String]) { value =>
-          val device = TableFile.getTableFile(databaseName, tableName).device
+          val device = TableFile(databaseName, tableName).device
           assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
           val columnType = device.columns(columnID).metadata.`type`
           complete(qp.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))

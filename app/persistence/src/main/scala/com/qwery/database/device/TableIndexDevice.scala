@@ -4,7 +4,9 @@ package device
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
+
 import com.qwery.database.ColumnTypes.IntType
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.models.TableIndexRef
@@ -195,7 +197,7 @@ object TableIndexDevice {
    * @return the [[TableIndexDevice table index]]
    */
   def apply(ref: TableIndexRef): TableIndexDevice = {
-    val tableConfig = TableFile.readTableConfig(ref.databaseName, ref.tableName)
+    val tableConfig = readTableConfig(ref.databaseName, ref.tableName)
     val indexColumn = tableConfig.columns.find(_.name == ref.indexColumnName).map(_.toColumn)
       .getOrElse(throw ColumnNotFoundException(ref.tableName, ref.indexColumnName))
     new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn))

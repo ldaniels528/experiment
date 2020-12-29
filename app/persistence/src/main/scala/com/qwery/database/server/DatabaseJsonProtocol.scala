@@ -7,6 +7,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.models._
+import com.qwery.database.server.models._
 import com.qwery.database.types.QxAny
 import com.qwery.models.TypeAsEnum
 import spray.json._
@@ -60,7 +61,7 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
-  implicit val databaseInfoJsonFormat: RootJsonFormat[DatabaseInfo] = jsonFormat1(DatabaseInfo.apply)
+  implicit val databaseInfoJsonFormat: RootJsonFormat[DatabaseSearchResult] = jsonFormat1(DatabaseSearchResult.apply)
 
   implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat2(DatabaseMetrics.apply)
 
@@ -72,9 +73,9 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
-  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat2(TableConfig.apply)
+  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat3(TableConfig.apply)
 
-  implicit val tableInfoJsonFormat: RootJsonFormat[TableInfo] = jsonFormat3(TableInfo.apply)
+  implicit val tableInfoJsonFormat: RootJsonFormat[ColumnSearchResult] = jsonFormat3(ColumnSearchResult.apply)
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 

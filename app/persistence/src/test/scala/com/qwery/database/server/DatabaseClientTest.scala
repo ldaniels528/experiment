@@ -5,7 +5,7 @@ import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
-import com.qwery.database.models.TableCreation
+import com.qwery.database.server.models._
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -146,7 +146,7 @@ class DatabaseClientTest extends AnyFunSpec {
     }
 
     it("should execute queries against the server") {
-      val sql = s"SELECT * FROM $tableNameB WHERE symbol = 'AAPL'"
+      val sql = s"SELECT * FROM $tableNameB WHERE exchange = 'NASDAQ' LIMIT 5"
       invoke(sql, service.executeQuery(databaseName, sql))
     }
 
@@ -157,7 +157,7 @@ class DatabaseClientTest extends AnyFunSpec {
     }
 
     it("should list desired columns from all tables within a database") {
-      val list = service.getColumns(databaseName = "qwery", tableNamePattern = None, columnNamePattern = Some("symbol"))
+      val list = service.getColumns(databaseName, tableNamePattern = None, columnNamePattern = Some("symbol"))
       logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
       list foreach { tableInfo =>
         logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
@@ -188,7 +188,12 @@ class DatabaseClientTest extends AnyFunSpec {
       case rows: Seq[_] =>
         logger.info(f"$label ~> (${rows.size} items) [$responseTime%.1f msec]")
         rows.zipWithIndex.foreach { case (row, index) => logger.info(f"[$index%02d] $row") }
-      case result => logger.info(f"$label ~> $result [$responseTime%.1f msec]")
+      case results: QueryResult =>
+        logger.info(results.columns.map(c => f"${c.name}%-12s").mkString(" | "))
+        logger.info(results.columns.map(_ => "-" * 12).mkString("-+-"))
+        for(row <- results.rows) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
+      case result =>
+        logger.info(f"$label ~> $result [$responseTime%.1f msec]")
     }
     results
   }

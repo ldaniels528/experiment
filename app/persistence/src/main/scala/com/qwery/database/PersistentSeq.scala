@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
 
 import com.qwery.database.Codec._
+import com.qwery.database.DatabaseFiles._
 import com.qwery.database.device._
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models.TableConfig
@@ -429,7 +430,7 @@ object PersistentSeq {
 
   /**
    * Creates a new persistent sequence implementation
-   * @tparam A the product class
+   * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](): PersistentSeq[A] = builder[A].build
@@ -437,7 +438,7 @@ object PersistentSeq {
   /**
    * Creates a new disk-based sequence implementation
    * @param persistenceFile the persistence [[File file]]
-   * @tparam A the product class
+   * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](persistenceFile: File): PersistentSeq[A] = {
@@ -448,24 +449,25 @@ object PersistentSeq {
    * Creates a new database table-based sequence implementation
    * @param databaseName the database name
    * @param tableName    the table name
-   * @tparam A the product class
+   * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](databaseName: String, tableName: String): PersistentSeq[A] = {
     val `class`: Class[A] = classTag[A].runtimeClass.asInstanceOf[Class[A]]
-    new PersistentSeq[A](TableFile(databaseName, tableName).device, `class`)
+    val (_, device) = getTableDevice(databaseName, tableName)
+    new PersistentSeq[A](device, `class`)
   }
 
   /**
    * Creates a new builder
-   * @tparam A the product type
+   * @tparam A the [[Product product type]]
    * @return a new [[Builder]]
    */
   def builder[A <: Product : ClassTag]: Builder[A] = new PersistentSeq.Builder[A]()
 
   /**
-   * Retrieves the columns that represent the [[Product product type]] T
-   * @tparam T the [[Product product type]] T
+   * Retrieves the columns that represent the [[Product product type]]
+   * @tparam T the [[Product product type]]
    * @return a tuple of collection of [[Column columns]]
    */
   def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
@@ -500,7 +502,7 @@ object PersistentSeq {
 
   /**
    * PersistentSeq Builder
-   * @tparam A the product type
+   * @tparam A the [[Product product type]]
    */
   class Builder[A <: Product : ClassTag]() {
     private val (columns, theClass) = toColumns[A]
@@ -572,12 +574,13 @@ object PersistentSeq {
     }
 
     def withTable(databaseName: String, tableName: String): this.type = {
-      this.persistenceFile = TableFile.getTableDataFile(databaseName, tableName)
+      this.persistenceFile = getTableDataFile(databaseName, tableName)
+
       // create the table
       val tableDirectory = persistenceFile.getParentFile
       if (!tableDirectory.exists()) {
         tableDirectory.mkdirs()
-        TableFile.writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), indices = Nil))
+        writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), isColumnar = true))
       }
       this
     }
