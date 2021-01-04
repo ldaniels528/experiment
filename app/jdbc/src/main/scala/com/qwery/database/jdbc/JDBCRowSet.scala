@@ -102,15 +102,15 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def moveToCurrentRow(): Unit = rowIndex = rows.length - 1
 
-  def insertRow(): Unit = connection.service.insertRow(connection.database, tableName, constructRow)
+  def insertRow(): Unit = connection.client.insertRow(connection.database, tableName, constructRow)
 
-  def updateRow(): Unit = connection.service.replaceRow(connection.database, tableName, __id(), constructRow)
+  def updateRow(): Unit = connection.client.replaceRow(connection.database, tableName, __id(), constructRow)
 
-  def deleteRow(): Unit = connection.service.deleteRow(connection.database, tableName, __id())
+  def deleteRow(): Unit = connection.client.deleteRow(connection.database, tableName, __id())
 
   def refreshRow(): Unit = {
     val refreshedRow = for {
-      row <- connection.service.getRow(connection.database, tableName, __id()).toArray
+      row <- connection.client.getRow(connection.database, tableName, __id()).toArray
       name <- columns.map(_.name)
     } yield row.get(name)
 

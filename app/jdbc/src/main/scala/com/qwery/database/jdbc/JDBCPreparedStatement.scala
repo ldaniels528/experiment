@@ -35,7 +35,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
   override def executeBatch(): Array[Int] = {
     val outcome = (batches.reverse map { params =>
       val sql = populateSQLTemplate(query, indices, params)
-      val outcome = connection.service.executeQuery(connection.database, sql)
+      val outcome = connection.client.executeQuery(connection.database, sql)
       outcome.count
     }).toArray
     clearBatch()
@@ -44,7 +44,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def executeQuery(): ResultSet = {
     val sql = populateSQLTemplate(query, indices, parameterMetaData.getParameters)
-    val outcome = connection.service.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.database, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     resultSet
@@ -52,7 +52,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def executeUpdate(): Int = {
     val sql = populateSQLTemplate(query, indices, parameterMetaData.getParameters)
-    val outcome = connection.service.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.database, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     updateCount

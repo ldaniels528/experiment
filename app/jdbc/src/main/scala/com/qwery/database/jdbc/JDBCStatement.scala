@@ -54,7 +54,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection) extends Statem
   override def execute(sql: String, columnNames: Array[String]): Boolean = executeUpdate(sql, columnNames) > 0
 
   override def executeQuery(sql: String): ResultSet = {
-    val outcome = connection.service.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.database, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     resultSet
@@ -67,7 +67,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection) extends Statem
   override def executeUpdate(sql: String, columnNames: Array[String]): Int = executeUpdate(sql)
 
   override def executeUpdate(sql: String): Int = {
-    val outcome = connection.service.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.database, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     updateCount

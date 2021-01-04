@@ -14,10 +14,10 @@ import scala.collection.concurrent.TrieMap
 
 /**
  * Qwery JDBC Connection
- * @param service  the [[DatabaseClient]]
- * @param database the database name
+ * @param client   the [[DatabaseClient database client]]
+ * @param database the default database name
  */
-class JDBCConnection(val service: DatabaseClient, val database: String, url: String) extends Connection with JDBCWrapper {
+class JDBCConnection(val client: DatabaseClient, val database: String, url: String) extends Connection with JDBCWrapper {
   private val clientInfoMap = TrieMap[String, String]()
   private val savePoints = TrieMap[String, Savepoint]()
   private var warnings: Option[SQLWarning] = None

@@ -103,7 +103,7 @@ class DatabaseClientTest extends AnyFunSpec {
       val (rowID, columnID) = (0, 0)
       invoke(
         label = s"service.getField($databaseName, $tableNameA, rowID = $rowID, columnID = $columnID)",
-        block = service.getField(databaseName, tableNameA, rowID, columnID)
+        block = service.getFieldAsBytes(databaseName, tableNameA, rowID, columnID)
       )
     }
 

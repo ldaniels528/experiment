@@ -2,13 +2,14 @@ package com.qwery.database
 package server
 
 import java.net.URLEncoder
-
 import com.qwery.database.JSONSupport._
 import com.qwery.database.server.DatabaseJsonProtocol._
 import com.qwery.database.server.QxWebServiceClient._
 import com.qwery.database.server.models._
 import net.liftweb.json._
 import spray.json._
+
+import java.io.File
 
 /**
  * Qwery Database Client
@@ -55,8 +56,12 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     $http.get(toUrl(databaseName)).as[DatabaseMetrics]
   }
 
-  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
-    $http.download(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID")
+  def getFieldAsBytes(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {
+    $http.getAsBytes(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID")
+  }
+
+  def getFieldAsFile(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): File = {
+    $http.getAsFile(url = s"${toUrl(databaseName, tableName)}/$rowID/$columnID")
   }
 
   def getLength(databaseName: String, tableName: String): UpdateCount = {
