@@ -20,6 +20,11 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   private implicit val formats: DefaultFormats = DefaultFormats
   private val charSetName = "utf-8"
   private val $http = new QxWebServiceClient()
+  private var closed = false
+
+  def close(): Unit = closed = true
+
+  def isClosed: Boolean = closed
 
   def createTable(databaseName: String, ref: TableCreation): UpdateCount = {
     $http.post(toUrl(databaseName), ref.toJSON.getBytes(charSetName)).as[UpdateCount]

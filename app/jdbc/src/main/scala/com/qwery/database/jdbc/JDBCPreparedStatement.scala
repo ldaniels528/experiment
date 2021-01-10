@@ -15,12 +15,12 @@ import scala.language.postfixOps
 /**
  * Qwery JDBC Prepared Statement
  * @param connection the [[JDBCConnection connection]]
- * @param query      the SQL query
+ * @param sql        the SQL query
  */
-class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: String)
+class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: String)
   extends JDBCStatement(connection) with PreparedStatement {
   protected var batches: List[List[Any]] = Nil
-  protected val indices: List[Int] = parseSQLTemplate(query)
+  protected val indices: List[Int] = parseSQLTemplate(sql)
 
   @BeanProperty val parameterMetaData = new JDBCParameterMetaData()
 
@@ -34,8 +34,8 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def executeBatch(): Array[Int] = {
     val outcome = (batches.reverse map { params =>
-      val sql = populateSQLTemplate(query, indices, params)
-      val outcome = connection.client.executeQuery(connection.database, sql)
+      val _sql = populateSQLTemplate(sql, indices, params)
+      val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
       outcome.count
     }).toArray
     clearBatch()
@@ -43,16 +43,16 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
   }
 
   override def executeQuery(): ResultSet = {
-    val sql = populateSQLTemplate(query, indices, parameterMetaData.getParameters)
-    val outcome = connection.client.executeQuery(connection.database, sql)
+    val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
+    val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     resultSet
   }
 
   override def executeUpdate(): Int = {
-    val sql = populateSQLTemplate(query, indices, parameterMetaData.getParameters)
-    val outcome = connection.client.executeQuery(connection.database, sql)
+    val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
+    val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     updateCount
@@ -88,6 +88,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, query: Str
 
   override def setAsciiStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x
 
+  @deprecated
   override def setUnicodeStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x
 
   override def setBinaryStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x

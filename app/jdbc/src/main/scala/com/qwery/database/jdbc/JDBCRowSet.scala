@@ -9,12 +9,17 @@ import com.qwery.database.models.TableColumn
 
 /**
  * Qwery JDBC Row Set
- * @param connection the [[JDBCConnection connection]]
- * @param tableName  the table name
- * @param columns    the collection of [[TableColumn columns]]
- * @param rows       the row data
+ * @param connection   the [[JDBCConnection connection]]
+ * @param databaseName the database name
+ * @param schemaName   the schema name
+ * @param tableName    the table name
+ * @param columns      the collection of [[TableColumn columns]]
+ * @param rows         the row data
+ * @param __ids        the collection of row identifiers
  */
 class JDBCRowSet(connection: JDBCConnection,
+                 databaseName: String,
+                 schemaName: String,
                  tableName: String,
                  columns: Seq[TableColumn],
                  rows: Seq[Seq[Option[Any]]],
@@ -102,15 +107,15 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def moveToCurrentRow(): Unit = rowIndex = rows.length - 1
 
-  def insertRow(): Unit = connection.client.insertRow(connection.database, tableName, constructRow)
+  def insertRow(): Unit = connection.client.insertRow(databaseName, tableName, constructRow)
 
-  def updateRow(): Unit = connection.client.replaceRow(connection.database, tableName, __id(), constructRow)
+  def updateRow(): Unit = connection.client.replaceRow(databaseName, tableName, __id(), constructRow)
 
-  def deleteRow(): Unit = connection.client.deleteRow(connection.database, tableName, __id())
+  def deleteRow(): Unit = connection.client.deleteRow(databaseName, tableName, __id())
 
   def refreshRow(): Unit = {
     val refreshedRow = for {
-      row <- connection.client.getRow(connection.database, tableName, __id()).toArray
+      row <- connection.client.getRow(databaseName, tableName, __id()).toArray
       name <- columns.map(_.name)
     } yield row.get(name)
 

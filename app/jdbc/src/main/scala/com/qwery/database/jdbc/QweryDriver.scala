@@ -23,8 +23,11 @@ class QweryDriver extends Driver {
 
   override def connect(url: String, info: Properties): Connection = {
     url match {
-      case urlPattern(host, port, database) =>
-        new JDBCConnection(client = DatabaseClient(host, port.toInt), database = database, url = url)
+      case urlPattern(host, port, databaseName) =>
+        val conn = new JDBCConnection(client = DatabaseClient(host, port.toInt), url = url)
+        conn.setCatalog(databaseName)
+        conn.setSchema(databaseName)
+        conn
       case x => die(s"Invalid JDBC URL: $x")
     }
   }

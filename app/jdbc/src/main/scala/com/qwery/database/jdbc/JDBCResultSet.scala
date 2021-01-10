@@ -17,21 +17,24 @@ import scala.beans.{BeanProperty, BooleanBeanProperty}
  * Qwery JDBC Result Set
  * @param connection   the [[JDBCConnection connection]]
  * @param databaseName the database name
+ * @param schemaName   the schema name
  * @param tableName    the table name
- * @param columns      the [[TableColumn columns]]
+ * @param columns      the [[TableColumn table columns]]
  * @param data         the collection of row data
+ * @param __ids        the collection of row identifiers
  */
 class JDBCResultSet(connection: JDBCConnection,
                     databaseName: String,
+                    schemaName: String,
                     tableName: String,
                     columns: Seq[TableColumn],
                     data: Seq[Seq[Option[Any]]],
-                   __ids: Seq[ROWID] = Nil) extends ResultSet with JDBCWrapper {
-  private var isRowUpdated = false
-  private var isRowInserted = false
-  private var isRowDeleted = false
+                    __ids: Seq[ROWID] = Nil) extends ResultSet with JDBCWrapper {
+  private var isRowUpdated: Boolean = false
+  private var isRowInserted: Boolean = false
+  private var isRowDeleted: Boolean = false
   private val sqlWarning = new SQLWarning()
-  private val rows = new JDBCRowSet(connection, tableName, columns, data, __ids)
+  private val rows = new JDBCRowSet(connection, databaseName, schemaName, tableName, columns, data, __ids)
 
   @BooleanBeanProperty var closed: Boolean = false
   @BeanProperty val concurrency: Int = ResultSet.CONCUR_UPDATABLE
@@ -39,7 +42,7 @@ class JDBCResultSet(connection: JDBCConnection,
   @BeanProperty var fetchDirection: Int = ResultSet.FETCH_FORWARD
   @BeanProperty var fetchSize: Int = 20
   @BeanProperty val holdability: Int = ResultSet.HOLD_CURSORS_OVER_COMMIT
-  @BeanProperty val metaData = new JDBCResultSetMetaData(databaseName, tableName, columns)
+  @BeanProperty val metaData = new JDBCResultSetMetaData(databaseName, schemaName, tableName, columns)
   @BeanProperty val `type`: Int = ResultSet.TYPE_SCROLL_SENSITIVE
 
   override def next(): Boolean = rows.next()
@@ -117,7 +120,7 @@ class JDBCResultSet(connection: JDBCConnection,
   override def getObject(columnLabel: String): AnyRef = rows.getColumnValueOpt[AnyRef](columnLabel).orNull
 
   override def findColumn(columnLabel: String): Int = columns.indexWhere(_.name == columnLabel) match {
-    case -1 => -1
+    case -1 => throw new SQLException(s"Column '$columnLabel' not found'")
     case index => index + 1
   }
 

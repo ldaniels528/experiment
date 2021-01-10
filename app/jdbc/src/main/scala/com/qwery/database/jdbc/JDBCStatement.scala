@@ -10,7 +10,8 @@ import scala.collection.mutable.ListBuffer
  * Qwery Statement
  * @param connection the [[JDBCConnection connection]]
  */
-class JDBCStatement(@BeanProperty val connection: JDBCConnection) extends Statement with JDBCWrapper {
+class JDBCStatement(@BeanProperty val connection: JDBCConnection)
+  extends Statement with JDBCWrapper {
   private val batches = ListBuffer[String]()
   private var _isCloseOnCompletion: Boolean = _
 
@@ -54,7 +55,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection) extends Statem
   override def execute(sql: String, columnNames: Array[String]): Boolean = executeUpdate(sql, columnNames) > 0
 
   override def executeQuery(sql: String): ResultSet = {
-    val outcome = connection.client.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.getCatalog, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     resultSet
@@ -67,7 +68,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection) extends Statem
   override def executeUpdate(sql: String, columnNames: Array[String]): Int = executeUpdate(sql)
 
   override def executeUpdate(sql: String): Int = {
-    val outcome = connection.client.executeQuery(connection.database, sql)
+    val outcome = connection.client.executeQuery(connection.getCatalog, sql)
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count
     updateCount
