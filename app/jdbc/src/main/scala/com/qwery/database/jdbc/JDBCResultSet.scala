@@ -430,6 +430,7 @@ object JDBCResultSet {
   def apply(connection: JDBCConnection, queryResult: QueryResult) = new JDBCResultSet(
     connection = connection,
     databaseName = queryResult.databaseName,
+    schemaName = queryResult.databaseName,
     tableName = queryResult.tableName,
     columns = queryResult.columns,
     data = queryResult.rows,
