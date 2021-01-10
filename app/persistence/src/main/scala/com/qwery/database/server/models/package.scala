@@ -5,6 +5,7 @@ import com.qwery.database.device.BlockDevice
 import com.qwery.database.models.TableColumn
 import com.qwery.database.models.TableColumn._
 import com.qwery.database.{Column, KeyValues, ROWID}
+import org.slf4j.Logger
 
 package object models {
 
@@ -37,16 +38,22 @@ package object models {
       }
     }
 
+    def show(implicit logger: Logger): Unit = {
+      logger.info(columns.map(c => f"${c.name}%-12s").mkString(" | "))
+      logger.info(columns.map(_ => "-" * 12).mkString("-+-"))
+      for (row <- rows) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
+    }
+
     override def toString: String = this.toJSON
   }
 
   object QueryResult {
-    def toQueryResult(databaseName: String, tableName: String, out: BlockDevice): QueryResult = {
-      val rows = out.toList
-      val dstFieldNames: Set[String] = out.columns.map(_.name).toSet
-      QueryResult(databaseName, tableName, columns = out.columns.map(_.toTableColumn), __ids = rows.map(_.id), rows = rows map { row =>
-        val mapping = row.toMap.filter { case (name, _) => dstFieldNames.contains(name) } // TODO properly handle field projection
-        out.columns map { column => mapping.get(column.name) }
+    def toQueryResult(databaseName: String, tableName: String, device: BlockDevice): QueryResult = {
+      val rows = device.toList
+      //val dstFieldNames: Set[String] = device.columns.map(_.name).toSet
+      QueryResult(databaseName, tableName, columns = device.columns.map(_.toTableColumn), __ids = rows.map(_.id), rows = rows map { row =>
+        val mapping = row.toMap//.filter { case (name, _) => dstFieldNames.contains(name) } // TODO properly handle field projection
+        device.columns.map(_.name).map(mapping.get)
       })
     }
   }
