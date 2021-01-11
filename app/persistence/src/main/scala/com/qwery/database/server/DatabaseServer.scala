@@ -1,6 +1,9 @@
 package com.qwery.database
 package server
 
+import java.text.NumberFormat
+import java.util.concurrent.atomic.AtomicLong
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpResponse, _}
@@ -19,7 +22,6 @@ import spray.json._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 /**
@@ -27,6 +29,8 @@ import scala.util.{Failure, Success}
  */
 object DatabaseServer {
   private val logger = LoggerFactory.getLogger(getClass)
+  private val nf = NumberFormat.getNumberInstance
+  private val pidGenerator = new AtomicLong()
 
   /**
    * Main program
@@ -259,12 +263,24 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableQuery(databaseName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableQuery(databaseName: String)
+                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
-        logger.info(sql)
-        complete(qp.executeQuery(databaseName, sql))
+        val pid = pidGenerator.addAndGet(1)
+        val startTime = System.nanoTime()
+        logger.info(f"[$pid%04d] SQL: $sql")
+        val promisedResults = qp.executeQuery(databaseName, sql)
+        promisedResults onComplete {
+          case Success(results) =>
+            val elapsedTime = (System.nanoTime() - startTime) / 1e+6
+            logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
+            //results.show(logger)
+          case Failure(e) =>
+            logger.error(f"[$pid%04d] ${e.getMessage}")
+        }
+        complete(promisedResults)
       }
     }
   }
@@ -312,7 +328,7 @@ object DatabaseServer {
     * Column search API routes (e.g. "/columns?database=shocktrade&table=stock%&column=symbol")
     * @return the [[Route]]
     */
-  private def routesSearchColumns(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesSearchColumns(implicit qp: QueryProcessor, timeout: Timeout): Route = {
     get {
       // search for columns (e.g. "GET /columns?database=shocktrade&table=stock%&column=symbol")
       extract(_.request.uri.query()) { params =>

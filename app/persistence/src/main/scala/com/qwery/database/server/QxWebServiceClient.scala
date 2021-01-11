@@ -12,7 +12,7 @@ import scala.io.Source
 /**
  * Qwery Web Service Client
  */
-class QxWebServiceClient(connectionTimeout: Duration = 1.second, readTimeout: Duration = 1.second) {
+class QxWebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Duration = 15.second) {
 
   /**
    * The HTTP DELETE request method deletes the specified resource.

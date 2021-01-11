@@ -30,7 +30,13 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def clearParameters(): Unit = parameterMetaData.clear()
 
-  override def execute(): Boolean = executeUpdate() > 0
+  override def execute(): Boolean = {
+    val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
+    val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
+    resultSet = JDBCResultSet(connection, outcome)
+    updateCount = outcome.count
+    outcome.rows.nonEmpty
+  }
 
   override def executeBatch(): Array[Int] = {
     val outcome = (batches.reverse map { params =>

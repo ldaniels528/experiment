@@ -25,7 +25,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
   @BeanProperty val databaseProductVersion: String = s"$databaseMajorVersion.$databaseMinorVersion"
   @BeanProperty val defaultTransactionIsolation: Int = ResultSet.CONCUR_UPDATABLE
   @BeanProperty val driverMajorVersion: Int = 0
-  @BeanProperty val driverMinorVersion: Int = 1
+  @BeanProperty val driverMinorVersion: Int = 2
   @BeanProperty val driverVersion: String = s"$driverMajorVersion.$driverMinorVersion"
   @BeanProperty val driverName: String = s"Qwery v$driverVersion"
   @BeanProperty val extraNameCharacters: String = ""

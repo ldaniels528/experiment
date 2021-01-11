@@ -20,7 +20,7 @@ class JDBCConnection(val client: DatabaseClient, url: String) extends Connection
   private val clientInfoMap = TrieMap[String, String]()
   private val savePoints = TrieMap[String, Savepoint]()
   private var warnings: Option[SQLWarning] = None
-  private var networkTimeout: Int = 1500
+  private var networkTimeout: Int = 30000
 
   @BeanProperty var autoCommit: Boolean = true
   @BeanProperty var catalog: String = _
@@ -85,9 +85,9 @@ class JDBCConnection(val client: DatabaseClient, url: String) extends Connection
 
   override def nativeSQL(sql: String): String = sql
 
-  override def commit(): Unit = die("Transactions are not supported")
+  override def commit(): Unit = ()
 
-  override def rollback(): Unit = die("Transactions are not supported")
+  override def rollback(): Unit = ()
 
   override def close(): Unit = client.close()
 
@@ -105,7 +105,7 @@ class JDBCConnection(val client: DatabaseClient, url: String) extends Connection
     savepoint
   }
 
-  override def rollback(savepoint: Savepoint): Unit = die("Transactions are not supported")
+  override def rollback(savepoint: Savepoint): Unit = ()
 
   override def releaseSavepoint(savepoint: Savepoint): Unit = savePoints.remove(savepoint.getSavepointName)
 

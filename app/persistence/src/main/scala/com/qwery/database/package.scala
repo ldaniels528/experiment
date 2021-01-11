@@ -5,11 +5,14 @@ import java.nio.ByteBuffer
 
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
+import org.slf4j.LoggerFactory
 
 /**
  * Qwery database package object
  */
 package object database {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   type Block = (ROWID, ByteBuffer)
   type KeyValue = (String, Option[Any])
   type RECORD_ID = Int
@@ -67,7 +70,9 @@ package object database {
    */
   def safeCast[T](value: Any): Option[T] = value match {
     case v: T => Some(v)
-    case _ => Option.empty[T]
+    case x =>
+      logger.warn(s"Failed to cast '$value' (${Option(x).map(_.getClass.getName).orNull})")
+      Option.empty[T]
   }
 
   type StopWatch = () => Double

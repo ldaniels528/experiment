@@ -52,22 +52,26 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should retrieve the tables for a given database") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        iterateRows(conn.getMetaData.getTables( "test", null, null, null))(row => logger.info(s"row: $row"))
+        iterateRows(conn.getMetaData.getTables( "test", null, null, null)) { row =>
+          logger.info(s"row: $row")
+        }
       }
     }
 
     it("should retrieve the columns for a given database") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        iterateRows(conn.getMetaData.getColumns( "test", null, "stock", "symbol"))(row => logger.info(s"row: $row"))
+        iterateRows(conn.getMetaData.getColumns( "test", null, "stock", "symbol")) { row =>
+          logger.info(s"row: $row")
+        }
       }
     }
 
     it("should execute a DROP TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val sql = s"DROP TABLE IF EXISTS $tableName"
-        val isDropped = conn.createStatement().execute(sql)
-        logger.info(f"$sql => $isDropped")
-        //assert(isDropped)
+        val count = conn.createStatement().executeUpdate(sql)
+        logger.info(f"$sql => $count")
+        assert(count == 1)
       }
     }
 
@@ -82,9 +86,9 @@ class QweryDriverTest extends AnyFunSpec {
               |)
               |LOCATION 'qwery://test'
               |""".stripMargin
-        val isCreated = conn.createStatement().execute(sql)
-        logger.info(f"$sql => $isCreated")
-        assert(isCreated)
+        val count = conn.createStatement().executeUpdate(sql)
+        logger.info(f"$sql => $count")
+        assert(count == 1)
       }
     }
 
@@ -132,57 +136,66 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute a SELECT query") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val rs = conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'AAPL'")
-        iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'AAPL'") use { rs =>
+          iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+        }
       }
     }
 
     it("should execute a SELECT query with parameters") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val ps = conn.prepareStatement(s"SELECT * FROM $tableName WHERE symbol = ?")
-        ps.setString(1, "AAPL")
-        val rs = ps.executeQuery()
-        iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+        conn.prepareStatement(s"SELECT * FROM $tableName WHERE symbol = ?") use { ps =>
+          ps.setString(1, "AAPL")
+          ps.executeQuery() use { rs =>
+            iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+          }
+        }
       }
     }
 
     it("should modify and insert a new record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val rs0 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        rs0.next()
-        rs0.updateDouble("lastSale", 15.44)
-        rs0.insertRow()
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>
+          rs0.next()
+          rs0.updateDouble("lastSale", 15.44)
+          rs0.insertRow()
+        }
 
         // retrieve the rows again
-        val rs1 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
+          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        }
       }
     }
 
     it("should modify and update an existing record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val rs0 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        rs0.next()
-        rs0.updateString("symbol", "AAA")
-        rs0.updateDouble("lastSale", 78.99)
-        rs0.updateLong("lastTradeTime", System.currentTimeMillis())
-        rs0.updateRow()
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>
+          rs0.next()
+          rs0.updateString("symbol", "AAA")
+          rs0.updateDouble("lastSale", 78.99)
+          rs0.updateLong("lastTradeTime", System.currentTimeMillis())
+          rs0.updateRow()
+        }
 
         // retrieve the rows again
-        val rs1 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
+          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        }
       }
     }
 
     it("should delete an existing record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val rs0 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        rs0.next()
-        rs0.deleteRow()
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>
+          rs0.next()
+          rs0.deleteRow()
+        }
 
         // retrieve the rows again
-        val rs1 = conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20")
-        iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
+          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        }
       }
     }
 
@@ -209,7 +222,7 @@ class QweryDriverTest extends AnyFunSpec {
     Map((
       for (index <- 1 to rsmd.getColumnCount) yield {
         val name = rsmd.getColumnName(index)
-        val value = rs.getObject(index)
+        val value = rs.getObject(name)
         name -> value
       }): _*)
   }

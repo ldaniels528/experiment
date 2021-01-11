@@ -71,11 +71,17 @@ class JDBCResultSet(connection: JDBCConnection,
 
   override def getBytes(columnIndex: Int): Array[Byte] = rows.getColumnValueOpt[Array[Byte]](columnIndex).orNull
 
-  override def getDate(columnIndex: Int): Date = rows.getColumnValueOpt[Date](columnIndex).orNull
+  override def getDate(columnIndex: Int): Date = {
+    rows.getColumnValueOpt[java.util.Date](columnIndex).map(d => new Date(d.getTime)).orNull
+  }
 
-  override def getTime(columnIndex: Int): Time = rows.getColumnValueOpt[Time](columnIndex).orNull
+  override def getTime(columnIndex: Int): Time = {
+    rows.getColumnValueOpt[java.util.Date](columnIndex).map(d => new Time(d.getTime)).orNull
+  }
 
-  override def getTimestamp(columnIndex: Int): Timestamp = rows.getColumnValueOpt[Timestamp](columnIndex).orNull
+  override def getTimestamp(columnIndex: Int): Timestamp = {
+    rows.getColumnValueOpt[java.util.Date](columnIndex).map(d => new Timestamp(d.getTime)).orNull
+  }
 
   override def getAsciiStream(columnIndex: Int): InputStream = getClob(columnIndex).getAsciiStream
 

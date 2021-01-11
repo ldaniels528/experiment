@@ -5,36 +5,39 @@ import java.nio.ByteBuffer
 import java.sql.RowId
 
 import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.jdbc.JDBCRowSet.uninited
 import com.qwery.database.models.TableColumn
+import org.slf4j.LoggerFactory
 
 /**
- * Qwery JDBC Row Set
- * @param connection   the [[JDBCConnection connection]]
- * @param databaseName the database name
- * @param schemaName   the schema name
- * @param tableName    the table name
- * @param columns      the collection of [[TableColumn columns]]
- * @param rows         the row data
- * @param __ids        the collection of row identifiers
- */
+  * Qwery JDBC Row Set
+  * @param connection   the [[JDBCConnection connection]]
+  * @param databaseName the database name
+  * @param schemaName   the schema name
+  * @param tableName    the table name
+  * @param columns      the collection of [[TableColumn columns]]
+  * @param rows         the row data
+  * @param __ids        the collection of row identifiers
+  */
 class JDBCRowSet(connection: JDBCConnection,
-                 databaseName: String,
-                 schemaName: String,
-                 tableName: String,
-                 columns: Seq[TableColumn],
-                 rows: Seq[Seq[Option[Any]]],
-                 __ids: Seq[ROWID]) {
+                     databaseName: String,
+                     schemaName: String,
+                     tableName: String,
+                     columns: Seq[TableColumn],
+                     rows: Seq[Seq[Option[Any]]],
+                     __ids: Seq[ROWID])  {
+  private val logger = LoggerFactory.getLogger(getClass)
   private val matrix: Array[Option[Any]] = rows.flatten.toArray
-  private var rowIndex = -1
+  private var rowIndex = uninited
 
   def first(): Boolean = {
-    rowIndex = -1
-    true
+    rowIndex = uninited
+    isValidRow
   }
 
   def last(): Boolean = {
-    rowIndex = rows.length - 2
-    true
+    rowIndex = (rows.length - 2) max uninited
+    isValidRow
   }
 
   def getColumnValue[T](columnIndex: Int): T = {
@@ -52,18 +55,28 @@ class JDBCRowSet(connection: JDBCConnection,
     val column = columns(columnIndex - 1)
     val columnType = ColumnTypes.withName(column.columnType)
     val rawValue_? = matrix(offset)
-    rawValue_?.flatMap(rv => safeCast[T](Codec.convertTo(rv, columnType)))
+    val value = rawValue_?.flatMap(rv => safeCast[T](Codec.convertTo(rv, columnType)))
+    logger.debug(s"getColumnValueOpt($columnIndex) => $value [rowIndex=$rowIndex]")
+    value
   }
 
   def getColumnValueOpt[T](columnLabel: String): Option[T] = {
     val index = columns.indexWhere(_.name == columnLabel)
-    assert(index >= 0 && index < columns.length, s"Column '$columnLabel' does not exist")
-    getColumnValueOpt[T](columnIndex = index + 1)
+    validateColumnIndex(index, columnLabel)
+    val value = getColumnValueOpt[T](columnIndex = index + 1)
+    logger.debug(s"""getColumnValueOpt("$columnLabel") => $value [rowIndex=$rowIndex]""")
+    value
   }
 
-  def getRowId(columnIndex: Int): RowId = if (__ids.nonEmpty) JDBCRowId(__ids(rowIndex)) else null
+  def getRowId(columnIndex: Int): RowId = {
+    validateColumnIndex(columnIndex)
+    if (__ids.nonEmpty) JDBCRowId(__ids(rowIndex)) else null
+  }
 
-  def getRowId(columnLabel: String): RowId = if (__ids.nonEmpty) JDBCRowId(__ids(rowIndex)) else null
+  def getRowId(columnLabel: String): RowId = {
+    validateColumnIndex(columnIndex = columns.indexWhere(_.name == columnLabel), columnLabel)
+    if (__ids.nonEmpty) JDBCRowId(__ids(rowIndex)) else null
+  }
 
   def getRowNumber: Int = rowIndex + 1
 
@@ -93,9 +106,9 @@ class JDBCRowSet(connection: JDBCConnection,
     }
   }
 
-  def beforeFirst(): Unit = ???
+  def beforeFirst(): Unit = rowIndex = uninited
 
-  def afterLast(): Unit = ???
+  def afterLast(): Unit = rows.length
 
   def absolute(row: Int): Boolean = ???
 
@@ -136,7 +149,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def update(columnLabel: String, value: Any): Unit = {
     val index = columns.indexWhere(_.name == columnLabel)
-    assert(index >= 0 && index < columns.length, s"Column '$columnLabel' does not exist")
+    validateColumnIndex(index, columnLabel)
     update(columnIndex = index + 1, value)
   }
 
@@ -144,7 +157,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def updateNull(columnLabel: String): Unit = {
     val index = columns.indexWhere(_.name == columnLabel)
-    assert(index >= 0 && index < columns.length, s"Column '$columnLabel' does not exist")
+    validateColumnIndex(index, columnLabel)
     matrix(getOffset(columnIndex = index + 1)) = None
   }
 
@@ -160,12 +173,50 @@ class JDBCRowSet(connection: JDBCConnection,
 
   private def getOffset(columnIndex: Int): Int = {
     assert(rowIndex >= 0 && rowIndex < rows.length, s"Row index is out of range ($rowIndex)")
-    assert(columnIndex > 0 && columnIndex <= columns.length, s"Column index is out of range ($columnIndex)")
+    validateColumnIndex(columnIndex)
     val offset = rowIndex * columns.length + (columnIndex - 1)
     assert(offset >= 0 && offset < rows.length * columns.length, s"Invalid offset ($offset)")
     offset
   }
 
-  private def __id(columnIndex: Int = 0): ROWID = ByteBuffer.wrap(getRowId(columnIndex).getBytes).getRowID
-  
+  private def __id(columnIndex: Int = 1): ROWID = ByteBuffer.wrap(getRowId(columnIndex).getBytes).getRowID
+
+  private def isValidRow: Boolean = rowIndex + 1 < rows.length
+
+  private def validateColumnIndex(columnIndex: Int): Unit = {
+    assert(columnIndex > 0 && columnIndex <= columns.length, s"Column index is out of range ($columnIndex)")
+  }
+
+  private def validateColumnIndex(columnIndex: Int, columnLabel: String): Unit = {
+    assert(columnIndex >= 0 && columnIndex < columns.length, s"Column '$columnLabel' does not exist")
+  }
+
+}
+
+/**
+  * JDBC Row Set Companion
+  */
+object JDBCRowSet {
+  private val uninited = -1
+
+  /**
+    * Creates a new JDBC Row Set
+    * @param connection   the [[JDBCConnection connection]]
+    * @param databaseName the database name
+    * @param schemaName   the schema name
+    * @param tableName    the table name
+    * @param columns      the collection of [[TableColumn columns]]
+    * @param rows         the row data
+    * @param __ids        the collection of row identifiers
+    */
+  def apply(connection: JDBCConnection,
+                       databaseName: String,
+                       schemaName: String,
+                       tableName: String,
+                       columns: Seq[TableColumn],
+                       rows: Seq[Seq[Option[Any]]],
+                       __ids: Seq[ROWID]): JDBCRowSet = {
+    new JDBCRowSet(connection, databaseName, schemaName, tableName, columns, rows, __ids)
+  }
+
 }

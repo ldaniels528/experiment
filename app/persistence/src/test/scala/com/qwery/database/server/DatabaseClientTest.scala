@@ -190,9 +190,7 @@ class DatabaseClientTest extends AnyFunSpec {
         logger.info(f"$label ~> (${rows.size} items) [$responseTime%.1f msec]")
         rows.zipWithIndex.foreach { case (row, index) => logger.info(f"[$index%02d] $row") }
       case results: QueryResult =>
-        logger.info(results.columns.map(c => f"${c.name}%-12s").mkString(" | "))
-        logger.info(results.columns.map(_ => "-" * 12).mkString("-+-"))
-        for(row <- results.rows) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
+        results.show(logger)
       case result =>
         logger.info(f"$label ~> $result [$responseTime%.1f msec]")
     }
