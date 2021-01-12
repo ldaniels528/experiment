@@ -162,7 +162,8 @@ class QweryDriverTest extends AnyFunSpec {
               |   MIN(lastSale) AS minLastSale,
               |   MAX(lastSale) AS maxLastSale,
               |   SUM(lastSale) AS sumLastSale
-              |FROM $tableName""".stripMargin) use { rs =>
+              |FROM $tableName
+              |""".stripMargin) use { rs =>
           iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
         }
       }

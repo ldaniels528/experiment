@@ -21,7 +21,7 @@ class TableQuery(tableDevice: BlockDevice) {
   private val tempName = () => java.lang.Long.toString(System.currentTimeMillis(), 36)
 
   /**
-    * Executes aggregate and transformation queries
+    * Executes aggregation, summarization and transformation queries
     * @param projection the [[Expression field projection]]
     * @param where      the condition which determines which records are included
     * @param groupBy    the optional aggregation columns
@@ -78,17 +78,12 @@ class TableQuery(tableDevice: BlockDevice) {
     // aggregate the results
     val results = createTempTable(projectionColumns)
     tempTables.values foreach { implicit groupDevice =>
-      // compile the projection into aggregators
+      // compile the projection into aggregate expressions
       val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
       // update the aggregate expressions
-      groupDevice.use(_.foreachKVP(keyValues => aggExpressions.foreach(_.append(keyValues))))
+      groupDevice.use(_.foreachKVP(keyValues => aggExpressions.foreach(_ += keyValues)))
       // create the aggregate key-values
-      val dstKV = KeyValues(aggExpressions map { expr =>
-        expr.collect match {
-          case results: List[Any] => expr.name -> results.mkString(",") // TODO fix this
-          case value => expr.name -> value
-        }
-      }: _*)
+      val dstKV = KeyValues(aggExpressions map { expr => expr.name -> expr.collect }: _*)
       // write the aggregated key-values as a row
       results.writeRow(dstKV.toBinaryRow(rowID = results.length)(results))
     }
@@ -150,32 +145,28 @@ class TableQuery(tableDevice: BlockDevice) {
                          where: KeyValues,
                          orderBy: Seq[OrderColumn],
                          limit: Option[Int]): BlockDevice = {
-    // determine the projection
-    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
-
-    // compile the projection into aggregators
+    // compile the projection into aggregate expressions
     val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
 
     // update the aggregate expressions
-    tableDevice.whileKV(where, limit) { srcKV => aggExpressions.foreach(_.append(srcKV)) }
+    tableDevice.whileKV(where, limit) { srcKV => aggExpressions.foreach(_ += srcKV) }
 
     // create the aggregate key-values
-    val results = createTempTable(projectionColumns, fixedRowCount = 1)
-    val dstKV = KeyValues(aggExpressions map { expr =>
-      expr.collect match {
-        case results: List[Any] => expr.name -> results.mkString(",") // TODO fix this
-        case value => expr.name -> value
-      }
-    }: _*)
+    val dstKV = KeyValues(aggExpressions map { expr => expr.name -> expr.collect }: _*)
 
     // write the aggregated key-values as a row
-    results.writeRow(dstKV.toBinaryRow(rowID = results.length)(results))
-
-    // order the results?
+    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
+    implicit val results: BlockDevice = createTempTable(projectionColumns, fixedRowCount = 1)
+    results.writeRow(dstKV.toBinaryRow(rowID = results.length))
     sortResults(results, orderBy)
   }
 
-  private def isSummarization(projection: Seq[Expression]): Boolean = {
+  /**
+    * Indicates whether the projection contains at least one aggregate function
+    * @param projection the collection of projection [[Expression expressions]]
+    * @return true, if the projection contains at least one aggregate function
+    */
+  def isSummarization(projection: Seq[Expression]): Boolean = {
     projection.exists {
       case FunctionCall(name, _) => aggregateFunctions.contains(name)
       case _ => false
