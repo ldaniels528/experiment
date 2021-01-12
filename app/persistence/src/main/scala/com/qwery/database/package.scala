@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.ByteBuffer
 
 import com.qwery.database.ColumnTypes.ColumnType
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, RowOrientedFileBlockDevice}
 import org.slf4j.LoggerFactory
 
 /**
@@ -50,6 +50,10 @@ package object database {
 
   def createTempTable(columns: Seq[Column]): BlockDevice = {
     new RowOrientedFileBlockDevice(columns, createTempFile())
+  }
+
+  def createTempTable(columns: Seq[Column], fixedRowCount: Int): BlockDevice = {
+    new ByteArrayBlockDevice(columns, fixedRowCount)
   }
 
   def createTempTable(device: BlockDevice): BlockDevice = {

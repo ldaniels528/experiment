@@ -153,6 +153,21 @@ class QweryDriverTest extends AnyFunSpec {
       }
     }
 
+    it("should execute a summarization query") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        conn.createStatement().executeQuery(
+          s"""|SELECT
+              |   COUNT(*) AS transactions,
+              |   AVG(lastSale) AS avgLastSale,
+              |   MIN(lastSale) AS minLastSale,
+              |   MAX(lastSale) AS maxLastSale,
+              |   SUM(lastSale) AS sumLastSale
+              |FROM $tableName""".stripMargin) use { rs =>
+          iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+        }
+      }
+    }
+
     it("should modify and insert a new record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>

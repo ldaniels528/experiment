@@ -9,7 +9,6 @@ import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.language.postfixOps
@@ -19,7 +18,6 @@ import scala.language.postfixOps
  * @param tableDevice the [[BlockDevice table device]] to query
  */
 class TableQuery(tableDevice: BlockDevice) {
-  private val logger = LoggerFactory.getLogger(getClass)
   private val tempName = () => java.lang.Long.toString(System.currentTimeMillis(), 36)
 
   /**
@@ -36,7 +34,8 @@ class TableQuery(tableDevice: BlockDevice) {
              groupBy: Seq[SQLField] = Nil,
              orderBy: Seq[OrderColumn] = Nil,
              limit: Option[Int] = None): BlockDevice = {
-    if (groupBy.nonEmpty) aggregateQuery(projection, where, groupBy, orderBy, limit)
+    if (groupBy.nonEmpty) aggregationQuery(projection, where, groupBy, orderBy, limit)
+    else if (isSummarization(projection)) summarizationQuery(projection, where, orderBy, limit)
     else transformationQuery(projection, where, orderBy, limit)
   }
 
@@ -45,7 +44,7 @@ class TableQuery(tableDevice: BlockDevice) {
   //////////////////////////////////////////////////////////////////
 
   /**
-    * Executes an aggregate query
+    * Executes an aggregation query
     * @param projection the [[Expression field projection]]
     * @param where      the [[KeyValues inclusion criteria]]
     * @param groupBy    the columns to group by
@@ -53,11 +52,11 @@ class TableQuery(tableDevice: BlockDevice) {
     * @param limit      the maximum number of rows for which to return
     * @return a [[BlockDevice device]] containing the rows
     */
-  def aggregateQuery(projection: Seq[Expression],
-                     where: KeyValues,
-                     groupBy: Seq[SQLField],
-                     orderBy: Seq[OrderColumn],
-                     limit: Option[Int]): BlockDevice = {
+  def aggregationQuery(projection: Seq[Expression],
+                       where: KeyValues,
+                       groupBy: Seq[SQLField],
+                       orderBy: Seq[OrderColumn],
+                       limit: Option[Int]): BlockDevice = {
     // determine the projection, reference and group by columns
     val projectionColumns: Seq[Column] = getProjectionColumns(projection)
     val referenceColumns: Seq[Column] = getReferencedColumns(projection)
@@ -120,10 +119,10 @@ class TableQuery(tableDevice: BlockDevice) {
   }
 
   /**
-   * Returns all columns referenced within the expressions
-   * @param expressions the collection of expressions
-   * @return the referenced [[Column columns]]
-   */
+    * Returns all columns referenced within the expressions
+    * @param expressions the collection of expressions
+    * @return the referenced [[Column columns]]
+    */
   private def getReferencedColumns(expressions: Seq[Expression]): Seq[Column] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
@@ -133,6 +132,54 @@ class TableQuery(tableDevice: BlockDevice) {
       case FunctionCall(_, args) => getReferencedColumns(args.filterNot(_ == AllFields))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
+  }
+
+  //////////////////////////////////////////////////////////////////
+  //      SUMMARIZATION
+  //////////////////////////////////////////////////////////////////
+
+  /**
+    * Executes a summarization query
+    * @param projection the [[Expression field projection]]
+    * @param where      the [[KeyValues inclusion criteria]]
+    * @param orderBy    the columns to order by
+    * @param limit      the maximum number of rows for which to return
+    * @return a [[BlockDevice device]] containing the rows
+    */
+  def summarizationQuery(projection: Seq[Expression],
+                         where: KeyValues,
+                         orderBy: Seq[OrderColumn],
+                         limit: Option[Int]): BlockDevice = {
+    // determine the projection
+    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
+
+    // compile the projection into aggregators
+    val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
+
+    // update the aggregate expressions
+    tableDevice.whileKV(where, limit) { srcKV => aggExpressions.foreach(_.append(srcKV)) }
+
+    // create the aggregate key-values
+    val results = createTempTable(projectionColumns, fixedRowCount = 1)
+    val dstKV = KeyValues(aggExpressions map { expr =>
+      expr.collect match {
+        case results: List[Any] => expr.name -> results.mkString(",") // TODO fix this
+        case value => expr.name -> value
+      }
+    }: _*)
+
+    // write the aggregated key-values as a row
+    results.writeRow(dstKV.toBinaryRow(rowID = results.length)(results))
+
+    // order the results?
+    sortResults(results, orderBy)
+  }
+
+  private def isSummarization(projection: Seq[Expression]): Boolean = {
+    projection.exists {
+      case FunctionCall(name, _) => aggregateFunctions.contains(name)
+      case _ => false
+    }
   }
 
   //////////////////////////////////////////////////////////////////
