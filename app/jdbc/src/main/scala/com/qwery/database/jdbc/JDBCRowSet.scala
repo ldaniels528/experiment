@@ -41,11 +41,11 @@ class JDBCRowSet(connection: JDBCConnection,
   }
 
   def getColumnValue[T](columnIndex: Int): T = {
-    getColumnValueOpt[T](columnIndex).getOrElse(die(s"No value was found for column index $columnIndex"))
+    getColumnValueOpt[T](columnIndex).getOrElse(null.asInstanceOf[T])
   }
 
   def getColumnValue[T](columnLabel: String): T = {
-    getColumnValueOpt[T](columnLabel).getOrElse(die(s"No value was found for column name '$columnLabel''"))
+    getColumnValueOpt[T](columnLabel).getOrElse(null.asInstanceOf[T])
   }
 
   def getColumnValueOpt[T](columnIndex: Int): Option[T] = {

@@ -302,7 +302,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "SCOPE_CATALOG", columnType = StringType),
       mkColumn(name = "SCOPE_SCHEMA", columnType = StringType),
       mkColumn(name = "SCOPE_TABLE", columnType = StringType),
-      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType),
+      mkColumn(name = "SOURCE_DATA_TYPE", columnType = IntType),
       mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType),
       mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
     new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Attributes", columns, data = Nil)
@@ -310,16 +310,16 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
 
   override def getBestRowIdentifier(catalog: String, schema: String, table: String, scope: Int, nullable: Boolean): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "SCOPE", columnType = ShortType),
+      mkColumn(name = "SCOPE", columnType = IntType),
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
       mkColumn(name = "DATA_TYPE", columnType = IntType),
       mkColumn(name = "TYPE_NAME", columnType = StringType),
       mkColumn(name = "COLUMN_SIZE", columnType = IntType),
       mkColumn(name = "BUFFER_LENGTH", columnType = IntType),
-      mkColumn(name = "DECIMAL_DIGITS", columnType = ShortType),
-      mkColumn(name = "PSEUDO_COLUMN", columnType = ShortType))
+      mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
+      mkColumn(name = "PSEUDO_COLUMN", columnType = IntType))
     new JDBCResultSet(connection, catalog, schema, tableName = "BestRowIdentifier", columns, data = Seq(
-      Seq(1.shortValue, ROWID_NAME, IntType.getJDBCType, "IntType", INT_BYTES, null, 0.shortValue, 1.shortValue).map(Option.apply)
+      Seq(1, ROWID_NAME, IntType.getJDBCType, "IntType", INT_BYTES, null, 0, 1).map(Option.apply)
     ))
   }
 
@@ -363,14 +363,14 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "SCOPE_CATALOG", columnType = StringType),
       mkColumn(name = "SCOPE_SCHEMA", columnType = StringType),
       mkColumn(name = "SCOPE_TABLE", columnType = StringType),
-      mkColumn(name = "SOURCE_DATA_TYPE", columnType = ShortType),
+      mkColumn(name = "SOURCE_DATA_TYPE", columnType = IntType),
       mkColumn(name = "IS_AUTOINCREMENT", columnType = StringType),
       mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
     val results = connection.client.searchColumns(databaseNamePattern = Some(catalog), tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
     new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Columns", columns, data = results map { ti =>
       Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType,
         ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment.orNull, "", null, null, ti.column.sizeInBytes,
-        results.indexOf(ti), "YES",  null, null, null, 0.shortValue, "NO", "NO").map(Option.apply)
+        results.indexOf(ti), "YES",  null, null, null, 0, "NO", "NO").map(Option.apply)
     })
   }
 
@@ -400,9 +400,9 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
       mkColumn(name = "FKTABLE_NAME", columnType = StringType),
       mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
-      mkColumn(name = "KEY_SEQ", columnType = ShortType),
-      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
-      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "KEY_SEQ", columnType = IntType),
+      mkColumn(name = "UPDATE_RULE", columnType = IntType),
+      mkColumn(name = "DELETE_RULE", columnType = IntType),
       mkColumn(name = "FK_NAME", columnType = StringType),
       mkColumn(name = "PK_NAME", columnType = StringType),
       mkColumn(name = "DEFERRABILITY", columnType = IntType))
@@ -419,9 +419,9 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
       mkColumn(name = "FKTABLE_NAME", columnType = StringType),
       mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
-      mkColumn(name = "KEY_SEQ", columnType = ShortType),
-      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
-      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "KEY_SEQ", columnType = IntType),
+      mkColumn(name = "UPDATE_RULE", columnType = IntType),
+      mkColumn(name = "DELETE_RULE", columnType = IntType),
       mkColumn(name = "FK_NAME", columnType = StringType),
       mkColumn(name = "PK_NAME", columnType = StringType),
       mkColumn(name = "DEFERRABILITY", columnType = IntType))
@@ -434,7 +434,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FUNCTION_SCHEM", columnType = StringType),
       mkColumn(name = "FUNCTION_NAME", columnType = StringType),
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
-      mkColumn(name = "COLUMN_TYPE", columnType = ShortType),
+      mkColumn(name = "COLUMN_TYPE", columnType = IntType),
       mkColumn(name = "DATA_TYPE", columnType = IntType),
       mkColumn(name = "TYPE_NAME", columnType = StringType),
       mkColumn(name = "PRECISION", columnType = IntType),
@@ -456,7 +456,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FUNCTION_SCHEM", columnType = StringType),
       mkColumn(name = "FUNCTION_NAME", columnType = StringType),
       mkColumn(name = "REMARKS", columnType = StringType),
-      mkColumn(name = "FUNCTION_TYPE", columnType = ShortType),
+      mkColumn(name = "FUNCTION_TYPE", columnType = IntType),
       mkColumn(name = "SPECIFIC_NAME", columnType = StringType))
     new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Functions", columns, data = Nil)
   }
@@ -471,9 +471,9 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FKTABLE_SCHEM", columnType = StringType),
       mkColumn(name = "FKTABLE_NAME", columnType = StringType),
       mkColumn(name = "FKCOLUMN_NAME", columnType = StringType),
-      mkColumn(name = "KEY_SEQ", columnType = ShortType),
-      mkColumn(name = "UPDATE_RULE", columnType = ShortType),
-      mkColumn(name = "DELETE_RULE", columnType = ShortType),
+      mkColumn(name = "KEY_SEQ", columnType = IntType),
+      mkColumn(name = "UPDATE_RULE", columnType = IntType),
+      mkColumn(name = "DELETE_RULE", columnType = IntType),
       mkColumn(name = "FK_NAME", columnType = StringType),
       mkColumn(name = "PK_NAME", columnType = StringType),
       mkColumn(name = "DEFERRABILITY", columnType = IntType))
@@ -514,7 +514,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "PROCEDURE_SCHEM", columnType = StringType),
       mkColumn(name = "PROCEDURE_NAME", columnType = StringType),
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
-      mkColumn(name = "COLUMN_TYPE", columnType = ShortType),
+      mkColumn(name = "COLUMN_TYPE", columnType = IntType),
       mkColumn(name = "DATA_TYPE", columnType = IntType),
       mkColumn(name = "TYPE_NAME", columnType = StringType),
       mkColumn(name = "PRECISION", columnType = IntType),
@@ -566,7 +566,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "LITERAL_PREFIX", columnType = StringType),
       mkColumn(name = "LITERAL_SUFFIX", columnType = StringType),
       mkColumn(name = "CREATE_PARAMS", columnType = StringType),
-      mkColumn(name = "NULLABLE", columnType = ShortType))
+      mkColumn(name = "NULLABLE", columnType = IntType))
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "Types", columns, data = values.toSeq.map { columnType =>
       Seq(columnType.toString, columnType.getJDBCType, columnType.getFixedLength.getOrElse(255), null, null, null, ResultSetMetaData.columnNullable).map(Option(_))
     })
@@ -601,10 +601,10 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "TABLE_SCHEM", columnType = StringType),
       mkColumn(name = "TABLE_NAME", columnType = StringType),
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
-      mkColumn(name = "KEY_SEQ", columnType = ShortType),
+      mkColumn(name = "KEY_SEQ", columnType = IntType),
       mkColumn(name = "PK_NAME", columnType = StringType))
     new JDBCResultSet(connection, catalog, schema, tableName = "BestRowIdentifier", columns, data = Seq(
-      Seq(catalog, schema, table, ROWID_NAME, 1.shortValue, ROWID_NAME).map(Option.apply)
+      Seq(catalog, schema, table, ROWID_NAME, 1, ROWID_NAME).map(Option.apply)
     ))
   }
 
@@ -666,14 +666,14 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
 
   override def getVersionColumns(catalog: String, schema: String, table: String): ResultSet = {
     val columns = Seq(
-      mkColumn(name = "SCOPE", columnType = ShortType),
+      mkColumn(name = "SCOPE", columnType = IntType),
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
       mkColumn(name = "DATA_TYPE", columnType = IntType),
       mkColumn(name = "TYPE_NAME", columnType = StringType),
       mkColumn(name = "COLUMN_SIZE", columnType = IntType),
       mkColumn(name = "BUFFER_LENGTH", columnType = StringType),
       mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
-      mkColumn(name = "PSEUDO_COLUMN", columnType = ShortType))
+      mkColumn(name = "PSEUDO_COLUMN", columnType = IntType))
     new JDBCResultSet(connection, catalog, schema, tableName = "VersionColumns", columns, data = Nil)
   }
 
