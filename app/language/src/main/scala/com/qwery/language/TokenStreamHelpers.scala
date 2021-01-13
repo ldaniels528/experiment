@@ -8,7 +8,7 @@ import scala.language.postfixOps
   */
 object TokenStreamHelpers {
   private val identifierRegEx = "[$_a-zA-Z][_a-zA-Z0-9]{0,64}"
-  private val prefixes = Seq("CALL", "FILESYSTEM", "SELECT", "#")
+  private val prefixes = Seq("CALL", "SELECT", "#")
 
   /**
     * Token Extensions

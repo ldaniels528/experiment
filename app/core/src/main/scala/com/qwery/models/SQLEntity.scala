@@ -54,14 +54,14 @@ object StorageFormats extends Enumeration {
 /**
  * Represents a Hive-compatible table definition
  * @param name            the name of the table
- * @param columns         the table columns
+ * @param columns         the table [[Column columns]]
  * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
  * @param inputFormat     the [[StorageFormat input format]]
  * @param outputFormat    the [[StorageFormat output format]]
  * @param location        the physical location of the data files
  * @example
  * {{{
- *     CREATE [EXTERNAL] TABLE [IF NOT EXISTS] Cars(
+ *     CREATE [COLUMNAR/EXTERNAL] TABLE [IF NOT EXISTS] Cars(
  *         Name STRING,
  *         Miles_per_Gallon INT,
  *         Cylinders INT,
@@ -81,6 +81,9 @@ object StorageFormats extends Enumeration {
  */
 case class Table(name: String,
                  columns: List[Column],
+                 isColumnar: Boolean = false,
+                 isExternal: Boolean = false,
+                 description: Option[String] = None,
                  location: Option[Location] = None,
                  fieldTerminator: Option[String] = None,
                  lineTerminator: Option[String] = None,

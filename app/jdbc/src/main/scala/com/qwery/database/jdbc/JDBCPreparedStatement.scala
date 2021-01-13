@@ -10,7 +10,6 @@ import com.qwery.database.jdbc.JDBCPreparedStatement._
 import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 
 import scala.beans.BeanProperty
-import scala.language.postfixOps
 
 /**
  * Qwery JDBC Prepared Statement
@@ -94,7 +93,6 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
 
   override def setAsciiStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x
 
-  @deprecated
   override def setUnicodeStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x
 
   override def setBinaryStream(parameterIndex: Int, x: InputStream, length: Int): Unit = parameterMetaData(parameterIndex) = x

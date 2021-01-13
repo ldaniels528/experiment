@@ -100,6 +100,15 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
+    it("should support CREATE COLUMNAR TABLE statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE COLUMNAR TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
+           |""".stripMargin)
+      assert(results == Create(Table(name = "Customers", isColumnar = true,
+        columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply)
+      )))
+    }
+
     it("should support CREATE TABLE w/COMMENT") {
       val results = SQLLanguageParser.parse(
         """|CREATE TABLE Customers (
@@ -112,11 +121,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |ROW FORMAT DELIMITED
            |FIELDS TERMINATED BY ','
            |STORED AS INPUTFORMAT 'CSV'
+           |WITH DESCRIPTION 'Customer information'
            |WITH HEADERS ON
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(Table(name = "Customers",
+      assert(results == Create(Table(name = "Customers", description = Some("Customer information"),
         columns = List(
           Column("customer_uid UUID").withComment("Unique Customer ID"),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
@@ -482,15 +492,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
           from = Table("Departments"),
           where = Exists(Select(fields = Seq('employee_id), from = Table("Employees"), where = Field('role) === "MANAGER"))
         ))
-    }
-
-    it("should support SELECT ... FILESYSTEM(...) statements") {
-      val results = SQLLanguageParser.parse(
-        """|SELECT * FROM (FILESYSTEM('models/'))
-           |WHERE name like '%.csv'
-           |ORDER BY name DESC
-           |""".stripMargin)
-      assert(results == Select(Seq('*), from = FileSystem("models/"), where = LIKE('name, "%.csv"), orderBy = Seq('name desc)))
     }
 
     it("should support SELECT ... GROUP BY fields statements") {

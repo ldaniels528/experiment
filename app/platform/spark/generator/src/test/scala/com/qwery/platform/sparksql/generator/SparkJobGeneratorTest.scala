@@ -33,18 +33,6 @@ class SparkJobGeneratorTest extends AnyFunSpec {
       ))
     }
 
-    it("should compile and execute: files.sql") {
-      SparkJobGenerator.main(Array(
-        "--app-name", "Files Demo",
-        "--input-path", "./samples/sql/misc/files.sql",
-        "--output-path", "../temp/projects/files_demo",
-        "--class-name", "com.github.ldaniels528.qwery.Files",
-        "spark.debug.maxToStringFields", "2048",
-        "spark.executor.memory", "10g"
-      ))
-    }
-
-
     it("should compile and execute: join.sql") {
       SparkJobGenerator.main(Array(
         "--app-name", "Joins Demo",

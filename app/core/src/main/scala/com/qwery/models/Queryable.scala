@@ -16,13 +16,6 @@ trait Queryable extends Invokable with Aliasable
 case class Except(query0: Invokable, query1: Invokable) extends Queryable
 
 /**
-  * Retrieves files from the local filesystem
-  * @param path the local file path
-  * @example {{{ SELECT * FROM (FileSystem('~/Downloads')) WHERE name LIKE '%.csv' }}}
-  */
-case class FileSystem(path: String) extends Queryable
-
-/**
   * Represents a Intersection operation.
   * @param query0 the first [[Queryable queryable resource]]
   * @param query1 the second [[Queryable queryable resource]]

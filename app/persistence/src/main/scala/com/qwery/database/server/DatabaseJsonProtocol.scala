@@ -61,25 +61,27 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
+  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
+
+  implicit val tableSummaryJsonFormat: RootJsonFormat[TableSummary] = jsonFormat3(TableSummary.apply)
+
   implicit val columnSearchResultJsonFormat: RootJsonFormat[ColumnSearchResult] = jsonFormat3(ColumnSearchResult.apply)
 
   implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
   implicit val databaseSearchResultJsonFormat: RootJsonFormat[DatabaseSearchResult] = jsonFormat1(DatabaseSearchResult.apply)
 
-  implicit val databaseMetricsJsonFormat: RootJsonFormat[DatabaseMetrics] = jsonFormat2(DatabaseMetrics.apply)
+  implicit val databaseSummaryJsonFormat: RootJsonFormat[DatabaseSummary] = jsonFormat2(DatabaseSummary.apply)
 
   implicit val loadMetricsJsonFormat: RootJsonFormat[LoadMetrics] = jsonFormat3(LoadMetrics.apply)
 
   implicit val rowStatisticsJsonFormat: RootJsonFormat[RowStatistics] = jsonFormat6(RowStatistics.apply)
 
-  implicit val tableCreationJsonFormat: RootJsonFormat[TableCreation] = jsonFormat2(TableCreation.apply)
+  implicit val tableCreationJsonFormat: RootJsonFormat[TableCreation] = jsonFormat4(TableCreation.apply)
 
-  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat3(TableConfig.apply)
+  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat4(TableConfig.apply)
 
   implicit val tableSearchResultJsonFormat: RootJsonFormat[TableSearchResult] = jsonFormat2(TableSearchResult.apply)
-
-  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 
   implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat6(TableMetrics.apply)
 

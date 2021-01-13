@@ -580,7 +580,7 @@ object PersistentSeq {
       val tableDirectory = persistenceFile.getParentFile
       if (!tableDirectory.exists()) {
         tableDirectory.mkdirs()
-        writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), isColumnar = true))
+        writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), isColumnar = true, indices = Nil))
       }
       this
     }

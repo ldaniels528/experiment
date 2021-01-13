@@ -81,7 +81,7 @@ object SQLCompiler {
       import com.qwery.language.SQLDecompiler.implicits._
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
-          cx.CreateTable(databaseName, table.name, columns = table.columns.map(_.toColumn.toTableColumn))
+          cx.CreateTable(databaseName, table.name, table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar)
         case mx.Create(TableIndex(_, TableRef(tableName), columns)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Create(mx.View(viewName, query, ifNotExists)) =>

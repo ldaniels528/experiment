@@ -49,7 +49,6 @@ trait SQLLanguageParser {
     "DELETE" -> parseDelete,
     "DROP" -> parseDrop,
     "ERROR" -> parseConsoleError,
-    "FILESYSTEM" -> parseFileSystem,
     "FOR" -> parseForLoop,
     "INCLUDE" -> parseInclude,
     "INFO" -> parseConsoleInfo,
@@ -127,21 +126,19 @@ trait SQLLanguageParser {
     * @return an [[Invokable]]
     */
   def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
+    "CREATE COLUMNAR TABLE" -> parseCreateTable,
     "CREATE EXTERNAL TABLE" -> parseCreateTable,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INDEX" -> parseCreateTableIndex,
     "CREATE INLINE TABLE" -> parseCreateInlineTable,
     "CREATE PROCEDURE" -> parseCreateProcedure,
     "CREATE TABLE" -> parseCreateTable,
-    "CREATE TEMPORARY FUNCTION" -> parseCreateFunction,
-    "CREATE TEMPORARY PROCEDURE" -> parseCreateProcedure,
-    "CREATE TEMPORARY VIEW" -> parseCreateView,
     "CREATE TYPE" -> parseCreateTypeAsEnum,
     "CREATE VIEW" -> parseCreateView
   )
 
   /**
-    * Parses a CREATE [TEMPORARY] FUNCTION statement
+    * Parses a CREATE FUNCTION statement
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
@@ -175,12 +172,12 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses a CREATE [EXTERNAL] TABLE statement
+    * Parses a CREATE [COLUMNAR/EXTERNAL] TABLE statement
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
   def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?EXTERNAL TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
+    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|COLUMNAR|EXTERNAL) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
 
     def escapeChars(string: String): String = {
       val replacements = Seq("\\n" -> "\n", "\\r" -> "\r", "\\t" -> "\t") // TODO \u0000
@@ -199,7 +196,10 @@ trait SQLLanguageParser {
 
     Create(Table(
       name = params.atoms("name"),
+      description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
+      isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
+      isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL"),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
       inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
@@ -306,15 +306,6 @@ trait SQLLanguageParser {
     val params = SQLTemplateParams(ts, "DROP VIEW ?%IFE:exists %t:name")
     DropView(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
-
-  /**
-    * Parses a FILESYSTEM statement (row-level function)
-    * @example {{{ FileSystem('./customers') }}}
-    * @param ts the given [[TokenStream token stream]]
-    * @return a [[FileSystem]]
-    */
-  def parseFileSystem(ts: TokenStream): FileSystem =
-    FileSystem(path = SQLTemplateParams(ts, "FILESYSTEM ( %a:path )").atoms("path"))
 
   /**
     * Parses a FOR statement
@@ -436,7 +427,6 @@ trait SQLLanguageParser {
     */
   def parseNextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
     "CALL" -> parseCall,
-    "FILESYSTEM" -> parseFileSystem,
     "SELECT" -> parseSelect
   )
 

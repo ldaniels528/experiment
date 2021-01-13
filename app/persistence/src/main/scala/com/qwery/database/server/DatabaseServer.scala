@@ -118,7 +118,7 @@ object DatabaseServer {
         // create the new table (e.g. "POST /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]}
         entity(as[String]) { jsonString =>
           val ref = jsonString.fromJSON[TableCreation]
-          complete(qp.createTable(databaseName, ref.tableName, ref.columns))
+          complete(qp.createTable(databaseName, ref.tableName, ref.description, ref.columns, ref.isColumnar))
         }
       }
   }

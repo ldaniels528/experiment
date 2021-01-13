@@ -541,6 +541,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
   }
 
   override def getTables(catalog: String, schemaPattern: String, tableNamePattern: String, types: Array[String]): ResultSet = {
+    val types_? = Option(types)
     val columns = Seq(
       mkColumn(name = "TABLE_CAT", columnType = StringType),
       mkColumn(name = "TABLE_SCHEM", columnType = StringType),
@@ -552,9 +553,11 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "TYPE_NAME", columnType = StringType),
       mkColumn(name = "SELF_REFERENCING_COL_NAME", columnType = StringType),
       mkColumn(name = "REF_GENERATION", columnType = StringType))
-    val metrics = connection.client.getDatabaseMetrics(catalog)
-    new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Tables", columns, data = metrics.tables map { tableName =>
-      Seq(catalog, connection.getSchema, tableName, "TABLE", "", null, null, "TABLE", null, null).map(Option(_))
+    val summary = connection.client.getDatabaseSummary(catalog)
+    new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Tables", columns, data = summary.tables flatMap { table =>
+      if (types_?.isEmpty || types_?.exists(_.contains(table.tableType)))
+        Some(Seq(catalog, connection.getSchema, table.tableName, table.tableType, table.description.orNull, null, null, null, null, null).map(Option.apply))
+      else None
     })
   }
 
@@ -574,7 +577,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
 
   override def getTableTypes: ResultSet = {
     val columns = Seq(mkColumn(name = "TABLE_TYPE", columnType = StringType))
-    val tableTypes = Seq("TABLE"/*, "VIEW"*/)
+    val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "VIEW")
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "TableTypes", columns, data = tableTypes map { tableType =>
       Seq(Option(tableType))
     })
@@ -589,8 +592,8 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "GRANTEE", columnType = StringType),
       mkColumn(name = "PRIVILEGE", columnType = StringType),
       mkColumn(name = "IS_GRANTABLE", columnType = StringType))
-    val metrics = connection.client.getDatabaseMetrics(catalog)
-    new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "TablePrivileges", columns, data = metrics.tables map { tableName =>
+    val summary = connection.client.getDatabaseSummary(catalog)
+    new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "TablePrivileges", columns, data = summary.tables map { tableName =>
       Seq(catalog, tableName, tableName, "System", "Everyone", rights.mkString(","), "NO").map(Option(_))
     })
   }

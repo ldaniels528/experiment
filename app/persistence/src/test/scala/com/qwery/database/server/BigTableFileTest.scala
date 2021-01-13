@@ -18,7 +18,7 @@ class BigTableFileTest extends AnyFunSpec {
     it("should handle ingesting large data sets") {
       val expected = 1e+5.toInt
       TableFile.dropTable(databaseName, tableName, ifExists = true)
-      TableFile.createTable(databaseName, tableName,
+      TableFile.createTable(databaseName, tableName, description = Some("Table with 100,000 stocks"),
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", metadata = ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", metadata = ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),

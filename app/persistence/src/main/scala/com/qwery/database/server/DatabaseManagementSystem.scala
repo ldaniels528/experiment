@@ -11,19 +11,26 @@ import scala.util.Try
   * Database Management System
   */
 object DatabaseManagementSystem {
+  val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "VIEW")
 
   /**
-    * Retrieves metrics for a database by name
+    * Retrieves the summary for a database by name
     * @param databaseName the database name
-    * @return the [[DatabaseMetrics metrics]]
+    * @return the [[DatabaseSummary database summary]]
     */
-  def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
-    DatabaseMetrics(databaseName, tables = getDatabaseRootDirectory(databaseName).listFilesRecursively.map(_.getName) flatMap {
-      case filename if filename.endsWith(".json") =>
-        filename.lastIndexOf('.') match {
-          case -1 => None
-          case index => Some(filename.substring(0, index))
+  def getDatabaseSummary(databaseName: String): DatabaseSummary = {
+    val databaseDirectory = getDatabaseRootDirectory(databaseName)
+    val tableDirectories = Option(databaseDirectory.listFiles).toList.flatten
+    DatabaseSummary(databaseName, tables = tableDirectories.flatMap {
+      case tableDirectory if tableDirectory.isDirectory =>
+        val tableName = tableDirectory.getName
+        Try(DatabaseFiles.readTableConfig(databaseName, tableName)).toOption map { config =>
+          val tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE"
+          TableSummary(tableName = tableName, tableType = tableType, description = config.description)
         }
+      case viewFile if viewFile.isFile & viewFile.getName.endsWith(".sql") =>
+        val viewName = viewFile.getName.substring(0, viewFile.getName.lastIndexOf('.'))
+        Some(TableSummary(tableName = viewName, tableType = "VIEW", description = Some("Logical table/view")))
       case _ => None
     })
   }
@@ -37,9 +44,9 @@ object DatabaseManagementSystem {
     */
   def searchColumns(databaseNamePattern: Option[String], tableNamePattern: Option[String], columnNamePattern: Option[String]): List[ColumnSearchResult] = {
     for {
-      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatMap(_.toList)
+      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatten
       databaseName = databaseDirectory.getName if databaseNamePattern like databaseName
-      tableFile <- Option(databaseDirectory.listFiles()).toList.flatMap(_.toList)
+      tableFile <- Option(databaseDirectory.listFiles()).toList.flatten
       tableName = tableFile.getName if tableNamePattern like tableName
       config <- Try(readTableConfig(databaseName, tableFile.getName)).toOption.toList
       result <- config.columns collect {
@@ -55,7 +62,7 @@ object DatabaseManagementSystem {
     */
   def searchDatabases(databaseNamePattern: Option[String] = None): List[DatabaseSearchResult] = {
     for {
-      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatMap(_.toList)
+      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatten
       databaseName = databaseDirectory.getName if databaseNamePattern like databaseName
     } yield DatabaseSearchResult(databaseName)
   }
@@ -68,10 +75,10 @@ object DatabaseManagementSystem {
     */
   def searchTables(databaseNamePattern: Option[String], tableNamePattern: Option[String]): List[TableSearchResult] = {
     for {
-      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatMap(_.toList)
+      databaseDirectory <- Option(getServerRootDirectory.listFiles()).toList.flatten
       databaseName = databaseDirectory.getName if databaseNamePattern like databaseName
-      tableFile <- Option(databaseDirectory.listFiles()).toList.flatMap(_.toList)
-      tableName = tableFile.getName if tableNamePattern like tableName
+      tableSummary <- getDatabaseSummary(databaseName).tables
+      tableName = tableSummary.tableName if tableNamePattern like tableName
     } yield TableSearchResult(databaseName, tableName)
   }
 

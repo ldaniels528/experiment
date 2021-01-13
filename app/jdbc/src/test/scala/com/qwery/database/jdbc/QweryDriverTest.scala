@@ -84,7 +84,7 @@ class QweryDriverTest extends AnyFunSpec {
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)
-              |LOCATION 'qwery://test'
+              |WITH DESCRIPTION 'securities table'
               |""".stripMargin
         val count = conn.createStatement().executeUpdate(sql)
         logger.info(f"$sql => $count")

@@ -43,7 +43,7 @@ class DatabaseClientTest extends AnyFunSpec {
     }
 
     it("should drop an existing table") {
-      invoke(label = s"service.dropTable($databaseName, $tableNameA)", service.dropTable(databaseName, tableNameA))
+      invoke(label = s"""service.dropTable("$databaseName", "$tableNameA")""", service.dropTable(databaseName, tableNameA))
     }
 
     it("should drop an existing table (SQL)") {
@@ -60,7 +60,7 @@ class DatabaseClientTest extends AnyFunSpec {
       )
       invoke(
         label = s"service.createTable($databaseName, $tableNameA, $columns)",
-        block = service.createTable(databaseName, TableCreation.create(tableNameA, columns)))
+        block = service.createTable(databaseName, TableCreation.create(tableNameA, description = Some("test table"), columns, isColumnar = false)))
     }
 
     it("should create a new table (SQL)") {
@@ -71,24 +71,23 @@ class DatabaseClientTest extends AnyFunSpec {
             |  lastSale DOUBLE comment 'the latest sale price',
             |  lastTradeTime DATE comment 'the latest sale date/time'
             |)
-            |LOCATION '/$databaseName/$tableNameB/'
             |""".stripMargin.trim
       invoke(sql, service.executeQuery(databaseName, sql))
     }
 
     it("should append a record to the end of a table") {
       val record = KeyValues("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
-      invoke(label = s"service.appendRow($databaseName, $tableNameA, $record)", service.insertRow(databaseName, tableNameA, record))
+      invoke(label = s"""service.appendRow("$databaseName", "$tableNameA", $record)""", service.insertRow(databaseName, tableNameA, record))
     }
 
     it("should replace a record at a specfic index") {
       val record = KeyValues("symbol" -> "MSFT", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> System.currentTimeMillis())
-      invoke(label = s"service.replaceRow($databaseName, $tableNameA,  rowID = 1, $record)", service.replaceRow(databaseName, tableNameA, rowID = 1, values = record))
+      invoke(label = s"""service.replaceRow("$databaseName", "$tableNameA", rowID = 1, $record)""", service.replaceRow(databaseName, tableNameA, rowID = 1, values = record))
     }
 
     it("should update a record at a specfic index") {
       val record = KeyValues("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 56.78, "lastSaleTime" -> System.currentTimeMillis())
-      invoke(label = s"service.updateRow($databaseName, $tableNameA,  rowID = 1, $record)", service.updateRow(databaseName, tableNameA, rowID = 1, values = record))
+      invoke(label = s"""service.updateRow("$databaseName", "$tableNameA", rowID = 1, $record)""", service.updateRow(databaseName, tableNameA, rowID = 1, values = record))
     }
 
     it("should append a record to the end of a table (SQL)") {
@@ -102,14 +101,14 @@ class DatabaseClientTest extends AnyFunSpec {
     it("should retrieve a field from a row on the server") {
       val (rowID, columnID) = (0, 0)
       invoke(
-        label = s"service.getField($databaseName, $tableNameA, rowID = $rowID, columnID = $columnID)",
+        label = s"""service.getField("$databaseName", "$tableNameA", rowID = $rowID, columnID = $columnID)""",
         block = service.getFieldAsBytes(databaseName, tableNameA, rowID, columnID)
       )
     }
 
     it("should iterate records from the server") {
       invoke(
-        label = s"service.toIterator($databaseName, $tableNameA)",
+        label = s"""service.toIterator("$databaseName", "$tableNameA")""",
         block = service.toIterator(databaseName, tableNameA))
     }
 
@@ -121,28 +120,28 @@ class DatabaseClientTest extends AnyFunSpec {
       copyInto(databaseName, tableNameB, new File("./stocks.csv"))
     }
 
-    it("should retrieve database metrics for a table from the server") {
-      invoke(s"service.getDatabaseMetrics($databaseName)", service.getDatabaseMetrics(databaseName))
+    it("should retrieve database summary for a table from the server") {
+      invoke(s"""service.getDatabaseSummary("$databaseName")""", service.getDatabaseSummary(databaseName))
     }
 
     it("should retrieve table metrics for a table from the server") {
-      invoke(s"service.getTableMetrics($databaseName, $tableNameA)", service.getTableMetrics(databaseName, tableNameA))
+      invoke(s"""service.getTableMetrics("$databaseName", "$tableNameA")""", service.getTableMetrics(databaseName, tableNameA))
     }
 
     it("should retrieve a row by ID from the server") {
-      invoke(s"service.getRow($databaseName, $tableNameA, rowID = 0)", service.getRow(databaseName, tableNameA, rowID = 0))
+      invoke(s"""service.getRow("$databaseName", "$tableNameA", rowID = 0)""", service.getRow(databaseName, tableNameA, rowID = 0))
     }
 
     it("should retrieve a range of rows from the server") {
       invoke(
-        label = s"service.getRange($databaseName, $tableNameA, start = 1000, length = 5)",
+        label = s"""service.getRange("$databaseName", "$tableNameA", start = 1000, length = 5)""",
         block = service.getRange(databaseName, tableNameA, start = 1000, length = 5))
     }
 
     it("should search for a row via criteria from the server") {
       val condition = KeyValues("symbol" -> "MSFT")
       invoke(
-        label = s"service.findRows($databaseName, $tableNameA, $condition, limit = Some(5))",
+        label = s"""service.findRows("$databaseName", "$tableNameA", $condition, limit = Some(5))""",
         block = service.findRows(databaseName, tableNameA, condition, limit = Some(5)))
     }
 
@@ -150,7 +149,7 @@ class DatabaseClientTest extends AnyFunSpec {
       val limit = Some(5)
       val condition = KeyValues("exchange" -> "NASDAQ")
       invoke(
-        label = s"service.findRows($databaseName, $tableNameA, $condition, $limit)",
+        label = s"""service.findRows("$databaseName", "$tableNameA", $condition, $limit)""",
         block = service.findRows(databaseName, tableNameA, condition, limit))
     }
 
@@ -161,7 +160,7 @@ class DatabaseClientTest extends AnyFunSpec {
 
     it("should delete a row by ID from the server") {
       invoke(
-        label = s"service.deleteRow($databaseName, $tableNameA, rowID = 999)",
+        label = s"""service.deleteRow("$databaseName", "$tableNameA", rowID = 999)""",
         block = service.deleteRow(databaseName, tableNameA, rowID = 999))
     }
 

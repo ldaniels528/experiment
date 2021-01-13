@@ -1,21 +1,23 @@
-package com.qwery.database.server
+package com.qwery.database
+package server
 
 import com.qwery.database.JSONSupport.JSONProductConversion
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.models.TableColumn
 import com.qwery.database.models.TableColumn._
-import com.qwery.database.{Column, KeyValues, ROWID}
 import org.slf4j.Logger
 
 package object models {
 
-  case class ColumnSearchResult(databaseName: String, tableName: String, column: TableColumn)
+  case class ColumnSearchResult(databaseName: String, tableName: String, column: TableColumn) {
+    override def toString: String = this.toJSON
+  }
 
   case class DatabaseSearchResult(databaseName: String) {
     override def toString: String = this.toJSON
   }
 
-  case class DatabaseMetrics(databaseName: String, tables: Seq[String]) {
+  case class DatabaseSummary(databaseName: String, tables: Seq[TableSummary]) {
     override def toString: String = this.toJSON
   }
 
@@ -50,18 +52,21 @@ package object models {
   object QueryResult {
     def toQueryResult(databaseName: String, tableName: String, device: BlockDevice): QueryResult = {
       val rows = device.toList
-      //val dstFieldNames: Set[String] = device.columns.map(_.name).toSet
       QueryResult(databaseName, tableName, columns = device.columns.map(_.toTableColumn), __ids = rows.map(_.id), rows = rows map { row =>
-        val mapping = row.toMap//.filter { case (name, _) => dstFieldNames.contains(name) } // TODO properly handle field projection
+        val mapping = row.toMap
         device.columns.map(_.name).map(mapping.get)
       })
     }
   }
 
-  case class TableCreation(tableName: String, columns: Seq[TableColumn])
+  case class TableCreation(tableName: String, description: Option[String], columns: Seq[TableColumn], isColumnar: Boolean) {
+    override def toString: String = this.toJSON
+  }
 
   object TableCreation {
-    def create(tableName: String, columns: Seq[Column]) = new TableCreation(tableName, columns.map(_.toTableColumn))
+    def create(tableName: String, description: Option[String], columns: Seq[Column], isColumnar: Boolean): TableCreation = {
+      new TableCreation(tableName, description, columns.map(_.toTableColumn), isColumnar)
+    }
   }
 
   case class TableMetrics(databaseName: String,
@@ -73,7 +78,13 @@ package object models {
     override def toString: String = this.toJSON
   }
 
-  case class TableSearchResult(databaseName: String, tableName: String)
+  case class TableSearchResult(databaseName: String, tableName: String) {
+    override def toString: String = this.toJSON
+  }
+
+  case class TableSummary(tableName: String, tableType: String, description: Option[String]) {
+    override def toString: String = this.toJSON
+  }
 
   case class UpdateCount(count: Int, __id: Option[Int] = None) {
     override def toString: String = this.toJSON

@@ -20,7 +20,7 @@ class TableFileTest extends AnyFunSpec {
 
     it("should create a new table and insert new rows into it") {
       TableFile.dropTable(databaseName, tableName, ifExists = true)
-      TableFile.createTable(databaseName, tableName,
+      TableFile.createTable(databaseName, tableName, description = Some("table to test inserting records"),
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
@@ -46,7 +46,7 @@ class TableFileTest extends AnyFunSpec {
     it("should perform the equivalent of an INSERT-SELECT") {
       val newTableName = "stocks_insert_select"
       TableFile.dropTable(databaseName, newTableName, ifExists = true)
-      TableFile.createTable(databaseName, newTableName,
+      TableFile.createTable(databaseName, newTableName, description = Some("table to test INSERT-SELECT"),
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),

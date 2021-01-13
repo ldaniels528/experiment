@@ -473,13 +473,19 @@ object TableFile {
   }
 
   /**
-   * Creates a new database table
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param columns      the table columns
-   * @return the new [[TableFile]]
-   */
-  def createTable(databaseName: String, tableName: String, columns: Seq[Column]): TableFile = {
+    * Creates a new database table
+    * @param databaseName the name of the database
+    * @param tableName    the name of the table
+    * @param columns      the table columns
+    * @param isColumnar   indicates whether the table is column-based
+    * @param description  the optional table description
+    * @return the new [[TableFile]]
+    */
+  def createTable(databaseName: String,
+                  tableName: String,
+                  columns: Seq[Column],
+                  isColumnar: Boolean = false,
+                  description: Option[String] = None): TableFile = {
     val dataFile = getTableDataFile(databaseName, tableName)
     assert(!dataFile.exists(), s"Table '$databaseName.$tableName' already exists")
 
@@ -487,7 +493,7 @@ object TableFile {
     getTableRootDirectory(databaseName, tableName).mkdirs()
 
     // create the table configuration file
-    val config = TableConfig(columns = columns.map(_.toTableColumn), indices = Nil)
+    val config = TableConfig(columns = columns.map(_.toTableColumn), isColumnar, indices = Nil, description = description)
     writeTableConfig(databaseName, tableName, config)
 
     // return the table

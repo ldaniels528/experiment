@@ -703,6 +703,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     var isHiveOrAthena = true
     while (isHiveOrAthena) {
       stream match {
+        case ts if ts nextIf "DESCRIPTION" => template += SQLTemplateParams(ts, "%a:description")
         case ts if ts nextIf "FIELDS TERMINATED BY" => template += SQLTemplateParams(ts, "%a:field.delimiter")
         case ts if ts nextIf "LINES TERMINATED BY" => template += SQLTemplateParams(ts, "%a:line.delimiter")
         case ts if ts nextIf "LOCATION" =>

@@ -57,8 +57,8 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     }
   }
 
-  def getDatabaseMetrics(databaseName: String): DatabaseMetrics = {
-    $http.get(toUrl(databaseName)).as[DatabaseMetrics]
+  def getDatabaseSummary(databaseName: String): DatabaseSummary = {
+    $http.get(toUrl(databaseName)).as[DatabaseSummary]
   }
 
   def getFieldAsBytes(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Array[Byte] = {

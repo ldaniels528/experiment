@@ -100,7 +100,7 @@ class SQLTemplateParserTest extends AnyFunSpec {
       verify(text = "SELECT firstName, lastName FROM AddressBook", template = "%Q:query")(SQLTemplateParams(sources = Map(
         "query" -> Select(fields = List('firstName, 'lastName), from = Table("AddressBook"))
       )))
-      verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Expected keyword CALL, FILESYSTEM or SELECT near 'AddressBook'")
+      verifyNot(text = "AddressBook", template = "%Q:table")(failure = "Expected keyword CALL or SELECT near 'AddressBook'")
       verify(text = "#addressBook", template = "%Q:variable")(SQLTemplateParams(sources = Map(
         "variable" -> @#("addressBook")
       )))

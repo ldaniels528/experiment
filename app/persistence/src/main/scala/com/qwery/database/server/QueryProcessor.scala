@@ -52,11 +52,13 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
     * Creates a new table
     * @param databaseName the database name
     * @param tableName    the table name
+    * @param description  the table description
     * @param columns      the table columns
+    * @param isColumnar   indicates whether the table is column-based
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createTable(databaseName: String, tableName: String, columns: Seq[TableColumn])(implicit timeout: Timeout): Future[UpdateCount] = {
-    asUpdateCount(CreateTable(databaseName, tableName, columns))
+  def createTable(databaseName: String, tableName: String, description: Option[String] = None, columns: Seq[TableColumn], isColumnar: Boolean)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateTable(databaseName, tableName, description, columns, isColumnar))
   }
 
   /**
@@ -178,9 +180,9 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
   /**
     * Retrieves the metrics for the specified database
     * @param databaseName the specified database
-    * @return the promise of [[DatabaseMetrics]]
+    * @return the promise of [[DatabaseSummary]]
     */
-  def getDatabaseMetrics(databaseName: String)(implicit timeout: Timeout): Future[DatabaseMetrics] = {
+  def getDatabaseMetrics(databaseName: String)(implicit timeout: Timeout): Future[DatabaseSummary] = {
     val command = GetDatabaseMetrics(databaseName)
     this ? command map {
       case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
@@ -482,7 +484,7 @@ object QueryProcessor {
   class SystemCPU() extends Actor {
     override def receive: Receive = {
       case cmd@GetDatabaseMetrics(databaseName) =>
-        invoke(cmd, sender())(getDatabaseMetrics(databaseName)) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
+        invoke(cmd, sender())(getDatabaseSummary(databaseName)) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
       case cmd@SearchColumns(databaseNamePattern, tableNamePattern, columnNamePattern) =>
         invoke(cmd, sender())(searchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! ColumnSearchResponse(data) }
       case cmd@SearchDatabases(pattern) =>
@@ -507,8 +509,8 @@ object QueryProcessor {
     override def receive: Receive = {
       case cmd@CreateIndex(_, _, indexColumn) =>
         invoke(cmd, sender())(table.createIndex(indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
-      case cmd@CreateTable(_, tableName, columns) =>
-        invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn))) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@CreateTable(_, tableName, description, columns, isColumnar) =>
+        invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, columns.map(_.toColumn), isColumnar, description)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
         invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteRange(_, _, start, length) =>
@@ -693,7 +695,7 @@ object QueryProcessor {
 
     case class CreateIndex(databaseName: String, tableName: String, indexColumnName: String) extends TableUpdateRequest
 
-    case class CreateTable(databaseName: String, tableName: String, columns: Seq[TableColumn]) extends TableUpdateRequest
+    case class CreateTable(databaseName: String, tableName: String, description: Option[String], columns: Seq[TableColumn], isColumnar: Boolean) extends TableUpdateRequest
 
     case class DeleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableUpdateRequest
 
@@ -745,7 +747,7 @@ object QueryProcessor {
 
     case class DatabaseSearchResponse(databases: List[DatabaseSearchResult]) extends DatabaseIOResponse
 
-    case class DatabaseMetricsRetrieved(metrics: DatabaseMetrics) extends DatabaseIOResponse
+    case class DatabaseMetricsRetrieved(metrics: DatabaseSummary) extends DatabaseIOResponse
 
     case class FailureOccurred(command: SystemIORequest, cause: Throwable) extends DatabaseIOResponse
 

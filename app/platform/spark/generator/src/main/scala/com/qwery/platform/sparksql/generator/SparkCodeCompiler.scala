@@ -381,7 +381,6 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case Create(tableOrView: TableLike) => generateReader(tableOrView)
           case Create(udf: UserDefinedFunction) => generateCode(udf)
           case d: Declare => generateCode(d)
-          case FileSystem(path) => s"""getFiles("$path")"""
           case Include(path) => incorporateSources(path).toCode
           case i: Insert => generateWriter(i)
           case l: LocalVariableRef => l.name
