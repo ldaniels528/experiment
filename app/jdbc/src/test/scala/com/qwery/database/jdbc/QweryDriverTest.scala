@@ -70,7 +70,6 @@ class QweryDriverTest extends AnyFunSpec {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val sql = s"DROP TABLE IF EXISTS $tableName"
         val count = conn.createStatement().executeUpdate(sql)
-        logger.info(f"$sql => $count")
         assert(count == 1)
       }
     }
@@ -87,7 +86,6 @@ class QweryDriverTest extends AnyFunSpec {
               |WITH DESCRIPTION 'securities table'
               |""".stripMargin
         val count = conn.createStatement().executeUpdate(sql)
-        logger.info(f"$sql => $count")
         assert(count == 1)
       }
     }
@@ -100,7 +98,6 @@ class QweryDriverTest extends AnyFunSpec {
               |VALUES ("MSFT", "NYSE", 56.55, $now), ("AAPL", "NASDAQ", 98.55, $now)
               |""".stripMargin
         val count = conn.createStatement().executeUpdate(sql)
-        logger.info(f"Insert count: $count")
         assert(count == 2)
       }
     }
@@ -117,7 +114,6 @@ class QweryDriverTest extends AnyFunSpec {
           ps.setObject(index + 1, value)
         }
         val count = ps.executeUpdate()
-        logger.info(f"Insert count: $count")
         assert(count == 2)
       }
     }
@@ -129,7 +125,6 @@ class QweryDriverTest extends AnyFunSpec {
           s"""|UPDATE $tableName SET lastSale = 101.12, lastTradeTime = $now WHERE symbol = "GOOG"
               |""".stripMargin
         val count = conn.createStatement().executeUpdate(sql)
-        logger.info(f"Update count: $count")
         assert(count == 1)
       }
     }
@@ -137,7 +132,8 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute a SELECT query") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'AAPL'") use { rs =>
-          iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+          rs.next()
+          assert(rs.getString("symbol") == "AAPL")
         }
       }
     }
@@ -147,8 +143,31 @@ class QweryDriverTest extends AnyFunSpec {
         conn.prepareStatement(s"SELECT * FROM $tableName WHERE symbol = ?") use { ps =>
           ps.setString(1, "AAPL")
           ps.executeQuery() use { rs =>
-            iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+            rs.next()
+            assert(rs.getString("symbol") == "AAPL")
           }
+        }
+      }
+    }
+
+    it("should execute a COUNT query") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        conn.createStatement().executeQuery(
+          s"""|SELECT COUNT(*) FROM $tableName
+              |""".stripMargin) use { rs =>
+          rs.next()
+          assert(rs.getInt(1) == 4)
+        }
+      }
+    }
+
+    it("should execute a COUNT query with alias") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        conn.createStatement().executeQuery(
+          s"""|SELECT COUNT(*) AS transactions FROM $tableName
+              |""".stripMargin) use { rs =>
+          rs.next()
+          assert(rs.getInt("transactions") == 4)
         }
       }
     }
@@ -164,7 +183,12 @@ class QweryDriverTest extends AnyFunSpec {
               |   SUM(lastSale) AS sumLastSale
               |FROM $tableName
               |""".stripMargin) use { rs =>
-          iterateRows(rs)(row => logger.info(f"row [${__id(rs)}%02d]: $row"))
+          rs.next()
+          assert(rs.getDouble("sumLastSale") == 312.77)
+          assert(rs.getDouble("maxLastSale") == 101.12)
+          assert(rs.getDouble("avgLastSale") == 78.1925)
+          assert(rs.getDouble("minLastSale") == 56.55)
+          assert(rs.getInt("transactions") == 4)
         }
       }
     }
@@ -173,13 +197,15 @@ class QweryDriverTest extends AnyFunSpec {
       DriverManager.getConnection(jdbcURL) use { conn =>
         conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>
           rs0.next()
+          rs0.updateString("symbol", "CCC")
           rs0.updateDouble("lastSale", 15.44)
           rs0.insertRow()
         }
 
-        // retrieve the rows again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
-          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        // retrieve the row again
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'CCC'") use { rs1 =>
+          rs1.next()
+          assert(rs1.getDouble("lastSale") == 15.44)
         }
       }
     }
@@ -194,23 +220,24 @@ class QweryDriverTest extends AnyFunSpec {
           rs0.updateRow()
         }
 
-        // retrieve the rows again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
-          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        // retrieve the row again
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'AAA'") use { rs1 =>
+          rs1.next()
+          assert(rs1.getDouble("lastSale") == 78.99)
         }
       }
     }
 
     it("should delete an existing record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs0 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'CCC'") use { rs0 =>
           rs0.next()
           rs0.deleteRow()
         }
 
-        // retrieve the rows again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableName LIMIT 20") use { rs1 =>
-          iterateRows(rs1)(row => logger.info(f"row [${__id(rs1)}%02d]: $row"))
+        // retrieve the row again
+        conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'CCC'") use { rs1 =>
+          assert(!rs1.next())
         }
       }
     }

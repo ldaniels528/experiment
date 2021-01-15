@@ -122,13 +122,14 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def insertRow(): Unit = connection.client.insertRow(databaseName, tableName, constructRow)
 
-  def updateRow(): Unit = connection.client.replaceRow(databaseName, tableName, __id(), constructRow)
+  def updateRow(): Unit = __id().foreach(connection.client.replaceRow(databaseName, tableName, _, constructRow))
 
-  def deleteRow(): Unit = connection.client.deleteRow(databaseName, tableName, __id())
+  def deleteRow(): Unit = __id().foreach(connection.client.deleteRow(databaseName, tableName, _))
 
   def refreshRow(): Unit = {
     val refreshedRow = for {
-      row <- connection.client.getRow(databaseName, tableName, __id()).toArray
+      rowID <- __id().toArray
+      row <- connection.client.getRow(databaseName, tableName, rowID).toArray
       name <- columns.map(_.name)
     } yield row.get(name)
 
@@ -179,7 +180,9 @@ class JDBCRowSet(connection: JDBCConnection,
     offset
   }
 
-  private def __id(columnIndex: Int = 1): ROWID = ByteBuffer.wrap(getRowId(columnIndex).getBytes).getRowID
+  private def __id(columnIndex: Int = 1): Option[ROWID] = {
+    Option(getRowId(columnIndex)).map(r => ByteBuffer.wrap(r.getBytes).getRowID)
+  }
 
   private def isValidRow: Boolean = rowIndex + 1 < rows.length
 

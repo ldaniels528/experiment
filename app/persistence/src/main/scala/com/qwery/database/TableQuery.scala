@@ -10,6 +10,7 @@ import com.qwery.models.expressions.{AllFields, BasicField, Expression, Function
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.postfixOps
 
@@ -18,7 +19,7 @@ import scala.language.postfixOps
  * @param tableDevice the [[BlockDevice table device]] to query
  */
 class TableQuery(tableDevice: BlockDevice) {
-  private val tempName = () => java.lang.Long.toString(System.currentTimeMillis(), 36)
+  private val tempName = (_: Any) => java.lang.Long.toString(System.nanoTime(), 36)
 
   /**
     * Executes aggregation, summarization and transformation queries
@@ -57,8 +58,20 @@ class TableQuery(tableDevice: BlockDevice) {
                        groupBy: Seq[SQLField],
                        orderBy: Seq[OrderColumn],
                        limit: Option[Int]): BlockDevice = {
-    // determine the projection, reference and group by columns
-    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
+    // create a closure for temporary column naming
+    val determineName: Any => String = {
+      val mapping = TrieMap[Int, String]()
+      (v: Any) => mapping.getOrElseUpdate(v.hashCode(), tempName())
+    }
+
+    // determine the projection columns
+    val projectionColumns: Seq[Column] = {
+      val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, determineName)
+      (aggExpressions.map(_.name) zip getProjectionColumns(projection))
+        .map { case (name, column) => column.copy(name = name) }
+    }
+
+    // determine the reference and group by columns
     val referenceColumns: Seq[Column] = getReferencedColumns(projection)
     val referenceColumnNames: Set[String] = referenceColumns.map(_.name).toSet
     val groupByColumns: Seq[Column] = getColumnsByName(groupBy.map(_.name))
@@ -79,7 +92,7 @@ class TableQuery(tableDevice: BlockDevice) {
     val results = createTempTable(projectionColumns)
     tempTables.values foreach { implicit groupDevice =>
       // compile the projection into aggregate expressions
-      val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
+      val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, determineName)
       // update the aggregate expressions
       groupDevice.use(_.foreachKVP(keyValues => aggExpressions.foreach(_ += keyValues)))
       // create the aggregate key-values
@@ -92,15 +105,15 @@ class TableQuery(tableDevice: BlockDevice) {
     sortResults(results, orderBy)
   }
 
-  private def getAggregateProjection(expressions: Seq[Expression]): Seq[AggregateExpr] = {
+  private def getAggregateProjection(expressions: Seq[Expression], tempName: Any => String): Seq[AggregateExpr] = {
     expressions map {
       case AllFields => die("Aggregation function or constant value expected")
       case f: BasicField => AggregateField(name = f.alias || f.name, srcName = f.name)
       case fc@FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
-        CountDistinct(fc.alias || tempName(), args)
+        CountDistinct(fc.alias || tempName(fc), args)
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = aggregateFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
-        fxTemplate(fc.alias || tempName(), args)
+        fxTemplate(fc.alias || tempName(fc), args)
       case expression => die(s"Unconverted expression: $expression")
     }
   }
@@ -146,16 +159,19 @@ class TableQuery(tableDevice: BlockDevice) {
                          orderBy: Seq[OrderColumn],
                          limit: Option[Int]): BlockDevice = {
     // compile the projection into aggregate expressions
-    val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection)
+    val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, tempName)
 
     // update the aggregate expressions
     tableDevice.whileKV(where, limit) { srcKV => aggExpressions.foreach(_ += srcKV) }
 
     // create the aggregate key-values
-    val dstKV = KeyValues(aggExpressions map { expr => expr.name -> expr.collect }: _*)
+    val dstKV = KeyValues(aggExpressions.map { expr => expr.name -> expr.collect }: _*)
 
-    // write the aggregated key-values as a row
-    val projectionColumns: Seq[Column] = getProjectionColumns(projection)
+    // ensure temporary column names are honored
+    val projectionColumns: Seq[Column] = (aggExpressions.map(_.name) zip getProjectionColumns(projection))
+      .map { case (name, column) => column.copy(name = name) }
+
+    // write the summarized key-values as a row
     implicit val results: BlockDevice = createTempTable(projectionColumns, fixedRowCount = 1)
     results.writeRow(dstKV.toBinaryRow(rowID = results.length))
     sortResults(results, orderBy)
@@ -209,7 +225,7 @@ class TableQuery(tableDevice: BlockDevice) {
       case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
-        val fx = fxTemplate(fc.alias || tempName(), args)
+        val fx = fxTemplate(fc.alias || tempName(fc), args)
         Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
@@ -221,7 +237,7 @@ class TableQuery(tableDevice: BlockDevice) {
       case f: BasicField => srcRow.fields.find(_.name == f.name).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
-        val fx = fxTemplate(fc.alias || tempName(), args)
+        val fx = fxTemplate(fc.alias || tempName(fc), args)
         Seq(Field(name = fx.name, metadata = FieldMetadata(), QxAny(Option(fx.execute(srcRow.toKeyValues)))))
       case expression => die(s"Unconverted expression: $expression")
     }
@@ -240,7 +256,7 @@ class TableQuery(tableDevice: BlockDevice) {
         // is it a built-in function?
         if (builtinFunctions.contains(functionName)) {
           val fxTemplate = builtinFunctions(functionName)
-          val fx = fxTemplate(fc.alias || tempName(), args)
+          val fx = fxTemplate(fc.alias || tempName(fc), args)
           Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
         }
         // is it a user-defined function?

@@ -276,7 +276,7 @@ object DatabaseServer {
           case Success(results) =>
             val elapsedTime = (System.nanoTime() - startTime) / 1e+6
             logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
-            //results.show(logger)
+            //results.show(5)(logger)
           case Failure(e) =>
             logger.error(f"[$pid%04d] ${e.getMessage}")
         }

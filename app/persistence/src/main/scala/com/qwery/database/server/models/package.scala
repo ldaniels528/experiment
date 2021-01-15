@@ -40,10 +40,10 @@ package object models {
       }
     }
 
-    def show(implicit logger: Logger): Unit = {
+    def show(limit: Int = 20)(implicit logger: Logger): Unit = {
       logger.info(columns.map(c => f"${c.name}%-12s").mkString(" | "))
       logger.info(columns.map(_ => "-" * 12).mkString("-+-"))
-      for (row <- rows) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
+      for (row <- rows.take(limit)) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
     }
 
     override def toString: String = this.toJSON
