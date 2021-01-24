@@ -2,7 +2,7 @@ package com.qwery.database
 package collections
 
 import com.qwery.database.collections.StockQuote.randomQuote
-import com.qwery.database.device.ColumnOrientedBlockDevice
+import com.qwery.database.device.{BlockDevice, ColumnOrientedBlockDevice}
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
@@ -14,10 +14,8 @@ class ColumnOrientedPersistentSeqTest extends AnyFunSpec {
   private val quotes10 = (1 to 10).map(_ => randomQuote)
 
   describe(classOf[ColumnOrientedBlockDevice].getSimpleName) {
-    val coll = PersistentSeq.builder[StockQuote]
-      //.withTable(databaseName = "test", tableName = "columnar")
-      .withColumnModel
-      .build
+    // build a column-oriented device
+    val coll = PersistentSeq[StockQuote](BlockDevice.builder.withColumnModel[StockQuote])
 
     it("should write data into columnar files") {
       coll.device.shrinkTo(0)

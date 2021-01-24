@@ -34,8 +34,8 @@ crossScalaVersions := Seq(scalaVersion_2_11, scalaVersion_2_12)
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_collections, database_server, database_client, database_jdbc).
-  dependsOn(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_collections, database_server, database_client, database_jdbc).
+  aggregate(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_server, database_client, database_jdbc).
+  dependsOn(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_server, database_client, database_jdbc).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -124,11 +124,7 @@ lazy val database_core = (project in file("./app/database-core")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "net.liftweb" %% "lift-json" % "3.3.0"
     ))
@@ -150,40 +146,10 @@ lazy val database_client = (project in file("./app/database-client")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "net.liftweb" %% "lift-json" % "3.3.0",
       "com.qwery" %% "database-server" % appVersion % Test
-    ))
-
-/**
-  * @example sbt "project database_collections" test
-  */
-lazy val database_collections = (project in file("./app/database-collections")).
-  dependsOn(database_core, util, language).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "database-collections",
-    organization := "com.qwery",
-    description := "Qwery Database Client",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % "3.3.0"
     ))
 
 /**
@@ -203,11 +169,7 @@ lazy val database_models = (project in file("./app/database-models")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "net.liftweb" %% "lift-json" % "3.3.0"
     ))
@@ -229,7 +191,6 @@ lazy val database_server = (project in file("./app/database-server")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "commons-io" % "commons-io" % "2.6",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
@@ -239,7 +200,7 @@ lazy val database_server = (project in file("./app/database-server")).
     ))
 
 /**
-  * @example sbt "project jdbc" test
+  * @example sbt "project database_jdbc" test
   */
 lazy val database_jdbc = (project in file("./app/database-jdbc")).
   dependsOn(database_client).
@@ -256,7 +217,6 @@ lazy val database_jdbc = (project in file("./app/database-jdbc")).
     mainClass in assembly := Some("com.qwery.database.QweryDriver"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.qwery" %% "database-server" % appVersion % Test
     ))
 

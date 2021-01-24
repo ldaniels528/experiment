@@ -1,9 +1,9 @@
 package com.qwery.database
 package collections
 
-import com.qwery.database.collections.PersistentSeq._
 import com.qwery.database.collections.StockQuote._
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.device.BlockDevice.toColumns
 import com.qwery.util.ServicingTools.time
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory

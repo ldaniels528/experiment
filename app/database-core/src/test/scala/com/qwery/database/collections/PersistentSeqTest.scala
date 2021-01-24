@@ -1,20 +1,20 @@
 package com.qwery.database
 package collections
 
-import java.io.File
-
 import com.qwery.database.collections.StockQuote._
+import com.qwery.database.device.BlockDevice
 import com.qwery.database.types.QxString
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
+import java.io.File
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.Random
 
 /**
- * Persistent Sequence Test Suite
- */
+  * Persistent Sequence Test Suite
+  */
 class PersistentSeqTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val expectedCount: Int = 1e+5.toInt
@@ -59,7 +59,7 @@ class PersistentSeqTest extends AnyFunSpec {
     }
 
     it("should append a collection of items to the collection") {
-     val items = eval("coll.append(Seq(..))", coll.append(stockList))
+      val items = eval("coll.append(Seq(..))", coll.append(stockList))
       assert(items.count() == expectedCount)
     }
 
@@ -267,12 +267,13 @@ class PersistentSeqTest extends AnyFunSpec {
   }
 
   def newCollection[A <: Product : ClassTag](partitionSize: Int): PersistentSeq[A] = {
-    PersistentSeq.builder[A]
-      //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
-      .withParallelism(ExecutionContext.global)
-      .withPartitions(partitionSize)
-      //.withColumnModel
-      .build
+    PersistentSeq[A](
+      BlockDevice.builder
+        .withRowModel[A]
+        //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
+        .withParallelism(ExecutionContext.global)
+        .withPartitions(partitionSize)
+    )
   }
 
 }

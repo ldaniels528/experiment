@@ -210,7 +210,7 @@ object DatabaseServer {
     } ~
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
-        parameters('__contentType.?) { contentType_? : Option[String] =>
+        parameters('__contentType.?) { contentType_? =>
           val column = TableFile(databaseName, tableName).device.columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
           complete(qp.getField(databaseName, tableName, rowID, columnID) map { field =>
@@ -300,7 +300,7 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
-        parameters('__metadata.?) { metadata_? : Option[String] =>
+        parameters('__metadata.?) { metadata_? =>
           val isMetadata = metadata_?.map(_.toLowerCase).contains("true")
           complete(qp.getRow(databaseName, tableName, rowID) map {
             case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toKeyValues.toJson

@@ -1,26 +1,29 @@
 package com.qwery.database
 package collections
 
-import java.io.File
-
+import com.qwery.database.device.BlockDevice
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
+import java.io.File
 import scala.reflect.ClassTag
 
 class ShrinkTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val expectedCount: Int = 10000
-  private val coll = newCollection[StockQuoteWithID](partitionSize = expectedCount / 11)
-    .loadTextFile(new File("./stocks.csv")) {
-      _.split("[,]") match {
-        case Array(symbol, exchange, price, date) =>
-          Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
-        case _ => None
-      }
-    }
 
   describe(classOf[PersistentSeq[_]].getSimpleName) {
+
+    // build the collection
+    val coll = newCollection[StockQuoteWithID](partitionSize = expectedCount / 11)
+      .loadTextFile(new File("./stocks.csv")) {
+        _.split("[,]") match {
+          case Array(symbol, exchange, price, date) =>
+            Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
+          case _ => None
+        }
+      }
+
     logger.info(s"coll is a ${coll.getClass.getSimpleName}; sample size is $expectedCount")
 
     it("should shrink the collection by 20%") {
@@ -45,11 +48,13 @@ class ShrinkTest extends AnyFunSpec {
   }
 
   def newCollection[A <: Product : ClassTag](partitionSize: Int): PersistentSeq[A] = {
-    PersistentSeq.builder[A]
-      //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
-      //.withParallelism(ExecutionContext.global)
-      .withPartitions(partitionSize = partitionSize)
-      .build
+    PersistentSeq[A](
+      BlockDevice.builder
+        .withRowModel[A]
+        //.withMemoryCapacity(capacity = (expectedCount * 1.2).toInt)
+        //.withParallelism(ExecutionContext.global)
+        .withPartitions(partitionSize))
+
   }
 
 }

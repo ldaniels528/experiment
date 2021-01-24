@@ -1,22 +1,17 @@
 package com.qwery.database
 package collections
 
+import com.qwery.database.Codec._
+import com.qwery.database.device._
+import com.qwery.util.ResourceHelper._
+
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
-
-import com.qwery.database.Codec._
-import com.qwery.database.device._
-
-import com.qwery.util.OptionHelper.OptionEnrichment
-import com.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
-
 import scala.collection.{GenIterable, mutable}
-import scala.concurrent.ExecutionContext
 import scala.io.Source
 import scala.language.postfixOps
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
 
 /**
  * Represents a persistent sequential collection
@@ -425,14 +420,25 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
  * PersistentSeq Companion
  */
 object PersistentSeq {
-  private[this] lazy val logger = LoggerFactory.getLogger(getClass)
 
   /**
    * Creates a new persistent sequence implementation
    * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
-  def apply[A <: Product : ClassTag](): PersistentSeq[A] = builder[A].build
+  def apply[A <: Product : ClassTag](): PersistentSeq[A] = apply[A](BlockDevice.builder.withRowModel[A])
+
+  /**
+    * Creates a new persistent sequence implementation
+    * @tparam A the [[Product product type]]
+    * @param builder the [[BlockDevice.Builder device builder]]
+    * @return a new [[PersistentSeq persistent sequence]]
+    */
+  def apply[A <: Product : ClassTag](builder: BlockDevice.Builder): PersistentSeq[A] = {
+    val (columns, _class) = BlockDevice.toColumns[A]
+    val device = builder.withColumns(columns).build
+    new PersistentSeq[A](device, _class)
+  }
 
   /**
    * Creates a new disk-based sequence implementation
@@ -441,136 +447,7 @@ object PersistentSeq {
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](persistenceFile: File): PersistentSeq[A] = {
-    builder[A].withPersistenceFile(persistenceFile).build
-  }
-
-  /**
-   * Creates a new builder
-   * @tparam A the [[Product product type]]
-   * @return a new [[Builder]]
-   */
-  def builder[A <: Product : ClassTag]: Builder[A] = new PersistentSeq.Builder[A]()
-
-  /**
-   * Retrieves the columns that represent the [[Product product type]]
-   * @tparam T the [[Product product type]]
-   * @return a tuple of collection of [[Column columns]]
-   */
-  def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
-    val `class` = classTag[T].runtimeClass
-    val declaredFields = `class`.getDeclaredFields.toList
-    val defaultMaxLen = 128
-    val columns = declaredFields map { field =>
-      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
-      val `type` = ColumnTypes.determineClassType(field.getType)
-      val maxSize = ci.map(_.maxSize)
-      if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
-        logger.warn(
-          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
-              |
-              |case class StockQuote(@(ColumnInfo@field)(maxSize = 8)    symbol: String,
-              |                      @(ColumnInfo@field)(maxSize = 8)    exchange: String,
-              |                                                          lastSale: Double,
-              |                                                          tradeTime: Long,
-              |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
-              |""".stripMargin)
-      }
-      Column(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
-        `type` = `type`,
-        isCompressed = ci.exists(_.isCompressed),
-        isEncrypted = ci.exists(_.isEncrypted),
-        isNullable = ci.exists(_.isNullable),
-        isPrimary = ci.exists(_.isPrimary),
-        isRowID = ci.exists(_.isRowID)))
-    }
-    (columns, `class`.asInstanceOf[Class[T]])
-  }
-
-  /**
-   * PersistentSeq Builder
-   * @tparam A the [[Product product type]]
-   */
-  class Builder[A <: Product : ClassTag]() {
-    private val (columns, theClass) = toColumns[A]
-    private var capacity: Int = 0
-    private var executionContext: ExecutionContext = _
-    private var partitionSize: Int = 0
-    private var persistenceFile: File = _
-    private var isColumnModel: Boolean = false
-
-    def build: PersistentSeq[A] = {
-      // is it column-oriented?
-      if (isColumnModel) {
-        val file = if (persistenceFile != null) persistenceFile else createTempFile()
-        new PersistentSeq(ColumnOrientedFileBlockDevice(columns, file), theClass)
-      }
-
-      // is it partitioned?
-      else if (partitionSize > 0) {
-        new PersistentSeq(`class` = theClass, device =
-          if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
-          else new ParallelPartitionedBlockDevice(columns, partitionSize)(executionContext)
-        )
-      }
-
-      // is it in memory?
-      else if (capacity > 0) {
-        new PersistentSeq(`class` = theClass, device =
-          if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new RowOrientedFileBlockDevice(columns, persistenceFile))
-          else new ByteArrayBlockDevice(columns, capacity))
-      }
-
-      // must be a simple disk-based collection
-      else {
-        val file = if (persistenceFile != null) persistenceFile else createTempFile()
-        new PersistentSeq(new RowOrientedFileBlockDevice(columns, file), theClass)
-      }
-    }
-
-    def withColumnModel: this.type = {
-      this.isColumnModel = true
-      this
-    }
-
-    def withRowModel: this.type = {
-      this.isColumnModel = false
-      this
-    }
-
-    def withMemoryCapacity(capacity: Int): this.type = {
-      this.capacity = capacity
-      this.isColumnModel = false
-      this
-    }
-
-    def withParallelism(executionContext: ExecutionContext): this.type = {
-      this.executionContext = executionContext
-      this
-    }
-
-    def withPartitions(partitionSize: Int): this.type = {
-      this.partitionSize = partitionSize
-      this.isColumnModel = false
-      this
-    }
-
-    def withPersistenceFile(file: File): this.type = {
-      this.persistenceFile = file
-      this
-    }
-
-    /*
-    def withTable(databaseName: String, tableName: String): this.type = {
-      this.persistenceFile = getTableDataFile(databaseName, tableName)
-
-      // create the table
-      val tableDirectory = persistenceFile.getParentFile
-      if (!tableDirectory.exists()) {
-        tableDirectory.mkdirs()
-        writeTableConfig(databaseName, tableName, TableConfig(columns.map(_.toTableColumn), isColumnar = true, indices = Nil))
-      }
-      this
-    }*/
+    apply[A](BlockDevice.builder.withRowModel[A].withPersistenceFile(persistenceFile))
   }
 
 }

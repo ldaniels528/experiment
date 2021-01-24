@@ -1,18 +1,17 @@
 package com.qwery.database
 package server
 
-import java.util.Date
-
-import com.qwery.database.models.TableColumn._
 import com.qwery.database.models.TableProperties
 import com.qwery.models.expressions.{AllFields, BasicField}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
+import java.util.Date
+
 /**
- * Table File Test
- */
+  * Table File Test
+  */
 class TableFileTest extends AnyFunSpec {
   private lazy val logger = LoggerFactory.getLogger(getClass)
 
@@ -28,21 +27,30 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column(name = "lastSaleTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         ))) use { table =>
         table.truncate()
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
 
-        table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastSaleTime" -> new Date()))
 
         val count = table.count()
         logger.info(s"$databaseName.$tableName: inserted $count records")
         assert(count == 6)
+      }
+    }
+
+    it("should expose the table data as a PersistentSeq") {
+      TableFile(databaseName, tableName) use { table =>
+        val ps = table.toPersistentSeq[StockQuoteWithDate]
+        ps.zipWithIndex.foreach { case (quote, n) =>
+          logger.info(f"[$n%04d] $quote")
+        }
       }
     }
 
@@ -55,7 +63,7 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column(name = "lastSaleTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         ))) use { newTable =>
         newTable.truncate()
         TableFile(databaseName, tableName) use { table =>
@@ -85,9 +93,9 @@ class TableFileTest extends AnyFunSpec {
     it("should find rows via a condition in a table") {
       TableFile(databaseName, tableName) use { table =>
         val results = table.getRows(limit = None, condition = KeyValues("exchange" -> "NASDAQ")).toList
-       table.device.columns zip results.zipWithIndex foreach { case (column, (result, index)) =>
-         logger.info(s"[$index] ${column.name}: $result")
-       }
+        table.device.columns zip results.zipWithIndex foreach { case (column, (result, index)) =>
+          logger.info(s"[$index] ${column.name}: $result")
+        }
       }
     }
 
@@ -154,20 +162,20 @@ class TableFileTest extends AnyFunSpec {
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
           Column(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column(name = "lastSaleTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
         ))) use { table =>
         table.truncate()
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")
 
-        table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastTradeTime" -> new Date()))
-        table.insertRow(KeyValues("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastTradeTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "GE", "exchange" -> "NASDAQ", "lastSale" -> 89.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "PEREZ", "exchange" -> "OTCBB", "lastSale" -> 0.001, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "AMZN", "exchange" -> "NYSE", "lastSale" -> 1234.55, "lastSaleTime" -> new Date()))
+        table.insertRow(KeyValues("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastSaleTime" -> new Date()))
 
         val agg = table.selectRows(
-          where= KeyValues(),
+          where = KeyValues(),
           groupBy = Seq(BasicField(name = "exchange")),
           fields = Seq(BasicField(name = "exchange"))
         )

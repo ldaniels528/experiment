@@ -1,8 +1,7 @@
 package com.qwery.database
 package server
 
-import java.io.File
-
+import com.qwery.database.collections.PersistentSeq
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.models._
@@ -11,8 +10,10 @@ import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
 
+import java.io.File
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
+import scala.reflect.ClassTag
 
 /**
  * Represents a physical table file
@@ -356,6 +357,15 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
       val updatedValues = row.toKeyValues ++ values
       replaceRow(row.id, updatedValues)
     }
+  }
+
+  def toPersistentSeq[A <: Product : ClassTag]: PersistentSeq[A] = {
+    val (columns, _class) = BlockDevice.toColumns[A]
+    val deviceColumns = device.columns.map(c => c.name -> c.metadata.`type`)
+    val productColumns = columns.map(c => c.name -> c.metadata.`type`)
+    val missingColumns = deviceColumns.collect { case t@(name, _type) if !deviceColumns.contains(t) => name + ':' + _type }
+    assert(missingColumns.isEmpty, s"Class ${_class.getName} does not contain columns: ${missingColumns.mkString(", ")}")
+    new PersistentSeq[A](device, _class)
   }
 
   /**

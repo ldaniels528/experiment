@@ -1,19 +1,22 @@
 package com.qwery.database
 package device
 
-import java.io.{File, PrintWriter}
-import java.nio.ByteBuffer
-import java.text.SimpleDateFormat
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.OptionComparisonHelper.OptionComparator
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.types._
+import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
+import org.slf4j.LoggerFactory
 
+import java.io.{File, PrintWriter}
+import java.nio.ByteBuffer
+import java.text.SimpleDateFormat
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.reflect.{ClassTag, classTag}
 
 /**
  * Represents a raw block device
@@ -435,6 +438,146 @@ trait BlockDevice {
  * Block Device Companion
  */
 object BlockDevice {
+  private[this] lazy val logger = LoggerFactory.getLogger(getClass)
+
+  /**
+    * Facilitates building a new block device
+    * @return a new [[Builder]]
+    */
+  def builder: Builder = new Builder()
+
+  /**
+    * Retrieves the columns that represent the [[Product product type]]
+    * @tparam T the [[Product product type]]
+    * @return a tuple of collection of [[Column columns]]
+    */
+  def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
+    val `class` = classTag[T].runtimeClass
+    val declaredFields = `class`.getDeclaredFields.toList
+    val defaultMaxLen = 128
+    val columns = declaredFields map { field =>
+      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
+      val `type` = ColumnTypes.determineClassType(field.getType)
+      val maxSize = ci.map(_.maxSize)
+      if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
+        logger.warn(
+          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
+              |
+              |case class StockQuote(@(ColumnInfo@field)(maxSize = 8)    symbol: String,
+              |                      @(ColumnInfo@field)(maxSize = 8)    exchange: String,
+              |                                                          lastSale: Double,
+              |                                                          tradeTime: Long,
+              |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
+              |""".stripMargin)
+      }
+      Column(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+        `type` = `type`,
+        isCompressed = ci.exists(_.isCompressed),
+        isEncrypted = ci.exists(_.isEncrypted),
+        isNullable = ci.exists(_.isNullable),
+        isPrimary = ci.exists(_.isPrimary),
+        isRowID = ci.exists(_.isRowID)))
+    }
+    (columns, `class`.asInstanceOf[Class[T]])
+  }
+
+  /**
+    * Block Device Builder
+    */
+  class Builder() {
+    private var columns: Seq[Column] = Nil
+    private var capacity: Int = 0
+    private var executionContext: ExecutionContext = _
+    private var partitionSize: Int = 0
+    private var persistenceFile: File = _
+    private var isColumnModel: Boolean = false
+
+    /**
+      * Creates a new block device
+      * @return a new [[BlockDevice block device]]
+      */
+    def build: BlockDevice = {
+      assert(columns.nonEmpty, "No columns specified")
+
+      // is it column-oriented?
+      if (isColumnModel) {
+        val file = if (persistenceFile != null) persistenceFile else createTempFile()
+        ColumnOrientedFileBlockDevice(columns, file)
+      }
+
+      // is it partitioned?
+      else if (partitionSize > 0) {
+        if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
+        else new ParallelPartitionedBlockDevice(columns, partitionSize)(executionContext)
+      }
+
+      // is it in memory?
+      else if (capacity > 0) {
+        if (persistenceFile != null) new HybridBlockDevice(columns, capacity, new RowOrientedFileBlockDevice(columns, persistenceFile))
+        else new ByteArrayBlockDevice(columns, capacity)
+      }
+
+      // must be a simple disk-based collection
+      else {
+        val file = if (persistenceFile != null) persistenceFile else createTempFile()
+        new RowOrientedFileBlockDevice(columns, file)
+      }
+    }
+
+    def withColumnModel[A <: Product : ClassTag]: this.type = {
+      val (columns, _) = toColumns[A]
+      this.columns = columns
+      this.isColumnModel = true
+      this
+    }
+
+    def withColumnModel(columns: Seq[Column]): this.type = {
+      this.columns = columns
+      this.isColumnModel = true
+      this
+    }
+
+    def withColumns(columns: Seq[Column]): this.type = {
+      this.columns = columns
+      this
+    }
+
+    def withMemoryCapacity(capacity: Int): this.type = {
+      this.capacity = capacity
+      this.isColumnModel = false
+      this
+    }
+
+    def withParallelism(executionContext: ExecutionContext): this.type = {
+      this.executionContext = executionContext
+      this
+    }
+
+    def withPartitions(partitionSize: Int): this.type = {
+      this.partitionSize = partitionSize
+      this.isColumnModel = false
+      this
+    }
+
+    def withPersistenceFile(file: File): this.type = {
+      this.persistenceFile = file
+      this
+    }
+
+    def withRowModel[A <: Product : ClassTag]: this.type = {
+      val (columns, _) = toColumns[A]
+      this.columns = columns
+      this.isColumnModel = false
+      this
+    }
+
+    def withRowModel(columns: Seq[Column]): this.type = {
+      this.columns = columns
+      this.isColumnModel = false
+      this
+    }
+
+  }
 
   case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) {
     def +(that: RowStatistics): RowStatistics = that.copy(
