@@ -1,8 +1,6 @@
 package com.qwery.database
 package server
 
-import java.util.UUID
-
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props, Scheduler}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
@@ -16,10 +14,11 @@ import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._
 import com.qwery.database.server.QueryProcessor.implicits._
 import com.qwery.models.expressions.{Expression, Field => SQLField}
-import com.qwery.models.{Insert, OrderColumn}
+import com.qwery.models.{Insert, Invokable, OrderColumn}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
+import java.util.UUID
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
@@ -62,12 +61,12 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
     * Creates a new view (virtual table)
     * @param databaseName the database name
     * @param viewName     the view name
-    * @param queryString  the SQL query
+    * @param query        the SQL query
     * @param ifNotExists  if true, the operation will not fail
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
-    asUpdateCount(CreateView(databaseName, viewName, queryString, ifNotExists))
+  def createView(databaseName: String, viewName: String, query: Invokable, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateView(databaseName, viewName, query, ifNotExists))
   }
 
   /**
@@ -740,7 +739,7 @@ object QueryProcessor {
     //      VIRTUAL TABLE MUTATIONS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class CreateView(databaseName: String, tableName: String, queryString: String, ifNotExists: Boolean) extends VirtualTableIORequest
+    case class CreateView(databaseName: String, tableName: String, query: Invokable, ifNotExists: Boolean) extends VirtualTableIORequest
 
     case class DropView(databaseName: String, tableName: String, ifExists: Boolean) extends VirtualTableIORequest
 

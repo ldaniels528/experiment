@@ -1,9 +1,9 @@
 package com.qwery.database
 package server
 
+import com.qwery.database.models._
 import com.qwery.database.server.DatabaseFiles._
 import com.qwery.database.server.DatabaseManagementSystem.implicits._
-import com.qwery.database.models._
 
 import scala.util.Try
 
@@ -11,7 +11,7 @@ import scala.util.Try
   * Database Management System
   */
 object DatabaseManagementSystem {
-  val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "VIEW")
+  val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "LOGICAL_TABLE")
 
   /**
     * Retrieves the summary for a database by name
@@ -24,13 +24,14 @@ object DatabaseManagementSystem {
     DatabaseSummary(databaseName, tables = tableDirectories.flatMap {
       case tableDirectory if tableDirectory.isDirectory =>
         val tableName = tableDirectory.getName
-        Try(DatabaseFiles.readTableConfig(databaseName, tableName)).toOption map { config =>
-          val tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE"
-          TableSummary(tableName = tableName, tableType = tableType, description = config.description)
-        }
-      case viewFile if viewFile.isFile & viewFile.getName.endsWith(".sql") =>
-        val viewName = viewFile.getName.substring(0, viewFile.getName.lastIndexOf('.'))
-        Some(TableSummary(tableName = viewName, tableType = "VIEW", description = Some("Logical table/view")))
+        if (isTableFile(databaseName, tableName)) {
+          Try(readTableConfig(databaseName, tableName)).toOption map { config =>
+            val tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE"
+            TableSummary(tableName = tableName, tableType = tableType, description = config.description)
+          }
+        } else if (isViewFile(databaseName, tableName)) {
+          Some(TableSummary(tableName = tableName, tableType = "LOGICAL_TABLE", description = Some("Logical table/view")))
+        } else None
       case _ => None
     })
   }

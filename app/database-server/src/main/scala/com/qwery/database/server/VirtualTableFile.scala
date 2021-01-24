@@ -1,11 +1,11 @@
 package com.qwery.database
 package server
 
-import com.qwery.database.server.DatabaseFiles._
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.server.DatabaseFiles._
 import com.qwery.database.server.QueryProcessor.commands.SelectRows
-import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
+import com.qwery.models.{Invokable, OrderColumn}
 
 /**
   * Represents a virtual table file (e.g. view)
@@ -58,10 +58,16 @@ object VirtualTableFile {
     new VirtualTableFile(databaseName, viewName, device = getViewDevice(databaseName, viewName))
   }
 
-  def createView(databaseName: String, viewName: String, queryString: String, ifNotExists: Boolean): VirtualTableFile = {
+  def createView(databaseName: String, viewName: String, query: Invokable, ifNotExists: Boolean): VirtualTableFile = {
     val viewFile = getViewConfigFile(databaseName, viewName)
     if (viewFile.exists() && !ifNotExists) die(s"View '$viewName' already exists")
-    else writeViewConfig(databaseName, viewName, queryString)
+    else {
+      // create the root directory
+      getTableRootDirectory(databaseName, viewName).mkdirs()
+
+      // write the view config
+      writeViewConfig(databaseName, viewName, query)
+    }
     VirtualTableFile(databaseName, viewName)
   }
 
@@ -72,7 +78,8 @@ object VirtualTableFile {
   }
 
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {
-    SQLCompiler.compile(databaseName, sql = readViewConfig(databaseName, viewName)) match {
+    import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
+    readViewConfig(databaseName, viewName).compile(databaseName) match {
       case SelectRows(_, tableName, fields, where, groupBy, orderBy, limit) =>
         TableFile(databaseName, tableName).selectRows(fields, where, groupBy, orderBy, limit)
       case other => die(s"Unhandled view query model - $other")

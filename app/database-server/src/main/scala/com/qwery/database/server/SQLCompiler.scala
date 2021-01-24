@@ -79,7 +79,6 @@ object SQLCompiler {
      * @param invokable the [[Invokable]]
      */
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
-      import com.qwery.language.SQLDecompiler.implicits._
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
           val props = TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = false)
@@ -87,7 +86,7 @@ object SQLCompiler {
         case mx.Create(TableIndex(_, TableRef(tableName), columns)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Create(mx.View(viewName, query, ifNotExists)) =>
-          cx.CreateView(databaseName, viewName, query.toSQL, ifNotExists)
+          cx.CreateView(databaseName, viewName, query, ifNotExists)
         case mx.Delete(TableRef(tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
         case mx.DropTable(TableRef(tableName), ifExists) =>

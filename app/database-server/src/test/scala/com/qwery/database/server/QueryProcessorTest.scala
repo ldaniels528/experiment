@@ -1,14 +1,14 @@
 package com.qwery.database
 package server
 
-import java.util.Date
-
 import akka.util.Timeout
 import com.qwery.database.server.StockQuote._
+import com.qwery.language.SQLLanguageParser
 import com.qwery.models.expressions.AllFields
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
+import java.util.Date
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
@@ -129,7 +129,7 @@ class QueryProcessorTest extends AnyFunSpec {
     it("should perform CREATE VIEW (API)") {
       val outcome = for {
         _ <- queryProcessor.dropView(databaseName, viewName = "tickers", ifExists = true)
-        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true, queryString =
+        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true, query = SQLLanguageParser.parse(
           s"""|SELECT
               |   symbol AS ticker,
               |   exchange AS market,
@@ -141,7 +141,7 @@ class QueryProcessorTest extends AnyFunSpec {
               |ORDER BY lastSale DESC
               |LIMIT 50
               |""".stripMargin
-        )
+        ))
         results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), limit = Some(5))
       } yield results
 

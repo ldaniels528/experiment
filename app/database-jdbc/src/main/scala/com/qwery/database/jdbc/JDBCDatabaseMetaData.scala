@@ -577,7 +577,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
 
   override def getTableTypes: ResultSet = {
     val columns = Seq(mkColumn(name = "TABLE_TYPE", columnType = StringType))
-    val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "VIEW")
+    val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "LOGICAL_TABLE")
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "TableTypes", columns, data = tableTypes map { tableType =>
       Seq(Option(tableType))
     })

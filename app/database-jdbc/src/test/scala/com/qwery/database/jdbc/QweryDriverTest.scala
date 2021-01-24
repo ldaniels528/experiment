@@ -70,7 +70,7 @@ class QweryDriverTest extends AnyFunSpec {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val sql = s"DROP TABLE IF EXISTS $tableName"
         val count = conn.createStatement().executeUpdate(sql)
-        assert(count == 1)
+        assert(count >= 0 && count <= 1)
       }
     }
 
@@ -205,6 +205,7 @@ class QweryDriverTest extends AnyFunSpec {
         // retrieve the row again
         conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'CCC'") use { rs1 =>
           rs1.next()
+          assert(rs1.getString("symbol") == "CCC")
           assert(rs1.getDouble("lastSale") == 15.44)
         }
       }
@@ -223,6 +224,7 @@ class QweryDriverTest extends AnyFunSpec {
         // retrieve the row again
         conn.createStatement().executeQuery(s"SELECT * FROM $tableName WHERE symbol = 'AAA'") use { rs1 =>
           rs1.next()
+          assert(rs1.getString("symbol") == "AAA")
           assert(rs1.getDouble("lastSale") == 78.99)
         }
       }
