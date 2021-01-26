@@ -34,8 +34,12 @@ crossScalaVersions := Seq(scalaVersion_2_11, scalaVersion_2_12)
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_server, database_client, database_jdbc).
-  dependsOn(core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x, database_models, database_server, database_client, database_jdbc).
+  aggregate(
+    core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
+    database_core, database_models, database_server, database_client, database_jdbc).
+  dependsOn(
+    core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
+    database_core, database_models, database_server, database_client, database_jdbc).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -133,7 +137,7 @@ lazy val database_core = (project in file("./app/database-core")).
   * @example sbt "project database_client" test
   */
 lazy val database_client = (project in file("./app/database-client")).
-  dependsOn(database_models, util, language).
+  dependsOn(core, util, language, database_core, database_models).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -156,7 +160,7 @@ lazy val database_client = (project in file("./app/database-client")).
   * @example sbt "project database_models" test
   */
 lazy val database_models = (project in file("./app/database-models")).
-  dependsOn(database_core, util, language).
+  dependsOn(core, util, language, database_core).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -178,7 +182,7 @@ lazy val database_models = (project in file("./app/database-models")).
   * @example sbt "project database_server" test
   */
 lazy val database_server = (project in file("./app/database-server")).
-  dependsOn(database_models, util, language).
+  dependsOn(core, util, language, database_core, database_models).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -203,7 +207,7 @@ lazy val database_server = (project in file("./app/database-server")).
   * @example sbt "project database_jdbc" test
   */
 lazy val database_jdbc = (project in file("./app/database-jdbc")).
-  dependsOn(database_client).
+  dependsOn(database_core, database_client).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
