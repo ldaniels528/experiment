@@ -141,7 +141,7 @@ trait SparkCodeCompiler {
               .build()
           case None => ""
         }
-      case View(name, query, ifNotExists) =>
+      case View(name, query, description, ifNotExists) =>
         CodeBuilder(prepend = ".")
           .append(query.toCode)
           .append(withGlobalTempView(name))

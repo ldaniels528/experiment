@@ -61,7 +61,7 @@ class DatabaseClientTest extends AnyFunSpec {
       )
       invoke(
         label = s"service.createTable($databaseName, $tableNameA, $columns)",
-        block = service.createTable(databaseName, tableNameA, TableProperties.create(description = Some("test table"), columns = columns)))
+        block = service.createTable(databaseName, tableNameA, TableProperties.create(description = Some("API created table"), columns = columns)))
     }
 
     it("should create a new table (SQL)") {
@@ -71,7 +71,7 @@ class DatabaseClientTest extends AnyFunSpec {
             |  exchange STRING(8) comment 'the stock exchange',
             |  lastSale DOUBLE comment 'the latest sale price',
             |  lastTradeTime DATE comment 'the latest sale date/time'
-            |)
+            |) WITH DESCRIPTION 'SQL created table'
             |""".stripMargin.trim
       invoke(sql, service.executeQuery(databaseName, sql))
     }

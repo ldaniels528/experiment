@@ -24,14 +24,21 @@ object DatabaseManagementSystem {
     DatabaseSummary(databaseName, tables = tableDirectories.flatMap {
       case tableDirectory if tableDirectory.isDirectory =>
         val tableName = tableDirectory.getName
+
+        // is it a physical table?
         if (isTableFile(databaseName, tableName)) {
           Try(readTableConfig(databaseName, tableName)).toOption map { config =>
-            val tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE"
-            TableSummary(tableName = tableName, tableType = tableType, description = config.description)
+            TableSummary(tableName, tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE", config.description)
           }
-        } else if (isViewFile(databaseName, tableName)) {
-          Some(TableSummary(tableName = tableName, tableType = "LOGICAL_TABLE", description = Some("Logical table/view")))
-        } else None
+        }
+        // is it a logical table?
+        else if (isVirtualTable(databaseName, tableName)) {
+          Try(readTableConfig(databaseName, tableName)).toOption map { config =>
+            TableSummary(tableName, tableType = "LOGICAL_TABLE", config.description)
+          }
+        }
+        // unsupported file
+        else None
       case _ => None
     })
   }

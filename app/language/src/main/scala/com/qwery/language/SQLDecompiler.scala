@@ -19,13 +19,13 @@ object SQLDecompiler {
   }
 
   def decompile(invokable: Invokable): String = invokable match {
-    case Create(View(name, query, ifNotExists)) => decompileCreateView(name, query, ifNotExists)
+    case Create(View(name, query, description, ifNotExists)) => decompileCreateView(name, query, description, ifNotExists)
     case select: Select => decompileSelect(select).withAlias(select.alias)
     case t@TableRef(name) => name.withAlias(t.alias)
     case other => die(s"Failed to decompile - $other")
   }
 
-  private def decompileCreateView(name: String, query: Invokable, ifNotExists: Boolean): String = {
+  private def decompileCreateView(name: String, query: Invokable, description: Option[String], ifNotExists: Boolean): String = {
     s"create view $name ${if (ifNotExists) "if not exists" else ""} as ${query.toSQL}".replaceAllLiterally("  ", " ")
   }
 

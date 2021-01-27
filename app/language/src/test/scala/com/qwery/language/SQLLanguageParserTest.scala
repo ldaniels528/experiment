@@ -262,6 +262,23 @@ class SQLLanguageParserTest extends AnyFunSpec {
         ))))
     }
 
+    it("should support CREATE VIEW ... WITH DESCRIPTION statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE VIEW IF NOT EXISTS OilAndGas
+           |WITH DESCRIPTION 'AMEX Stock symbols sorted by last sale'
+           |AS
+           |SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |FROM Customers
+           |WHERE Industry = 'Oil/Gas Transmission'
+           |""".stripMargin)
+      assert(results == Create(View(name = "OilAndGas", description = Some("AMEX Stock symbols sorted by last sale"), ifNotExists = true,
+        query = Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = Field('Industry) === "Oil/Gas Transmission"
+        ))))
+    }
+
     it("should support DECLARE statements") {
       val results = SQLLanguageParser.parse("DECLARE @customerId INTEGER")
       assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = false))

@@ -85,8 +85,8 @@ object SQLCompiler {
           cx.CreateTable(databaseName, table.name, props)
         case mx.Create(TableIndex(_, TableRef(tableName), columns)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
-        case mx.Create(mx.View(viewName, query, ifNotExists)) =>
-          cx.CreateView(databaseName, viewName, query, ifNotExists)
+        case mx.Create(mx.View(viewName, invokable, description, ifNotExists)) =>
+          cx.CreateView(databaseName, viewName, description, invokable, ifNotExists)
         case mx.Delete(TableRef(tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
         case mx.DropTable(TableRef(tableName), ifExists) =>

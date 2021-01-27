@@ -1,7 +1,6 @@
 package com.qwery.database
 
 import java.util.concurrent.atomic.AtomicInteger
-
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.functions._
 import com.qwery.database.types.QxAny
@@ -38,6 +37,16 @@ class TableQuery(tableDevice: BlockDevice) {
     if (groupBy.nonEmpty) aggregationQuery(projection, where, groupBy, orderBy, limit)
     else if (isSummarization(projection)) summarizationQuery(projection, where, orderBy, limit)
     else transformationQuery(projection, where, orderBy, limit)
+  }
+
+  /**
+   * Returns the equivalent columns for the field projection
+   * @param projection the [[Expression field projection]]
+   * @return a [[BlockDevice device]] containing the rows
+   */
+  def explainColumns(projection: Seq[Expression]): Seq[Column] = {
+    if (isSummarization(projection)) getSummarizationColumns(projection)(getAggregateProjection(projection, tempName))
+    else getTransformationColumns(projection)
   }
 
   //////////////////////////////////////////////////////////////////
@@ -105,6 +114,12 @@ class TableQuery(tableDevice: BlockDevice) {
     sortResults(results, orderBy)
   }
 
+  private def getAggregateColumns(projection: Seq[Expression], tempName: Any => String) = {
+    val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, tempName)
+    (aggExpressions.map(_.name) zip getProjectionColumns(projection))
+      .map { case (name, column) => column.copy(name = name) }
+  }
+
   private def getAggregateProjection(expressions: Seq[Expression], tempName: Any => String): Seq[AggregateExpr] = {
     expressions map {
       case AllFields => die("Aggregation function or constant value expected")
@@ -159,7 +174,7 @@ class TableQuery(tableDevice: BlockDevice) {
                          orderBy: Seq[OrderColumn],
                          limit: Option[Int]): BlockDevice = {
     // compile the projection into aggregate expressions
-    val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, tempName)
+    implicit val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, tempName)
 
     // update the aggregate expressions
     tableDevice.whileKV(where, limit) { srcKV => aggExpressions.foreach(_ += srcKV) }
@@ -168,13 +183,17 @@ class TableQuery(tableDevice: BlockDevice) {
     val dstKV = KeyValues(aggExpressions.map { expr => expr.name -> expr.collect }: _*)
 
     // ensure temporary column names are honored
-    val projectionColumns: Seq[Column] = (aggExpressions.map(_.name) zip getProjectionColumns(projection))
-      .map { case (name, column) => column.copy(name = name) }
+    val projectionColumns: Seq[Column] = getSummarizationColumns(projection)
 
     // write the summarized key-values as a row
     implicit val results: BlockDevice = createTempTable(projectionColumns, fixedRowCount = 1)
     results.writeRow(dstKV.toBinaryRow(rowID = results.length))
     sortResults(results, orderBy)
+  }
+
+  private def getSummarizationColumns(projection: Seq[Expression])(implicit aggExpressions: Seq[AggregateExpr]): Seq[Column] = {
+    // ensure temporary column names are honored
+    (aggExpressions.map(_.name) zip getProjectionColumns(projection)).map { case (name, column) => column.copy(name = name) }
   }
 
   /**

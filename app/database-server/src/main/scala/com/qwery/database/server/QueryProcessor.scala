@@ -58,15 +58,16 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
   }
 
   /**
-    * Creates a new view (virtual table)
-    * @param databaseName the database name
-    * @param viewName     the view name
-    * @param query        the SQL query
-    * @param ifNotExists  if true, the operation will not fail
-    * @return the promise of an [[UpdateCount update count]]
-    */
-  def createView(databaseName: String, viewName: String, query: Invokable, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
-    asUpdateCount(CreateView(databaseName, viewName, query, ifNotExists))
+   * Creates a new view (virtual table)
+   * @param databaseName the database name
+   * @param viewName     the view name
+   * @param description  the optional description or remarks
+   * @param invokable    the [[Invokable SQL query]]
+   * @param ifNotExists  if true, the operation will not fail
+   * @return the promise of an [[UpdateCount update count]]
+   */
+  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateView(databaseName, viewName, description, invokable, ifNotExists))
   }
 
   /**
@@ -601,8 +602,8 @@ object QueryProcessor {
     private lazy val vTable = VirtualTableFile(databaseName, viewName)
 
     override def receive: Receive = {
-      case cmd@CreateView(_, _, queryString, ifNotExists) =>
-        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, queryString, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@CreateView(_, _, description, invokable, ifNotExists) =>
+        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DropView(_, _, ifExists) =>
         invoke(cmd, sender())(VirtualTableFile.dropView(databaseName, viewName, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@FindRows(_, _, condition, limit) =>
@@ -739,7 +740,7 @@ object QueryProcessor {
     //      VIRTUAL TABLE MUTATIONS
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    case class CreateView(databaseName: String, tableName: String, query: Invokable, ifNotExists: Boolean) extends VirtualTableIORequest
+    case class CreateView(databaseName: String, tableName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean) extends VirtualTableIORequest
 
     case class DropView(databaseName: String, tableName: String, ifExists: Boolean) extends VirtualTableIORequest
 

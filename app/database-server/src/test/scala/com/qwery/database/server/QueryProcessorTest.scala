@@ -39,7 +39,7 @@ class QueryProcessorTest extends AnyFunSpec {
             |   exchange VARCHAR(8) COMMENT "the stock exchange",
             |   lastSale DOUBLE COMMENT "the latest sale price",
             |   lastTradeTime DATETIME COMMENT "the latest sale date/time"
-            |)
+            |) WITH DESCRIPTION 'SQL created table'
             |""".stripMargin), Duration.Inf)
     }
 
@@ -129,17 +129,19 @@ class QueryProcessorTest extends AnyFunSpec {
     it("should perform CREATE VIEW (API)") {
       val outcome = for {
         _ <- queryProcessor.dropView(databaseName, viewName = "tickers", ifExists = true)
-        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true, query = SQLLanguageParser.parse(
-          s"""|SELECT
-              |   symbol AS ticker,
-              |   exchange AS market,
-              |   lastSale,
-              |   ROUND(lastSale, 1) AS roundedLastSale,
-              |   lastTradeTime AS lastSaleTime
-              |FROM $tableName
-              |WHERE exchange = 'AMEX'
-              |ORDER BY lastSale DESC
-              |LIMIT 50
+        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true,
+          description = Some("AMEX Stock symbols sorted by last sale"),
+          invokable = SQLLanguageParser.parse(
+            s"""|SELECT
+                |   symbol AS ticker,
+                |   exchange AS market,
+                |   lastSale,
+                |   ROUND(lastSale, 1) AS roundedLastSale,
+                |   lastTradeTime AS lastSaleTime
+                |FROM $tableName
+                |WHERE exchange = 'AMEX'
+                |ORDER BY lastSale DESC
+                |LIMIT 50
               |""".stripMargin
         ))
         results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), limit = Some(5))
@@ -157,7 +159,9 @@ class QueryProcessorTest extends AnyFunSpec {
       val outcome = for {
         _ <- queryProcessor.executeQuery(databaseName, sql = "DROP VIEW IF EXISTS tickers")
         _ <- queryProcessor.executeQuery(databaseName, sql =
-          s"""|CREATE VIEW tickers AS
+          s"""|CREATE VIEW tickers
+              |WITH DESCRIPTION 'AMEX Stock symbols sorted by last sale'
+              |AS
               |SELECT
               |   symbol AS ticker,
               |   exchange AS market,

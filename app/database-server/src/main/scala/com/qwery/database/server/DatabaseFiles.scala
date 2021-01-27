@@ -2,7 +2,7 @@ package com.qwery.database
 package server
 
 import com.qwery.database.JSONSupport._
-import com.qwery.database.device._
+import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.models._
 import com.qwery.models.Invokable
 import com.qwery.util.ResourceHelper._
@@ -14,18 +14,6 @@ import scala.io.Source
   * Database Files
   */
 object DatabaseFiles {
-
-  def getTableDevice(databaseName: String, tableName: String): (TableConfig, BlockDevice) = {
-    val (configFile, dataFile) = (getTableConfigFile(databaseName, tableName), getTableDataFile(databaseName, tableName))
-    assert(configFile.exists() && dataFile.exists(), s"Table '$databaseName.$tableName' does not exist")
-
-    val config = readTableConfig(databaseName, tableName)
-    val device = if (config.isColumnar)
-      ColumnOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
-    else
-      new RowOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
-    (config, device)
-  }
 
   //////////////////////////////////////////////////////////////////////////////////////
   //  DATABASE CONFIG
@@ -59,6 +47,18 @@ object DatabaseFiles {
     new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
   }
 
+  def getTableDevice(databaseName: String, tableName: String): (TableConfig, BlockDevice) = {
+    val (configFile, dataFile) = (getTableConfigFile(databaseName, tableName), getTableDataFile(databaseName, tableName))
+    assert(configFile.exists() && dataFile.exists(), s"Table '$databaseName.$tableName' does not exist")
+
+    val config = readTableConfig(databaseName, tableName)
+    val device = if (config.isColumnar)
+      ColumnOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+    else
+      new RowOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+    (config, device)
+  }
+
   def getTableRootDirectory(databaseName: String, tableName: String): File = {
     new File(new File(getServerRootDirectory, databaseName), tableName)
   }
@@ -90,23 +90,21 @@ object DatabaseFiles {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////
-  //  VIEW CONFIG
+  //  VIRTUAL TABLE (VIEW) CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getViewConfigFile(databaseName: String, viewName: String): File = {
+  def getViewDataFile(databaseName: String, viewName: String): File = {
     new File(new File(new File(getServerRootDirectory, databaseName), viewName), getViewFileName(viewName))
   }
 
   def getViewFileName(viewName: String): String = s"$viewName.qvu"
 
-  def isViewFile(databaseName: String, tableName: String): Boolean = getViewConfigFile(databaseName, tableName).exists()
-
   def isVirtualTable(databaseName: String, viewName: String): Boolean = {
-    getViewConfigFile(databaseName, viewName).exists()
+    getViewDataFile(databaseName, viewName).exists()
   }
 
-  def readViewConfig(databaseName: String, viewName: String): Invokable = {
-    val file = getViewConfigFile(databaseName, viewName)
+  def readViewData(databaseName: String, viewName: String): Invokable = {
+    val file = getViewDataFile(databaseName, viewName)
     if (!file.exists()) die(s"Table '$viewName' does not exist")
     else {
       new ObjectInputStream(new FileInputStream(file)).use(_.readObject())
@@ -114,8 +112,8 @@ object DatabaseFiles {
     }
   }
 
-  def writeViewConfig(databaseName: String, viewName: String, query: Invokable): Unit = {
-    new ObjectOutputStream(new FileOutputStream(getViewConfigFile(databaseName, viewName))).use(_.writeObject(query))
+  def writeViewData(databaseName: String, viewName: String, query: Invokable): Unit = {
+    new ObjectOutputStream(new FileOutputStream(getViewDataFile(databaseName, viewName))).use(_.writeObject(query))
   }
 
 }

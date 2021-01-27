@@ -248,15 +248,22 @@ trait SQLLanguageParser {
     * @return an [[Invokable invokable]]
    * @example
    * {{{
-   * CREATE VIEW OilAndGas AS
+   * CREATE VIEW OilAndGas
+   * WITH DESCRIPTION 'Oil & Gas Stocks sorted by symbol'
+   * AS
    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
    * FROM Customers
    * WHERE Industry = 'Oil/Gas Transmission'
+   * ORDER BY Symbol DESC
    * }}}
     */
   def parseCreateView(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?AS %Q:query")
-    Create(View(name = params.atoms("name"), query = params.sources("query"), ifNotExists = params.indicators.get("exists").contains(true)))
+    val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?%w:props ?AS %Q:query")
+    Create(View(
+      name = params.atoms("name"),
+      query = params.sources("query"),
+      description = params.atoms.get("description"),
+      ifNotExists = params.indicators.get("exists").contains(true)))
   }
 
   /**
