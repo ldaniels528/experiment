@@ -88,7 +88,9 @@ object VirtualTableFile {
     val configFile = getTableConfigFile(databaseName, viewName)
     if (!ifExists && !dataFile.exists()) die(s"View '$viewName' (${dataFile.getAbsolutePath}) does not exist")
     if (!ifExists && !configFile.exists()) die(s"View '$viewName' (${configFile.getAbsolutePath}) does not exist")
-    dataFile.exists() && configFile.exists() && getViewDataFile(databaseName, viewName).delete()
+    val directory = getTableRootDirectory(databaseName, viewName)
+    val files = directory.listFilesRecursively
+    files.forall(_.delete())
   }
 
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {

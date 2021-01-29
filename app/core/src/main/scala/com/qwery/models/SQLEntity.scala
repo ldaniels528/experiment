@@ -81,6 +81,7 @@ object StorageFormats extends Enumeration {
  */
 case class Table(name: String,
                  columns: List[Column],
+                 ifNotExists: Boolean = false,
                  isColumnar: Boolean = false,
                  isExternal: Boolean = false,
                  description: Option[String] = None,
@@ -115,7 +116,7 @@ object Table {
  * @param table   the host [[Location table reference]]
  * @param columns the [[Field columns]] for which to build the index
  */
-case class TableIndex(name: String, table: Location, columns: Seq[Field]) extends SQLEntity
+case class TableIndex(name: String, table: Location, columns: Seq[Field], ifNotExists: Boolean) extends SQLEntity
 
 /**
  * Represents an enumeration type definition

@@ -97,7 +97,7 @@ object DatabaseFiles {
     new File(new File(new File(getServerRootDirectory, databaseName), viewName), getViewFileName(viewName))
   }
 
-  def getViewFileName(viewName: String): String = s"$viewName.qvu"
+  def getViewFileName(viewName: String): String = s"$viewName.bin"
 
   def isVirtualTable(databaseName: String, viewName: String): Boolean = {
     getViewDataFile(databaseName, viewName).exists()
@@ -105,11 +105,8 @@ object DatabaseFiles {
 
   def readViewData(databaseName: String, viewName: String): Invokable = {
     val file = getViewDataFile(databaseName, viewName)
-    if (!file.exists()) die(s"Table '$viewName' does not exist")
-    else {
-      new ObjectInputStream(new FileInputStream(file)).use(_.readObject())
-        .asInstanceOf[Invokable]
-    }
+    assert(file.exists(), s"Table '$viewName' does not exist")
+    new ObjectInputStream(new FileInputStream(file)).use(_.readObject().asInstanceOf[Invokable])
   }
 
   def writeViewData(databaseName: String, viewName: String, query: Invokable): Unit = {

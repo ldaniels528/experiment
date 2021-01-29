@@ -81,9 +81,9 @@ object SQLCompiler {
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
-          val props = TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = false)
+          val props = TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
           cx.CreateTable(databaseName, table.name, props)
-        case mx.Create(TableIndex(_, TableRef(tableName), columns)) =>
+        case mx.Create(TableIndex(_, TableRef(tableName), columns, ifNotExists)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
         case mx.Create(mx.View(viewName, invokable, description, ifNotExists)) =>
           cx.CreateView(databaseName, viewName, description, invokable, ifNotExists)

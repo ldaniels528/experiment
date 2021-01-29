@@ -198,6 +198,7 @@ trait SQLLanguageParser {
       name = params.atoms("name"),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
+      ifNotExists = params.indicators.get("exists").contains(true),
       isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
       isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL"),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
@@ -223,7 +224,12 @@ trait SQLLanguageParser {
    */
   def parseCreateTableIndex(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %a:name ON %L:table ( %F:columns )")
-    Create(TableIndex(name = params.atoms("name"), columns = params.fields("columns"), table = params.locations("table")))
+    Create(TableIndex(
+      name = params.atoms("name"),
+      columns = params.fields("columns"),
+      table = params.locations("table"),
+      ifNotExists = params.indicators.get("exists").contains(true)
+    ))
   }
 
   /**

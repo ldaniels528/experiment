@@ -66,7 +66,7 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
    * @param ifNotExists  if true, the operation will not fail
    * @return the promise of an [[UpdateCount update count]]
    */
-  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean = false)(implicit timeout: Timeout): Future[UpdateCount] = {
+  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean)(implicit timeout: Timeout): Future[UpdateCount] = {
     asUpdateCount(CreateView(databaseName, viewName, description, invokable, ifNotExists))
   }
 

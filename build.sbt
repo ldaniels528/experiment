@@ -13,6 +13,9 @@ val scalaAppVersion = scalaVersion_2_12
 
 val akkaVersion = "2.6.9"
 val akkaHttpVersion = "10.2.1"
+val awsKinesisClientVersion = "1.14.0"
+val awsSDKVersion = "1.11.943"
+val liftJsonVersion = "3.3.0"
 val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
 val sparkVersion_2_3_x = "2.3.4"
@@ -129,8 +132,7 @@ lazy val database_core = (project in file("./app/database-core")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % "3.3.0"
+      "net.liftweb" %% "lift-json" % liftJsonVersion
     ))
 
 /**
@@ -150,9 +152,54 @@ lazy val database_client = (project in file("./app/database-client")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "commons-io" % "commons-io" % "2.6",
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % "3.3.0",
+      "com.qwery" %% "database-server" % appVersion % Test
+    ))
+
+/**
+ * @example sbt "project database_jdbc" test
+ */
+lazy val database_jdbc = (project in file("./app/database-jdbc")).
+  dependsOn(database_core, database_client).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "qwery-jdbc",
+    organization := "com.qwery",
+    description := "Qwery JDBC Driver",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case PathList("org", "apache", xs @ _*) => MergeStrategy.first
+      case _ => MergeStrategy.first
+    },
+    libraryDependencies ++= Seq(
+      "com.qwery" %% "database-server" % appVersion % Test
+    ))
+
+/**
+ * @example sbt "project database_kinesis" test
+ */
+lazy val database_kinesis = (project in file("./app/database-kinesis")).
+  dependsOn(util, database_client).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "database-kinesis",
+    organization := "com.qwery",
+    description := "Qwery AWS Kinesis Integration",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    mainClass in assembly := Some("com.qwery.database.kinesis.KinesisSync"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+      "com.amazonaws" % "amazon-kinesis-client" % awsKinesisClientVersion,
+      //"com.amazonaws" % "aws-java-sdk-kinesis" % awsSDKVersion,
       "com.qwery" %% "database-server" % appVersion % Test
     ))
 
@@ -175,7 +222,7 @@ lazy val database_models = (project in file("./app/database-models")).
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % "3.3.0"
+      "net.liftweb" %% "lift-json" % liftJsonVersion
     ))
 
 /**
@@ -193,6 +240,7 @@ lazy val database_server = (project in file("./app/database-server")).
     scalaVersion := scalaAppVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    mainClass in assembly := Some("com.qwery.database.server.DatabaseServer"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "commons-io" % "commons-io" % "2.6",
@@ -200,28 +248,7 @@ lazy val database_server = (project in file("./app/database-server")).
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % "3.3.0"
-    ))
-
-/**
-  * @example sbt "project database_jdbc" test
-  */
-lazy val database_jdbc = (project in file("./app/database-jdbc")).
-  dependsOn(database_core, database_client).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "qwery-jdbc",
-    organization := "com.qwery",
-    description := "Qwery JDBC Driver",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    mainClass in assembly := Some("com.qwery.database.QweryDriver"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "com.qwery" %% "database-server" % appVersion % Test
+      "net.liftweb" %% "lift-json" % liftJsonVersion
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

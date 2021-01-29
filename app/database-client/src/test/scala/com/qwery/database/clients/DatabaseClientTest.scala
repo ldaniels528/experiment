@@ -48,7 +48,7 @@ class DatabaseClientTest extends AnyFunSpec {
     }
 
     it("should drop an existing table (SQL)") {
-      val sql = s"DROP TABLE $tableNameB"
+      val sql = s"DROP TABLE IF EXISTS $tableNameB"
       invoke(sql, service.executeQuery(databaseName, sql))
     }
 

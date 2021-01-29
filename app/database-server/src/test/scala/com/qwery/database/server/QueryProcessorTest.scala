@@ -9,7 +9,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
 import java.util.Date
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 /**
@@ -127,9 +127,10 @@ class QueryProcessorTest extends AnyFunSpec {
     }
 
     it("should perform CREATE VIEW (API)") {
+      val viewName = "tickers_AMEX"
       val outcome = for {
-        _ <- queryProcessor.dropView(databaseName, viewName = "tickers", ifExists = true)
-        _ <- queryProcessor.createView(databaseName, viewName = "tickers", ifNotExists = true,
+        _ <- queryProcessor.dropView(databaseName, viewName, ifExists = true)
+        _ <- queryProcessor.createView(databaseName, viewName, ifNotExists = true,
           description = Some("AMEX Stock symbols sorted by last sale"),
           invokable = SQLLanguageParser.parse(
             s"""|SELECT
@@ -144,7 +145,7 @@ class QueryProcessorTest extends AnyFunSpec {
                 |LIMIT 50
               |""".stripMargin
         ))
-        results <- queryProcessor.selectRows(databaseName, tableName = "tickers", fields = Seq(AllFields), limit = Some(5))
+        results <- queryProcessor.selectRows(databaseName, viewName, fields = Seq(AllFields), limit = Some(5))
       } yield results
 
       val results = Await.result(outcome, Duration.Inf)
@@ -156,11 +157,12 @@ class QueryProcessorTest extends AnyFunSpec {
     }
 
     it("should perform CREATE VIEW (SQL)") {
+      val viewName = "tickers_NYSE"
       val outcome = for {
-        _ <- queryProcessor.executeQuery(databaseName, sql = "DROP VIEW IF EXISTS tickers")
+        _ <- queryProcessor.executeQuery(databaseName, sql = s"DROP VIEW IF EXISTS $viewName")
         _ <- queryProcessor.executeQuery(databaseName, sql =
-          s"""|CREATE VIEW tickers
-              |WITH DESCRIPTION 'AMEX Stock symbols sorted by last sale'
+          s"""|CREATE VIEW $viewName
+              |WITH DESCRIPTION 'NYSE Stock symbols sorted by last sale'
               |AS
               |SELECT
               |   symbol AS ticker,
@@ -169,12 +171,12 @@ class QueryProcessorTest extends AnyFunSpec {
               |   ROUND(lastSale, 1) AS roundedLastSale,
               |   lastTradeTime AS lastSaleTime
               |FROM $tableName
-              |WHERE exchange = 'AMEX'
+              |WHERE exchange = 'NYSE'
               |ORDER BY lastSale DESC
               |LIMIT 50
               |""".stripMargin
         )
-        results <- queryProcessor.executeQuery(databaseName, sql = "SELECT * FROM tickers LIMIT 5")
+        results <- queryProcessor.executeQuery(databaseName, sql = s"SELECT * FROM $viewName LIMIT 5")
       } yield results
 
       val results = Await.result(outcome, Duration.Inf)

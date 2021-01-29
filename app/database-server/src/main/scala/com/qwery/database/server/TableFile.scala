@@ -482,9 +482,11 @@ object TableFile {
     */
   def createTable(databaseName: String, tableName: String, properties: TableProperties): TableFile = {
     val dataFile = getTableDataFile(databaseName, tableName)
-    assert(properties.ifNotExists || !dataFile.exists(), s"Table '$databaseName.$tableName' already exists")
-    if (dataFile.exists()) apply(databaseName, tableName)
+    val configFile = getTableConfigFile(databaseName, tableName)
+    if (properties.ifNotExists && dataFile.exists() && configFile.exists()) apply(databaseName, tableName)
     else {
+      assert(!dataFile.exists(), s"Table '$databaseName.$tableName' already exists")
+
       // create the root directory
       getTableRootDirectory(databaseName, tableName).mkdirs()
 
@@ -506,6 +508,10 @@ object TableFile {
    * @return true, if the table was deleted
    */
   def dropTable(databaseName: String, tableName: String, ifExists: Boolean = false): Boolean = {
+    val dataFile = getViewDataFile(databaseName, tableName)
+    val configFile = getTableConfigFile(databaseName, tableName)
+    if (!ifExists && !dataFile.exists()) die(s"Table '$tableName' (${dataFile.getAbsolutePath}) does not exist")
+    if (!ifExists && !configFile.exists()) die(s"Table '$tableName' (${configFile.getAbsolutePath}) does not exist")
     val directory = getTableRootDirectory(databaseName, tableName)
     val files = directory.listFilesRecursively
     files.forall(_.delete())

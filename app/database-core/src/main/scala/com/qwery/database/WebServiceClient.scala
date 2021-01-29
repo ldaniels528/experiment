@@ -1,13 +1,11 @@
 package com.qwery.database
-package clients
-
-import java.io._
-import java.net.{HttpURLConnection, URL}
 
 import com.qwery.util.ResourceHelper._
 import net.liftweb.json.{DefaultFormats, JObject, JValue, parse}
 import org.apache.commons.io.IOUtils
 
+import java.io._
+import java.net.{HttpURLConnection, URL}
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.io.Source
 

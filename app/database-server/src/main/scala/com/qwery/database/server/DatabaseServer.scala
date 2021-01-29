@@ -51,7 +51,7 @@ object DatabaseServer {
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val timeout: Timeout = 2.minutes
+    implicit val timeout: Timeout = 10.minutes
     implicit val queryProcessor: QueryProcessor = new QueryProcessor()
     import system.dispatcher
 
@@ -78,6 +78,7 @@ object DatabaseServer {
    * @return the [[Route]]
    */
   def route()(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+    // Database API routes
     // route: /d/<database> (e.g. "/d/portfolio")
     path("d" / Segment)(routesByDatabase) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
@@ -94,6 +95,12 @@ object DatabaseServer {
       path("d" / Segment / Segment / "length")(routesByDatabaseTableLength) ~
       // route: /q/<database> (e.g. "/q/portfolio")
       path("q" / Segment)(routesByDatabaseTableQuery) ~
+      //
+      // Message API routes
+      // route: /m/<database>/<table> (e.g. "/m/portfolio/stocks" <~ """{ "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }""")
+      path("m" / Segment / Segment)(routesMessaging) ~
+      // route: /m/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
+      path("m" / Segment / Segment / IntNumber)(routesByDatabaseTableRowID) ~
       //
       // Search API routes
       // route: /columns/?database=<pattern>&table=<pattern>&column=<pattern> (e.g. "/columns/?database=portfolios&table=stocks&column=symbol")
@@ -322,6 +329,22 @@ object DatabaseServer {
           complete(qp.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
         }
       }
+  }
+
+  /**
+   * Messaging-specific API routes (e.g. "/m/portfolio/stocks")
+   * @param databaseName the name of the database
+   * @param tableName    the name of the table
+   * @return the [[Route]]
+   */
+  private def routesMessaging(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+    post {
+      // append the new message to the table
+      // (e.g. "POST /m/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
+      entity(as[JsObject]) { jsObject =>
+        complete(qp.insertRow(databaseName, tableName, toValues(jsObject)))
+      }
+    }
   }
 
   /**

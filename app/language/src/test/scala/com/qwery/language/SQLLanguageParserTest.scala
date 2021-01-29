@@ -50,7 +50,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
       val results = SQLLanguageParser.parse(
         """|CREATE INDEX stocks_symbol ON stocks (symbol)
            |""".stripMargin)
-      assert(results == Create(TableIndex(name = "stocks_symbol", columns = List("symbol").map(Field.apply), table = TableRef("stocks"))))
+      assert(results == Create(TableIndex(
+        name = "stocks_symbol",
+        columns = List("symbol").map(Field.apply),
+        table = TableRef("stocks"),
+        ifNotExists = false
+      )))
     }
 
     it("should support CREATE INLINE TABLE statements") {

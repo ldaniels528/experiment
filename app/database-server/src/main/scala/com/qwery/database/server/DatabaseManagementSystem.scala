@@ -20,7 +20,7 @@ object DatabaseManagementSystem {
     */
   def getDatabaseSummary(databaseName: String): DatabaseSummary = {
     val databaseDirectory = getDatabaseRootDirectory(databaseName)
-    val tableDirectories = Option(databaseDirectory.listFiles).toList.flatten
+    val tableDirectories = Option(databaseDirectory.listFiles).toList.flatten.filterNot(_.getName.startsWith("."))
     DatabaseSummary(databaseName, tables = tableDirectories.flatMap {
       case tableDirectory if tableDirectory.isDirectory =>
         val tableName = tableDirectory.getName
