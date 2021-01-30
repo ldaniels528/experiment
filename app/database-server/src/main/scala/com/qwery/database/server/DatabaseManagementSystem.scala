@@ -5,6 +5,9 @@ import com.qwery.database.models._
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.server.DatabaseManagementSystem.implicits._
 
+import java.text.SimpleDateFormat
+import java.time.ZoneId
+import java.util.{Date, TimeZone}
 import scala.util.Try
 
 /**
@@ -20,21 +23,27 @@ object DatabaseManagementSystem {
     */
   def getDatabaseSummary(databaseName: String): DatabaseSummary = {
     val databaseDirectory = getDatabaseRootDirectory(databaseName)
-    val tableDirectories = Option(databaseDirectory.listFiles).toList.flatten.filterNot(_.getName.startsWith("."))
+    val tableDirectories = Option(databaseDirectory.listFiles).toList.flatten
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of("UTC")))
     DatabaseSummary(databaseName, tables = tableDirectories.flatMap {
-      case tableDirectory if tableDirectory.isDirectory =>
+      case tableDirectory if tableDirectory.isDirectory & !tableDirectory.isHidden =>
         val tableName = tableDirectory.getName
 
         // is it a physical table?
         if (isTableFile(databaseName, tableName)) {
           Try(readTableConfig(databaseName, tableName)).toOption map { config =>
-            TableSummary(tableName, tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE", config.description)
+            val dataFile = getTableDataFile(databaseName, tableName)
+            val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
+            TableSummary(tableName, tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE", description = config.description, lastModifiedTime = modifiedTime)
           }
         }
         // is it a logical table?
         else if (isVirtualTable(databaseName, tableName)) {
           Try(readTableConfig(databaseName, tableName)).toOption map { config =>
-            TableSummary(tableName, tableType = "LOGICAL_TABLE", config.description)
+            val dataFile = getViewDataFile(databaseName, tableName)
+            val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
+            TableSummary(tableName, tableType = "LOGICAL_TABLE", description = config.description, lastModifiedTime = modifiedTime)
           }
         }
         // unsupported file

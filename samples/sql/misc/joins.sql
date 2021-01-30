@@ -9,7 +9,7 @@ begin
 
     /* First, we define our input and output sources */
     info 'Describing the input and output sources... ';
-    create table Securities (
+    create external table Securities (
             Symbol STRING,
             Name STRING,
             LastSale STRING,

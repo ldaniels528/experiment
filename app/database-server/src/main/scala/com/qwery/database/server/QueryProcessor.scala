@@ -641,11 +641,21 @@ object QueryProcessor {
     sealed trait SystemIORequest
 
     /**
+      * Represents a System I/O Response
+      */
+    sealed trait SystemIOResponse
+
+    /**
      * Represents a Database I/O Request
      */
     sealed trait DatabaseIORequest extends SystemIORequest {
       def databaseName: String
     }
+
+    /**
+      * Represents a Database I/O Response
+      */
+    sealed trait DatabaseIOResponse extends SystemIOResponse
 
     /**
      * Represents a Table I/O Request
@@ -658,11 +668,6 @@ object QueryProcessor {
       * Represents a Virtual Table I/O Request
       */
     sealed trait VirtualTableIORequest extends TableIORequest
-
-    /**
-     * Represents a Database I/O Response
-     */
-    sealed trait DatabaseIOResponse
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //      READ-ONLY COMMANDS
@@ -783,7 +788,7 @@ object QueryProcessor {
     case class FailedCommandException(command: SystemIORequest, cause: Throwable)
       extends RuntimeException(s"Request '$command' failed", cause)
 
-    case class UnhandledCommandException(command: SystemIORequest, response: DatabaseIOResponse)
+    case class UnhandledCommandException(command: SystemIORequest, response: SystemIOResponse)
       extends RuntimeException(s"After a '$command' an unhandled message '$response' was received")
 
   }

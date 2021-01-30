@@ -22,6 +22,49 @@ sealed trait SQLEntity {
 sealed trait TableLike extends SQLEntity
 
 /**
+  * Represents a Hive-compatible table definition
+  * @param name            the name of the table
+  * @param columns         the table [[Column columns]]
+  * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
+  * @param inputFormat     the [[StorageFormat input format]]
+  * @param outputFormat    the [[StorageFormat output format]]
+  * @param location        the physical location of the data files
+  * @example
+  * {{{
+  *     CREATE EXTERNAL TABLE [IF NOT EXISTS] Cars(
+  *         Name STRING,
+  *         Miles_per_Gallon INT,
+  *         Cylinders INT,
+  *         Displacement INT,
+  *         Horsepower INT,
+  *         Weight_in_lbs INT,
+  *         Acceleration DECIMAL,
+  *         Year DATE,
+  *         Origin CHAR(1))
+  *     COMMENT 'Data about cars from a public database'
+  *     ROW FORMAT DELIMITED
+  *     FIELDS TERMINATED BY ','
+  *     STORED AS TEXTFILE
+  *     LOCATION '/user/ldaniels/visdata';
+  * }}}
+  * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
+  */
+case class ExternalTable(name: String,
+                 columns: List[Column],
+                 ifNotExists: Boolean = false,
+                 description: Option[String] = None,
+                 location: Option[Location] = None,
+                 fieldTerminator: Option[String] = None,
+                 lineTerminator: Option[String] = None,
+                 headersIncluded: Option[Boolean] = None,
+                 nullValue: Option[String] = None,
+                 inputFormat: Option[StorageFormat] = None,
+                 outputFormat: Option[StorageFormat] = None,
+                 partitionBy: List[Column] = Nil,
+                 serdeProperties: Map[String, String] = Map.empty,
+                 tableProperties: Map[String, String] = Map.empty) extends TableLike
+
+/**
  * Represents an inline table definition
  * @param name    the name of the table
  * @param columns the table columns
@@ -52,13 +95,9 @@ object StorageFormats extends Enumeration {
 }
 
 /**
- * Represents a Hive-compatible table definition
+ * Represents a table definition
  * @param name            the name of the table
  * @param columns         the table [[Column columns]]
- * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
- * @param inputFormat     the [[StorageFormat input format]]
- * @param outputFormat    the [[StorageFormat output format]]
- * @param location        the physical location of the data files
  * @example
  * {{{
  *     CREATE [COLUMNAR/EXTERNAL] TABLE [IF NOT EXISTS] Cars(
@@ -72,10 +111,6 @@ object StorageFormats extends Enumeration {
  *         Year DATE,
  *         Origin CHAR(1))
  *     COMMENT 'Data about cars from a public database'
- *     ROW FORMAT DELIMITED
- *     FIELDS TERMINATED BY ','
- *     STORED AS TEXTFILE
- *     LOCATION '/user/ldaniels/visdata';
  * }}}
  * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
  */
@@ -83,18 +118,9 @@ case class Table(name: String,
                  columns: List[Column],
                  ifNotExists: Boolean = false,
                  isColumnar: Boolean = false,
-                 isExternal: Boolean = false,
+                 isPartitioned: Boolean = false,
                  description: Option[String] = None,
-                 location: Option[Location] = None,
-                 fieldTerminator: Option[String] = None,
-                 lineTerminator: Option[String] = None,
-                 headersIncluded: Option[Boolean] = None,
-                 nullValue: Option[String] = None,
-                 inputFormat: Option[StorageFormat] = None,
-                 outputFormat: Option[StorageFormat] = None,
-                 partitionBy: List[Column] = Nil,
-                 serdeProperties: Map[String, String] = Map.empty,
-                 tableProperties: Map[String, String] = Map.empty) extends TableLike
+                 partitionBy: List[Column] = Nil) extends TableLike
 
 /**
  * Table Companion

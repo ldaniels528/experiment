@@ -62,7 +62,7 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
 
-  implicit val tableSummaryJsonFormat: RootJsonFormat[TableSummary] = jsonFormat3(TableSummary.apply)
+  implicit val tableSummaryJsonFormat: RootJsonFormat[TableSummary] = jsonFormat5(TableSummary.apply)
 
   implicit val columnSearchResultJsonFormat: RootJsonFormat[ColumnSearchResult] = jsonFormat3(ColumnSearchResult.apply)
 

@@ -73,7 +73,7 @@ object DatabaseServer {
    * @param port the server port
    */
   def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Unit = {
-    Http().newServerAt(host, port).bindFlow(route()) onComplete {
+    Http().newServerAt(host, port).bindFlow(route(host, port)) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
       case Failure(e) =>
@@ -85,10 +85,10 @@ object DatabaseServer {
    * Define the API routes
    * @return the [[Route]]
    */
-  def route()(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  def route(host: String, port: Int)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     // Database API routes
     // route: /d/<database> (e.g. "/d/portfolio")
-    path("d" / Segment)(routesByDatabase) ~
+    path("d" / Segment)(routesByDatabase(_, host, port)) ~
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
       path("d" / Segment / Segment)(routesByDatabaseTable) ~
       // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
@@ -124,10 +124,15 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @return the [[Route]]
    */
-  private def routesByDatabase(databaseName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabase(databaseName: String, host: String, port: Int)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     get {
-      // retrieve the database metrics (e.g. "GET /d/portfolio")
-      complete(qp.getDatabaseSummary(databaseName))
+      // retrieve the database summary (e.g. "GET /d/portfolio")
+      val databaseSummary = qp.getDatabaseSummary(databaseName).map { case DatabaseSummary(dbName, tables) =>
+        DatabaseSummary(dbName, tables.map { ts =>
+          ts.copy(href = Some(s"http://$host:$port/d/$dbName/${ts.tableName}"))
+        })
+      }
+      complete(databaseSummary)
     }
   }
 

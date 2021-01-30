@@ -127,10 +127,11 @@ trait SQLLanguageParser {
     */
   def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
     "CREATE COLUMNAR TABLE" -> parseCreateTable,
-    "CREATE EXTERNAL TABLE" -> parseCreateTable,
+    "CREATE EXTERNAL TABLE" -> parseCreateTableExternal,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INDEX" -> parseCreateTableIndex,
     "CREATE INLINE TABLE" -> parseCreateInlineTable,
+    "CREATE PARTITIONED TABLE" -> parseCreateTable,
     "CREATE PROCEDURE" -> parseCreateProcedure,
     "CREATE TABLE" -> parseCreateTable,
     "CREATE TYPE" -> parseCreateTypeAsEnum,
@@ -172,12 +173,30 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses a CREATE [COLUMNAR/EXTERNAL] TABLE statement
+    * Parses a CREATE [COLUMNAR|PARTITIONED] TABLE statement
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
   def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|COLUMNAR|EXTERNAL) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
+    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|COLUMNAR|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
+    Create(Table(
+      name = params.atoms("name"),
+      description = params.atoms.get("description"),
+      columns = params.columns.getOrElse("columns", Nil),
+      ifNotExists = params.indicators.get("exists").contains(true),
+      isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
+      isPartitioned = params.atoms.is("mode", _ equalsIgnoreCase "PARTITIONED"),
+      partitionBy = params.columns.getOrElse("partitions", Nil)
+    ))
+  }
+
+  /**
+    * Parses a CREATE EXTERNAL TABLE statement
+    * @param ts the given [[TokenStream token stream]]
+    * @return an [[Create executable]]
+    */
+  def parseCreateTableExternal(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE EXTERNAL TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
 
     def escapeChars(string: String): String = {
       val replacements = Seq("\\n" -> "\n", "\\r" -> "\r", "\\t" -> "\t") // TODO \u0000
@@ -194,13 +213,11 @@ trait SQLLanguageParser {
       else None
     }
 
-    Create(Table(
+    Create(ExternalTable(
       name = params.atoms("name"),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
-      isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
-      isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL"),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
       inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),

@@ -119,7 +119,7 @@ trait SparkCodeCompiler {
     case other => die(s"Variable '$other' is not supported in this context")
   }
 
-  def generatePath(table: Table): Option[String] = table.location.map(generatePath)
+  def generatePath(table: ExternalTable): Option[String] = table.location.map(generatePath)
 
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
@@ -129,7 +129,7 @@ trait SparkCodeCompiler {
           .append(generateCode(columns))
           .append(withGlobalTempView(name))
           .build()
-      case table: Table =>
+      case table: ExternalTable =>
         table.inputFormat.map(_.toString.toLowerCase()) match {
           case Some(format) =>
             CodeBuilder(prepend = ".")
@@ -217,7 +217,7 @@ trait SparkCodeCompiler {
     * Generates Spark table options
     * @see [[https://docs.databricks.com/spark/latest/data-sources/read-csv.html]]
     */
-  def generateTableOptions(table: Table): CodeBuilder = {
+  def generateTableOptions(table: ExternalTable): CodeBuilder = {
     CodeBuilder(prepend = ".")
       .append(table.fieldTerminator.map(delimiter => s"""option("delimiter", "$delimiter")"""))
       .append(table.headersIncluded.map(enabled => s"""option("header", value = $enabled)"""))
@@ -237,7 +237,8 @@ trait SparkCodeCompiler {
   def generateWriter(insert: Insert)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     ctx.lookupTableOrView(insert.destination.target.toCode) match {
       case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
-      case table: Table =>
+      case table: Table => die(s"Physical table '${table.name}' is not supported")
+      case table: ExternalTable =>
         // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
         val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
 

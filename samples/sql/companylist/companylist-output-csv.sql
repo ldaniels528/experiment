@@ -2,7 +2,7 @@ begin
 
     /* Next, we define our output source */
 
-    create table OilGasSecurities (
+    create external table OilGasSecurities (
         Symbol STRING,
         Name STRING,
         LastSale DOUBLE,

@@ -89,14 +89,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE TABLE statements") {
+    it("should support CREATE EXTERNAL TABLE statements") {
       val results2 = SQLLanguageParser.parse(
-        """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
+        """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |STORED AS INPUTFORMAT 'JSON' OUTPUTFORMAT 'JSON'
            |LOCATION './dataSets/customers/json/'
            |""".stripMargin)
-      assert(results2 == Create(Table(name = "Customers",
+      assert(results2 == Create(ExternalTable(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         inputFormat = StorageFormats.JSON,
@@ -109,14 +109,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
       val results = SQLLanguageParser.parse(
         """|CREATE COLUMNAR TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |""".stripMargin)
-      assert(results == Create(Table(name = "Customers", isColumnar = true,
+      assert(results == Create(Table(name = "Customers", isColumnar = true, isPartitioned = false,
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply)
       )))
     }
 
-    it("should support CREATE TABLE w/COMMENT") {
+    it("should support CREATE EXTERNAL TABLE w/COMMENT") {
       val results = SQLLanguageParser.parse(
-        """|CREATE TABLE Customers (
+        """|CREATE EXTERNAL TABLE Customers (
            |    customer_uid UUID COMMENT 'Unique Customer ID',
            |    name STRING COMMENT '',
            |    address STRING COMMENT '',
@@ -131,7 +131,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(Table(name = "Customers", description = Some("Customer information"),
+      assert(results == Create(ExternalTable(name = "Customers", description = Some("Customer information"),
         columns = List(
           Column("customer_uid UUID").withComment("Unique Customer ID"),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
@@ -154,20 +154,19 @@ class SQLLanguageParserTest extends AnyFunSpec {
             |  lastSale DOUBLE,
             |  lastTradeTime DATE
             |)
-            |LOCATION './dataSets/stocks/json/'
             |""".stripMargin
       )
       assert(results == Create(Table(name = "Stocks",
+        isColumnar = false, isPartitioned = false,
         columns = List(
           Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
-          Column("lastSale DOUBLE"), Column("lastTradeTime DATE")),
-        location = LocationRef("./dataSets/stocks/json/")
+          Column("lastSale DOUBLE"), Column("lastTradeTime DATE"))
       )))
     }
 
-    it("should support CREATE TABLE ... WITH statements") {
+    it("should support CREATE EXTERNAL TABLE ... WITH statements") {
       val results = SQLLanguageParser.parse(
-        """|CREATE TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
+        """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |ROW FORMAT DELIMITED
            |FIELDS TERMINATED BY ','
@@ -176,7 +175,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(Table(name = "Customers",
+      assert(results == Create(ExternalTable(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldTerminator = ",",
@@ -188,9 +187,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support complex CREATE TABLE statements") {
+    it("should support complex CREATE EXTERNAL TABLE statements") {
       val results = SQLLanguageParser.parse(
-        """|CREATE TABLE `kbb_mart.kbb_rev_per_page`(
+        """|CREATE EXTERNAL TABLE `kbb_mart.kbb_rev_per_page`(
            |  `rank` string COMMENT 'from deserializer',
            |  `section` string COMMENT 'from deserializer',
            |  `super_section` string COMMENT 'from deserializer',
@@ -214,7 +213,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |TBLPROPERTIES (
            |  'transient_lastDdlTime'='1555400098')
            |""".stripMargin)
-      assert(results == Create(Table(name = "kbb_mart.kbb_rev_per_page",
+      assert(results == Create(ExternalTable(name = "kbb_mart.kbb_rev_per_page",
         columns = List(
           Column("rank string"),
           Column("section string"),

@@ -16,7 +16,7 @@ begin
       *   "day":9
       * }
       */
-    create table LiveRamp (
+    create external table LiveRamp (
         profile_id STRING,
         visitor_id STRING,
         identity_type STRING,
@@ -38,7 +38,7 @@ begin
       *   "liveramp_ingestion_date":1531115764000
       * }
       */
-    create table LiveRampCSV (
+    create external table LiveRampCSV (
         profile_id STRING,
         visitor_id STRING,
         identity_type STRING,
