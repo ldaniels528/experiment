@@ -2,10 +2,11 @@ package com.qwery.database
 package models
 
 import java.util.{Date, UUID}
-
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.device.BlockDevice.RowStatistics
+import com.qwery.database.device.TableIndexRef
+import com.qwery.database.files.{DatabaseConfig, LoadMetrics, TableColumn, TableConfig, TableMetrics, TableProperties}
 import com.qwery.database.types.QxAny
 import com.qwery.models.TypeAsEnum
 import spray.json._

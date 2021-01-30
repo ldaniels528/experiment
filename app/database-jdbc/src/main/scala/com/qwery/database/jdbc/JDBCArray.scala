@@ -1,10 +1,10 @@
 package com.qwery.database
 package jdbc
 
+import com.qwery.database.files.TableColumn
+
 import java.sql.ResultSet
 import java.{sql, util}
-
-import com.qwery.database.models.TableColumn
 
 /**
  * Represents a JDBC array

@@ -1,11 +1,11 @@
 package com.qwery.database.device
 
+import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, ROWID, Row, RowMetadata}
+
 import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
-
-import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, MathUtilsLong, ROWID, Row, RowMetadata}
 
 /**
  * Row-Oriented File Block Device
@@ -19,7 +19,7 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends R
 
   override def getPhysicalSize: Option[Long] = Some(raf.length())
 
-  override def length: ROWID = fromOffset(raf.length().toRowID)
+  override def length: ROWID = fromOffset(raf.length())
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val column = columns(columnID)

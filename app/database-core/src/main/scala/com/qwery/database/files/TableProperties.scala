@@ -1,8 +1,8 @@
-package com.qwery.database.models
+package com.qwery.database.files
 
 import com.qwery.database.Column
 import com.qwery.database.JSONSupport.JSONProductConversion
-import com.qwery.database.models.TableColumn._
+import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 
 /**
   * Represents a table's properties

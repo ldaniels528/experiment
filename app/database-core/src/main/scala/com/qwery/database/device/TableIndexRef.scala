@@ -1,4 +1,4 @@
-package com.qwery.database.models
+package com.qwery.database.device
 
 import com.qwery.database.JSONSupport.JSONProductConversion
 

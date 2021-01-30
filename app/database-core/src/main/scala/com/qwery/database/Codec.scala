@@ -300,9 +300,9 @@ object Codec extends Compression {
 
     @inline def putFieldMetadata(fmd: FieldMetadata): ByteBuffer = buf.put(fmd.encode)
 
-    @inline def getRowID: ROWID = buf.getInt
+    @inline def getRowID: ROWID = buf.getLong
 
-    @inline def putRowID(rowID: ROWID): ByteBuffer = buf.putInt(rowID)
+    @inline def putRowID(rowID: ROWID): ByteBuffer = buf.putLong(rowID)
 
     @inline def getRowMetadata: RowMetadata = RowMetadata.decode(buf.get)
 

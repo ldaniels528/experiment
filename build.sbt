@@ -139,7 +139,7 @@ lazy val database_core = (project in file("./app/database-core")).
   * @example sbt "project database_client" test
   */
 lazy val database_client = (project in file("./app/database-client")).
-  dependsOn(core, util, language, database_core, database_models).
+  dependsOn(database_core, database_models).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -152,14 +152,14 @@ lazy val database_client = (project in file("./app/database-client")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
-      "com.qwery" %% "database-server" % appVersion % Test
+      "com.qwery" %% "database-server-testkit" % appVersion % Test
     ))
 
 /**
  * @example sbt "project database_jdbc" test
  */
 lazy val database_jdbc = (project in file("./app/database-jdbc")).
-  dependsOn(database_core, database_client).
+  dependsOn(database_client).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -171,20 +171,21 @@ lazy val database_jdbc = (project in file("./app/database-jdbc")).
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     autoCompilerPlugins := true,
+    test in assembly := {},
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
       case PathList("org", "apache", xs @ _*) => MergeStrategy.first
       case _ => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
-      "com.qwery" %% "database-server" % appVersion % Test
+      "com.qwery" %% "database-server-testkit" % appVersion % Test
     ))
 
 /**
  * @example sbt "project database_kinesis" test
  */
 lazy val database_kinesis = (project in file("./app/database-kinesis")).
-  dependsOn(util, database_client).
+  dependsOn(database_client).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -199,15 +200,14 @@ lazy val database_kinesis = (project in file("./app/database-kinesis")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "amazon-kinesis-client" % awsKinesisClientVersion,
-      //"com.amazonaws" % "aws-java-sdk-kinesis" % awsSDKVersion,
-      "com.qwery" %% "database-server" % appVersion % Test
+      "com.qwery" %% "database-server-testkit" % appVersion % Test
     ))
 
 /**
   * @example sbt "project database_models" test
   */
 lazy val database_models = (project in file("./app/database-models")).
-  dependsOn(core, util, language, database_core).
+  dependsOn(database_core).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -229,7 +229,7 @@ lazy val database_models = (project in file("./app/database-models")).
   * @example sbt "project database_server" test
   */
 lazy val database_server = (project in file("./app/database-server")).
-  dependsOn(core, util, language, database_core, database_models).
+  dependsOn(database_core, database_models).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -242,13 +242,34 @@ lazy val database_server = (project in file("./app/database-server")).
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
     mainClass in assembly := Some("com.qwery.database.server.DatabaseServer"),
     autoCompilerPlugins := true,
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case PathList("org", "apache", xs @ _*) => MergeStrategy.first
+      case _ => MergeStrategy.first
+    },
     libraryDependencies ++= Seq(
-      "commons-io" % "commons-io" % "2.6",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % liftJsonVersion
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
+    ))
+
+/**
+ * @example sbt "project database_server_testkit" test
+ */
+lazy val database_server_testkit = (project in file("./app/database-server-testkit")).
+  dependsOn(database_server).
+  //settings(publishingSettings: _*).
+  settings(testDependencies: _*).
+  settings(
+    name := "database-server-testkit",
+    organization := "com.qwery",
+    description := "Qwery Database Server Test Kit",
+    version := appVersion,
+    scalaVersion := scalaAppVersion,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
+    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
+    autoCompilerPlugins := true,
+    libraryDependencies ++= Seq(
+
     ))
 
 /////////////////////////////////////////////////////////////////////////////////

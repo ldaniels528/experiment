@@ -1,14 +1,10 @@
 package com.qwery.database.kinesis
 
-import akka.actor.ActorSystem
-import akka.util.Timeout
 import com.qwery.database.clients.DatabaseClient
 import com.qwery.database.kinesis.KinesisSync.KinesisSyncConfig
-import com.qwery.database.server.{DatabaseServer, QueryProcessor}
+import com.qwery.database.server.testkit.DatabaseTestServer
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.duration._
 
 class KinesisSyncTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -17,7 +13,7 @@ class KinesisSyncTest extends AnyFunSpec {
   private val tableName = "vhp_kinesis_stg"
 
   // start the server
-  startServer(port)
+  DatabaseTestServer.startServer(port)
 
   // create the clients
   private val databaseClient = DatabaseClient(port = port)
@@ -56,16 +52,6 @@ class KinesisSyncTest extends AnyFunSpec {
       ))
     }
 
-  }
-
-  def startServer(port: Int): Unit = {
-    implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val timeout: Timeout = 2.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
-    import system.dispatcher
-
-    logger.info(s"Starting Database Server on port $port...")
-    DatabaseServer.startServer(port = port)
   }
 
 }

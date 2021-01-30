@@ -1,11 +1,10 @@
-package com.qwery.database
-package server
+package com.qwery.database.files
 
 import com.qwery.database.collections.PersistentSeq
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
-import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.models._
-import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice, TableIndexRef}
+import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.{Column, Field, KeyValues, ROWID, ROWID_NAME, RecursiveFileList, Row, RowIsLockedException, TableQuery, createTempTable, die, stopWatch}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
@@ -34,9 +33,9 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
    */
   def close(): Unit = device.close()
 
-  def count(): ROWID = device.countRows(_.isActive)
+  def count(): Long = device.countRows(_.isActive)
 
-  def countRows(condition: KeyValues, limit: Option[Int] = None): Int = device.whileRow(condition, limit) { _ => }
+  def countRows(condition: KeyValues, limit: Option[Int] = None): Long = device.whileRow(condition, limit) { _ => }
 
   /**
    * Creates a new binary search index
@@ -60,7 +59,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
 
   def deleteField(rowID: ROWID, columnName: String): Unit = deleteField(rowID, getColumnIdByName(columnName))
 
-  def deleteRange(start: ROWID, length: Int): Int = {
+  def deleteRange(start: ROWID, length: Int): Long = {
     val limit: ROWID = device.length min (start + length)
     var rowID: ROWID = start
     while (rowID < limit) {
@@ -76,7 +75,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     }
   }
 
-  def deleteRows(condition: KeyValues, limit: Option[Int] = None): Int = {
+  def deleteRows(condition: KeyValues, limit: Option[Int] = None): Long = {
     device.whileRow(condition, limit) { row => deleteRow(row.id) }
   }
 
@@ -333,7 +332,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     updateField(rowID, getColumnIdByName(columnName), newValue)
   }
 
-  def updateRange(start: ROWID, length: Int, values: KeyValues): Int = {
+  def updateRange(start: ROWID, length: Int, values: KeyValues): Long = {
     val limit: ROWID = (start + length) min device.length
     var rowID: ROWID = start
     while (rowID < limit) {
@@ -352,7 +351,7 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
     } { (indexDevice, oldValue, newValue) => indexDevice.updateRow(rowID, oldValue, newValue) }
   }
 
-  def updateRows(values: KeyValues, condition: KeyValues, limit: Option[Int] = None): Int = {
+  def updateRows(values: KeyValues, condition: KeyValues, limit: Option[Int] = None): Long = {
     device.whileRow(condition, limit) { row =>
       val updatedValues = row.toKeyValues ++ values
       replaceRow(row.id, updatedValues)

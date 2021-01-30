@@ -1,7 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.Scope._
-import com.qwery.database.types.{QxAny, QxInt}
+import com.qwery.database.types.{QxAny, QxLong}
 
 import scala.collection.concurrent.TrieMap
 
@@ -13,7 +13,7 @@ trait Scope {
   /**
    * @return the current row ID
    */
-  def currentRow: QxInt
+  def currentRow: QxLong
 
   def exists(f: ((String, Any)) => Boolean): Boolean
 
@@ -94,7 +94,7 @@ class DefaultScope(items: (String, Any)*) extends Scope {
   private val functions = TrieMap[String, Function]()
   private val variables = TrieMap[String, Variable]()
 
-  override def currentRow: QxInt = QxInt(rowID)
+  override def currentRow: QxLong = QxLong(rowID)
 
   override def exists(f: ((String, Any)) => Boolean): Boolean = mappings.exists(f)
 

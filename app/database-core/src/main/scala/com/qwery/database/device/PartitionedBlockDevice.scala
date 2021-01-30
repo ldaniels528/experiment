@@ -1,6 +1,6 @@
 package com.qwery.database.device
 
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, RECORD_ID, ROWID, RowMetadata, createTempTable}
+import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, ROWID, RowMetadata, createTempTable}
 
 import java.nio.ByteBuffer
 
@@ -67,7 +67,7 @@ class PartitionedBlockDevice(val columns: Seq[Column],
 
   override def shrinkTo(newSize: ROWID): Unit = {
     // determine the cut-off partition and overrun (remainder)
-    val cutOffIndex = newSize / partitionSize
+    val cutOffIndex = (newSize / partitionSize).toInt
     val remainder = newSize % partitionSize
 
     // adjust the size of the cut-off partition
@@ -85,7 +85,7 @@ class PartitionedBlockDevice(val columns: Seq[Column],
     partition.writeField(toLocalOffset(rowID, index), columnID, buf)
   }
 
-  override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
+  override def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit = {
     val index = toPartitionIndex(rowID)
     partitions(index).writeFieldMetaData(toLocalOffset(rowID, index), columnID, metadata)
   }
@@ -113,9 +113,9 @@ class PartitionedBlockDevice(val columns: Seq[Column],
 
   protected def toLocalOffset(rowID: ROWID, index: Int): ROWID = (rowID - index * partitionSize) min partitionSize
 
-  protected def toPartitionIndex(offset: RECORD_ID, isLimit: Boolean = false): Int = {
+  protected def toPartitionIndex(offset: ROWID, isLimit: Boolean = false): Int = {
     val index = offset / partitionSize
-    val normalizedIndex = if (isLimit && offset == partitionSize) (index - 1) min 0 else index
+    val normalizedIndex = (if (isLimit && offset == partitionSize) (index - 1) min 0 else index).toInt
     ensurePartitions(normalizedIndex)
     normalizedIndex
   }

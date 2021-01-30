@@ -1,17 +1,13 @@
 package com.qwery.database
 package jdbc
 
-import java.nio.ByteBuffer
-import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
-
-import akka.actor.ActorSystem
-import akka.util.Timeout
-import com.qwery.database.server.{DatabaseServer, QueryProcessor}
+import com.qwery.database.server.testkit.DatabaseTestServer
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.DurationInt
+import java.nio.ByteBuffer
+import java.sql.{DriverManager, ResultSet, ResultSetMetaData}
 
 /**
  * Qwery JDBC Driver Test Suite
@@ -24,7 +20,7 @@ class QweryDriverTest extends AnyFunSpec {
   private val tableNameB = "stocks_jdbc_columnar"
 
   // start the server
-  startServer(port)
+  DatabaseTestServer.startServer(port)
 
   describe(QweryDriver.getClass.getSimpleName) {
     Class.forName("com.qwery.database.jdbc.QweryDriver")
@@ -283,16 +279,6 @@ class QweryDriverTest extends AnyFunSpec {
   def iterateRows(rs: ResultSet)(f: Map[String, Any] => Unit): Unit = {
     val rsmd = rs.getMetaData
     while (rs.next()) f(toRow(rs, rsmd))
-  }
-
-  def startServer(port: Int): Unit = {
-    implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val timeout: Timeout = 2.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
-    import system.dispatcher
-
-    logger.info(s"Starting Database Server on port $port...")
-    DatabaseServer.startServer(port = port)
   }
 
   def toRow(rs: ResultSet, rsmd: ResultSetMetaData): Map[String, AnyRef] = {

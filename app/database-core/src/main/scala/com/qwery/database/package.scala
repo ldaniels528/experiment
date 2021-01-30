@@ -15,17 +15,16 @@ package object database {
 
   type Block = (ROWID, ByteBuffer)
   type KeyValue = (String, Option[Any])
-  type RECORD_ID = Int
 
   // byte quantities
   val ONE_BYTE = 1
   val INT_BYTES = 4
   val LONG_BYTES = 8
-  val ROW_ID_BYTES = 4
+  val ROW_ID_BYTES = 8
   val SHORT_BYTES = 2
 
   // row ID-related
-  type ROWID = Int
+  type ROWID = Long
   val ROWID_NAME = "__id"
 
   //////////////////////////////////////////////////////////////////////////////////////
@@ -112,7 +111,7 @@ package object database {
   case class DataDirectoryNotFoundException(directory: File)
     extends RuntimeException(s"Could not create or find the data directory: ${directory.getAbsolutePath}")
 
-  case class OffsetOutOfRangeException(offset: RECORD_ID, limit: RECORD_ID)
+  case class OffsetOutOfRangeException(offset: ROWID, limit: ROWID)
     extends RuntimeException(s"Maximum capacity exceeded: $offset > $limit")
 
   case class PartitionSizeException(partitionSize: Int)
@@ -145,8 +144,6 @@ package object database {
   final implicit class MathUtilsLong(val number: Long) extends AnyVal {
 
     def toBoolean: Boolean = number != 0
-
-    def toRowID: ROWID = number.toInt
 
     def isPrime: Boolean = number match {
       case n if n < 2 => false

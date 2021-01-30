@@ -1,15 +1,13 @@
-package com.qwery.database
-package server
+package com.qwery.database.device
 
-import java.io.File
-import java.util.Date
-
-import com.qwery.database.device._
-import com.qwery.database.models.TableColumn._
-import com.qwery.database.models._
+import com.qwery.database.files.{LoadMetrics, TableFile, TableProperties}
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues, time}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
+
+import java.io.File
+import java.util.Date
 
 /**
  * Table Index Device Test Suite

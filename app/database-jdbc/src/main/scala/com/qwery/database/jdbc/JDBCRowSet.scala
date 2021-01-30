@@ -3,10 +3,9 @@ package jdbc
 
 import java.nio.ByteBuffer
 import java.sql.RowId
-
 import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.files.TableColumn
 import com.qwery.database.jdbc.JDBCRowSet.uninited
-import com.qwery.database.models.TableColumn
 import org.slf4j.LoggerFactory
 
 /**
@@ -20,15 +19,16 @@ import org.slf4j.LoggerFactory
   * @param __ids        the collection of row identifiers
   */
 class JDBCRowSet(connection: JDBCConnection,
-                     databaseName: String,
-                     schemaName: String,
-                     tableName: String,
-                     columns: Seq[TableColumn],
-                     rows: Seq[Seq[Option[Any]]],
-                     __ids: Seq[ROWID])  {
+                 databaseName: String,
+                 schemaName: String,
+                 tableName: String,
+                 columns: Seq[TableColumn],
+                 var rows: Seq[Seq[Option[Any]]],
+                 var __ids: Seq[ROWID]) {
   private val logger = LoggerFactory.getLogger(getClass)
   private val matrix: Array[Option[Any]] = rows.flatten.toArray
   private var rowIndex = uninited
+  private var lastInsertedRowIndex = uninited
 
   def first(): Boolean = {
     rowIndex = uninited
@@ -110,17 +110,34 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def afterLast(): Unit = rows.length
 
-  def absolute(row: Int): Boolean = ???
+  def absolute(row: Int): Boolean = {
+    val isOkay = row < rows.length
+    if (isOkay) lastInsertedRowIndex = row
+    isOkay
+  }
 
-  def relative(rows: Int): Boolean = ???
+  def relative(rows: Int): Boolean = {
+    val newIndex = rowIndex + rows
+    val isOkay = newIndex >= 0 && newIndex < this.rows.length
+    if (isOkay) rowIndex = newIndex
+    isOkay
+  }
 
   def cancelRowUpdates(): Unit = refreshRow()
 
-  def moveToInsertRow(): Unit = ???
+  def moveToInsertRow(): Unit = rowIndex = lastInsertedRowIndex
 
   def moveToCurrentRow(): Unit = rowIndex = rows.length - 1
 
-  def insertRow(): Unit = connection.client.insertRow(databaseName, tableName, constructRow)
+  def insertRow(): Unit = {
+    val newRow = constructRow
+    val w = connection.client.insertRow(databaseName, tableName, newRow)
+    if (w.count > 0) {
+      lastInsertedRowIndex = rows.length
+      rows = rows.toList ::: (newRow.values.map(Option.apply) :: Nil)
+      __ids = __ids ++ Seq(w.__id.map(id => id).getOrElse(-1L))
+    }
+  }
 
   def updateRow(): Unit = __id().foreach(connection.client.replaceRow(databaseName, tableName, _, constructRow))
 

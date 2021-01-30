@@ -1,12 +1,12 @@
-package com.qwery.database
-package server
+package com.qwery.database.server
 
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.models.{TableColumn, TableConfig}
-import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
+import com.qwery.database.files.{TableColumn, TableConfig, TableFile}
 import com.qwery.database.server.QueryProcessor.commands.SelectRows
 import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
+import com.qwery.database.{KeyValues, RecursiveFileList, TableQuery, createTempTable, die}
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.models.{Invokable, OrderColumn}
 
@@ -94,7 +94,6 @@ object VirtualTableFile {
   }
 
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {
-    import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
     readViewData(databaseName, viewName).compile(databaseName) match {
       case SelectRows(_, tableName, fields, where, groupBy, orderBy, limit) =>
         TableFile(databaseName, tableName).selectRows(fields, where, groupBy, orderBy, limit)

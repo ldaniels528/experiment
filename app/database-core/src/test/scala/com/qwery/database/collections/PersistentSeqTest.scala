@@ -226,8 +226,8 @@ class PersistentSeqTest extends AnyFunSpec {
 
     it("should extract a slice of items from the collection") {
       if (coll.nonEmpty) {
-        val size = coll.length / 2
-        val fromPos = new Random().nextInt(coll.length - size)
+        val size = (coll.length / 2).toInt
+        val fromPos = new Random().nextInt(coll.length.toInt - size)
         val items = eval(f"coll.slice($fromPos, ${fromPos + size})", coll.slice(fromPos, fromPos + size))
         items.take(5).foreach(item => println(item.toString))
       }

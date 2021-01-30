@@ -32,7 +32,7 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
 
   override def getPhysicalSize: Option[Long] = Some(raf0.length + rafN.map(_._1.length).sum)
 
-  override def length: ROWID = raf0.length.toRowID
+  override def length: ROWID = raf0.length
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val (raf, column) = rafN(columnID)

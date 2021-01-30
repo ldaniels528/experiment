@@ -3,9 +3,9 @@ package clients
 
 import java.io.File
 import java.net.URLEncoder
-
 import com.qwery.database.JSONSupport._
 import com.qwery.database.WebServiceClient._
+import com.qwery.database.files.{TableMetrics, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models._
 import net.liftweb.json._

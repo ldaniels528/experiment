@@ -1,12 +1,8 @@
 package com.qwery.database.clients
 
-import akka.actor.ActorSystem
-import akka.util.Timeout
-import com.qwery.database.server.{DatabaseServer, QueryProcessor}
+import com.qwery.database.server.testkit.DatabaseTestServer
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.duration._
 
 /**
  * Messaging Producer-Consumer Test Suite
@@ -14,12 +10,12 @@ import scala.concurrent.duration._
  */
 class MessageProducerConsumerTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val port = 12119
+  private val port = 12117
   private val databaseName = "test"
   private val tableName = "messaging_client_test"
 
   // start the server
-  startServer(port)
+  DatabaseTestServer.startServer(port)
 
   // create the clients
   private val databaseClient = DatabaseClient(port = port)
@@ -76,16 +72,6 @@ class MessageProducerConsumerTest extends AnyFunSpec {
       logger.info(s"message: $message")
       assert(message.map(_.toMap).contains(Map("__id" -> 0, "exchange" -> "NYSE", "symbol" -> "AAPL", "lastSale" -> 900.0, "lastSaleTime" -> 1611772605427L)))
     }
-  }
-
-  def startServer(port: Int): Unit = {
-    implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val timeout: Timeout = 2.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
-    import system.dispatcher
-
-    logger.info(s"Starting Database Server on port $port...")
-    DatabaseServer.startServer(port = port)
   }
 
 }

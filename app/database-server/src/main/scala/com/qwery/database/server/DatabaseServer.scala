@@ -3,7 +3,6 @@ package server
 
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicLong
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpResponse, _}
@@ -12,8 +11,9 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import akka.util.Timeout
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
-import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.JSONSupport._
+import com.qwery.database.files.{TableFile, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models._
 import com.qwery.models.expressions.Expression
@@ -38,21 +38,29 @@ object DatabaseServer {
    */
   def main(args: Array[String]): Unit = {
     val defaultPort = 8233
+    val defaultPoolSize = 5
+    val defaultTimeout = 10
 
     // display the application version
     val version = 0.1
     logger.info(f"Qwery Database Server v$version%.1f")
 
-    // get the bind/listen port
-    val port = args match {
-      case Array(port, _*) => port.toInt
-      case Array() => defaultPort
+    // get the configuration
+    val (port, poolSize, timeoutMin) = args match {
+      case Array(port, poolSize, timeoutMin) => (port.toInt, poolSize.toInt, timeoutMin.toInt)
+      case Array(port, poolSize) => (port.toInt, poolSize.toInt, defaultTimeout)
+      case Array(port) => (port.toInt, defaultPoolSize, defaultTimeout)
+      case Array() => (defaultPort, defaultPoolSize, defaultTimeout)
     }
+
+    // display the pool size
+    logger.info(s"Actor pool size is $poolSize")
+    logger.info(s"Request timeout is $timeoutMin minutes")
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val timeout: Timeout = 10.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
+    implicit val timeout: Timeout = timeoutMin.minutes
+    implicit val queryProcessor: QueryProcessor = new QueryProcessor(poolSize)
     import system.dispatcher
 
     // start the server
@@ -84,11 +92,11 @@ object DatabaseServer {
       // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
       path("d" / Segment / Segment)(routesByDatabaseTable) ~
       // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
-      path("d" / Segment / Segment / IntNumber)(routesByDatabaseTableRowID) ~
+      path("d" / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
       // route: /d/<database>/<table>/<rowID>/<columnID> (e.g. "/d/portfolio/stocks/187/2")
-      path("d" / Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableColumnID) ~
+      path("d" / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableColumnID) ~
       // route: /r/<database>/<table>/<rowID>/<count> (e.g. "/r/portfolio/stocks/187/23")
-      path("r" / Segment / Segment / IntNumber / IntNumber)(routesByDatabaseTableRange) ~
+      path("r" / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableRange) ~
       // route: /d/<database>/<table>/export/<format>/<fileName> (e.g. "/d/portfolio/stocks/export/json/stocks.json")
       path("d" / Segment / Segment / "export" / Segment / Segment)(routesByDatabaseTableExport) ~
       // route: /d/<database>/<table>/length (e.g. "/d/portfolio/stocks/length")
@@ -100,7 +108,7 @@ object DatabaseServer {
       // route: /m/<database>/<table> (e.g. "/m/portfolio/stocks" <~ """{ "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }""")
       path("m" / Segment / Segment)(routesMessaging) ~
       // route: /m/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
-      path("m" / Segment / Segment / IntNumber)(routesByDatabaseTableRowID) ~
+      path("m" / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
       //
       // Search API routes
       // route: /columns/?database=<pattern>&table=<pattern>&column=<pattern> (e.g. "/columns/?database=portfolios&table=stocks&column=symbol")
@@ -299,7 +307,7 @@ object DatabaseServer {
    * @param rowID        the referenced row ID
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: Int)
+  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: ROWID)
                                         (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")

@@ -1,17 +1,14 @@
 package com.qwery.database
-package server
+package device
+
+import com.qwery.database.ColumnTypes.IntType
+import com.qwery.database.OptionComparisonHelper.OptionComparator
+import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
+import com.qwery.database.files.DatabaseFiles._
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
-
-import com.qwery.database.ColumnTypes.IntType
-import com.qwery.database.server.DatabaseFiles._
-import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
-import com.qwery.database.server.TableIndexDevice.{_encode, toRowIDField}
-import com.qwery.database.models.TableIndexRef
-
 import scala.collection.mutable
 
 /**
@@ -21,7 +18,7 @@ import scala.collection.mutable
  */
 class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
   extends RowOrientedFileBlockDevice(columns, TableIndexDevice.getTableIndexFile(ref)) {
-  private val indexColumnID: ROWID = columns.indexWhere(_.name == ref.indexColumnName)
+  private val indexColumnID: Int = columns.indexWhere(_.name == ref.indexColumnName)
   private val indexColumn: Column = columns(indexColumnID)
   private var isDirty: Boolean = false
 
@@ -41,7 +38,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     }
 
     // search for a matching field value
-    var (p0: ROWID, p1: ROWID, changed: Boolean) = (0, length - 1, true)
+    var (p0: ROWID, p1: ROWID, changed: Boolean) = (0L, length - 1, true)
     while (p0 != p1 && valueAt(p0) < searchValue && valueAt(p1) > searchValue && changed) {
       val (mp, z0, z1) = ((p0 + p1) >> 1, p0, p1)
       if (searchValue >= valueAt(mp)) p0 = mp else p1 = mp
@@ -125,7 +122,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
     // iterate the source file/table
     val srcColumnID = source.columns.indexWhere(_.name == ref.indexColumnName)
     val eof: ROWID = source.length
-    var (srcRowID: ROWID, dstRowID: ROWID) = (0, 0)
+    var (srcRowID: ROWID, dstRowID: ROWID) = (0L, 0L)
     while (srcRowID < eof) {
       // read a record from the source
       val input = source.getRow(srcRowID)

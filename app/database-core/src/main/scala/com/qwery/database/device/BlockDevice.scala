@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.reflect.{ClassTag, classTag}
@@ -22,7 +22,7 @@ import scala.reflect.{ClassTag, classTag}
  * Represents a raw block device
  */
 trait BlockDevice {
-  val columnOffsets: List[ROWID] = {
+  val columnOffsets: List[Int] = {
     case class Accumulator(agg: Int = 0, var last: Int = FieldMetadata.BYTES_LENGTH, var list: List[Int] = Nil)
     columns.filterNot(_.isLogical).map(_.maxPhysicalSize).foldLeft(Accumulator()) { (acc, maxLength) =>
       val index = acc.agg + acc.last
@@ -41,7 +41,7 @@ trait BlockDevice {
    */
   val toRowIdField: ROWID => Option[Field] = {
     val rowIdColumn_? = columns.find(_.metadata.isRowID)
-    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), typedValue = QxInt(Some(rowID))))
+    (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), typedValue = QxLong(Some(rowID))))
   }
 
   /**
@@ -58,7 +58,7 @@ trait BlockDevice {
    */
   def countRows(predicate: RowMetadata => Boolean): ROWID = {
     val eof: ROWID = length
-    var (rowID: ROWID, total) = (0, 0)
+    var (rowID: ROWID, total: ROWID) = (0L, 0L)
     while (rowID < eof) {
       if (predicate(readRowMetaData(rowID))) total += 1
       rowID += 1
@@ -211,8 +211,8 @@ trait BlockDevice {
   }
 
   def getRowStatistics: RowStatistics = {
-    var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) = (0, 0, 0, 0, 0, 0)
-    var (rowID: ROWID, eof: ROWID) = (0, length)
+    var (active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) = (0L, 0L, 0L, 0L, 0L, 0L)
+    var (rowID: ROWID, eof: ROWID) = (0L, length)
     while (rowID < eof) {
       val rmd = readRowMetaData(rowID)
       if (rmd.isActive) active += 1
@@ -230,15 +230,15 @@ trait BlockDevice {
    * @return the last active row ID or <tt>None</tt>
    */
   def lastIndexOption: Option[ROWID] = {
-    var rowID: ROWID = length - 1
+    var rowID: ROWID = length - 1L
     while (rowID >= 0 && readRowMetaData(rowID).isDeleted) rowID -= 1
     if (rowID >= 0) Some(rowID) else None
   }
 
   /**
    * @return the number of records in the file, including the deleted ones.
-   *         The [[PersistentSeq.count count()]] method is probably the method you truly want.
-   * @see [[PersistentSeq.count]]
+   * The [[count]] method is probably the method you truly want.
+   * @see [[count]]
    */
   def length: ROWID
 
@@ -257,7 +257,7 @@ trait BlockDevice {
 
   def readRowMetaData(rowID: ROWID): RowMetadata
 
-  def readRows(rowID: ROWID, numberOfRows: Int = 1): Seq[BinaryRow] = {
+  def readRows(rowID: ROWID, numberOfRows: Long = 1): Seq[BinaryRow] = {
     for (rowID <- rowID until rowID + numberOfRows) yield readRow(rowID)
   }
 
@@ -273,7 +273,7 @@ trait BlockDevice {
   def remove(rowID: ROWID): Unit = updateRowMetaData(rowID)(_.copy(isActive = false))
 
   def reverseInPlace(): Unit = {
-    var (top: ROWID, bottom: ROWID) = (0, length - 1)
+    var (top: ROWID, bottom: ROWID) = (0L, length - 1)
     while (top < bottom) {
       swap(top, bottom)
       bottom -= 1
@@ -311,7 +311,7 @@ trait BlockDevice {
 
     def fetch(rowID: ROWID): Option[B] = cache.getOrElseUpdate(rowID, get(rowID))
 
-    def isLesser(n: Int, high: Int): Boolean = if(isAscending) fetch(n) > fetch(high) else fetch(n) < fetch(high)
+    def isLesser(n: ROWID, high: ROWID): Boolean = if(isAscending) fetch(n) > fetch(high) else fetch(n) < fetch(high)
 
     def partition(low: ROWID, high: ROWID): ROWID = {
       var m = low - 1 // index of lesser item
@@ -401,9 +401,9 @@ trait BlockDevice {
   //      UTILITIES
   //////////////////////////////////////////////////////////////////
 
-  def whileKV(condition: KeyValues, limit: Option[Int] = None)(f: KeyValues => Unit): Int = {
+  def whileKV(condition: KeyValues, limit: Option[Int] = None)(f: KeyValues => Unit): Long = {
     val counter = new AtomicInteger(0)
-    var (matches: ROWID, rowID: ROWID) = (0, 0)
+    var (matches: ROWID, rowID: ROWID) = (0L, 0L)
     val eof = length
     while (rowID < eof && (limit.isEmpty || limit.exists(counter.addAndGet(1) <= _))) {
       getKeyValues(rowID) foreach { row =>
@@ -417,9 +417,9 @@ trait BlockDevice {
     matches
   }
 
-  def whileRow(condition: KeyValues, limit: Option[Int] = None)(f: Row => Unit): Int = {
-    val counter = new AtomicInteger(0)
-    var (matches: ROWID, rowID: ROWID) = (0, 0)
+  def whileRow(condition: KeyValues, limit: Option[Int] = None)(f: Row => Unit): Long = {
+    val counter = new AtomicLong(0)
+    var (matches: ROWID, rowID: ROWID) = (0L, 0L)
     val eof = length
     while (rowID < eof && (limit.isEmpty || limit.exists(counter.addAndGet(1) <= _))) {
       val row = getRow(rowID)

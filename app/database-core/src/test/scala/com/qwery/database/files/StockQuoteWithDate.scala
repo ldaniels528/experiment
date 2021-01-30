@@ -1,4 +1,4 @@
-package com.qwery.database.server
+package com.qwery.database.files
 
 import com.qwery.database.ColumnInfo
 

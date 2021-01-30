@@ -3,15 +3,16 @@ package com.qwery.database.models
 import com.qwery.database.JSONSupport._
 import com.qwery.database.KeyValues
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models.TableColumn._
+import com.qwery.database.files.TableColumn
+import com.qwery.database.files.TableColumn._
 import org.slf4j.Logger
 
 case class QueryResult(databaseName: String,
                        tableName: String,
                        columns: Seq[TableColumn] = Nil,
                        rows: Seq[Seq[Option[Any]]] = Nil,
-                       count: Int = 0,
-                       __ids: Seq[Int] = Nil) {
+                       count: Long = 0,
+                       __ids: Seq[Long] = Nil) {
 
   def foreachKVP(f: KeyValues => Unit): Unit = {
     val columnNames = columns.map(_.name)

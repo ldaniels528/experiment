@@ -89,7 +89,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 
   def contains(elem: T): Boolean = indexOfOpt(elem).nonEmpty
 
-  override def copyToArray[B >: T](array: Array[B], start: ROWID, len: ROWID): Unit = {
+  override def copyToArray[B >: T](array: Array[B], start: Int, len: Int): Unit = {
     var n: Int = 0
     for {
       rowID <- start until (start + len)
@@ -105,7 +105,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
    * Counts all active rows
    * @return the number of active rows
    */
-  def count(): Int = device.countRows(_.isActive)
+  def count(): Long = device.countRows(_.isActive)
 
   /**
    * Counts the number of items matching the predicate
@@ -152,7 +152,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 
   override def headOption: Option[T] = device.firstIndexOption.flatMap(get)
 
-  def indexOf(elem: T, fromPos: ROWID = 0): Int = indexOfOpt(elem, fromPos).getOrElse(-1)
+  def indexOf(elem: T, fromPos: ROWID = 0): ROWID = indexOfOpt(elem, fromPos).getOrElse(-1L: ROWID)
 
   def indexOfOpt(elem: T, fromPos: ROWID = 0): Option[ROWID] = {
     var index_? : Option[ROWID] = None
@@ -160,7 +160,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
     index_?
   }
 
-  def indexWhere(predicate: T => Boolean): Int = indexWhereOpt(predicate).getOrElse(-1)
+  def indexWhere(predicate: T => Boolean): ROWID = indexWhereOpt(predicate).getOrElse(-1L: ROWID)
 
   def indexWhereOpt(predicate: T => Boolean): Option[ROWID] = {
     var index_? : Option[ROWID] = None
@@ -257,7 +257,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 
   def reverseIterator: Iterator[T] = device.reverseIterator.flatMap(t => toItem(t._1, t._2, evenDeletes = false))
 
-  override def slice(start: ROWID, end: ROWID): Stream[T] = {
+  override def slice(start: Int, end: Int): Stream[T] = {
     device.readRows(start, numberOfRows = 1 + (end - start)) flatMap { row => toItem(row, evenDeletes = false) } toStream
   }
 
@@ -323,7 +323,7 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
     val eof: ROWID = device.length
     var n: ROWID = 0
     var m: Int = 0
-    val array: Array[B] = new Array[B](count())
+    val array: Array[B] = new Array[B](count().toInt)
     while (n < eof) {
       get(n).foreach { item =>
         array(m) = item

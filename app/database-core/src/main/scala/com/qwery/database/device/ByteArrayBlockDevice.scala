@@ -13,7 +13,7 @@ import com.qwery.database.{BinaryRow, Column, FieldMetadata, OffsetOutOfRangeExc
  */
 class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends RowOrientedBlockDevice {
   private val _capacity = toOffset(capacity)
-  private val array = new Array[Byte](_capacity)
+  private val array = new Array[Byte](_capacity.toInt)
   private var limit: ROWID = 0
 
   override def close(): Unit = ()
@@ -23,14 +23,14 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   override def length: ROWID = fromOffset(limit)
 
   override def readRowAsBinary(rowID: ROWID): ByteBuffer = {
-    val p0 = toOffset(rowID)
+    val p0 = toOffset(rowID).toInt
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     wrap(bytes)
   }
 
   override def readRow(rowID: ROWID): BinaryRow = {
-    val p0 = toOffset(rowID)
+    val p0 = toOffset(rowID).toInt
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     val buf = wrap(bytes)
@@ -38,14 +38,14 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {
-    FieldMetadata.decode(array(toOffset(rowID, columnID)))
+    FieldMetadata.decode(array(toOffset(rowID, columnID).toInt))
   }
 
-  override def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(array(toOffset(rowID)))
+  override def readRowMetaData(rowID: ROWID): RowMetadata = RowMetadata.decode(array(toOffset(rowID).toInt))
 
   override def readField(rowID: ROWID, columnID: Int): ByteBuffer = {
     val column = columns(columnID)
-    val p0 = toOffset(rowID, columnID)
+    val p0 = toOffset(rowID, columnID).toInt
     val bytes = new Array[Byte](column.maxPhysicalSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     wrap(bytes)
@@ -56,7 +56,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def writeRowAsBinary(rowID: ROWID, buf: ByteBuffer): Unit = {
-    val offset = toOffset(rowID)
+    val offset = toOffset(rowID).toInt
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
     val bytes = buf.array()
@@ -65,7 +65,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def writeField(rowID: ROWID, columnID: Int, buf: ByteBuffer): Unit = {
-    val offset = toOffset(rowID, columnID)
+    val offset = toOffset(rowID, columnID).toInt
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
     val bytes = buf.array()
@@ -74,7 +74,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit = {
-    val offset = toOffset(rowID, columnID)
+    val offset = toOffset(rowID, columnID).toInt
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
     array(offset) = metadata.encode
@@ -82,7 +82,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
   }
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = {
-    val offset = toOffset(rowID)
+    val offset = toOffset(rowID).toInt
     val required = offset + 1
     assert(required <= _capacity, throw OffsetOutOfRangeException(required, capacity))
     array(offset) = metadata.encode

@@ -1,18 +1,15 @@
 package com.qwery.database
 package clients
 
-import java.io.File
-import java.util.Date
-
-import akka.actor.ActorSystem
-import akka.util.Timeout
+import com.qwery.database.files.{TableFile, TableProperties}
 import com.qwery.database.models._
-import com.qwery.database.server.{DatabaseServer, QueryProcessor, TableFile}
+import com.qwery.database.server.testkit.DatabaseTestServer
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.DurationInt
+import java.io.File
+import java.util.Date
 
 /**
  * Database Client Test Suite
@@ -22,7 +19,7 @@ class DatabaseClientTest extends AnyFunSpec {
   private val port = 12120
 
   // start the server
-  startServer(port)
+  DatabaseTestServer.startServer(port)
 
   describe(classOf[DatabaseClient].getName) {
     // create the client
@@ -195,16 +192,6 @@ class DatabaseClientTest extends AnyFunSpec {
         logger.info(f"$label ~> $result [$responseTime%.1f msec]")
     }
     results
-  }
-
-  def startServer(port: Int): Unit = {
-    implicit val system: ActorSystem = ActorSystem(name = "test-server")
-    implicit val timeout: Timeout = 2.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor()
-    import system.dispatcher
-
-    logger.info(s"Starting Database Server on port $port...")
-    DatabaseServer.startServer(port = port)
   }
 
 }

@@ -1,7 +1,7 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.models.TableColumn
+import com.qwery.database.files.TableColumn
 
 import java.sql.ResultSetMetaData
 

@@ -2,8 +2,7 @@ package com.qwery.database
 package server
 
 import com.qwery.database.ExpressionVM._
-import com.qwery.database.models.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.models.TableProperties
+import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
 import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
@@ -81,7 +80,7 @@ object SQLCompiler {
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
-          val props = TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
+          val props = files.TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
           cx.CreateTable(databaseName, table.name, props)
         case mx.Create(TableIndex(_, TableRef(tableName), columns, ifNotExists)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())

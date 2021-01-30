@@ -1,9 +1,10 @@
-package com.qwery.database
-package server
+package com.qwery.database.files
 
 import com.qwery.database.JSONSupport._
-import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice}
-import com.qwery.database.models._
+import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice, TableIndexRef}
+import com.qwery.database.getServerRootDirectory
+import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
+import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Invokable
 import com.qwery.util.ResourceHelper._
 
@@ -106,11 +107,12 @@ object DatabaseFiles {
   def readViewData(databaseName: String, viewName: String): Invokable = {
     val file = getViewDataFile(databaseName, viewName)
     assert(file.exists(), s"Table '$viewName' does not exist")
-    new ObjectInputStream(new FileInputStream(file)).use(_.readObject().asInstanceOf[Invokable])
+    val sql = Source.fromFile(file).use(_.mkString)
+    SQLLanguageParser.parse(sql)
   }
 
   def writeViewData(databaseName: String, viewName: String, query: Invokable): Unit = {
-    new ObjectOutputStream(new FileOutputStream(getViewDataFile(databaseName, viewName))).use(_.writeObject(query))
+    new PrintWriter(getViewDataFile(databaseName, viewName)).use(_.println(query.toSQL))
   }
 
 }

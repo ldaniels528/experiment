@@ -24,7 +24,7 @@ class ColumnOrientedPersistentSeqTest extends AnyFunSpec {
     }
 
     it("should read data from columnar files") {
-      val items = quotes10.indices.map(coll.apply)
+      val items = quotes10.indices.map(i => coll.apply(i.toLong))
       items.foreach { q => logger.info(q.toString) }
     }
 

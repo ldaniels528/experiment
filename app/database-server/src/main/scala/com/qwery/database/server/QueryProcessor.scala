@@ -6,8 +6,9 @@ import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.qwery.database.ExpressionVM.evaluate
+import com.qwery.database.files.{TableFile, TableMetrics, TableProperties}
 import com.qwery.database.models._
-import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.server.DatabaseManagementSystem._
 import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
@@ -764,7 +765,7 @@ object QueryProcessor {
 
     case class RowsRetrieved(rows: Seq[Row]) extends DatabaseIOResponse
 
-    case class RowsUpdated(count: Int) extends DatabaseIOResponse
+    case class RowsUpdated(count: Long) extends DatabaseIOResponse
 
     case class RowUpdated(rowID: ROWID, isSuccess: Boolean) extends DatabaseIOResponse
 
@@ -807,7 +808,7 @@ object QueryProcessor {
           case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
           case QueryResultRetrieved(result) => result
           case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
-          case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count) // TODO  fix me!
+          case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count)
           case response => throw UnhandledCommandException(request, response)
         }
       }

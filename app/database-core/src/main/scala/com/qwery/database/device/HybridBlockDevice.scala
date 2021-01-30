@@ -58,7 +58,7 @@ class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: Block
     if (rowID < capacity) mem.writeField(rowID, columnID, buf) else disk.writeField(rowID - capacity, columnID, buf)
   }
 
-  override def writeFieldMetaData(rowID: ROWID, columnID: ROWID, metadata: FieldMetadata): Unit = {
+  override def writeFieldMetaData(rowID: ROWID, columnID: Int, metadata: FieldMetadata): Unit = {
     if (rowID < capacity) mem.writeFieldMetaData(rowID, columnID, metadata) else disk.writeFieldMetaData(rowID - capacity, columnID, metadata)
   }
 

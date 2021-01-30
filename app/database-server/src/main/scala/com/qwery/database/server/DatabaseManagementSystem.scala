@@ -2,7 +2,7 @@ package com.qwery.database
 package server
 
 import com.qwery.database.models._
-import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.server.DatabaseManagementSystem.implicits._
 
 import scala.util.Try

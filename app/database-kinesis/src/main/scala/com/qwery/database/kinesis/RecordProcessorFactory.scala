@@ -6,6 +6,7 @@ import com.qwery.database.clients.MessageProducer
 import com.qwery.database.kinesis.RecordProcessorFactory.RecordProcessor
 import org.slf4j.LoggerFactory
 
+import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicLong
 import scala.collection.JavaConverters._
 
@@ -29,8 +30,9 @@ class RecordProcessorFactory(host: String, port: Int, databaseName: String, tabl
  */
 object RecordProcessorFactory {
   private var lastRecords = 0L
-  private var lastUpdateTime = System.currentTimeMillis()
+  private val lastUpdateTime = new AtomicLong(System.currentTimeMillis())
   private val records = new AtomicLong(0L)
+  private val nf = NumberFormat.getNumberInstance
 
   /**
    * Qwery Record Processor
@@ -59,13 +61,14 @@ object RecordProcessorFactory {
         }
 
         // compute the statistics
-        val diff = (System.currentTimeMillis() - lastUpdateTime) / 1000.0
-        if (diff >= 30) {
-          val delta = records.get - lastRecords
+        val time = lastUpdateTime.get
+        val diff = (System.currentTimeMillis() - time) / 1000.0
+        if (diff >= 60 && lastUpdateTime.compareAndSet(time, System.currentTimeMillis())) {
+          val total = records.get
+          val delta = total - lastRecords
           val rps = delta / diff.toDouble
-          logger.info(f"total: ${records.get} | delta: $delta | records/sec: $rps%.1f")
-          lastUpdateTime = System.currentTimeMillis()
-          lastRecords = 0
+          logger.info(f"total: ${nf.format(total)} | delta: ${nf.format(delta)} | records/sec: $rps%.1f")
+          lastRecords = total
         }
       } finally {
         checkPointer.checkpoint()

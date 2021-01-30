@@ -1,11 +1,10 @@
-package com.qwery.database
-package server
+package com.qwery.database.files
 
-import java.util.Date
-
-import com.qwery.database.models.TableProperties
+import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
+
+import java.util.Date
 
 /**
  * Big Table File Test Suite

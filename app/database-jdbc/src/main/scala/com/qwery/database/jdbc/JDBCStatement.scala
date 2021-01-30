@@ -49,7 +49,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   override def execute(sql: String): Boolean = {
     val outcome = connection.client.executeQuery(connection.getCatalog, sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     outcome.rows.nonEmpty
   }
 
@@ -62,7 +62,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   override def executeQuery(sql: String): ResultSet = {
     val outcome = connection.client.executeQuery(connection.getCatalog, sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     resultSet
   }
 
@@ -75,7 +75,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   override def executeUpdate(sql: String): Int = {
     val outcome = connection.client.executeQuery(connection.getCatalog, sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     updateCount
   }
 

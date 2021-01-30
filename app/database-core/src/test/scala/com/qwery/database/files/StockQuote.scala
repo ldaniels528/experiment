@@ -1,10 +1,9 @@
-package com.qwery.database
-package collections
+package com.qwery.database.files
+
+import com.qwery.database.ColumnInfo
 
 import scala.annotation.meta.field
-import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.reflect.ClassTag
 import scala.util.Random
 
 case class StockQuote(@(ColumnInfo@field)(maxSize = 8) symbol: String,
@@ -14,12 +13,6 @@ case class StockQuote(@(ColumnInfo@field)(maxSize = 8) symbol: String,
 
 object StockQuote {
   private val random = new Random()
-
-  @tailrec
-  def randomURID[A <: Product : ClassTag](coll: PersistentSeq[A]): ROWID = {
-    val offset: ROWID = random.nextInt(coll.length.toInt)
-    if (coll.device.readRowMetaData(offset).isDeleted) randomURID(coll) else offset
-  }
 
   def randomExchange: String = {
     val exchanges = Seq("AMEX", "NASDAQ", "OTCBB", "NYSE")

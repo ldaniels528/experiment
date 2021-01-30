@@ -33,7 +33,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
     val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
     val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     outcome.rows.nonEmpty
   }
 
@@ -41,7 +41,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
     val outcome = (batches.reverse map { params =>
       val _sql = populateSQLTemplate(sql, indices, params)
       val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
-      outcome.count
+      outcome.count.toInt
     }).toArray
     clearBatch()
     outcome
@@ -51,7 +51,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
     val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
     val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     resultSet
   }
 
@@ -59,7 +59,7 @@ class JDBCPreparedStatement(@BeanProperty connection: JDBCConnection, sql: Strin
     val _sql = populateSQLTemplate(sql, indices, parameterMetaData.getParameters)
     val outcome = connection.client.executeQuery(connection.getCatalog, _sql)
     resultSet = JDBCResultSet(connection, outcome)
-    updateCount = outcome.count
+    updateCount = outcome.count.toInt
     updateCount
   }
 

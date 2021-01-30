@@ -1,4 +1,4 @@
-package com.qwery.database.models
+package com.qwery.database.files
 
 import com.qwery.database.JSONSupport.JSONProductConversion
 import com.qwery.models.TypeAsEnum

@@ -1,12 +1,13 @@
 package com.qwery.database
 package jdbc
 
+import com.qwery.database.files.TableColumn
+
 import java.io.{InputStream, Reader}
 import java.net.URL
 import java.sql.{Array => SQLArray, _}
 import java.util
 import java.util.{Calendar, UUID}
-
 import com.qwery.database.models._
 import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 

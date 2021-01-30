@@ -129,7 +129,7 @@ class BlockDeviceTest extends AnyFunSpec {
     it("should trim dead entries from of the collection") {
       val coll = PersistentSeq[StockQuote]()
       implicit val device: BlockDevice = coll.device
-      eval("(900 to 999).map(coll.remove)", (900 to 999).map(coll.device.remove))
+      eval("(900 to 999).map(coll.remove)", (900L to 999L).map(coll.device.remove))
       eval("device.trim()", coll.device.trim())
     }
 

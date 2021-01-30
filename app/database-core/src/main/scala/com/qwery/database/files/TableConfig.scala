@@ -1,6 +1,7 @@
-package com.qwery.database.models
+package com.qwery.database.files
 
 import com.qwery.database.JSONSupport.JSONProductConversion
+import com.qwery.database.device.TableIndexRef
 
 case class TableConfig(columns: Seq[TableColumn],
                        isColumnar: Boolean,
