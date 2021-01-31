@@ -1,10 +1,10 @@
 package com.qwery.database.files
 
 import com.qwery.database.collections.PersistentSeq
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice, TableIndexRef}
+import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice, TableIndexRef, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.{Column, Field, KeyValues, ROWID, ROWID_NAME, RecursiveFileList, Row, RowIsLockedException, TableQuery, createTempTable, die, stopWatch}
+import com.qwery.database.{Column, Field, KeyValues, ROWID, ROWID_NAME, RecursiveFileList, Row, RowIsLockedException, createTempTable, die, stopWatch}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
@@ -23,7 +23,7 @@ import scala.reflect.ClassTag
  */
 case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) {
   private val indexFiles = TrieMap[String, TableIndexDevice]()
-  private val selector = new TableQuery(device)
+  private val selector = new BlockDeviceQuery(device)
 
   // load the indices for this table
   config.indices.foreach(ref => registerIndex(ref, TableIndexDevice(ref)))

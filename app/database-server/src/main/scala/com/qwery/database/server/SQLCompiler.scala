@@ -1,6 +1,7 @@
 package com.qwery.database
 package server
 
+import com.qwery.database.DatabaseCPU.columnTypeMap
 import com.qwery.database.ExpressionVM._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
@@ -16,33 +17,6 @@ import com.qwery.{models => mx}
  * SQL Compiler - compiles SQL into [[DatabaseIORequest]]s
  */
 object SQLCompiler {
-  private val columnTypeMap = Map(
-    "ARRAY" -> ColumnTypes.ArrayType,
-    "BIGINT" -> ColumnTypes.BigIntType,
-    "BINARY" -> ColumnTypes.BinaryType,
-    "BLOB" -> ColumnTypes.BlobType,
-    "BOOLEAN" -> ColumnTypes.BooleanType,
-    "CHAR" -> ColumnTypes.StringType,
-    "CLOB" -> ColumnTypes.ClobType,
-    "DATE" -> ColumnTypes.DateType,
-    "DATETIME" -> ColumnTypes.DateType,
-    "DECIMAL" -> ColumnTypes.BigDecimalType,
-    "DOUBLE" -> ColumnTypes.DoubleType,
-    "FLOAT" -> ColumnTypes.FloatType,
-    "INT" -> ColumnTypes.IntType,
-    "INTEGER" -> ColumnTypes.IntType,
-    "LONG" -> ColumnTypes.LongType,
-    "OBJECT" -> ColumnTypes.SerializableType,
-    "REAL" -> ColumnTypes.DoubleType,
-    "SHORT" -> ColumnTypes.ShortType,
-    "SMALLINT" -> ColumnTypes.ShortType,
-    "STRING" -> ColumnTypes.StringType,
-    "TEXT" -> ColumnTypes.ClobType,
-    "TIMESTAMP" -> ColumnTypes.DateType,
-    "TINYINT" -> ColumnTypes.ByteType,
-    "UUID" -> ColumnTypes.UUIDType,
-    "VARCHAR" -> ColumnTypes.StringType
-  )
 
   def compile(databaseName: String, sql: String): DatabaseIORequest = {
     val model = SQLLanguageParser.parse(sql)

@@ -176,7 +176,7 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
   }
 
   /**
-    * Retrieves the metrics for the specified database
+    * Retrieves the summary for the specified database
     * @param databaseName the specified database
     * @return the promise of [[DatabaseSummary]]
     */

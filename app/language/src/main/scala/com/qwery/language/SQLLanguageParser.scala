@@ -185,8 +185,7 @@ trait SQLLanguageParser {
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
       isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
-      isPartitioned = params.atoms.is("mode", _ equalsIgnoreCase "PARTITIONED"),
-      partitionBy = params.columns.getOrElse("partitions", Nil)
+      isPartitioned = params.atoms.is("mode", _ equalsIgnoreCase "PARTITIONED")
     ))
   }
 

@@ -119,8 +119,7 @@ case class Table(name: String,
                  ifNotExists: Boolean = false,
                  isColumnar: Boolean = false,
                  isPartitioned: Boolean = false,
-                 description: Option[String] = None,
-                 partitionBy: List[Column] = Nil) extends TableLike
+                 description: Option[String] = None) extends TableLike
 
 /**
  * Table Companion

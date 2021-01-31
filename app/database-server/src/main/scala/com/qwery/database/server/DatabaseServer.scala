@@ -1,8 +1,7 @@
 package com.qwery.database
 package server
 
-import java.text.NumberFormat
-import java.util.concurrent.atomic.AtomicLong
+import DatabaseManagementSystem._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpResponse, _}
@@ -11,15 +10,21 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import akka.util.Timeout
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
-import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.JSONSupport._
+import com.qwery.database.device.BlockDevice
+import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.files.{TableFile, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models._
+import com.qwery.database.server.DatabaseServer.implicits._
 import com.qwery.models.expressions.Expression
+import com.qwery.util.OptionHelper.OptionEnrichment
 import org.slf4j.LoggerFactory
 import spray.json._
 
+import java.text.NumberFormat
+import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
@@ -30,6 +35,7 @@ import scala.util.{Failure, Success}
 object DatabaseServer {
   private val logger = LoggerFactory.getLogger(getClass)
   private val nf = NumberFormat.getNumberInstance
+  private val cpu = new DatabaseCPU()
   private val pidGenerator = new AtomicLong()
 
   /**
@@ -124,15 +130,14 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @return the [[Route]]
    */
-  private def routesByDatabase(databaseName: String, host: String, port: Int)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabase(databaseName: String, host: String, port: Int): Route = {
     get {
       // retrieve the database summary (e.g. "GET /d/portfolio")
-      val databaseSummary = qp.getDatabaseSummary(databaseName).map { case DatabaseSummary(dbName, tables) =>
-        DatabaseSummary(dbName, tables.map { ts =>
-          ts.copy(href = Some(s"http://$host:$port/d/$dbName/${ts.tableName}"))
-        })
-      }
-      complete(databaseSummary)
+      val databaseSummary = DatabaseManagementSystem.getDatabaseSummary(databaseName)
+      val databaseSummaryWithRefs = databaseSummary.copy(tables = databaseSummary.tables.map { ts =>
+        ts.copy(href = Some(s"http://$host:$port/d/$databaseName/${ts.tableName}"))
+      })
+      complete(databaseSummaryWithRefs)
     }
   }
 
@@ -145,31 +150,29 @@ object DatabaseServer {
   private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks")
-      complete(qp.dropTable(databaseName, tableName, ifExists = true))
+      complete(cpu.dropTable(databaseName, tableName, ifExists = true).toUpdateCount)
     } ~
       get {
         // retrieve the table metrics (e.g. "GET /d/portfolio/stocks")
         // or query via query parameters (e.g. "GET /d/portfolio/stocks?exchange=AMEX&__limit=5")
         extract(_.request.uri.query()) { params =>
-          val (limit, condition) = (params.get("__limit").map(_.toInt), toValues(params))
-          complete(
-            if (params.isEmpty) qp.getTableMetrics(databaseName, tableName)
-            else qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toKeyValues))
-          )
+          val (limit, condition) = (params.get("__limit").map(_.toInt) ?? Some(20), toValues(params))
+          if (params.isEmpty) complete(cpu.getTableMetrics(databaseName, tableName))
+          else complete(qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toKeyValues)))
         }
       } ~
       post {
         // append the new record to the table
         // (e.g. "POST /d/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(qp.insertRow(databaseName, tableName, toValues(jsObject)))
+          complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount)
         }
       } ~
       put {
         // create the new table (e.g. "PUT /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]}
         entity(as[String]) { jsonString =>
           val properties = jsonString.fromJSON[TableProperties]
-          complete(qp.createTable(databaseName, tableName, properties))
+          complete(cpu.createTable(databaseName, tableName, properties).toUpdateCount)
         }
       }
   }
@@ -207,10 +210,10 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableLength(databaseName: String, tableName: String)(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableLength(databaseName: String, tableName: String): Route = {
     get {
       // retrieve the length of the table (e.g. "GET /d/portfolio/stocks/length")
-      complete(qp.getTableLength(databaseName, tableName))
+      complete(cpu.getTableLength(databaseName, tableName).toUpdateCount)
     }
   }
 
@@ -231,7 +234,8 @@ object DatabaseServer {
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
         parameters('__contentType.?) { contentType_? =>
-          val column = TableFile(databaseName, tableName).device.columns(columnID)
+          val columns = cpu.getColumns(databaseName, tableName)
+          val column = columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
           complete(qp.getField(databaseName, tableName, rowID, columnID) map { field =>
             val fieldBytes = field.typedValue.encode(column)
@@ -250,9 +254,9 @@ object DatabaseServer {
       put {
         // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
         entity(as[String]) { value =>
-          val device = TableFile(databaseName, tableName).device
-          assert(device.columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
-          val columnType = device.columns(columnID).metadata.`type`
+          val columns = cpu.getColumns(databaseName, tableName)
+          assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
+          val columnType = columns(columnID).metadata.`type`
           complete(qp.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
         }
       }
@@ -270,7 +274,7 @@ object DatabaseServer {
                                         (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
-      complete(qp.deleteRange(databaseName, tableName, start, length))
+      complete(cpu.deleteRange(databaseName, tableName, start, length).toUpdateCount)
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
@@ -312,17 +316,16 @@ object DatabaseServer {
    * @param rowID        the referenced row ID
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: ROWID)
-                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: ROWID): Route = {
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
-      complete(qp.deleteRow(databaseName, tableName, rowID))
+      complete(cpu.deleteRow(databaseName, tableName, rowID).toUpdateCount)
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
         parameters('__metadata.?) { metadata_? =>
           val isMetadata = metadata_?.map(_.toLowerCase).contains("true")
-          complete(qp.getRow(databaseName, tableName, rowID) map {
+          complete(cpu.getRow(databaseName, tableName, rowID) match {
             case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toKeyValues.toJson
             case None => JsObject()
           })
@@ -332,14 +335,14 @@ object DatabaseServer {
         // partially update the row by ID
         // (e.g. "POST /d/portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          complete(qp.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)))
+          complete(cpu.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)).toUpdateCount)
         }
       } ~
       put {
         // replace the row by ID
         // (e.g. "PUT /d/portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(qp.replaceRow(databaseName, tableName, rowID, toValues(jsObject)))
+          complete(cpu.replaceRow(databaseName, tableName, rowID, toValues(jsObject)).toUpdateCount)
         }
       }
   }
@@ -350,12 +353,12 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @return the [[Route]]
    */
-  private def routesMessaging(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesMessaging(databaseName: String, tableName: String): Route = {
     post {
       // append the new message to the table
       // (e.g. "POST /m/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
       entity(as[JsObject]) { jsObject =>
-        complete(qp.insertRow(databaseName, tableName, toValues(jsObject)))
+        complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount)
       }
     }
   }
@@ -364,12 +367,12 @@ object DatabaseServer {
     * Column search API routes (e.g. "/columns?database=shocktrade&table=stock%&column=symbol")
     * @return the [[Route]]
     */
-  private def routesSearchColumns(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesSearchColumns: Route = {
     get {
       // search for columns (e.g. "GET /columns?database=shocktrade&table=stock%&column=symbol")
       extract(_.request.uri.query()) { params =>
         val (databasePattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("table"), params.get("column"))
-        complete(qp.searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
+        complete(searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
       }
     }
   }
@@ -378,12 +381,12 @@ object DatabaseServer {
     * Database search API routes (e.g. "/databases?database=test%")
     * @return the [[Route]]
     */
-  private def routesSearchDatabases(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesSearchDatabases: Route = {
     get {
       // search for databases (e.g. "GET /databases?database=test%")
       extract(_.request.uri.query()) { params =>
         val databasePattern_? = params.get("database")
-        complete(qp.searchDatabases(databasePattern_?))
+        complete(searchDatabases(databasePattern_?))
       }
     }
   }
@@ -392,12 +395,12 @@ object DatabaseServer {
     * Table search API routes (e.g. "/tables?database=test%&table=stock%")
     * @return the [[Route]]
     */
-  private def routesSearchTables(implicit qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesSearchTables: Route = {
     get {
       // search for tables (e.g. "GET /tables?database=test%&table=stock%"")
       extract(_.request.uri.query()) { params =>
         val (databasePattern_?, tablePattern_?) = (params.get("database"), params.get("table"))
-        complete(qp.searchTables(databasePattern_?, tablePattern_?))
+        complete(searchTables(databasePattern_?, tablePattern_?))
       }
     }
   }
@@ -428,6 +431,53 @@ object DatabaseServer {
 
   private def toExpressions(jsObject: JsObject): Seq[(String, Expression)] = {
     jsObject.fields.toSeq.map { case (k, js) => (k, js.toExpression) }
+  }
+
+  /**
+    * implicits definitions
+    */
+  object implicits {
+
+    /**
+      * Results Conversion
+      * @param response the host response
+      */
+    final implicit class ResultsConversion(val response: Any) extends AnyVal {
+
+      @inline
+      def toUpdateCount: UpdateCount = response match {
+        case bool: Boolean => UpdateCount(bool)
+        case count: Long => UpdateCount(count)
+        case unknown =>
+          logger.warn(s"Cannot convert '$unknown' (${unknown.getClass.getName}) to ${classOf[UpdateCount].getName}")
+          UpdateCount(1)
+      }
+    }
+
+    /**
+      * Response Conversion
+      * @param response the response
+      */
+    final implicit class ResponseConversion(val response: Either[BlockDevice, Long]) extends AnyVal {
+
+      @inline
+      def asResult(databaseName: String, tableName: String, limit: Option[Int]): QueryResult = response match {
+        case Left(device) =>
+          var rows: List[Seq[Option[Any]]] = Nil
+          device.whileRow(KeyValues(), limit ?? Some(20)) { row => rows = row.fields.map(_.value) :: rows }
+          QueryResult(databaseName, tableName, columns = device.columns.map(_.toTableColumn), rows = rows)
+        case Right(count) =>
+          QueryResult(databaseName, tableName, columns = Nil, count = count)
+      }
+
+      @inline
+      def asUpdate: UpdateCount = response match {
+        case Left(device) => UpdateCount(device.length)
+        case Right(count) => UpdateCount(count)
+      }
+
+    }
+
   }
 
 }

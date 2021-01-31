@@ -1,23 +1,23 @@
-package com.qwery.database
+package com.qwery.database.device
 
-import java.util.concurrent.atomic.AtomicInteger
-import com.qwery.database.device.BlockDevice
 import com.qwery.database.functions._
 import com.qwery.database.types.QxAny
+import com.qwery.database.{Column, ColumnMetadata, Field, FieldMetadata, KeyValues, Row, createTempTable, die}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.postfixOps
 
 /**
- * Table Query
+ * Block Device Query
  * @param tableDevice the [[BlockDevice table device]] to query
  */
-class TableQuery(tableDevice: BlockDevice) {
+class BlockDeviceQuery(tableDevice: BlockDevice) {
   private val tempName = (_: Any) => java.lang.Long.toString(System.nanoTime(), 36)
 
   /**

@@ -1,11 +1,12 @@
 package com.qwery.database.files
 
-import com.qwery.database.device.BlockDevice
+import com.qwery.database.DatabaseCPU.toCriteria
+import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.{KeyValues, RecursiveFileList, TableQuery, createTempTable, die}
-import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal, Field => SQLField}
-import com.qwery.models.{Invokable, OrderColumn, Select, TableRef, expressions => ex}
+import com.qwery.database.{KeyValues, RecursiveFileList, createTempTable, die}
+import com.qwery.models.expressions.{Expression, Field => SQLField}
+import com.qwery.models.{Invokable, OrderColumn, Select, TableRef}
 
 /**
  * Represents a virtual table file (e.g. view)
@@ -14,12 +15,14 @@ import com.qwery.models.{Invokable, OrderColumn, Select, TableRef, expressions =
  * @param device       the [[BlockDevice materialized device]]
   */
 case class VirtualTableFile(databaseName: String, viewName: String, device: BlockDevice) {
-  private val selector = new TableQuery(device)
+  private val selector = new BlockDeviceQuery(device)
 
   /**
    * Closes the underlying file handle
    */
   def close(): Unit = device.close()
+
+  def countRows(condition: KeyValues, limit: Option[Int] = None): Long = device.whileRow(condition, limit) { _ => }
 
   /**
     * Retrieves rows matching the given condition up to the optional limit
@@ -98,17 +101,11 @@ object VirtualTableFile {
     }
   }
 
-  def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
-    case Some(ConditionalOp(ex.Field(name), Literal(value), "==", "=")) => KeyValues(name -> value)
-    case Some(condition) => die(s"Unsupported condition $condition")
-    case None => KeyValues()
-  }
-
   private def getProjectionColumns(databaseName: String, invokable: Invokable): Seq[TableColumn] = {
     invokable match {
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
         val tableFile = TableFile(databaseName, tableName)
-        val tableQuery = new TableQuery(tableFile.device)
+        val tableQuery = new BlockDeviceQuery(tableFile.device)
         tableQuery.explainColumns(fields).map(_.toTableColumn)
       case unknown => die(s"Unexpected instruction: $unknown")
     }
