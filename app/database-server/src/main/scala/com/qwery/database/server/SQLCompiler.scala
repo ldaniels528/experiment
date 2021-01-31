@@ -5,7 +5,7 @@ import com.qwery.database.ExpressionVM._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
-import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
+import com.qwery.database.server.SQLCompiler.implicits.{ExpressionFacade, InvokableFacade}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal}
@@ -47,6 +47,12 @@ object SQLCompiler {
   def compile(databaseName: String, sql: String): DatabaseIORequest = {
     val model = SQLLanguageParser.parse(sql)
     model.compile(databaseName)
+  }
+
+  def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
+    case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => KeyValues(name -> value.translate)
+    case Some(condition) => die(s"Unsupported condition $condition")
+    case None => KeyValues()
   }
 
   /**
@@ -113,12 +119,6 @@ object SQLCompiler {
         case mx.Update(TableRef(tableName), changes, where, limit) =>
           cx.UpdateRows(databaseName, tableName, changes = changes, condition = toCriteria(where), limit)
         case unknown => die(s"Unsupported operation $unknown")
-      }
-
-      private def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
-        case Some(ConditionalOp(ex.Field(name), value, "==", "=")) => KeyValues(name -> value.translate)
-        case Some(condition) => die(s"Unsupported condition $condition")
-        case None => KeyValues()
       }
 
     }

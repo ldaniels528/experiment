@@ -6,7 +6,7 @@ import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.qwery.database.ExpressionVM.evaluate
-import com.qwery.database.files.{TableFile, TableMetrics, TableProperties}
+import com.qwery.database.files.{TableFile, TableMetrics, TableProperties, VirtualTableFile}
 import com.qwery.database.models._
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.server.DatabaseManagementSystem._

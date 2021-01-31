@@ -1,14 +1,11 @@
-package com.qwery.database.server
+package com.qwery.database.files
 
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.files.{TableColumn, TableConfig, TableFile}
-import com.qwery.database.server.QueryProcessor.commands.SelectRows
-import com.qwery.database.server.SQLCompiler.implicits.InvokableFacade
 import com.qwery.database.{KeyValues, RecursiveFileList, TableQuery, createTempTable, die}
-import com.qwery.models.expressions.{Expression, Field => SQLField}
-import com.qwery.models.{Invokable, OrderColumn}
+import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal, Field => SQLField}
+import com.qwery.models.{Invokable, OrderColumn, Select, TableRef, expressions => ex}
 
 /**
  * Represents a virtual table file (e.g. view)
@@ -94,19 +91,25 @@ object VirtualTableFile {
   }
 
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {
-    readViewData(databaseName, viewName).compile(databaseName) match {
-      case SelectRows(_, tableName, fields, where, groupBy, orderBy, limit) =>
-        TableFile(databaseName, tableName).selectRows(fields, where, groupBy, orderBy, limit)
+    readViewData(databaseName, viewName) match {
+      case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
+        TableFile(databaseName, tableName).selectRows(fields, toCriteria(where), groupBy, orderBy, limit)
       case other => die(s"Unhandled view query model - $other")
     }
   }
 
+  def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
+    case Some(ConditionalOp(ex.Field(name), Literal(value), "==", "=")) => KeyValues(name -> value)
+    case Some(condition) => die(s"Unsupported condition $condition")
+    case None => KeyValues()
+  }
+
   private def getProjectionColumns(databaseName: String, invokable: Invokable): Seq[TableColumn] = {
-    invokable.compile(databaseName) match {
-      case select: SelectRows =>
-        val tableFile = TableFile(select.databaseName, select.tableName)
+    invokable match {
+      case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
+        val tableFile = TableFile(databaseName, tableName)
         val tableQuery = new TableQuery(tableFile.device)
-        tableQuery.explainColumns(select.fields).map(_.toTableColumn)
+        tableQuery.explainColumns(fields).map(_.toTableColumn)
       case unknown => die(s"Unexpected instruction: $unknown")
     }
   }
