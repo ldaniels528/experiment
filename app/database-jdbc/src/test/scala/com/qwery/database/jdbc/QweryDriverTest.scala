@@ -75,7 +75,7 @@ class QweryDriverTest extends AnyFunSpec {
         val count = conn.createStatement().executeUpdate(
           s"""|CREATE TABLE $tableNameA (
               |  symbol STRING(8) comment 'the ticker symbol',
-              |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
+              |  exchange STRING(8) AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)
@@ -152,7 +152,7 @@ class QweryDriverTest extends AnyFunSpec {
           s"""|SELECT COUNT(*) FROM $tableNameA
               |""".stripMargin) use { rs =>
           rs.next()
-          assert(rs.getInt(1) == 4)
+          assert(rs.getLong(1) == 4)
         }
       }
     }
@@ -163,7 +163,7 @@ class QweryDriverTest extends AnyFunSpec {
           s"""|SELECT COUNT(*) AS transactions FROM $tableNameA
               |""".stripMargin) use { rs =>
           rs.next()
-          assert(rs.getInt("transactions") == 4)
+          assert(rs.getLong("transactions") == 4)
         }
       }
     }
@@ -249,7 +249,7 @@ class QweryDriverTest extends AnyFunSpec {
         val count = conn.createStatement().executeUpdate(
           s"""|CREATE COLUMNAR TABLE $tableNameB (
               |  symbol STRING(8) comment 'the ticker symbol',
-              |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
+              |  exchange STRING(8) AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)

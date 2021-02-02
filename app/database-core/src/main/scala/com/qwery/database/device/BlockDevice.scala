@@ -56,7 +56,7 @@ trait BlockDevice {
    * @param predicate the function defining which items should be included
    * @return the number of rows matching the predicate
    */
-  def countRows(predicate: RowMetadata => Boolean): ROWID = {
+  def countRows(predicate: RowMetadata => Boolean): Long = {
     val eof: ROWID = length
     var (rowID: ROWID, total: ROWID) = (0L, 0L)
     while (rowID < eof) {

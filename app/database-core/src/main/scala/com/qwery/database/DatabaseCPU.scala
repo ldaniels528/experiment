@@ -2,14 +2,15 @@ package com.qwery.database
 
 import com.qwery.database.DatabaseCPU.implicits._
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
-import com.qwery.database.ExpressionVM.evaluate
+import com.qwery.database.ExpressionVM.{evaluate, nextID}
 import com.qwery.database.device.{BlockDevice, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.isTableFile
-import com.qwery.database.files.{TableColumn, TableFile, TableMetrics, TableProperties, VirtualTableFile}
+import com.qwery.database.files._
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.Into
 import com.qwery.models.expressions._
 import com.qwery.models.{expressions => ex, _}
+import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.{models => mx}
 
 import scala.collection.concurrent.TrieMap
@@ -45,12 +46,9 @@ class DatabaseCPU() {
     * @param databaseName the database name
     * @param tableName    the table name
     * @param properties   the [[TableProperties table properties]]
-    * @return the [[TableFile]]
     */
-  def createTable(databaseName: String, tableName: String, properties: TableProperties): TableFile = {
-    val table = TableFile.createTable(databaseName, tableName, properties)
-    tables(databaseName -> tableName) = table
-    table
+  def createTable(databaseName: String, tableName: String, properties: TableProperties): Unit = {
+    tables(databaseName -> tableName) = TableFile.createTable(databaseName, tableName, properties)
   }
 
   /**
@@ -60,16 +58,37 @@ class DatabaseCPU() {
     * @param description  the optional description or remarks
     * @param invokable    the [[Invokable SQL query]]
     * @param ifNotExists  if true, the operation will not fail
-    * @return true, if the view was created
     */
-  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean): VirtualTableFile = {
-    val view = VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)
-    views(databaseName -> viewName) = view
-    view
+  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean): Unit = {
+    views(databaseName -> viewName) = VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)
+  }
+
+  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Unit = {
+    tableOf(databaseName, tableName).deleteField(rowID, columnID)
   }
 
   def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnName: String): Unit = {
     tableOf(databaseName, tableName).deleteField(rowID, columnName)
+  }
+
+  /**
+    * Retrieves a field by row and column IDs
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param rowID        the row ID
+    * @param columnID     the column ID
+    * @return the [[Field field]]
+    */
+  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Field = {
+    tableOf(databaseName, tableName).getField(rowID, columnID)
+  }
+
+  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, newValue: Option[Any]): Unit = {
+    tableOf(databaseName, tableName).updateField(rowID, columnID, newValue)
+  }
+
+  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnName: String, newValue: Option[Any]): Unit = {
+    tableOf(databaseName, tableName).updateField(rowID, columnName, newValue)
   }
 
   /**
@@ -143,10 +162,10 @@ class DatabaseCPU() {
       case Insert(Into(TableRef(tableName)), queryable, fields) =>
         val solution = execute(databaseName, queryable)
         Solution(databaseName, tableName, insertRows(databaseName, tableName, device = solution.result.asInstanceOf[BlockDevice]))
-      case Select(Seq(FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where@None, limit@None) =>
-        Solution(databaseName, tableName, getDevice(databaseName, tableName).countRows(_.isActive))
-      case Select(Seq(FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
-        Solution(databaseName, tableName, countRows(databaseName, tableName, where, limit))
+      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where@None, limit@None) =>
+        Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => getDevice(databaseName, tableName).countRows(_.isActive)))
+      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
+        Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => countRows(databaseName, tableName, where, limit)))
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
         Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit))
       case Truncate(TableRef(tableName)) =>
@@ -163,19 +182,8 @@ class DatabaseCPU() {
     * @param sql          the SQL statement or query
     * @return either a [[BlockDevice block device]] containing a result set or an update count
     */
-  def executeQuery(databaseName: String, sql: String): Either[BlockDevice, Long] = {
-    val solution = execute(databaseName, invokable = SQLLanguageParser.parse(sql))
-    solution.result match {
-      case device: BlockDevice => Left(device)
-      case file: TableFile => Left(file.device)
-      case file: VirtualTableFile => Left(file.device)
-      case outcome: Boolean => Right(if(outcome) 1 else 0)
-      case count: Int => Right(count)
-      case count: Long => Right(count)
-      case ids: Seq[_] => Right(ids.length)
-      case _: Unit => Right(1)
-      case xx => die(s"executeQuery: unhandled $xx")
-    }
+  def executeQuery(databaseName: String, sql: String): Solution = {
+    execute(databaseName, invokable = SQLLanguageParser.parse(sql))
   }
 
   def getColumns(databaseName: String, tableName: String): Seq[Column] = getDevice(databaseName, tableName).columns
@@ -219,6 +227,18 @@ class DatabaseCPU() {
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[Row] = {
     val row = getDevice(databaseName, tableName).getRow(rowID)
     if (row.metadata.isActive) Some(row) else None
+  }
+
+  /**
+    * Retrieves rows matching the given condition up to the optional limit
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param condition    the given [[KeyValues condition]]
+    * @param limit        the optional limit
+    * @return the [[BlockDevice results]]
+    */
+  def getRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
+    tableOf(databaseName, tableName).getRows(condition, limit)
   }
 
   def getTableLength(databaseName: String, tableName: String): Long = getDevice(databaseName, tableName).length
@@ -309,11 +329,21 @@ class DatabaseCPU() {
   }
 
   def updateRow(databaseName: String, tableName: String, rowID: ROWID, changes: Seq[(String, Expression)]): Unit = {
-    tableOf(databaseName, tableName).updateRow(rowID, KeyValues(changes: _*))
+    implicit val scope: Scope = Scope()
+    val row = KeyValues(changes.map { case (name, expr) => (name, evaluate(expr)) }: _*)
+    tableOf(databaseName, tableName).updateRow(rowID, row)
   }
 
   def updateRows(databaseName: String, tableName: String, changes: Seq[(String, Expression)], condition: Option[Condition], limit: Option[Int] = None): Long = {
-    tableOf(databaseName, tableName).updateRows(KeyValues(changes: _*), toCriteria(condition), limit)
+    implicit val scope: Scope = Scope()
+    val row = KeyValues(changes.map { case (name, expr) => (name, evaluate(expr)) }: _*)
+    tableOf(databaseName, tableName).updateRows(row, toCriteria(condition), limit)
+  }
+
+  private def countRowsAsDevice(name: String, counter: () => Long): BlockDevice = {
+    val rows = createTempTable(columns = Seq(Column(name, metadata = ColumnMetadata(`type` = ColumnTypes.LongType))), fixedRowCount = 1)
+    rows.writeRow(KeyValues(name -> counter()).toBinaryRow(rows))
+    rows
   }
 
   private def tableOf(databaseName: String, tableName: String): TableFile = {
@@ -364,7 +394,25 @@ object DatabaseCPU {
     case None => KeyValues()
   }
 
-  case class Solution(databaseName: String, tableName: String, result: Any)
+  case class Solution(databaseName: String, tableName: String, result: Any) {
+
+    /**
+      * @return a normalized copy of then result as either a [[BlockDevice block device]] or [[Long update count]].
+      */
+    def get: Either[BlockDevice, ROWID] = {
+      result match {
+        case device: BlockDevice => Left(device)
+        case file: TableFile => Left(file.device)
+        case file: VirtualTableFile => Left(file.device)
+        case outcome: Boolean => Right(if (outcome) 1 else 0)
+        case count: Int => Right(count)
+        case count: Long => Right(count)
+        case ids: Seq[_] => Right(ids.length)
+        case _: Unit => Right(1)
+        case xx => die(s"executeQuery: unhandled $xx")
+      }
+    }
+  }
 
   /**
     * Implicit definitions

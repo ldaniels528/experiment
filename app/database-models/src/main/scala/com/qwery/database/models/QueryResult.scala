@@ -1,5 +1,6 @@
 package com.qwery.database.models
 
+import com.qwery.database.DatabaseCPU.Solution
 import com.qwery.database.JSONSupport._
 import com.qwery.database.KeyValues
 import com.qwery.database.device.BlockDevice
@@ -32,11 +33,47 @@ case class QueryResult(databaseName: String,
 }
 
 object QueryResult {
-  def toQueryResult(databaseName: String, tableName: String, device: BlockDevice): QueryResult = {
-    val rows = device.toList
-    QueryResult(databaseName, tableName, columns = device.columns.map(_.toTableColumn), __ids = rows.map(_.id), rows = rows map { row =>
-      val mapping = row.toMap
-      device.columns.map(_.name).map(mapping.get)
-    })
+
+  final implicit class SolutionToQueryResult(val solution: Solution) extends AnyVal {
+
+    @inline
+    def toQueryResult: QueryResult = {
+      val (columns, rows, count: Long) = solution.get match {
+        case Left(device) => (device.columns, device.toList, 0L)
+        case Right(count) => (Nil, Nil, count)
+      }
+      QueryResult(
+        databaseName = solution.databaseName,
+        tableName = solution.tableName,
+        columns = columns.map(_.toTableColumn),
+        __ids = rows.map(_.id),
+        count = count,
+        rows = rows map { row =>
+          val mapping = row.toMap
+          columns.map(_.name).map(mapping.get)
+        })
+    }
+
   }
+
+  final implicit class BlockDeviceToQueryResult(val device: BlockDevice) extends AnyVal {
+
+    @inline
+    def toQueryResult(databaseName: String, tableName: String): QueryResult = {
+      val rows = device.toList
+      val columns = device.columns
+      QueryResult(
+        databaseName = databaseName,
+        tableName = tableName,
+        columns = columns.map(_.toTableColumn),
+        __ids = rows.map(_.id),
+        count = rows.size,
+        rows = rows map { row =>
+          val mapping = row.toMap
+          columns.map(_.name).map(mapping.get)
+        })
+    }
+
+  }
+
 }

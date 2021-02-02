@@ -1,14 +1,12 @@
 package com.qwery.database
 package server
 
-import DatabaseManagementSystem._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpResponse, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
-import akka.util.Timeout
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.JSONSupport._
 import com.qwery.database.device.BlockDevice
@@ -16,7 +14,9 @@ import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.files.{TableFile, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
+import com.qwery.database.models.QueryResult.SolutionToQueryResult
 import com.qwery.database.models._
+import com.qwery.database.server.DatabaseManagementSystem._
 import com.qwery.database.server.DatabaseServer.implicits._
 import com.qwery.models.expressions.Expression
 import com.qwery.util.OptionHelper.OptionEnrichment
@@ -26,7 +26,6 @@ import spray.json._
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
 /**
@@ -44,29 +43,19 @@ object DatabaseServer {
    */
   def main(args: Array[String]): Unit = {
     val defaultPort = 8233
-    val defaultPoolSize = 5
-    val defaultTimeout = 10
 
     // display the application version
     val version = 0.1
     logger.info(f"Qwery Database Server v$version%.1f")
 
     // get the configuration
-    val (port, poolSize, timeoutMin) = args match {
-      case Array(port, poolSize, timeoutMin) => (port.toInt, poolSize.toInt, timeoutMin.toInt)
-      case Array(port, poolSize) => (port.toInt, poolSize.toInt, defaultTimeout)
-      case Array(port) => (port.toInt, defaultPoolSize, defaultTimeout)
-      case Array() => (defaultPort, defaultPoolSize, defaultTimeout)
+    val port = args match {
+      case Array(port) => port.toInt
+      case Array() => defaultPort
     }
-
-    // display the pool size
-    logger.info(s"Actor pool size is $poolSize")
-    logger.info(s"Request timeout is $timeoutMin minutes")
 
     // create the actor pool
     implicit val system: ActorSystem = ActorSystem(name = "database-server")
-    implicit val timeout: Timeout = timeoutMin.minutes
-    implicit val queryProcessor: QueryProcessor = new QueryProcessor(poolSize)
     import system.dispatcher
 
     // start the server
@@ -78,7 +67,7 @@ object DatabaseServer {
    * @param host the server host (e.g. "0.0.0.0")
    * @param port the server port
    */
-  def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Unit = {
+  def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext): Unit = {
     Http().newServerAt(host, port).bindFlow(route(host, port)) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
@@ -91,7 +80,7 @@ object DatabaseServer {
    * Define the API routes
    * @return the [[Route]]
    */
-  def route(host: String, port: Int)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  def route(host: String, port: Int): Route = {
     // Database API routes
     // route: /d/<database> (e.g. "/d/portfolio")
     path("d" / Segment)(routesByDatabase(_, host, port)) ~
@@ -147,10 +136,10 @@ object DatabaseServer {
    * @param tableName    the name of the table
    * @return the [[Route]]
    */
-  private def routesByDatabaseTable(databaseName: String, tableName: String)(implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTable(databaseName: String, tableName: String): Route = {
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks")
-      complete(cpu.dropTable(databaseName, tableName, ifExists = true).toUpdateCount)
+      complete(cpu.dropTable(databaseName, tableName, ifExists = true).toUpdateCount(1))
     } ~
       get {
         // retrieve the table metrics (e.g. "GET /d/portfolio/stocks")
@@ -158,21 +147,20 @@ object DatabaseServer {
         extract(_.request.uri.query()) { params =>
           val (limit, condition) = (params.get("__limit").map(_.toInt) ?? Some(20), toValues(params))
           if (params.isEmpty) complete(cpu.getTableMetrics(databaseName, tableName))
-          else complete(qp.findRows(databaseName, tableName, condition, limit).map(_.map(_.toKeyValues)))
+          else complete(cpu.getRows(databaseName, tableName, condition, limit).toList.map(_.toKeyValues))
         }
       } ~
       post {
         // append the new record to the table
         // (e.g. "POST /d/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount)
+          complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount(1))
         }
       } ~
       put {
-        // create the new table (e.g. "PUT /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]}
-        entity(as[String]) { jsonString =>
-          val properties = jsonString.fromJSON[TableProperties]
-          complete(cpu.createTable(databaseName, tableName, properties).toUpdateCount)
+        // create the new table (e.g. "PUT /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]})
+        entity(as[TableProperties]) { properties =>
+          complete(cpu.createTable(databaseName, tableName, properties).toUpdateCount(1))
         }
       }
   }
@@ -225,11 +213,10 @@ object DatabaseServer {
    * @param columnID     the desired column by index
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int)
-                                           (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Route = {
     delete {
       // delete a field (e.g. "DELETE /d/portfolio/stocks/287/0")
-      complete(qp.deleteField(databaseName, tableName, rowID, columnID))
+      complete(cpu.deleteField(databaseName, tableName, rowID, columnID).toUpdateCount(1))
     } ~
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
@@ -237,8 +224,9 @@ object DatabaseServer {
           val columns = cpu.getColumns(databaseName, tableName)
           val column = columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
-          complete(qp.getField(databaseName, tableName, rowID, columnID) map { field =>
-            val fieldBytes = field.typedValue.encode(column)
+          val field = cpu.getField(databaseName, tableName, rowID, columnID)
+          val fieldBytes = field.typedValue.encode(column)
+          complete({
             if (fieldBytes.length <= FieldMetadata.BYTES_LENGTH) HttpResponse(status = StatusCodes.NoContent)
             else {
               // copy the field's contents only (without metadata)
@@ -257,7 +245,7 @@ object DatabaseServer {
           val columns = cpu.getColumns(databaseName, tableName)
           assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
           val columnType = columns(columnID).metadata.`type`
-          complete(qp.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))))
+          complete(cpu.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))).toUpdateCount(1))
         }
       }
   }
@@ -270,15 +258,14 @@ object DatabaseServer {
    * @param length       the number of rows referenced
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int)
-                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int): Route = {
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
       complete(cpu.deleteRange(databaseName, tableName, start, length).toUpdateCount)
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(qp.getRange(databaseName, tableName, start, length).map(_.map(_.toKeyValues)))
+        complete(cpu.getRange(databaseName, tableName, start, length).toList.map(_.toKeyValues))
       }
   }
 
@@ -287,24 +274,25 @@ object DatabaseServer {
    * @param databaseName the name of the database
    * @return the [[Route]]
    */
-  private def routesByDatabaseTableQuery(databaseName: String)
-                                        (implicit ec: ExecutionContext, qp: QueryProcessor, timeout: Timeout): Route = {
+  private def routesByDatabaseTableQuery(databaseName: String): Route = {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
         val pid = pidGenerator.addAndGet(1)
         val startTime = System.nanoTime()
         logger.info(f"[$pid%04d] SQL: $sql")
-        val promisedResults = qp.executeQuery(databaseName, sql)
-        promisedResults onComplete {
-          case Success(results) =>
-            val elapsedTime = (System.nanoTime() - startTime) / 1e+6
-            logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
-            //results.show(5)(logger)
-          case Failure(e) =>
+
+        try {
+          val results = cpu.executeQuery(databaseName, sql).toQueryResult
+          val elapsedTime = (System.nanoTime() - startTime) / 1e+6
+          logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
+          results.show(5)(logger)
+          complete(results)
+        } catch {
+          case e: Exception =>
             logger.error(f"[$pid%04d] ${e.getMessage}")
+            complete(StatusCode.int2StatusCode(500))
         }
-        complete(promisedResults)
       }
     }
   }
@@ -319,7 +307,7 @@ object DatabaseServer {
   private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: ROWID): Route = {
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
-      complete(cpu.deleteRow(databaseName, tableName, rowID).toUpdateCount)
+      complete(cpu.deleteRow(databaseName, tableName, rowID).toUpdateCount(1))
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
@@ -335,14 +323,14 @@ object DatabaseServer {
         // partially update the row by ID
         // (e.g. "POST /d/portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)).toUpdateCount)
+          complete(cpu.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)).toUpdateCount(1))
         }
       } ~
       put {
         // replace the row by ID
         // (e.g. "PUT /d/portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.replaceRow(databaseName, tableName, rowID, toValues(jsObject)).toUpdateCount)
+          complete(cpu.replaceRow(databaseName, tableName, rowID, toValues(jsObject)).toUpdateCount(1))
         }
       }
   }
@@ -358,7 +346,7 @@ object DatabaseServer {
       // append the new message to the table
       // (e.g. "POST /m/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
       entity(as[JsObject]) { jsObject =>
-        complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount)
+        complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount(1))
       }
     }
   }
@@ -443,6 +431,9 @@ object DatabaseServer {
       * @param response the host response
       */
     final implicit class ResultsConversion(val response: Any) extends AnyVal {
+
+      @inline
+      def toUpdateCount(count: Long): UpdateCount = UpdateCount(count)
 
       @inline
       def toUpdateCount: UpdateCount = response match {

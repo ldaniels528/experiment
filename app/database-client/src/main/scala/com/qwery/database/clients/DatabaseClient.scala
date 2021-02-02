@@ -1,15 +1,17 @@
 package com.qwery.database
 package clients
 
-import java.io.File
-import java.net.URLEncoder
 import com.qwery.database.JSONSupport._
 import com.qwery.database.WebServiceClient._
 import com.qwery.database.files.{TableMetrics, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models._
 import net.liftweb.json._
+import org.slf4j.LoggerFactory
 import spray.json._
+
+import java.io.File
+import java.net.URLEncoder
 
 /**
  * Qwery Database Client
@@ -17,6 +19,7 @@ import spray.json._
  * @param port the remote port
  */
 case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
+  private val logger = LoggerFactory.getLogger(getClass)
   private implicit val formats: DefaultFormats = DefaultFormats
   private val charSetName = "utf-8"
   private val $http = new WebServiceClient()

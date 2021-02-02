@@ -9,6 +9,7 @@ import com.qwery.database.ExpressionVM.evaluate
 import com.qwery.database.files.{TableFile, TableMetrics, TableProperties, VirtualTableFile}
 import com.qwery.database.models._
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.models.QueryResult.BlockDeviceToQueryResult
 import com.qwery.database.server.DatabaseManagementSystem._
 import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
@@ -553,7 +554,7 @@ object QueryProcessor {
       case cmd@ReplaceRow(_, _, rowID, row) =>
         invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
       case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
-        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(QueryResult.toQueryResult(databaseName, tableName, _))) }
+        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, tableName))) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@UnlockRow(_, _, rowID, lockID) => unlockRow(cmd, rowID, lockID)
@@ -610,7 +611,7 @@ object QueryProcessor {
       case cmd@FindRows(_, _, condition, limit) =>
         invoke(cmd, sender())(vTable.getRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows.use(_.toList)) }
       case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
-        invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(QueryResult.toQueryResult(databaseName, viewName, _))) }
+        invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, viewName))) }
       case message =>
         logger.error(s"Unhandled VT-CPU processing message $message")
         unhandled(message)
