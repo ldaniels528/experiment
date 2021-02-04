@@ -1,9 +1,9 @@
-package com.qwery.database.kinesis
+package com.qwery.database.awstools.kinesis
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.{IRecordProcessor, IRecordProcessorFactory}
 import com.amazonaws.services.kinesis.clientlibrary.types.{InitializationInput, ProcessRecordsInput, ShutdownInput}
 import com.qwery.database.clients.MessageProducer
-import com.qwery.database.kinesis.RecordProcessorFactory.RecordProcessor
+import com.qwery.database.awstools.kinesis.RecordProcessorFactory.RecordProcessor
 import org.slf4j.LoggerFactory
 
 import java.text.NumberFormat

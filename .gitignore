@@ -1,7 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Scala template
 .DS_Store
-
 *.class
 *.log
 
@@ -29,13 +28,6 @@ project/plugins/project/
 # Simple Build Tool
 # http://www.scala-sbt.org/release/docs/Getting-Started/Directories.html#configuring-version-control
 
-target/
-lib_managed/
-src_managed/
-project/boot/
-.history
-.cache
-
 test*.*
 tickers.csv
 pixall-config.properties
@@ -60,7 +52,6 @@ fixed-data.txt
 data
 fixed-data.csv
 tmp
-.idea/
 node_modules/
 samples/awsdhubnp-consumer-ma-exporter-pixall/
 samples/sales_transaction_data/

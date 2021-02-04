@@ -88,10 +88,9 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute an INSERT statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val now = System.currentTimeMillis()
         val count = conn.createStatement().executeUpdate(
           s"""|INSERT INTO $tableNameA (symbol, exchange, lastSale, lastTradeTime)
-              |VALUES ("MSFT", "NYSE", 56.55, $now), ("AAPL", "NASDAQ", 98.55, $now)
+              |VALUES ("MSFT", "NYSE", 56.55, now()), ("AAPL", "NASDAQ", 98.55, now())
               |""".stripMargin
         )
         assert(count == 2)

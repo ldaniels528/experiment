@@ -18,7 +18,6 @@ import scala.language.postfixOps
  * @param tableDevice the [[BlockDevice table device]] to query
  */
 class BlockDeviceQuery(tableDevice: BlockDevice) {
-  private val tempName = (_: Any) => java.lang.Long.toString(System.nanoTime(), 36)
 
   /**
     * Executes aggregation, summarization and transformation queries
@@ -127,7 +126,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case fc@FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
         CountDistinct(fc.alias || tempName(fc), args)
       case fc@FunctionCall(functionName, args) =>
-        val fxTemplate = aggregateFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
+        val fxTemplate = lookupAggregationFunction(functionName)
         fxTemplate(fc.alias || tempName(fc), args)
       case expression => die(s"Unconverted expression: $expression")
     }
@@ -203,7 +202,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     */
   def isSummarization(projection: Seq[Expression]): Boolean = {
     projection.exists {
-      case FunctionCall(name, _) => aggregateFunctions.contains(name)
+      case FunctionCall(name, _) => isAggregateFunction(name)
       case _ => false
     }
   }
@@ -243,7 +242,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case AllFields => tableDevice.columns
       case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
-        val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
+        val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || tempName(fc), args)
         Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
       case expression => die(s"Unconverted expression: $expression")
@@ -255,7 +254,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case AllFields => srcRow.fields
       case f: BasicField => srcRow.fields.find(_.name == f.name).toSeq
       case fc@FunctionCall(functionName, args) =>
-        val fxTemplate = transformationFunctions.getOrElse(functionName.toLowerCase, die(s"Function '$functionName' does not exist"))
+        val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || tempName(fc), args)
         Seq(Field(name = fx.name, metadata = FieldMetadata(), QxAny(Option(fx.execute(srcRow.toKeyValues)))))
       case expression => die(s"Unconverted expression: $expression")
@@ -273,8 +272,8 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case fc@FunctionCall(_functionName, args) =>
         val functionName = _functionName.toLowerCase
         // is it a built-in function?
-        if (builtinFunctions.contains(functionName)) {
-          val fxTemplate = builtinFunctions(functionName)
+        if (isBuiltinFunction(functionName)) {
+          val fxTemplate = lookupBuiltinFunction(functionName)
           val fx = fxTemplate(fc.alias || tempName(fc), args)
           Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
         }

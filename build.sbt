@@ -14,7 +14,7 @@ val scalaAppVersion = scalaVersion_2_12
 val akkaVersion = "2.6.9"
 val akkaHttpVersion = "10.2.1"
 val awsKinesisClientVersion = "1.14.0"
-val awsSDKVersion = "1.11.943"
+val awsSDKVersion = "1.11.946"
 val liftJsonVersion = "3.3.0"
 val scalaTestVersion = "3.1.0"
 val slf4jVersion = "1.7.25"
@@ -196,7 +196,7 @@ lazy val database_kinesis = (project in file("./app/database-kinesis")).
     scalaVersion := scalaAppVersion,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
     scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    mainClass in assembly := Some("com.qwery.database.kinesis.KinesisSync"),
+    mainClass in assembly := Some("com.qwery.database.awstools.kinesis.KinesisSync"),
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "amazon-kinesis-client" % awsKinesisClientVersion,

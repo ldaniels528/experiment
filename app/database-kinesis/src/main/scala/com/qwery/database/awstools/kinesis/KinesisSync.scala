@@ -1,4 +1,4 @@
-package com.qwery.database.kinesis
+package com.qwery.database.awstools.kinesis
 
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder

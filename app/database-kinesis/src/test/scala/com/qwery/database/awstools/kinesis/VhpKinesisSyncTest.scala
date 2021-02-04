@@ -1,13 +1,11 @@
-package com.qwery.database.kinesis
+package com.qwery.database.awstools.kinesis
 
 import com.qwery.database.clients.DatabaseClient
-import com.qwery.database.kinesis.KinesisSync.KinesisSyncConfig
+import com.qwery.database.awstools.kinesis.KinesisSync.KinesisSyncConfig
 import com.qwery.database.server.testkit.DatabaseTestServer
 import org.scalatest.funspec.AnyFunSpec
-import org.slf4j.LoggerFactory
 
-class KinesisSyncTest extends AnyFunSpec {
-  private val logger = LoggerFactory.getLogger(getClass)
+class VhpKinesisSyncTest extends AnyFunSpec {
   private val port = 12118
   private val databaseName = "test"
   private val tableName = "vhp_kinesis_stg"
