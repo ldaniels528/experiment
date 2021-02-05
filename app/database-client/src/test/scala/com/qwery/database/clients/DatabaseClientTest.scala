@@ -91,7 +91,7 @@ class DatabaseClientTest extends AnyFunSpec {
     it("should append a record to the end of a table (SQL)") {
       val sql =
         s"""|INSERT INTO $tableNameB (symbol, exchange, lastSale, lastTradeTime)
-            |VALUES ("MSFT", "NYSE", 123.55, ${System.currentTimeMillis()})
+            |VALUES ("MSFT", "NYSE", 123.55, now())
             |""".stripMargin.replaceAllLiterally("\n", " ").trim
       invoke(sql, service.executeQuery(databaseName, sql))
     }

@@ -1,7 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.ColumnTypes.ColumnType
-import com.qwery.database.functions.{lookupTransformationFunction, tempName}
+import com.qwery.database.functions.lookupTransformationFunction
 import com.qwery.database.types._
 import com.qwery.models.Invokable
 import com.qwery.models.expressions.Case.When
@@ -27,7 +27,7 @@ object ExpressionVM {
       case fc@FunctionCall(name, args) =>
         //scope.getFunction(name).evaluate(args.map(evaluate))
         val fxTemplate = lookupTransformationFunction(name)
-        val fx = fxTemplate(fc.alias || tempName(fc), args)
+        val fx = fxTemplate(fc.alias || nextID, args)
         QxAny(fx.execute(KeyValues()))
       case If(cond, trueValue, falseValue) => evaluate(if (isTrue(cond)) trueValue else falseValue)
       case Literal(value) => QxAny(value)

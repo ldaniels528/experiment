@@ -1,10 +1,11 @@
 package com.qwery.database.device
 
+import com.qwery.database.ExpressionVM.nextID
 import com.qwery.database.functions._
 import com.qwery.database.types.QxAny
 import com.qwery.database.{Column, ColumnMetadata, Field, FieldMetadata, KeyValues, Row, createTempTable, die}
 import com.qwery.models.OrderColumn
-import com.qwery.models.expressions.{AllFields, BasicField, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
+import com.qwery.models.expressions.{AllFields, BasicField, Condition, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
@@ -18,6 +19,7 @@ import scala.language.postfixOps
  * @param tableDevice the [[BlockDevice table device]] to query
  */
 class BlockDeviceQuery(tableDevice: BlockDevice) {
+  private val tempName: Any => String = (_: Any) => nextID
 
   /**
     * Executes aggregation, summarization and transformation queries
@@ -31,6 +33,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   def select(projection: Seq[Expression],
              where: KeyValues,
              groupBy: Seq[SQLField] = Nil,
+             having: Option[Condition] = None,
              orderBy: Seq[OrderColumn] = Nil,
              limit: Option[Int] = None): BlockDevice = {
     if (groupBy.nonEmpty) aggregationQuery(projection, where, groupBy, orderBy, limit)
@@ -202,7 +205,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     */
   def isSummarization(projection: Seq[Expression]): Boolean = {
     projection.exists {
-      case FunctionCall(name, _) => isAggregateFunction(name)
+      case FunctionCall(name, _) => isSummarizationFunction(name)
       case _ => false
     }
   }
@@ -243,7 +246,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
-        val fx = fxTemplate(fc.alias || tempName(fc), args)
+        val fx = fxTemplate(fc.alias || nextID, args)
         Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
@@ -255,7 +258,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case f: BasicField => srcRow.fields.find(_.name == f.name).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
-        val fx = fxTemplate(fc.alias || tempName(fc), args)
+        val fx = fxTemplate(fc.alias || nextID, args)
         Seq(Field(name = fx.name, metadata = FieldMetadata(), QxAny(Option(fx.execute(srcRow.toKeyValues)))))
       case expression => die(s"Unconverted expression: $expression")
     }
@@ -274,7 +277,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
         // is it a built-in function?
         if (isBuiltinFunction(functionName)) {
           val fxTemplate = lookupBuiltinFunction(functionName)
-          val fx = fxTemplate(fc.alias || tempName(fc), args)
+          val fx = fxTemplate(fc.alias || nextID, args)
           Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
         }
         // is it a user-defined function?

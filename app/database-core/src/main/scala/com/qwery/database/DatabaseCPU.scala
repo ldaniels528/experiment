@@ -167,7 +167,7 @@ class DatabaseCPU() {
       case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
         Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => countRows(databaseName, tableName, where, limit)))
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-        Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit))
+        Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, having, orderBy, limit))
       case Truncate(TableRef(tableName)) =>
         Solution(databaseName, tableName, truncateTable(databaseName, tableName))
       case Update(TableRef(tableName), changes, where, limit) =>
@@ -294,26 +294,28 @@ class DatabaseCPU() {
   }
 
   /**
-    * Executes a query
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param fields       the [[Expression field projection]]
-    * @param where        the condition which determines which records are included
-    * @param groupBy      the optional aggregation columns
-    * @param orderBy      the columns to order by
-    * @param limit        the optional limit
-    * @return a [[BlockDevice]] containing the rows
-    */
+   * Executes a query
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param fields       the [[Expression field projection]]
+   * @param where        the condition which determines which records are included
+   * @param groupBy      the optional aggregation columns
+   * @param having       the aggregate condition which determines which records are included
+   * @param orderBy      the columns to order by
+   * @param limit        the optional limit
+   * @return a [[BlockDevice block device]] containing the rows
+   */
   def selectRows(databaseName: String, tableName: String,
                  fields: Seq[Expression],
                  where: Option[Condition],
                  groupBy: Seq[ex.Field] = Nil,
+                 having: Option[Condition] = None,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
     if (isTableFile(databaseName, tableName))
-      tableOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, orderBy, limit)
+      tableOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
     else
-      viewOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, orderBy, limit)
+      viewOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
   }
 
   /**

@@ -5,7 +5,7 @@ import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.{KeyValues, RecursiveFileList, createTempTable, die}
-import com.qwery.models.expressions.{Expression, Field => SQLField}
+import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.models.{Invokable, OrderColumn, Select, TableRef}
 
 /**
@@ -50,9 +50,10 @@ case class VirtualTableFile(databaseName: String, viewName: String, device: Bloc
   def selectRows(fields: Seq[Expression],
                  where: KeyValues,
                  groupBy: Seq[SQLField] = Nil,
+                 having: Option[Condition] = None,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
-    selector.select(fields, where, groupBy, orderBy, limit)
+    selector.select(fields, where, groupBy, having, orderBy, limit)
   }
 
 }
@@ -96,7 +97,7 @@ object VirtualTableFile {
   def getViewDevice(databaseName: String, viewName: String): BlockDevice = {
     readViewData(databaseName, viewName) match {
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-        TableFile(databaseName, tableName).selectRows(fields, toCriteria(where), groupBy, orderBy, limit)
+        TableFile(databaseName, tableName).selectRows(fields, toCriteria(where), groupBy, having, orderBy, limit)
       case other => die(s"Unhandled view query model - $other")
     }
   }

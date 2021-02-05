@@ -15,7 +15,7 @@ import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._
 import com.qwery.database.server.QueryProcessor.implicits._
-import com.qwery.models.expressions.{Expression, Field => SQLField}
+import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.models.{Insert, Invokable, OrderColumn}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -319,8 +319,8 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
     }
   }
 
-  def selectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues = KeyValues(), groupBy: Seq[SQLField] = Nil, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int])(implicit timeout: Timeout): Future[QueryResult] = {
-    asResultSet(SelectRows(databaseName, tableName, fields, where, groupBy, orderBy, limit))
+  def selectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues = KeyValues(), groupBy: Seq[SQLField] = Nil, having: Option[Condition] = None, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int])(implicit timeout: Timeout): Future[QueryResult] = {
+    asResultSet(SelectRows(databaseName, tableName, fields, where, groupBy, having, orderBy, limit))
   }
 
   def truncateTable(databaseName: String, tableName: String)(implicit timeout: Timeout): Future[UpdateCount] = {
@@ -553,8 +553,8 @@ object QueryProcessor {
         invoke(cmd, sender())(table.replaceRange(start, length, row)) { case (caller, _) => caller ! RowsUpdated(length) }
       case cmd@ReplaceRow(_, _, rowID, row) =>
         invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
-      case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
-        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, tableName))) }
+      case cmd@SelectRows(_, _, fields, where, groupBy, having, orderBy, limit) =>
+        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, having, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, tableName))) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@UnlockRow(_, _, rowID, lockID) => unlockRow(cmd, rowID, lockID)
@@ -610,8 +610,10 @@ object QueryProcessor {
         invoke(cmd, sender())(VirtualTableFile.dropView(databaseName, viewName, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@FindRows(_, _, condition, limit) =>
         invoke(cmd, sender())(vTable.getRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows.use(_.toList)) }
-      case cmd@SelectRows(_, _, fields, where, groupBy, orderBy, limit) =>
-        invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, viewName))) }
+      case cmd@SelectRows(_, _, fields, where, groupBy, having, orderBy, limit) =>
+        invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, having, orderBy, limit)) { case (caller, result) =>
+          caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, viewName)))
+        }
       case message =>
         logger.error(s"Unhandled VT-CPU processing message $message")
         unhandled(message)
@@ -694,7 +696,7 @@ object QueryProcessor {
 
     case class SearchTables(databaseNamePattern: Option[String], tableNamePattern: Option[String]) extends SystemIORequest
 
-    case class SelectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField] = Nil, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int] = None) extends TableIORequest
+    case class SelectRows(databaseName: String, tableName: String, fields: Seq[Expression], where: KeyValues, groupBy: Seq[SQLField] = Nil, having: Option[Condition] = None, orderBy: Seq[OrderColumn] = Nil, limit: Option[Int] = None) extends TableIORequest
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     //      TABLE MUTATION COMMANDS

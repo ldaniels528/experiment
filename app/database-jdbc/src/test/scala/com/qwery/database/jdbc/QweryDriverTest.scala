@@ -115,9 +115,8 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute an UPDATE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val now = System.currentTimeMillis()
         val count = conn.createStatement().executeUpdate(
-          s"""|UPDATE $tableNameA SET lastSale = 101.12, lastTradeTime = $now WHERE symbol = "GOOG"
+          s"""|UPDATE $tableNameA SET lastSale = 101.12, lastTradeTime = now() WHERE symbol = "GOOG"
               |""".stripMargin
         )
         assert(count == 1)
@@ -261,10 +260,9 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should insert records into a columnar table") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val now = System.currentTimeMillis()
         val count = conn.createStatement().executeUpdate(
           s"""|INSERT INTO $tableNameB (symbol, exchange, lastSale, lastTradeTime)
-              |VALUES ("MSFT", "NYSE", 56.55, $now), ("AAPL", "NASDAQ", 98.55, $now)
+              |VALUES ("MSFT", "NYSE", 56.55, now()), ("AAPL", "NASDAQ", 98.55, now())
               |""".stripMargin
         )
         assert(count == 2)

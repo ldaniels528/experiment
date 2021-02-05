@@ -1,12 +1,12 @@
 package com.qwery.database.files
 
 import com.qwery.database.collections.PersistentSeq
-import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice, TableIndexDevice, TableIndexRef, BlockDeviceQuery}
+import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, RowOrientedFileBlockDevice, TableIndexDevice, TableIndexRef}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.{Column, Field, KeyValues, ROWID, ROWID_NAME, RecursiveFileList, Row, RowIsLockedException, createTempTable, die, stopWatch}
 import com.qwery.models.OrderColumn
-import com.qwery.models.expressions.{Expression, Field => SQLField}
+import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -311,9 +311,10 @@ case class TableFile(databaseName: String, tableName: String, config: TableConfi
   def selectRows(fields: Seq[Expression],
                  where: KeyValues,
                  groupBy: Seq[SQLField] = Nil,
+                 having: Option[Condition] = None,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
-    selector.select(fields, where, groupBy, orderBy, limit)
+    selector.select(fields, where, groupBy, having, orderBy, limit)
   }
 
   def unlockRow(rowID: ROWID): Unit = {

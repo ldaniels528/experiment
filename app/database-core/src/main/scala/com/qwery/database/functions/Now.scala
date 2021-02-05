@@ -7,7 +7,7 @@ import com.qwery.models.expressions.Expression
 /**
  * Represents the SQL NOW function
  * @param name the output name of the result
- * @param args the function [[Expression arguments]] to round
+ * @param args the function [[Expression arguments]]
  */
 case class Now(name: String, args: List[Expression]) extends TransformationFunction {
   assert(args.isEmpty, "No arguments were expected")
