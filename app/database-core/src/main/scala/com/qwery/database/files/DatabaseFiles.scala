@@ -2,6 +2,7 @@ package com.qwery.database.files
 
 import com.qwery.database.JSONSupport._
 import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice, TableIndexRef}
+import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
 import com.qwery.database.getServerRootDirectory
 import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
 import com.qwery.language.SQLLanguageParser
@@ -21,11 +22,11 @@ object DatabaseFiles {
   //////////////////////////////////////////////////////////////////////////////////////
 
   def getDatabaseConfigFile(databaseName: String): File = {
-    new File(getDatabaseRootDirectory(databaseName), s"$databaseName.json")
+    getDatabaseRootDirectory(databaseName) / s"$databaseName.json"
   }
 
   def getDatabaseRootDirectory(databaseName: String): File = {
-    new File(getServerRootDirectory, databaseName)
+    getServerRootDirectory / databaseName
   }
 
   def readDatabaseConfig(databaseName: String): DatabaseConfig = {
@@ -45,7 +46,7 @@ object DatabaseFiles {
   //////////////////////////////////////////////////////////////////////////////////////
 
   def getTableConfigFile(databaseName: String, tableName: String): File = {
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), s"$tableName.json")
+    getTableRootDirectory(databaseName, tableName) / s"$tableName.json"
   }
 
   def getTableDevice(databaseName: String, tableName: String): (TableConfig, BlockDevice) = {
@@ -61,15 +62,15 @@ object DatabaseFiles {
   }
 
   def getTableRootDirectory(databaseName: String, tableName: String): File = {
-    new File(new File(getServerRootDirectory, databaseName), tableName)
+    getServerRootDirectory / databaseName / tableName
   }
 
   def getTableColumnFile(databaseName: String, tableName: String, columnID: Int): File = {
-    new File(getTableRootDirectory(databaseName, tableName), getTableFileName(tableName, columnID))
+    getTableRootDirectory(databaseName, tableName) / getTableFileName(tableName, columnID)
   }
 
   def getTableDataFile(databaseName: String, tableName: String): File = {
-    new File(getTableRootDirectory(databaseName, tableName), getTableFileName(tableName))
+    getTableRootDirectory(databaseName, tableName) / getTableFileName(tableName)
   }
 
   def getTableIndices(databaseName: String, tableName: String): Seq[TableIndexRef] = {
@@ -97,7 +98,7 @@ object DatabaseFiles {
   //////////////////////////////////////////////////////////////////////////////////////
 
   def getViewDataFile(databaseName: String, viewName: String): File = {
-    new File(getTableRootDirectory(databaseName, viewName), getViewFileName(viewName))
+    getTableRootDirectory(databaseName, viewName) / getViewFileName(viewName)
   }
 
   def getViewFileName(viewName: String): String = s"$viewName.sql"
@@ -115,6 +116,16 @@ object DatabaseFiles {
 
   def writeViewData(databaseName: String, viewName: String, query: Invokable): Unit = {
     new PrintWriter(getViewDataFile(databaseName, viewName)).use(_.println(query.toSQL))
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////
+  //  IMPLICIT DEFINITIONS
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  object implicits {
+    final implicit class RichFiles(val parentFile: File) extends AnyVal {
+      @inline def /(path: String) = new File(parentFile, path)
+    }
   }
 
 }
