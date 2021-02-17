@@ -283,15 +283,19 @@ object DatabaseServer {
         logger.info(f"[$pid%04d] SQL: $sql")
 
         try {
-          val results = cpu.executeQuery(databaseName, sql).toQueryResult
-          val elapsedTime = (System.nanoTime() - startTime) / 1e+6
-          logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
-          results.show(5)(logger)
-          complete(results)
+          cpu.executeQuery(databaseName, sql).map(_.toQueryResult) match {
+            case Some(results) =>
+              val elapsedTime = (System.nanoTime() - startTime) / 1e+6
+              logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
+              results.show(5)(logger)
+              complete(results)
+            case None =>
+              complete(QueryResult(databaseName, tableName = ""))
+          }
         } catch {
           case e: Exception =>
             logger.error(f"[$pid%04d] ${e.getMessage}")
-            complete(StatusCode.int2StatusCode(500))
+            complete(StatusCodes.InternalServerError.copy()(reason = e.getMessage, defaultMessage = e.getMessage))
         }
       }
     }

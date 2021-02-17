@@ -1,32 +1,44 @@
 package com.qwery.database
 
+import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.DatabaseCPU.implicits._
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
-import com.qwery.database.ExpressionVM.{evaluate, nextID}
+import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
 import com.qwery.database.device.{BlockDevice, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.isTableFile
 import com.qwery.database.files._
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.Insert.Into
+import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions._
 import com.qwery.models.{expressions => ex, _}
 import com.qwery.util.OptionHelper.OptionEnrichment
+import com.qwery.util.ResourceHelper._
 import com.qwery.{models => mx}
+import org.slf4j.LoggerFactory
 
+import java.io.File
 import scala.collection.concurrent.TrieMap
+import scala.io.Source
 
 /**
   * Database CPU
   */
 class DatabaseCPU() {
-  private val tables = TrieMap[(String, String), TableFile]()
-  private val views = TrieMap[(String, String), VirtualTableFile]()
+  private val logger = LoggerFactory.getLogger(getClass)
+  private val tables = TrieMap[(String, String), TableFileLike]()
 
   def countRows(databaseName: String, tableName: String, condition: Option[Condition], limit: Option[Int] = None): Long = {
-    if (isTableFile(databaseName, tableName))
-      tableOf(databaseName, tableName).countRows(toCriteria(condition), limit)
-    else
-      viewOf(databaseName, tableName).countRows(toCriteria(condition), limit)
+    tableOf(databaseName, tableName).countRows(toCriteria(condition), limit)
+  }
+
+  /**
+    * Creates a reference to an external table
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param ref          the [[ExternalTable table properties]]
+    */
+  def createExternalTable(databaseName: String, tableName: String, ref: ExternalTable): Unit = {
+    tables(databaseName -> tableName) = ExternalTableFile.createTable(databaseName, ref)
   }
 
   /**
@@ -60,7 +72,7 @@ class DatabaseCPU() {
     * @param ifNotExists  if true, the operation will not fail
     */
   def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean): Unit = {
-    views(databaseName -> viewName) = VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)
+    tables(databaseName -> viewName) = VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)
   }
 
   def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Unit = {
@@ -134,44 +146,57 @@ class DatabaseCPU() {
     */
   def dropView(databaseName: String, viewName: String, ifExists: Boolean = false): Boolean = {
     VirtualTableFile.dropView(databaseName, viewName, ifExists)
-    views.remove(databaseName -> viewName).nonEmpty
+    tables.remove(databaseName -> viewName).nonEmpty
   }
 
   /**
     * Executes an invokable
     * @param databaseName the database name
     * @param invokable    the [[Invokable invokable]]
-    * @return the [[Solution results]]
+    * @return the [[Solution solution]] containing a result set or an update count
     */
-  def execute(databaseName: String, invokable: Invokable): Solution = {
+  def execute(databaseName: String, invokable: Invokable): Option[Solution] = {
     invokable match {
-      case Create(TableIndex(_, TableRef(tableName), Seq(ex.Field(indexColumn)), ifNotExists)) =>
-        Solution(databaseName, tableName, createIndex(databaseName, tableName, indexColumn, ifNotExists))
+      case Console.Debug(message) => logger.debug(message); None
+      case Console.Error(message) => logger.error(message); None
+      case Console.Info(message) => logger.info(message); None
+      case Console.Print(message) => println(message); None
+      case Console.Warn(message) => logger.warn(message); None
+      case Create(ref: ExternalTable) =>
+        createExternalTable(databaseName, tableName = ref.name, ref = ref); None
       case Create(Table(tableName, columns, ifNotExists, isColumnar, isPartitioned, description)) =>
-        Solution(databaseName, tableName, createTable(databaseName, tableName, TableProperties(description, columns.map(_.toTableColumn), isColumnar, ifNotExists)))
+        Some(Solution(databaseName, tableName, createTable(databaseName, tableName, TableProperties(description, columns.map(_.toTableColumn), isColumnar, ifNotExists))))
+      case Create(TableIndex(_, TableRef(tableName), Seq(ex.Field(indexColumn)), ifNotExists)) =>
+        Some(Solution(databaseName, tableName, createIndex(databaseName, tableName, indexColumn, ifNotExists)))
       case Create(View(viewName, invokable, description, ifNotExists)) =>
-        Solution(databaseName, viewName, createView(databaseName, viewName, description, invokable, ifNotExists))
+        Some(Solution(databaseName, viewName, createView(databaseName, viewName, description, invokable, ifNotExists)))
       case Delete(TableRef(tableName), where, limit) =>
-        Solution(databaseName, tableName, deleteRows(databaseName, tableName, where, limit))
+        Some(Solution(databaseName, tableName, deleteRows(databaseName, tableName, where, limit)))
       case DropTable(TableRef(tableName), ifExists) =>
-        Solution(databaseName, tableName, dropTable(databaseName, tableName, ifExists))
+        Some(Solution(databaseName, tableName, dropTable(databaseName, tableName, ifExists)))
       case DropView(TableRef(viewName), ifExists) =>
-        Solution(databaseName, viewName, dropView(databaseName, viewName, ifExists))
+        Some(Solution(databaseName, viewName, dropView(databaseName, viewName, ifExists)))
+      case ForLoop(variable, rows, invokable, isReverse) => forLoop(variable, rows, invokable, isReverse)
+      case Include(path) => execute(databaseName, invokable = include(path))
       case Insert(Into(TableRef(tableName)), Insert.Values(values), fields) =>
-        Solution(databaseName, tableName, insertRows(databaseName, tableName, fields = fields.map(_.name), values = values))
+        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, fields = fields.map(_.name), values = values)))
       case Insert(Into(TableRef(tableName)), queryable, fields) =>
-        val solution = execute(databaseName, queryable)
-        Solution(databaseName, tableName, insertRows(databaseName, tableName, device = solution.result.asInstanceOf[BlockDevice]))
+        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, toDevice(databaseName, queryable), overwrite = false)))
+      case Insert(Overwrite(TableRef(tableName)), queryable, fields) =>
+        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, toDevice(databaseName, queryable), overwrite = true)))
       case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where@None, limit@None) =>
-        Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => getDevice(databaseName, tableName).countRows(_.isActive)))
+        Some(Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => getDevice(databaseName, tableName).countRows(_.isActive))))
       case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
-        Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => countRows(databaseName, tableName, where, limit)))
+        Some(Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => countRows(databaseName, tableName, where, limit))))
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-        Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, having, orderBy, limit))
+        Some(Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, having, orderBy, limit)))
+      case Show(invokable, limit) => show(databaseName, invokable, limit)
+      case SQL(ops) => ops.foldLeft[Option[Solution]](None) { (_, op) => execute(databaseName, op) }
       case Truncate(TableRef(tableName)) =>
-        Solution(databaseName, tableName, truncateTable(databaseName, tableName))
+        Some(Solution(databaseName, tableName, truncateTable(databaseName, tableName)))
       case Update(TableRef(tableName), changes, where, limit) =>
-        Solution(databaseName, tableName, updateRows(databaseName, tableName, changes, where, limit))
+        Some(Solution(databaseName, tableName, updateRows(databaseName, tableName, changes, where, limit)))
+      case While(condition, invokable) => `while`(databaseName, condition, invokable)
       case unhandled => die(s"Unhandled instruction: $unhandled")
     }
   }
@@ -180,18 +205,41 @@ class DatabaseCPU() {
     * Executes a SQL statement or query
     * @param databaseName the database name
     * @param sql          the SQL statement or query
-    * @return either a [[BlockDevice block device]] containing a result set or an update count
+    * @return the [[Solution solution]] containing a result set or an update count
     */
-  def executeQuery(databaseName: String, sql: String): Solution = {
+  def executeQuery(databaseName: String, sql: String): Option[Solution] = {
     execute(databaseName, invokable = SQLLanguageParser.parse(sql))
   }
 
-  def getColumns(databaseName: String, tableName: String): Seq[Column] = getDevice(databaseName, tableName).columns
-
-  def getDevice(databaseName: String, tableName: String): BlockDevice = {
-    if (isTableFile(databaseName, tableName)) tableOf(databaseName, tableName).device
-    else viewOf(databaseName, tableName).device
+  /**
+    * Executes a SQL script
+    * @param databaseName the database name
+    * @param file         the the SQL script [[File file]]
+    * @return the [[Solution solution]] containing a result set or an update count
+    */
+  def executeScript(databaseName: String, file: File): Option[Solution] = {
+    executeQuery(databaseName, sql = Source.fromFile(file).use(_.mkString))
   }
+
+  /**
+    * FOR-LOOP statement
+    * @param variable  the given [[RowSetVariableRef variable]]
+    * @param rows      the given [[Invokable rows]]
+    * @param invokable the [[Invokable statements]] to execute
+    * @param isReverse indicates reverse order
+    */
+  def forLoop(variable: RowSetVariableRef,
+              rows: Invokable,
+              invokable: Invokable,
+              isReverse: Boolean): Option[Solution] = ???
+
+  /**
+    * Returns the columns
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @return the [[Column columns]]
+    */
+  def getColumns(databaseName: String, tableName: String): Seq[Column] = getDevice(databaseName, tableName).columns
 
   /**
     * Deletes a range of rows in the database
@@ -248,6 +296,17 @@ class DatabaseCPU() {
   }
 
   /**
+    * Incorporates the source code of the given path
+    * @param path the given .sql source file
+    * @return the resultant source code
+    */
+  def include(path: String): Invokable = {
+    val file = new File(path).getCanonicalFile
+    logger.info(s"[*] Merging source file '${file.getAbsolutePath}'...")
+    SQLLanguageParser.parse(file)
+  }
+
+  /**
     * Appends a new row to the specified database table
     * @param databaseName the database name
     * @param tableName    the table name
@@ -267,7 +326,8 @@ class DatabaseCPU() {
     * @param device       the [[BlockDevice]] containing the rows
     * @return the number of rows inserted
     */
-  def insertRows(databaseName: String, tableName: String, device: BlockDevice): Int = {
+  def insertRows(databaseName: String, tableName: String, device: BlockDevice, overwrite: Boolean): Int = {
+    if (overwrite) getDevice(databaseName, tableName).shrinkTo(newSize = 0)
     tableOf(databaseName, tableName).insertRows(device)
   }
 
@@ -294,17 +354,17 @@ class DatabaseCPU() {
   }
 
   /**
-   * Executes a query
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param fields       the [[Expression field projection]]
-   * @param where        the condition which determines which records are included
-   * @param groupBy      the optional aggregation columns
-   * @param having       the aggregate condition which determines which records are included
-   * @param orderBy      the columns to order by
-   * @param limit        the optional limit
-   * @return a [[BlockDevice block device]] containing the rows
-   */
+    * Executes a query
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @param fields       the [[Expression field projection]]
+    * @param where        the condition which determines which records are included
+    * @param groupBy      the optional aggregation columns
+    * @param having       the aggregate condition which determines which records are included
+    * @param orderBy      the columns to order by
+    * @param limit        the optional limit
+    * @return a [[BlockDevice block device]] containing the rows
+    */
   def selectRows(databaseName: String, tableName: String,
                  fields: Seq[Expression],
                  where: Option[Condition],
@@ -312,10 +372,19 @@ class DatabaseCPU() {
                  having: Option[Condition] = None,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
-    if (isTableFile(databaseName, tableName))
-      tableOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
-    else
-      viewOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
+    tableOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
+  }
+
+  def show(databaseName: String, invokable: Invokable, limit: Option[Int] = None): Option[Solution] = {
+    execute(databaseName, invokable).map(_.get) match {
+      case Some(Left(device)) =>
+        (0 until limit.getOrElse(20)).map(device.getRow(_)).foreach { row =>
+          logger.info(f"[${row.id}02d] ${row.toKeyValues}")
+        }
+      case Some(Right(count)) => logger.info(s"w = $count")
+      case _ =>
+    }
+    None
   }
 
   /**
@@ -342,18 +411,41 @@ class DatabaseCPU() {
     tableOf(databaseName, tableName).updateRows(row, toCriteria(condition), limit)
   }
 
+  def `while`(databaseName: String, condition: Condition, invokable: Invokable): Option[Solution] = {
+    var result: Option[Solution] = None
+    implicit val scope: Scope = Scope()
+    while (condition.isTrue) {
+      result = execute(databaseName, invokable)
+    }
+    result
+  }
+
   private def countRowsAsDevice(name: String, counter: () => Long): BlockDevice = {
     val rows = createTempTable(columns = Seq(Column(name, metadata = ColumnMetadata(`type` = ColumnTypes.LongType))), fixedRowCount = 1)
     rows.writeRow(KeyValues(name -> counter()).toBinaryRow(rows))
     rows
   }
 
-  private def tableOf(databaseName: String, tableName: String): TableFile = {
+  /**
+    * Returns the block device
+    * @param databaseName the database name
+    * @param tableName    the table name
+    * @return the [[BlockDevice block device]]
+    */
+  private def getDevice(databaseName: String, tableName: String): BlockDevice = {
+    if (isTableFile(databaseName, tableName)) tableOf(databaseName, tableName).device
+    else tableOf(databaseName, tableName).device
+  }
+
+  private def tableOf(databaseName: String, tableName: String): TableFileLike = {
     tables.getOrElseUpdate(databaseName -> tableName, TableFile(databaseName, tableName))
   }
 
-  private def viewOf(databaseName: String, tableName: String): VirtualTableFile = {
-    views.getOrElseUpdate(databaseName -> tableName, VirtualTableFile(databaseName, tableName))
+  private def toDevice(databaseName: String, queryable: Queryable): BlockDevice = {
+    execute(databaseName, queryable).map(_.get) match {
+      case Some(Left(results: BlockDevice)) => results
+      case unknown => die(s"Query result expected, but got '$unknown' instead")
+    }
   }
 
 }
@@ -362,7 +454,7 @@ class DatabaseCPU() {
   * Database CPU Companion
   */
 object DatabaseCPU {
-  val columnTypeMap = Map(
+  private val columnTypeMappings = Map(
     "ARRAY" -> ColumnTypes.ArrayType,
     "BIGINT" -> ColumnTypes.BigIntType,
     "BINARY" -> ColumnTypes.BinaryType,
@@ -389,6 +481,10 @@ object DatabaseCPU {
     "UUID" -> ColumnTypes.UUIDType,
     "VARCHAR" -> ColumnTypes.StringType
   )
+
+  def lookupColumnType(typeName: String): ColumnType = {
+    columnTypeMappings.getOrElse(typeName.toUpperCase, ColumnTypes.BlobType)
+  }
 
   def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
     case Some(ConditionalOp(ex.Field(name), Literal(value), "==", "=")) => KeyValues(name -> value)
@@ -434,12 +530,12 @@ object DatabaseCPU {
         maxSize = column.spec.precision.headOption,
         metadata = ColumnMetadata(
           isNullable = column.isNullable,
-          `type` = columnTypeMap.getOrElse(column.spec.typeName, ColumnTypes.BlobType)
+          `type` = lookupColumnType(column.spec.typeName)
         ))
 
       @inline
       def toTableColumn: TableColumn = {
-        val columnType = columnTypeMap.getOrElse(column.spec.typeName, ColumnTypes.BlobType)
+        val columnType = lookupColumnType(column.spec.typeName)
         TableColumn(
           name = column.name,
           columnType = columnType.toString,

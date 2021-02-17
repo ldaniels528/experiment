@@ -7,6 +7,7 @@ import com.qwery.models.expressions.RowSetVariableRef
   * @param variable  the given [[RowSetVariableRef variable]]
   * @param rows      the given [[Invokable rows]]
   * @param invokable the [[Invokable statements]] to execute
+  * @param isReverse indicates reverse order
   * @example
   * {{{
   * FOR @item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
@@ -15,7 +16,7 @@ import com.qwery.models.expressions.RowSetVariableRef
   * END LOOP;
   * }}}
   */
-case class ForEach(variable: RowSetVariableRef,
+case class ForLoop(variable: RowSetVariableRef,
                    rows: Invokable,
                    invokable: Invokable,
                    isReverse: Boolean) extends Invokable

@@ -92,6 +92,11 @@ object ExpressionVM {
     }
   }
 
+  private def `case`(conditions: Seq[Case.When], otherwise: Option[Expression])(implicit scope: Scope): Option[QxAny] = {
+    val result_? = conditions.find(_.condition.isTrue).map(_.result) ?? otherwise
+    result_?.map(ExpressionVM.evaluate)
+  }
+
   private def compile(invokable: Invokable): Iterator[KeyValues] = {
     ???
   }
@@ -110,6 +115,16 @@ object ExpressionVM {
   }
 
   def nextID: String = java.lang.Long.toString(System.currentTimeMillis(), 36)
+
+  /**
+    * Rich Condition
+    * @param condition the host [[Condition expression]]
+    */
+  final implicit class RichCondition(val condition: Condition) extends AnyVal {
+
+    @inline def isTrue(implicit scope: Scope): Boolean = ExpressionVM.isTrue(condition)
+
+  }
 
   /**
    * Rich Expression

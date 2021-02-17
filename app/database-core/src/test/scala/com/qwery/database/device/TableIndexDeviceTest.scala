@@ -27,7 +27,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
       TableFile.dropTable(databaseName, tableName, ifExists = true)
 
       // create the table
-      TableFile.createTable(databaseName, tableName, properties = TableProperties.create(
+      TableFile.createTable(databaseName, tableName, ref = TableProperties.create(
         description = Some("index test table"),
         columns = Seq(
           Column(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),

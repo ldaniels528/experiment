@@ -174,6 +174,15 @@ package object database {
       case file => file :: Nil
     }
 
+    /**
+      * Recursively retrieves all files
+      * @return the list of [[File files]]
+      */
+    def streamFilesRecursively: Stream[File] = theFile match {
+      case directory if directory.isDirectory => directory.listFiles().toStream.flatMap(_.listFilesRecursively)
+      case file => file #:: Stream.empty
+    }
+
   }
 
 }

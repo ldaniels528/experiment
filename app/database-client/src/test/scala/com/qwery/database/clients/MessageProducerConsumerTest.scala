@@ -35,7 +35,7 @@ class MessageProducerConsumerTest extends AnyFunSpec {
             |  exchange STRING(8) comment 'the stock exchange',
             |  lastSale DOUBLE comment 'the latest sale price',
             |  lastSaleTime LONG comment 'the latest sale date/time'
-            |) WITH DESCRIPTION 'Messaging client test table'
+            |) WITH COMMENT 'Messaging client test table'
             |""".stripMargin
       )
     }

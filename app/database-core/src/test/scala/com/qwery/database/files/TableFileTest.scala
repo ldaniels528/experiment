@@ -1,6 +1,6 @@
-package com.qwery.database.files
+package com.qwery.database
+package files
 
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues, ROWID}
 import com.qwery.models.expressions.{AllFields, BasicField}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec

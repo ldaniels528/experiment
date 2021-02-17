@@ -36,9 +36,9 @@ class DatabaseCPUTest extends AnyFunSpec {
             |   exchange VARCHAR(8) COMMENT "the stock exchange",
             |   lastSale DOUBLE COMMENT "the latest sale price",
             |   lastTradeTime DATETIME COMMENT "the latest sale date/time"
-            |) WITH DESCRIPTION 'SQL created table'
+            |) WITH COMMENT 'SQL created table'
             |""".stripMargin)
-      assert(solution.get == Right(1L))
+      assert(solution.exists(_.get == Right(1L)))
     }
 
     it("should TRUNCATE the existing TABLE") {
@@ -57,7 +57,7 @@ class DatabaseCPUTest extends AnyFunSpec {
 
     it("should COUNT the rows in the TABLE") {
       val solution = cpu.executeQuery(databaseName, s"SELECT COUNT(*) FROM $tableName")
-      assert(solution.get.isLeft)
+      assert(solution.exists(_.get.isLeft))
     }
 
     it("should perform transformation queries") {
@@ -73,12 +73,15 @@ class DatabaseCPUTest extends AnyFunSpec {
             |LIMIT 5
             |""".stripMargin
       )
+      assert(solution.nonEmpty)
 
-      val outcome = solution.get
+      val outcome = solution.get.get
       assert(outcome.isLeft)
+
       val results = outcome.left.get
       assert(results.columns.map(_.name).toSet == Set("ticker", "market", "lastSale", "roundedLastSale", "lastSaleTime"))
       assert(results.length == 5)
+
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
@@ -99,12 +102,15 @@ class DatabaseCPUTest extends AnyFunSpec {
             |ORDER BY market DESC
             |""".stripMargin
       )
+      assert(solution.nonEmpty)
 
-      val outcome = solution.get
+      val outcome = solution.get.get
       assert(outcome.isLeft)
+
       val results = outcome.left.get
       assert(results.columns.map(_.name).toSet == Set("market", "total", "tickers", "avgLastSale", "sumLastSale", "maxLastSale", "minLastSale"))
       assert(results.length == 4)
+
       results foreachKVP { row =>
         logger.info(s"row: $row")
       }
@@ -118,7 +124,7 @@ class DatabaseCPUTest extends AnyFunSpec {
     it("should CREATE a VIEW") {
       cpu.executeQuery(databaseName, sql =
         s"""|CREATE VIEW IF NOT EXISTS $viewName
-            |WITH DESCRIPTION 'NYSE Stock symbols sorted by last sale'
+            |WITH COMMENT 'NYSE Stock symbols sorted by last sale'
             |AS
             |SELECT
             |   symbol AS ticker,
@@ -137,8 +143,11 @@ class DatabaseCPUTest extends AnyFunSpec {
 
     it("should query rows from the VIEW") {
       val solution = cpu.executeQuery(databaseName, sql = s"SELECT * FROM $viewName LIMIT 5")
-      val outcome = solution.get
+      assert(solution.nonEmpty)
+
+      val outcome = solution.get.get
       assert(outcome.isLeft)
+
       val results = outcome.left.get
       results foreachKVP { row =>
         logger.info(s"row: $row")

@@ -1,8 +1,5 @@
 package com.qwery.language
 
-import java.io.{File, InputStream}
-import java.net.URL
-
 import com.qwery.language.SQLTemplateParams.MappedParameters
 import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions._
@@ -10,6 +7,8 @@ import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 
+import java.io.{File, InputStream}
+import java.net.URL
 import scala.io.Source
 import scala.language.postfixOps
 
@@ -158,7 +157,10 @@ trait SQLLanguageParser {
     Create(InlineTable(
       name = params.atoms("name"),
       columns = params.columns.getOrElse("columns", Nil),
-      source = params.sources.getOrElse("source", ts.die("No source specified"))
+      values = params.sources.getOrElse("source", ts.die("No source specified")) match {
+        case values: Insert.Values => values
+        case other => ts.die(s"A value list was expected: $other")
+      }
     ))
   }
 
@@ -202,14 +204,8 @@ trait SQLLanguageParser {
       replacements.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }
     }
 
-    def getLocation: Option[Location] = {
-      if (params.atoms.contains("path")) Option(LocationRef(params.atoms("path")))
-      else if (params.variables.contains("path"))
-        params.variables("path") match {
-          case v: LocalVariableRef => Option(VariableLocationRef(v))
-          case _ => ts.die("Only scalar variables can be used")
-        }
-      else None
+    def getLocation: Option[String] = {
+      if (params.atoms.contains("path")) Option(params.atoms("path")) else None
     }
 
     Create(ExternalTable(
@@ -219,11 +215,10 @@ trait SQLLanguageParser {
       ifNotExists = params.indicators.get("exists").contains(true),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
-      inputFormat = params.atoms.get("formats.input").map(determineStorageFormat),
+      format = (params.atoms.get("formats.input") ?? params.atoms.get("formats.output")).map(determineStorageFormat),
       lineTerminator = params.atoms.get("line.delimiter").map(escapeChars),
       location = getLocation,
       nullValue = params.atoms.get("props.nullValue"),
-      outputFormat = params.atoms.get("formats.output").map(determineStorageFormat),
       partitionBy = params.columns.getOrElse("partitions", Nil),
       serdeProperties = params.properties.getOrElse("props.serde", Map.empty),
       tableProperties = params.properties.getOrElse("props.table", Map.empty)
@@ -268,16 +263,16 @@ trait SQLLanguageParser {
     * Parses a CREATE VIEW statement
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable invokable]]
-   * @example
-   * {{{
-   * CREATE VIEW OilAndGas
-   * WITH DESCRIPTION 'Oil & Gas Stocks sorted by symbol'
-   * AS
-   * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
-   * FROM Customers
-   * WHERE Industry = 'Oil/Gas Transmission'
-   * ORDER BY Symbol DESC
-   * }}}
+    * @example
+    * {{{
+    * CREATE VIEW OilAndGas
+    * WITH COMMENT 'Oil & Gas Stocks sorted by symbol'
+    * AS
+    * SELECT Symbol, Name, Sector, Industry, `Summary Quote`
+    * FROM Customers
+    * WHERE Industry = 'Oil/Gas Transmission'
+    * ORDER BY Symbol DESC
+    * }}}
     */
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?%w:props ?AS %Q:query")
@@ -350,13 +345,13 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[While]]
     */
-  def parseForLoop(stream: TokenStream): ForEach = {
+  def parseForLoop(stream: TokenStream): ForLoop = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
     val variable = params.variables("variable") match {
       case v: RowSetVariableRef => v
       case _ => stream.die("Local variables are not compatible with row sets")
     }
-    ForEach(variable, rows = params.sources("rows"),
+    ForLoop(variable, rows = params.sources("rows"),
       invokable = stream match {
         case ts if ts is "LOOP" => parseSequence(ts, startElem = "LOOP", endElem = "END LOOP")
         case ts => parseNext(ts)

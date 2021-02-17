@@ -79,7 +79,7 @@ class QweryDriverTest extends AnyFunSpec {
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)
-              |WITH DESCRIPTION 'securities table'
+              |WITH COMMENT 'securities table'
               |""".stripMargin
         )
         assert(count == 1)
@@ -251,7 +251,7 @@ class QweryDriverTest extends AnyFunSpec {
               |  lastSale DOUBLE comment 'the latest sale price',
               |  lastTradeTime DATE comment 'the latest sale date/time'
               |)
-              |WITH DESCRIPTION 'securities table (columnar)'
+              |WITH COMMENT 'securities table (columnar)'
               |""".stripMargin
         )
         assert(count == 1)

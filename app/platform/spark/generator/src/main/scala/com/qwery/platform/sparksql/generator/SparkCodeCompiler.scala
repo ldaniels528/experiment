@@ -113,24 +113,18 @@ trait SparkCodeCompiler {
         |""".stripMargin
   }
 
-  def generatePath(location: Location): String = location match {
-    case LocationRef(path) => s""""$path""""
-    case VariableLocationRef(variable) => variable.name
-    case other => die(s"Variable '$other' is not supported in this context")
-  }
-
-  def generatePath(table: ExternalTable): Option[String] = table.location.map(generatePath)
+  def generatePath(table: ExternalTable): Option[String] = table.location
 
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
-      case InlineTable(name, columns, source) =>
+      case InlineTable(name, columns, source, description) =>
         CodeBuilder(prepend = ".")
           .append(source.toCode)
           .append(generateCode(columns))
           .append(withGlobalTempView(name))
           .build()
       case table: ExternalTable =>
-        table.inputFormat.map(_.toString.toLowerCase()) match {
+        table.format.map(_.toString.toLowerCase()) match {
           case Some(format) =>
             CodeBuilder(prepend = ".")
               .append(s"spark.read")
@@ -146,7 +140,7 @@ trait SparkCodeCompiler {
           .append(query.toCode)
           .append(withGlobalTempView(name))
           .build()
-      case other => die(s"Table entity '${other.name}' could not be translated")
+      case other => die(s"Table '${other.name}' could not be translated")
     }
   }
 
@@ -240,7 +234,7 @@ trait SparkCodeCompiler {
       case table: Table => die(s"Physical table '${table.name}' is not supported")
       case table: ExternalTable =>
         // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
-        val writer = table.outputFormat.orFail("Table output format was not specified").toString.toLowerCase()
+        val writer = table.format.orFail("Table output format was not specified").toString.toLowerCase()
 
         // build() the expression
         CodeBuilder(prepend = ".")

@@ -1,15 +1,18 @@
 package com.qwery.database
 package models
 
-import java.util.{Date, UUID}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.qwery.database.ColumnTypes.ColumnType
 import com.qwery.database.device.BlockDevice.RowStatistics
 import com.qwery.database.device.TableIndexRef
-import com.qwery.database.files.{DatabaseConfig, LoadMetrics, TableColumn, TableConfig, TableMetrics, TableProperties}
+import com.qwery.database.files.TableConfig.ExternalTableConfig
+import com.qwery.database.files._
 import com.qwery.database.types.QxAny
-import com.qwery.models.TypeAsEnum
+import com.qwery.models.StorageFormats.StorageFormat
+import com.qwery.models.{StorageFormats, TypeAsEnum}
 import spray.json._
+
+import java.util.{Date, UUID}
 
 /**
  * Database JSON Protocol
@@ -58,6 +61,12 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   //      Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
+  implicit object StorageFormatJsonFormat extends JsonFormat[StorageFormat] {
+    override def read(json: JsValue): StorageFormat = StorageFormats.withName(json.convertTo[String])
+
+    override def write(storageFormat: StorageFormat): JsValue = JsString(storageFormat.toString)
+  }
+
   implicit val tableColumnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
   implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
@@ -78,7 +87,9 @@ object DatabaseJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit val tablePropertiesJsonFormat: RootJsonFormat[TableProperties] = jsonFormat4(TableProperties.apply)
 
-  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat4(TableConfig.apply)
+  implicit val extTableRefJsonFormat: RootJsonFormat[ExternalTableConfig] = jsonFormat6(ExternalTableConfig.apply)
+
+  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat5(TableConfig.apply)
 
   implicit val tableSearchResultJsonFormat: RootJsonFormat[TableSearchResult] = jsonFormat2(TableSearchResult.apply)
 

@@ -66,7 +66,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Create(InlineTable(
         name = "SpecialSecurities",
         columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
-        source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
+        values = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
       )))
     }
 
@@ -99,9 +99,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results2 == Create(ExternalTable(name = "Customers",
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
-        inputFormat = StorageFormats.JSON,
-        outputFormat = StorageFormats.JSON,
-        location = LocationRef("./dataSets/customers/json/")
+        format = StorageFormats.JSON,
+        location = Some("./dataSets/customers/json/")
       )))
     }
 
@@ -126,7 +125,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |ROW FORMAT DELIMITED
            |FIELDS TERMINATED BY ','
            |STORED AS INPUTFORMAT 'CSV'
-           |WITH DESCRIPTION 'Customer information'
+           |WITH COMMENT 'Customer information'
            |WITH HEADERS ON
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
@@ -140,9 +139,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        inputFormat = StorageFormats.CSV,
-        outputFormat = None,
-        location = LocationRef("./dataSets/customers/csv/")
+        format = StorageFormats.CSV,
+        location = Some("./dataSets/customers/csv/")
       )))
     }
 
@@ -181,9 +179,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        inputFormat = StorageFormats.CSV,
-        outputFormat = None,
-        location = LocationRef("./dataSets/customers/csv/")
+        format = StorageFormats.CSV,
+        location = Some("./dataSets/customers/csv/")
       )))
     }
 
@@ -223,9 +220,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
           Column("last_processed_ts_est string")
         ).map(_.withComment("from deserializer")),
         partitionBy = List(Column("hit_dt_est string"), Column("site_experience_desc string")),
-        inputFormat = StorageFormats.CSV,
-        outputFormat = StorageFormats.CSV,
-        location = LocationRef("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),
+        format = StorageFormats.CSV,
+        location = Some("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),
         serdeProperties = Map("quoteChar" -> "\\\"", "separatorChar" -> ","),
         tableProperties = Map("transient_lastDdlTime" -> "1555400098")
       )))
@@ -266,10 +262,10 @@ class SQLLanguageParserTest extends AnyFunSpec {
         ))))
     }
 
-    it("should support CREATE VIEW ... WITH DESCRIPTION statements") {
+    it("should support CREATE VIEW ... WITH COMMENT statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE VIEW IF NOT EXISTS OilAndGas
-           |WITH DESCRIPTION 'AMEX Stock symbols sorted by last sale'
+           |WITH COMMENT 'AMEX Stock symbols sorted by last sale'
            |AS
            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
@@ -328,7 +324,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |}
            |""".stripMargin)
-      assert(results == ForEach(
+      assert(results == ForLoop(
         variable = @#("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
         invokable = SQL(
@@ -345,7 +341,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |END LOOP;
            |""".stripMargin)
-      assert(results == ForEach(
+      assert(results == ForLoop(
         variable = @#("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
         invokable = SQL(

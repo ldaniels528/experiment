@@ -39,7 +39,7 @@ class QueryProcessorTest extends AnyFunSpec {
             |   exchange VARCHAR(8) COMMENT "the stock exchange",
             |   lastSale DOUBLE COMMENT "the latest sale price",
             |   lastTradeTime DATETIME COMMENT "the latest sale date/time"
-            |) WITH DESCRIPTION 'SQL created table'
+            |) WITH COMMENT 'SQL created table'
             |""".stripMargin), Duration.Inf)
     }
 
@@ -162,7 +162,7 @@ class QueryProcessorTest extends AnyFunSpec {
         _ <- queryProcessor.executeQuery(databaseName, sql = s"DROP VIEW IF EXISTS $viewName")
         _ <- queryProcessor.executeQuery(databaseName, sql =
           s"""|CREATE VIEW $viewName
-              |WITH DESCRIPTION 'NYSE Stock symbols sorted by last sale'
+              |WITH COMMENT 'NYSE Stock symbols sorted by last sale'
               |AS
               |SELECT
               |   symbol AS ticker,

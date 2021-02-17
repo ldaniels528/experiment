@@ -1,62 +1,20 @@
-package com.qwery.database.files
+package com.qwery.database
+package files
 
 import com.qwery.database.DatabaseCPU.toCriteria
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.{KeyValues, RecursiveFileList, createTempTable, die}
-import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
-import com.qwery.models.{Invokable, OrderColumn, Select, TableRef}
+import com.qwery.models.{Invokable, Select, TableRef}
 
 /**
- * Represents a virtual table file (e.g. view)
- * @param databaseName the name of the database
- * @param viewName     the name of the virtual table
- * @param device       the [[BlockDevice materialized device]]
+  * Represents a virtual table file (e.g. view)
+  * @param databaseName the name of the database
+  * @param tableName    the name of the virtual table
+  * @param config       the [[TableConfig table configuration]]
+  * @param device       the [[BlockDevice materialized device]]
   */
-case class VirtualTableFile(databaseName: String, viewName: String, device: BlockDevice) {
-  private val selector = new BlockDeviceQuery(device)
-
-  /**
-   * Closes the underlying file handle
-   */
-  def close(): Unit = device.close()
-
-  def countRows(condition: KeyValues, limit: Option[Int] = None): Long = device.whileRow(condition, limit) { _ => }
-
-  /**
-    * Retrieves rows matching the given condition up to the optional limit
-    * @param condition the given [[KeyValues condition]]
-    * @param limit     the optional limit
-    * @return the [[BlockDevice results]]
-    */
-  def getRows(condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
-    implicit val results: BlockDevice = createTempTable(device.columns)
-    device.whileRow(condition, limit) { row =>
-      results.writeRow(row.toBinaryRow)
-    }
-    results
-  }
-
-  /**
-    * Executes a query
-    * @param fields  the [[Expression field projection]]
-    * @param where   the condition which determines which records are included
-    * @param groupBy the optional aggregation columns
-    * @param orderBy the columns to order by
-    * @param limit   the optional limit
-    * @return a [[BlockDevice]] containing the rows
-    */
-  def selectRows(fields: Seq[Expression],
-                 where: KeyValues,
-                 groupBy: Seq[SQLField] = Nil,
-                 having: Option[Condition] = None,
-                 orderBy: Seq[OrderColumn] = Nil,
-                 limit: Option[Int] = None): BlockDevice = {
-    selector.select(fields, where, groupBy, having, orderBy, limit)
-  }
-
-}
+case class VirtualTableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) extends TableFileLike
 
 /**
   * View File Companion
@@ -64,7 +22,9 @@ case class VirtualTableFile(databaseName: String, viewName: String, device: Bloc
 object VirtualTableFile {
 
   def apply(databaseName: String, viewName: String): VirtualTableFile = {
-    new VirtualTableFile(databaseName, viewName, device = getViewDevice(databaseName, viewName))
+    new VirtualTableFile(databaseName, viewName,
+      config = readTableConfig(databaseName, viewName),
+      device = getViewDevice(databaseName, viewName))
   }
 
   def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean): VirtualTableFile = {
@@ -75,7 +35,7 @@ object VirtualTableFile {
       getTableRootDirectory(databaseName, viewName).mkdirs()
 
       // create the virtual table configuration file
-      val config = TableConfig(getProjectionColumns(databaseName, invokable), isColumnar = false, indices = Nil, description)
+      val config = TableConfig(columns = getProjectionColumns(databaseName, invokable), isColumnar = false, indices = Nil, description = description)
       writeTableConfig(databaseName, viewName, config)
 
       // write the virtual table data

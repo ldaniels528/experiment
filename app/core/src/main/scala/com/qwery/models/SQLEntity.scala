@@ -10,7 +10,7 @@ import com.qwery.models.expressions.Field
 sealed trait SQLEntity {
 
   /**
-    * @return the name of the entity
+    * @return the name of the database entity
     */
   def name: String
 }
@@ -19,15 +19,22 @@ sealed trait SQLEntity {
  * Base class for table-like entities (e.g. tables, inline tables and views)
  * @author lawrence.daniels@gmail.com
  */
-sealed trait TableLike extends SQLEntity
+sealed trait TableLike extends SQLEntity {
+
+  /**
+    * @return the optional description
+    */
+  def description: Option[String]
+}
 
 /**
-  * Represents a Hive-compatible table definition
+  * Represents a Hive-compatible external table definition
   * @param name            the name of the table
   * @param columns         the table [[Column columns]]
+  * @param ifNotExists     if true, the operation will not fail when the view exists
+  * @param description     the optional description
   * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
-  * @param inputFormat     the [[StorageFormat input format]]
-  * @param outputFormat    the [[StorageFormat output format]]
+  * @param format          the [[StorageFormat file format]]
   * @param location        the physical location of the data files
   * @example
   * {{{
@@ -50,32 +57,32 @@ sealed trait TableLike extends SQLEntity
   * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
   */
 case class ExternalTable(name: String,
-                 columns: List[Column],
-                 ifNotExists: Boolean = false,
-                 description: Option[String] = None,
-                 location: Option[Location] = None,
-                 fieldTerminator: Option[String] = None,
-                 lineTerminator: Option[String] = None,
-                 headersIncluded: Option[Boolean] = None,
-                 nullValue: Option[String] = None,
-                 inputFormat: Option[StorageFormat] = None,
-                 outputFormat: Option[StorageFormat] = None,
-                 partitionBy: List[Column] = Nil,
-                 serdeProperties: Map[String, String] = Map.empty,
-                 tableProperties: Map[String, String] = Map.empty) extends TableLike
+                         columns: List[Column],
+                         ifNotExists: Boolean = false,
+                         description: Option[String] = None,
+                         location: Option[String] = None,
+                         fieldTerminator: Option[String] = None,
+                         lineTerminator: Option[String] = None,
+                         headersIncluded: Option[Boolean] = None,
+                         nullValue: Option[String] = None,
+                         format: Option[StorageFormat] = None,
+                         partitionBy: List[Column] = Nil,
+                         serdeProperties: Map[String, String] = Map.empty,
+                         tableProperties: Map[String, String] = Map.empty) extends TableLike
 
 /**
- * Represents an inline table definition
- * @param name    the name of the table
- * @param columns the table columns
- * @param source  the physical location of the data files
- * @example
- * {{{
- *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
- *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
- * }}}
- */
-case class InlineTable(name: String, columns: List[Column], source: Invokable) extends TableLike
+  * Represents an inline table definition
+  * @param name        the name of the table
+  * @param columns     the table columns
+  * @param values      the collection of [[Insert.Values values]]
+  * @param description the optional description
+  * @example
+  * {{{
+  *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
+  *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
+  * }}}
+  */
+case class InlineTable(name: String, columns: List[Column], values: Insert.Values, description: Option[String] = None) extends TableLike
 
 /**
  * Represents an executable procedure
@@ -95,25 +102,27 @@ object StorageFormats extends Enumeration {
 }
 
 /**
- * Represents a table definition
- * @param name            the name of the table
- * @param columns         the table [[Column columns]]
- * @example
- * {{{
- *     CREATE [COLUMNAR/EXTERNAL] TABLE [IF NOT EXISTS] Cars(
- *         Name STRING,
- *         Miles_per_Gallon INT,
- *         Cylinders INT,
- *         Displacement INT,
- *         Horsepower INT,
- *         Weight_in_lbs INT,
- *         Acceleration DECIMAL,
- *         Year DATE,
- *         Origin CHAR(1))
- *     COMMENT 'Data about cars from a public database'
- * }}}
- * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
- */
+  * Represents a table definition
+  * @param name        the name of the table
+  * @param columns     the table [[Column columns]]
+  * @param ifNotExists if true, the operation will not fail when the view exists
+  * @param description the optional description
+  * @example
+  * {{{
+  *     CREATE [COLUMNAR] TABLE [IF NOT EXISTS] Cars(
+  *         Name STRING,
+  *         Miles_per_Gallon INT,
+  *         Cylinders INT,
+  *         Displacement INT,
+  *         Horsepower INT,
+  *         Weight_in_lbs INT,
+  *         Acceleration DECIMAL,
+  *         Year DATE,
+  *         Origin CHAR(1))
+  *     COMMENT 'Data about cars from a public database'
+  * }}}
+  * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
+  */
 case class Table(name: String,
                  columns: List[Column],
                  ifNotExists: Boolean = false,
@@ -164,7 +173,7 @@ case class UserDefinedFunction(name: String, `class`: String, jarLocation: Optio
   * @param name        the name of the view
   * @param query       the given [[Queryable query]]
   * @param description the optional description
-  * @param ifNotExists if true, the operation will not fail
+  * @param ifNotExists if true, the operation will not fail when the view exists
   * @example
   * {{{
   *   CREATE VIEW OilAndGas AS

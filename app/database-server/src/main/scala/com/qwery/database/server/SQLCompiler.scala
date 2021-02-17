@@ -1,7 +1,7 @@
 package com.qwery.database
 package server
 
-import com.qwery.database.DatabaseCPU.columnTypeMap
+import com.qwery.database.Column.implicits._
 import com.qwery.database.ExpressionVM._
 import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
@@ -108,23 +108,6 @@ object SQLCompiler {
         case value :: Nil => value
         case _ => die(s"Multiple ${label}s are not supported")
       }
-    }
-
-    /**
-     * SQL Column-To-Column Conversion
-     * @param column the [[mx.Column SQL Column]]
-     */
-    final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
-      @inline
-      def toColumn: Column = Column(
-        name = column.name,
-        comment = column.comment.getOrElse(""),
-        enumValues = column.enumValues,
-        maxSize = column.spec.precision.headOption,
-        metadata = ColumnMetadata(
-          isNullable = column.isNullable,
-          `type` = columnTypeMap.getOrElse(column.spec.typeName, ColumnTypes.BlobType)
-        ))
     }
 
   }

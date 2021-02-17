@@ -1,7 +1,9 @@
 package com.qwery.database
 
 import com.qwery.database.ColumnTypes.{ArrayType, BigDecimalType, BlobType, ClobType, SerializableType, StringType}
+import com.qwery.database.DatabaseCPU.lookupColumnType
 import com.qwery.util.OptionHelper.OptionEnrichment
+import com.qwery.{models => mx}
 
 /**
  * Represents a Column
@@ -82,6 +84,30 @@ object Column {
     val enumMaxLength = if (enumValues.nonEmpty) Some(enumValues.map(_.length).max) else None
     new Column(name, comment, enumValues, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? enumMaxLength ?? maxSize)
       .getOrElse(die(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
+  }
+
+  /**
+    * Implicit classes and conversions
+    */
+  object implicits {
+
+    /**
+      * SQL Column-To-Column Conversion
+      * @param column the [[mx.Column SQL Column]]
+      */
+    final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
+      @inline
+      def toColumn: Column = Column(
+        name = column.name,
+        comment = column.comment.getOrElse(""),
+        enumValues = column.enumValues,
+        maxSize = column.spec.precision.headOption,
+        metadata = ColumnMetadata(
+          isNullable = column.isNullable,
+          `type` = lookupColumnType(column.spec.typeName)
+        ))
+    }
+
   }
 
 }

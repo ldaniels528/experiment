@@ -30,7 +30,7 @@ class VhpKinesisSyncTest extends AnyFunSpec {
             |  pageType STRING(128) comment 'the page type',
             |  year STRING(4) comment 'the year (e.g. 2021)',
             |  t0 STRING(20) comment 'the t0 - EPOC/millis'
-            |) WITH DESCRIPTION 'Messaging client test table'
+            |) WITH COMMENT 'Messaging client test table'
             |""".stripMargin
       )
     }
