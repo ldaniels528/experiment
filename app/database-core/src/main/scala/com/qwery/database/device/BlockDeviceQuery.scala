@@ -247,7 +247,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || nextID, args)
-        Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+        Seq(Column.create(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
   }
@@ -278,7 +278,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
         if (isBuiltinFunction(functionName)) {
           val fxTemplate = lookupBuiltinFunction(functionName)
           val fx = fxTemplate(fc.alias || nextID, args)
-          Seq(Column(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+          Seq(Column.create(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
         }
         // is it a user-defined function?
         // TODO implement user-defined function

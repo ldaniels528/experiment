@@ -4,7 +4,6 @@ package files
 import com.qwery.database.collections.PersistentSeq
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice, TableIndexRef}
 import com.qwery.database.files.DatabaseFiles.writeTableConfig
-import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
@@ -231,7 +230,7 @@ trait TableFileLike {
   }
 
   def getTableMetrics: TableMetrics = TableMetrics(
-    databaseName = databaseName, tableName = tableName, columns = device.columns.toList.map(_.toTableColumn),
+    databaseName = databaseName, tableName = tableName, columns = device.columns.toList,
     physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length
   )
 

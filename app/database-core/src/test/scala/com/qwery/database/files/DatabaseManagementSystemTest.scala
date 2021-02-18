@@ -1,7 +1,7 @@
 package com.qwery.database
-package server
+package files
 
-import com.qwery.database.server.DatabaseManagementSystem._
+import com.qwery.database.files.DatabaseManagementSystem._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 

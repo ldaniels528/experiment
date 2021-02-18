@@ -3,7 +3,6 @@ package server
 
 import com.qwery.database.Column.implicits._
 import com.qwery.database.ExpressionVM._
-import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
 import com.qwery.database.server.SQLCompiler.implicits.{ExpressionFacade, InvokableFacade}
@@ -47,9 +46,9 @@ object SQLCompiler {
 
       def toColumn: Column = expression match {
         case ex.CurrentRow =>
-          Column(name = "CurrentRow", metadata = ColumnMetadata(`type` = ColumnTypes.IntType), maxSize = Some(ROW_ID_BYTES))
+          Column.create(name = "CurrentRow", metadata = ColumnMetadata(`type` = ColumnTypes.IntType), maxSize = Some(ROW_ID_BYTES))
         case expr =>
-          Column(name = expr.alias getOrElse nextID, metadata = ColumnMetadata(`type` = ColumnTypes.DoubleType), maxSize = Some(LONG_BYTES))
+          Column.create(name = expr.alias getOrElse nextID, metadata = ColumnMetadata(`type` = ColumnTypes.DoubleType), maxSize = Some(LONG_BYTES))
       }
     }
 
@@ -60,7 +59,7 @@ object SQLCompiler {
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
-          val props = files.TableProperties(description = table.description, columns = table.columns.map(_.toColumn.toTableColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
+          val props = files.TableProperties(description = table.description, columns = table.columns.map(_.toColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
           cx.CreateTable(databaseName, table.name, props)
         case mx.Create(TableIndex(_, TableRef(tableName), columns, ifNotExists)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())

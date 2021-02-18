@@ -1,10 +1,10 @@
 package com.qwery.database
 package jdbc
 
-import java.sql.{DatabaseMetaData, ResultSet, ResultSetMetaData, RowIdLifetime}
 import com.qwery.database.ColumnTypes._
-import com.qwery.database.files.TableColumn
+import com.qwery.database.files.DatabaseManagementSystem
 
+import java.sql.{DatabaseMetaData, ResultSet, ResultSetMetaData, RowIdLifetime}
 import scala.beans.{BeanProperty, BooleanBeanProperty}
 
 /**
@@ -317,7 +317,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "BUFFER_LENGTH", columnType = IntType),
       mkColumn(name = "DECIMAL_DIGITS", columnType = IntType),
       mkColumn(name = "PSEUDO_COLUMN", columnType = IntType))
-    new JDBCResultSet(connection, catalog, schema, tableName = "BestRowIdentifier", columns, data = Seq(
+    new JDBCResultSet(connection, catalog, schema, tableName = "BestRowIdentifiers", columns, data = Seq(
       Seq(1, ROWID_NAME, IntType.getJDBCType, "IntType", INT_BYTES, null, 0, 1).map(Option.apply)
     ))
   }
@@ -336,7 +336,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "MAX_LEN", columnType = IntType),
       mkColumn(name = "DEFAULT_VALUE", columnType = StringType),
       mkColumn(name = "DESCRIPTION", columnType = StringType))
-    new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "ClientInfo", columns, data = Nil)
+    new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "ClientInfoProperties", columns, data = Nil)
   }
   
   override def getColumns(catalog: String, schemaPattern: String, tableNamePattern: String, columnNamePattern: String): ResultSet = {
@@ -367,8 +367,8 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
     val results = connection.client.searchColumns(databaseNamePattern = Some(catalog), tableNamePattern = Some(tableNamePattern), columnNamePattern = Some(columnNamePattern))
     new JDBCResultSet(connection, catalog, connection.getSchema, tableName = "Columns", columns, data = results map { ti =>
-      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.toColumn.metadata.`type`.getJDBCType,
-        ti.column.columnType, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment.orNull, "", null, null, ti.column.sizeInBytes,
+      Seq(ti.databaseName, ti.databaseName, ti.tableName, ti.column.name, ti.column.metadata.`type`.getJDBCType,
+        ti.column.metadata.`type`.toString, ti.column.sizeInBytes, 0, 0, 10, 0, ti.column.comment, "", null, null, ti.column.sizeInBytes,
         results.indexOf(ti), "YES",  null, null, null, 0, "NO", "NO").map(Option.apply)
     })
   }
@@ -405,7 +405,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "FK_NAME", columnType = StringType),
       mkColumn(name = "PK_NAME", columnType = StringType),
       mkColumn(name = "DEFERRABILITY", columnType = IntType))
-    new JDBCResultSet(connection, parentCatalog, parentSchema, tableName = "CrossReference", columns, data = Nil)
+    new JDBCResultSet(connection, parentCatalog, parentSchema, tableName = "CrossReferences", columns, data = Nil)
   }
 
   override def getExportedKeys(catalog: String, schema: String, table: String): ResultSet = {
@@ -576,7 +576,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
 
   override def getTableTypes: ResultSet = {
     val columns = Seq(mkColumn(name = "TABLE_TYPE", columnType = StringType))
-    val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "LOGICAL_TABLE")
+    val tableTypes = DatabaseManagementSystem.tableTypes
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "TableTypes", columns, data = tableTypes map { tableType =>
       Seq(Option(tableType))
     })
@@ -605,7 +605,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "COLUMN_NAME", columnType = StringType),
       mkColumn(name = "KEY_SEQ", columnType = IntType),
       mkColumn(name = "PK_NAME", columnType = StringType))
-    new JDBCResultSet(connection, catalog, schema, tableName = "BestRowIdentifier", columns, data = Seq(
+    new JDBCResultSet(connection, catalog, schema, tableName = "PrimaryKeys", columns, data = Seq(
       Seq(catalog, schema, table, ROWID_NAME, 1, ROWID_NAME).map(Option.apply)
     ))
   }
@@ -680,7 +680,8 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
   }
 
   private def mkColumn(name: String, columnType: ColumnType, sizeInBytes: Int = 256) = {
-    TableColumn(name = name, columnType = columnType.toString, comment = None, sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
+    Column(name = name, metadata = ColumnMetadata(`type` = columnType), comment = "", enumValues = Nil,
+      sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
   }
 
 }

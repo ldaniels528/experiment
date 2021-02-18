@@ -1,7 +1,8 @@
 package com.qwery.database.clients
 
+import com.qwery.database.models.DatabaseJsonProtocol.unwrap
 import com.qwery.database.{KeyValues, ROWID, WebServiceClient, die}
-import net.liftweb.json.JObject
+import spray.json.JsObject
 
 import scala.util.{Failure, Success, Try}
 
@@ -18,7 +19,7 @@ case class MessageConsumer(host: String = "0.0.0.0", port: Int, databaseName: St
 
   def getMessage(offset: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, offset)) match {
-      case js: JObject => Option(KeyValues(js.values))
+      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> unwrap(jv)}))
       case js => die(s"Unexpected type returned $js")
     }
   }

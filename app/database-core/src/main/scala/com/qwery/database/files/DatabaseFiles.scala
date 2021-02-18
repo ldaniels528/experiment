@@ -55,9 +55,9 @@ object DatabaseFiles {
 
     val config = readTableConfig(databaseName, tableName)
     val device = if (config.isColumnar)
-      ColumnOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+      ColumnOrientedFileBlockDevice(columns = config.columns, dataFile)
     else
-      new RowOrientedFileBlockDevice(columns = config.columns.map(_.toColumn), dataFile)
+      new RowOrientedFileBlockDevice(columns = config.columns, dataFile)
     (config, device)
   }
 

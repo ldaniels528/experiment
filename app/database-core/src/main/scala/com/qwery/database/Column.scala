@@ -40,7 +40,7 @@ case class Column(name: String,
   /**
    * Returns the maximum physical size of the column
    */
-  val maxPhysicalSize: Int = {
+  def maxPhysicalSize: Int = {
     val size = metadata.`type` match {
       case ArrayType => sizeInBytes + SHORT_BYTES
       case BlobType | ClobType | SerializableType => sizeInBytes + INT_BYTES
@@ -67,6 +67,9 @@ case class Column(name: String,
  * Column Companion
  */
 object Column {
+  import spray.json._
+  import DefaultJsonProtocol._
+  implicit val columnJsonFormat: RootJsonFormat[Column] = jsonFormat5(Column.apply)
 
   /**
    * Creates a new Column
@@ -76,7 +79,7 @@ object Column {
    * @param maxSize  the optional maximum length of the column
    * @return a new [[Column]]
    */
-  def apply(name: String,
+  def create(name: String,
             comment: String = "",
             enumValues: Seq[String] = Nil,
             metadata: ColumnMetadata,
@@ -97,7 +100,7 @@ object Column {
       */
     final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
       @inline
-      def toColumn: Column = Column(
+      def toColumn: Column = Column.create(
         name = column.name,
         comment = column.comment.getOrElse(""),
         enumValues = column.enumValues,

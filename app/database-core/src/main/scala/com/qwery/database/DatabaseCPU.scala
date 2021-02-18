@@ -5,7 +5,7 @@ import com.qwery.database.DatabaseCPU.implicits._
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
 import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
 import com.qwery.database.device.{BlockDevice, TableIndexDevice}
-import com.qwery.database.files.DatabaseFiles.isTableFile
+import com.qwery.database.files.DatabaseFiles.{isVirtualTable, readTableConfig}
 import com.qwery.database.files._
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.{Into, Overwrite}
@@ -27,6 +27,14 @@ class DatabaseCPU() {
   private val logger = LoggerFactory.getLogger(getClass)
   private val tables = TrieMap[(String, String), TableFileLike]()
 
+  /**
+   * Counts the number of rows matching the optional criteria
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @param condition    the optional [[Condition criteria]]
+   * @param limit        the optional limit
+   * @return the number of rows matching the optional criteria
+   */
   def countRows(databaseName: String, tableName: String, condition: Option[Condition], limit: Option[Int] = None): Long = {
     tableOf(databaseName, tableName).countRows(toCriteria(condition), limit)
   }
@@ -165,7 +173,7 @@ class DatabaseCPU() {
       case Create(ref: ExternalTable) =>
         createExternalTable(databaseName, tableName = ref.name, ref = ref); None
       case Create(Table(tableName, columns, ifNotExists, isColumnar, isPartitioned, description)) =>
-        Some(Solution(databaseName, tableName, createTable(databaseName, tableName, TableProperties(description, columns.map(_.toTableColumn), isColumnar, ifNotExists))))
+        Some(Solution(databaseName, tableName, createTable(databaseName, tableName, TableProperties(description, columns.map(_.toColumn), isColumnar, ifNotExists))))
       case Create(TableIndex(_, TableRef(tableName), Seq(ex.Field(indexColumn)), ifNotExists)) =>
         Some(Solution(databaseName, tableName, createIndex(databaseName, tableName, indexColumn, ifNotExists)))
       case Create(View(viewName, invokable, description, ifNotExists)) =>
@@ -289,8 +297,20 @@ class DatabaseCPU() {
     tableOf(databaseName, tableName).getRows(condition, limit)
   }
 
+  /**
+   * Returns the length of the given table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @return the length of the given table
+   */
   def getTableLength(databaseName: String, tableName: String): Long = getDevice(databaseName, tableName).length
 
+  /**
+   * Returns the metrics for the given table
+   * @param databaseName the database name
+   * @param tableName    the table name
+   * @return the [[TableMetrics table metrics]]
+   */
   def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
     tableOf(databaseName, tableName).getTableMetrics
   }
@@ -302,7 +322,7 @@ class DatabaseCPU() {
     */
   def include(path: String): Invokable = {
     val file = new File(path).getCanonicalFile
-    logger.info(s"[*] Merging source file '${file.getAbsolutePath}'...")
+    logger.info(s"Merging source file '${file.getAbsolutePath}'...")
     SQLLanguageParser.parse(file)
   }
 
@@ -421,7 +441,7 @@ class DatabaseCPU() {
   }
 
   private def countRowsAsDevice(name: String, counter: () => Long): BlockDevice = {
-    val rows = createTempTable(columns = Seq(Column(name, metadata = ColumnMetadata(`type` = ColumnTypes.LongType))), fixedRowCount = 1)
+    val rows = createTempTable(columns = Seq(Column.create(name, metadata = ColumnMetadata(`type` = ColumnTypes.LongType))), fixedRowCount = 1)
     rows.writeRow(KeyValues(name -> counter()).toBinaryRow(rows))
     rows
   }
@@ -433,12 +453,16 @@ class DatabaseCPU() {
     * @return the [[BlockDevice block device]]
     */
   private def getDevice(databaseName: String, tableName: String): BlockDevice = {
-    if (isTableFile(databaseName, tableName)) tableOf(databaseName, tableName).device
-    else tableOf(databaseName, tableName).device
+    tableOf(databaseName, tableName).device
   }
 
   private def tableOf(databaseName: String, tableName: String): TableFileLike = {
-    tables.getOrElseUpdate(databaseName -> tableName, TableFile(databaseName, tableName))
+    tables.getOrElseUpdate(databaseName -> tableName, {
+      val config = readTableConfig(databaseName, tableName)
+      if (config.externalTable.nonEmpty) ExternalTableFile(databaseName, tableName)
+      else if (isVirtualTable(databaseName, tableName)) VirtualTableFile(databaseName, tableName)
+      else TableFile(databaseName, tableName)
+    })
   }
 
   private def toDevice(databaseName: String, queryable: Queryable): BlockDevice = {
@@ -523,7 +547,7 @@ object DatabaseCPU {
       */
     final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
       @inline
-      def toColumn: Column = Column(
+      def toColumn: Column = Column.create(
         name = column.name,
         comment = column.comment.getOrElse(""),
         enumValues = column.enumValues,
@@ -532,18 +556,6 @@ object DatabaseCPU {
           isNullable = column.isNullable,
           `type` = lookupColumnType(column.spec.typeName)
         ))
-
-      @inline
-      def toTableColumn: TableColumn = {
-        val columnType = lookupColumnType(column.spec.typeName)
-        TableColumn(
-          name = column.name,
-          columnType = columnType.toString,
-          comment = column.comment,
-          enumValues = column.enumValues,
-          sizeInBytes = columnType.getFixedLength.getOrElse(column.spec.precision.headOption
-            .getOrElse(die(s"Column size could not be determined for '$columnType'"))))
-      }
     }
 
   }

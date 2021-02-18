@@ -19,10 +19,10 @@ class ColumnOrientedFileBlockDeviceTest extends AnyFunSpec {
 
     it("should read/write columnar data") {
       val columns = Seq(
-        Column(name = "symbol", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
-        Column(name = "exchange", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
-        Column(name = "lastSale", metadata = ColumnMetadata(`type` = DoubleType)),
-        Column(name = "lastSaleTime", metadata = ColumnMetadata(`type` = DateType))
+        Column.create(name = "symbol", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
+        Column.create(name = "exchange", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
+        Column.create(name = "lastSale", metadata = ColumnMetadata(`type` = DoubleType)),
+        Column.create(name = "lastSaleTime", metadata = ColumnMetadata(`type` = DateType))
       )
 
       // get a reference to the file

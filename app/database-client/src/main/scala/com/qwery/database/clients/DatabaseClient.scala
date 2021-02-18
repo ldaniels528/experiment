@@ -6,8 +6,6 @@ import com.qwery.database.WebServiceClient._
 import com.qwery.database.files.{TableMetrics, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models._
-import net.liftweb.json._
-import org.slf4j.LoggerFactory
 import spray.json._
 
 import java.io.File
@@ -19,8 +17,6 @@ import java.net.URLEncoder
  * @param port the remote port
  */
 case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
-  private val logger = LoggerFactory.getLogger(getClass)
-  private implicit val formats: DefaultFormats = DefaultFormats
   private val charSetName = "utf-8"
   private val $http = new WebServiceClient()
   private var closed = false
@@ -101,7 +97,7 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     * @return the [[QueryResult]]
     */
   def executeQuery(databaseName: String, sql: String): QueryResult = {
-    $http.post(toQueryUrl(databaseName), body = sql.getBytes(charSetName)).toSprayJs.convertTo[QueryResult]
+    $http.post(toQueryUrl(databaseName), body = sql.getBytes(charSetName)).convertTo[QueryResult]
   }
 
   /**
@@ -114,7 +110,7 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     */
   def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Seq[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, condition, limit)) match {
-      case js: JArray => js.values.map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
+      case js: JsArray => js.elements.map(unwrap).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
@@ -150,20 +146,20 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     */
   def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[KeyValues] = {
     $http.get(url = s"${toRangeUrl(databaseName, tableName)}/$start/$length") match {
-      case js: JArray => js.values.map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
+      case js: JsArray => js.elements.map(unwrap).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
 
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, rowID)) match {
-      case js: JObject => Option(KeyValues(js.values))
+      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> unwrap(jv)}))
       case js => die(s"Unexpected type returned $js")
     }
   }
 
   def getRowWithMetadata(databaseName: String, tableName: String, rowID: ROWID): Row = {
-    $http.get(toUrl(databaseName, tableName, rowID)).extract[Row]
+    $http.get(toUrl(databaseName, tableName, rowID)).convertTo[Row]
   }
 
   def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {

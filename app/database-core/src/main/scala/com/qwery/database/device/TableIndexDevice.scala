@@ -187,7 +187,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
  * @author lawrence.daniels@gmail.com
  */
 object TableIndexDevice {
-  private val rowIDColumn = Column(name = ROWID_NAME, comment = "unique row ID", enumValues = Nil, ColumnMetadata(`type` = IntType))
+  private val rowIDColumn = Column.create(name = ROWID_NAME, comment = "unique row ID", enumValues = Nil, ColumnMetadata(`type` = IntType))
 
   /**
    * Retrieves the table index by reference
@@ -196,7 +196,7 @@ object TableIndexDevice {
    */
   def apply(ref: TableIndexRef): TableIndexDevice = {
     val tableConfig = readTableConfig(ref.databaseName, ref.tableName)
-    val indexColumn = tableConfig.columns.find(_.name == ref.indexColumnName).map(_.toColumn)
+    val indexColumn = tableConfig.columns.find(_.name == ref.indexColumnName)
       .getOrElse(throw ColumnNotFoundException(ref.tableName, ref.indexColumnName))
     new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn))
   }

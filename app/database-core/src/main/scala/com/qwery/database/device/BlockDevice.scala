@@ -4,7 +4,7 @@ package device
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.KeyValues.isSatisfied
 import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.device.BlockDevice.RowStatistics
+import com.qwery.database.models.RowStatistics
 import com.qwery.database.types._
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
@@ -470,7 +470,7 @@ object BlockDevice {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+      Column.create(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
         `type` = `type`,
         isCompressed = ci.exists(_.isCompressed),
         isEncrypted = ci.exists(_.isEncrypted),
@@ -577,17 +577,6 @@ object BlockDevice {
       this
     }
 
-  }
-
-  case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encrypted: ROWID, locked: ROWID, replicated: ROWID) {
-    def +(that: RowStatistics): RowStatistics = that.copy(
-      active = that.active + active,
-      compressed = that.compressed + compressed,
-      deleted = that.deleted + deleted,
-      encrypted = that.encrypted + encrypted,
-      locked = that.locked + locked,
-      replicated = that.replicated + replicated
-    )
   }
 
 }

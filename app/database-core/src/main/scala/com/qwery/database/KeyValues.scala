@@ -2,6 +2,7 @@ package com.qwery.database
 
 import com.qwery.database.Codec.CodecByteBuffer
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.models.JsValueConversion
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
@@ -92,6 +93,29 @@ object KeyValues {
   @inline
   def isSatisfied(result: => KeyValues, condition: => KeyValues): Boolean = {
     condition.forall { case (name, value) => result.get(name).contains(value) }
+  }
+
+  import spray.json._
+  implicit object KeyValuesJsonFormat extends JsonFormat[KeyValues] {
+    override def read(jsValue: JsValue): KeyValues = jsValue match {
+      case js: JsObject => KeyValues(js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON })
+      case x => die(s"Unsupported type $x (${x.getClass.getName})")
+    }
+
+    override def write(m: KeyValues): JsValue = {
+      JsObject(m.toMap.mapValues {
+        case b: Boolean => if (b) JsTrue else JsFalse
+        case d: java.util.Date => JsNumber(d.getTime)
+        case n: Double => JsNumber(n)
+        case n: Float => JsNumber(n)
+        case n: Int => JsNumber(n)
+        case n: Long => JsNumber(n)
+        case n: Number => JsNumber(n.doubleValue())
+        case n: Short => JsNumber(n)
+        case s: String => JsString(s)
+        case v: Any => JsString(v.toString)
+      })
+    }
   }
 
 }

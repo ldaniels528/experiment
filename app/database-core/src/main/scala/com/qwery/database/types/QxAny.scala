@@ -1,17 +1,16 @@
 package com.qwery.database
 package types
 
+import com.qwery.database.ColumnTypes._
+import com.qwery.models.expressions.Null
+import org.apache.commons.io.IOUtils
+
 import java.io.{ByteArrayOutputStream, InputStream, OutputStreamWriter, Reader}
 import java.nio.ByteBuffer
 import java.sql.{Blob, Clob}
 import java.text.SimpleDateFormat
 import java.util.UUID
-import com.qwery.database.ColumnTypes._
-import com.qwery.models.expressions.Null
-
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
-import org.apache.commons.io.IOUtils
-
 import scala.util.Try
 
 /**
@@ -113,6 +112,14 @@ sealed trait QxAny {
  * QxAny Companion
  */
 object QxAny {
+  import com.qwery.database.models.DatabaseJsonProtocol._
+  import spray.json._
+
+  implicit object QxAnyJsonFormat extends JsonFormat[QxAny] {
+    override def read(value: JsValue): QxAny = QxAny(unwrap(value))
+
+    override def write(value: QxAny): JsValue = value.value.toJson
+  }
 
   def apply(value: Any): QxAny = value match {
     case a: ArrayBlock => QxArray(Some(a))

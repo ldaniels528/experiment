@@ -39,10 +39,10 @@ crossScalaVersions := Seq(scalaVersion_2_11, scalaVersion_2_12)
 lazy val root = (project in file("./app")).
   aggregate(
     core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
-    database_core, database_models, database_server, database_client, database_jdbc).
+    database_core, database_server, database_client, database_jdbc).
   dependsOn(
     core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
-    database_core, database_models, database_server, database_client, database_jdbc).
+    database_core, database_server, database_client, database_jdbc).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -132,14 +132,16 @@ lazy val database_core = (project in file("./app/database-core")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "commons-io" % "commons-io" % "2.6",
-      "net.liftweb" %% "lift-json" % liftJsonVersion
+      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value
     ))
 
 /**
   * @example sbt "project database_client" test
   */
 lazy val database_client = (project in file("./app/database-client")).
-  dependsOn(database_core, database_models).
+  dependsOn(database_core).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -204,32 +206,10 @@ lazy val database_kinesis = (project in file("./app/database-kinesis")).
     ))
 
 /**
-  * @example sbt "project database_models" test
-  */
-lazy val database_models = (project in file("./app/database-models")).
-  dependsOn(database_core).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "database-models",
-    organization := "com.qwery",
-    description := "Qwery Database Server",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
-      "net.liftweb" %% "lift-json" % liftJsonVersion
-    ))
-
-/**
   * @example sbt "project database_server" test
   */
 lazy val database_server = (project in file("./app/database-server")).
-  dependsOn(database_core, database_models).
+  dependsOn(database_core).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -292,25 +272,6 @@ lazy val spark_generator = (project in file("./app/platform/spark/generator")).
     libraryDependencies ++= Seq(
 
     ))
-
-/*
-lazy val spark_tools_2_3_x = (project in file("./app/platform/spark/tools/2.3.x")).
-  dependsOn(util).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "spark-tools-v2_3",
-    organization := "com.qwery",
-    description := "Qwery Runtime Tools for Spark 2.3.x",
-    version := appVersion,
-    scalaVersion := scalaVersion_2_11,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % sparkVersion_2_3_x,
-      "org.apache.spark" %% "spark-sql" % sparkVersion_2_3_x
-    ))*/
 
 lazy val spark_tools_2_4_x = (project in file("./app/platform/spark/tools/2.4.x")).
   dependsOn(util).

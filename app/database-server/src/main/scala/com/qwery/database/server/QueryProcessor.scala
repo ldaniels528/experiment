@@ -10,7 +10,7 @@ import com.qwery.database.files.{TableFile, TableMetrics, TableProperties, Virtu
 import com.qwery.database.models._
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.models.QueryResult.BlockDeviceToQueryResult
-import com.qwery.database.server.DatabaseManagementSystem._
+import com.qwery.database.files.DatabaseManagementSystem._
 import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._

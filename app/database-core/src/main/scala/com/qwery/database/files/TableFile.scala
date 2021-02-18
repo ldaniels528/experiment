@@ -51,8 +51,7 @@ object TableFile {
       writeTableConfig(databaseName, tableName, config)
 
       // return the table
-      val columns = ref.columns.map(_.toColumn)
-      new TableFile(databaseName, tableName, config, new RowOrientedFileBlockDevice(columns, dataFile))
+      new TableFile(databaseName, tableName, config, new RowOrientedFileBlockDevice(ref.columns, dataFile))
     }
   }
 

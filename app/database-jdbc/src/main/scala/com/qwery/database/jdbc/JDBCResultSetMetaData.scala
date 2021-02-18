@@ -1,8 +1,6 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.files.TableColumn
-
 import java.sql.ResultSetMetaData
 
 /**
@@ -10,12 +8,12 @@ import java.sql.ResultSetMetaData
  * @param databaseName the database name
  * @param schemaName   the schema name
  * @param tableName    the table name
- * @param columns      the collection of [[TableColumn]]
+ * @param columns      the collection of [[Column]]
  */
 class JDBCResultSetMetaData(databaseName: String,
                             schemaName: String,
                             tableName: String,
-                            columns: Seq[TableColumn]) extends ResultSetMetaData with JDBCWrapper {
+                            columns: Seq[Column]) extends ResultSetMetaData with JDBCWrapper {
 
   override def getColumnCount: Int = columns.length
 
@@ -35,7 +33,7 @@ class JDBCResultSetMetaData(databaseName: String,
   }
 
   override def isNullable(column: Int): Int = {
-    if (columns(checkColumnIndex(column)).isNullable) 1 else 2
+    if (columns(checkColumnIndex(column)).metadata.isNullable) 1 else 2
   }
 
   override def isSearchable(column: Int): Boolean = {
@@ -44,7 +42,7 @@ class JDBCResultSetMetaData(databaseName: String,
   }
 
   override def isSigned(column: Int): Boolean = {
-    ColumnTypes.withName(columns(checkColumnIndex(column)).columnType).isSigned
+    columns(checkColumnIndex(column)).metadata.`type`.isSigned
   }
 
   override def getColumnDisplaySize(column: Int): Int = columns(checkColumnIndex(column)).sizeInBytes
@@ -54,11 +52,11 @@ class JDBCResultSetMetaData(databaseName: String,
   override def getColumnName(column: Int): String = columns(checkColumnIndex(column)).name
 
   override def getPrecision(column: Int): Int = {
-    ColumnTypes.withName(columns(checkColumnIndex(column)).columnType).getPrecision
+    columns(checkColumnIndex(column)).metadata.`type`.getPrecision
   }
 
   override def getScale(column: Int): Int = {
-    ColumnTypes.withName(columns(checkColumnIndex(column)).columnType).getScale
+    columns(checkColumnIndex(column)).metadata.`type`.getScale
   }
 
   override def getSchemaName(column: Int): String = {
@@ -77,10 +75,10 @@ class JDBCResultSetMetaData(databaseName: String,
   }
 
   override def getColumnType(column: Int): Int = {
-    ColumnTypes.withName(columns(checkColumnIndex(column)).columnType).getJDBCType
+    columns(checkColumnIndex(column)).metadata.`type`.getJDBCType
   }
 
-  override def getColumnTypeName(column: Int): String = columns(checkColumnIndex(column)).columnType
+  override def getColumnTypeName(column: Int): String = columns(checkColumnIndex(column)).metadata.`type`.toString
 
   override def isReadOnly(column: Int): Boolean = {
     checkColumnIndex(column)
@@ -97,7 +95,7 @@ class JDBCResultSetMetaData(databaseName: String,
     true
   }
 
-  override def getColumnClassName(column: Int): String = columns(checkColumnIndex(column)).columnType
+  override def getColumnClassName(column: Int): String = columns(checkColumnIndex(column)).metadata.`type`.toString
 
   private def checkColumnIndex(column: Int): Int = {
     assert(column > 0 && column <= columns.length, "Column index out of range")

@@ -8,15 +8,13 @@ import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
 import com.qwery.database.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
-import com.qwery.database.JSONSupport._
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
-import com.qwery.database.files.{TableFile, TableProperties}
+import com.qwery.database.files.DatabaseManagementSystem._
+import com.qwery.database.files.{DatabaseManagementSystem, TableFile, TableProperties}
 import com.qwery.database.models.DatabaseJsonProtocol._
 import com.qwery.database.models.QueryResult.SolutionToQueryResult
 import com.qwery.database.models._
-import com.qwery.database.server.DatabaseManagementSystem._
 import com.qwery.database.server.DatabaseServer.implicits._
 import com.qwery.models.expressions.Expression
 import com.qwery.util.OptionHelper.OptionEnrichment
@@ -49,9 +47,9 @@ object DatabaseServer {
     logger.info(f"Qwery Database Server v$version%.1f")
 
     // get the configuration
-    val port = args match {
-      case Array(port) => port.toInt
-      case Array() => defaultPort
+    val port: Int = args.toList match {
+      case port :: _ => port.toInt
+      case _ => defaultPort
     }
 
     // create the actor pool
@@ -315,13 +313,10 @@ object DatabaseServer {
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
-        parameters('__metadata.?) { metadata_? =>
-          val isMetadata = metadata_?.map(_.toLowerCase).contains("true")
-          complete(cpu.getRow(databaseName, tableName, rowID) match {
-            case Some(row) => if (isMetadata) row.toLiftJs.toSprayJs else row.toKeyValues.toJson
-            case None => JsObject()
-          })
-        }
+        complete(cpu.getRow(databaseName, tableName, rowID) match {
+          case Some(row) => row.toKeyValues.toJson
+          case None => JsObject()
+        })
       } ~
       post {
         // partially update the row by ID
@@ -460,7 +455,7 @@ object DatabaseServer {
         case Left(device) =>
           var rows: List[Seq[Option[Any]]] = Nil
           device.whileRow(KeyValues(), limit ?? Some(20)) { row => rows = row.fields.map(_.value) :: rows }
-          QueryResult(databaseName, tableName, columns = device.columns.map(_.toTableColumn), rows = rows)
+          QueryResult(databaseName, tableName, columns = device.columns, rows = rows)
         case Right(count) =>
           QueryResult(databaseName, tableName, columns = Nil, count = count)
       }

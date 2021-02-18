@@ -69,6 +69,15 @@ object RowMetadata {
   // the length of the encoded metadata
   val BYTES_LENGTH = 1
 
+  import spray.json._
+  implicit object RowMetadataJsonFormat extends JsonFormat[RowMetadata] {
+    override def read(json: JsValue): RowMetadata = json match {
+      case JsNumber(value) => RowMetadata.decode(value.toByte)
+    }
+
+    override def write(rmd: RowMetadata): JsValue = JsNumber(rmd.encode.toInt)
+  }
+
   /**
    * Decodes the 8-bit metadata code into [[RowMetadata metadata]]
    * @param metadataBits the metadata byte

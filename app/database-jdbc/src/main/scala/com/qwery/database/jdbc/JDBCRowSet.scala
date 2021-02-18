@@ -1,12 +1,12 @@
 package com.qwery.database
 package jdbc
 
-import java.nio.ByteBuffer
-import java.sql.RowId
 import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.files.TableColumn
 import com.qwery.database.jdbc.JDBCRowSet.uninited
 import org.slf4j.LoggerFactory
+
+import java.nio.ByteBuffer
+import java.sql.RowId
 
 /**
   * Qwery JDBC Row Set
@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
   * @param databaseName the database name
   * @param schemaName   the schema name
   * @param tableName    the table name
-  * @param columns      the collection of [[TableColumn columns]]
+  * @param columns      the collection of [[Column columns]]
   * @param rows         the row data
   * @param __ids        the collection of row identifiers
   */
@@ -22,7 +22,7 @@ class JDBCRowSet(connection: JDBCConnection,
                  databaseName: String,
                  schemaName: String,
                  tableName: String,
-                 columns: Seq[TableColumn],
+                 columns: Seq[Column],
                  var rows: Seq[Seq[Option[Any]]],
                  var __ids: Seq[ROWID]) {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -53,7 +53,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
     // lookup the value by column name
     val column = columns(columnIndex - 1)
-    val columnType = ColumnTypes.withName(column.columnType)
+    val columnType = column.metadata.`type`
     val rawValue_? = matrix(offset)
     val value = rawValue_?.flatMap(rv => safeCast[T](Codec.convertTo(rv, columnType)))
     logger.debug(s"getColumnValueOpt($columnIndex) => $value [rowIndex=$rowIndex]")
@@ -225,7 +225,7 @@ object JDBCRowSet {
     * @param databaseName the database name
     * @param schemaName   the schema name
     * @param tableName    the table name
-    * @param columns      the collection of [[TableColumn columns]]
+    * @param columns      the collection of [[Column columns]]
     * @param rows         the row data
     * @param __ids        the collection of row identifiers
     */
@@ -233,7 +233,7 @@ object JDBCRowSet {
                        databaseName: String,
                        schemaName: String,
                        tableName: String,
-                       columns: Seq[TableColumn],
+                       columns: Seq[Column],
                        rows: Seq[Seq[Option[Any]]],
                        __ids: Seq[ROWID]): JDBCRowSet = {
     new JDBCRowSet(connection, databaseName, schemaName, tableName, columns, rows, __ids)

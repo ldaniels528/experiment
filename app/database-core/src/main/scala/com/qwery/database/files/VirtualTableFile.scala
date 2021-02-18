@@ -4,7 +4,6 @@ package files
 import com.qwery.database.DatabaseCPU.toCriteria
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.files.TableColumn.ColumnToTableColumnConversion
 import com.qwery.models.{Invokable, Select, TableRef}
 
 /**
@@ -62,12 +61,12 @@ object VirtualTableFile {
     }
   }
 
-  private def getProjectionColumns(databaseName: String, invokable: Invokable): Seq[TableColumn] = {
+  private def getProjectionColumns(databaseName: String, invokable: Invokable): Seq[Column] = {
     invokable match {
       case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
         val tableFile = TableFile(databaseName, tableName)
         val tableQuery = new BlockDeviceQuery(tableFile.device)
-        tableQuery.explainColumns(fields).map(_.toTableColumn)
+        tableQuery.explainColumns(fields)
       case unknown => die(s"Unexpected instruction: $unknown")
     }
   }

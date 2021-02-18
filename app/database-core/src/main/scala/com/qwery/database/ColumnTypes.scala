@@ -1,13 +1,12 @@
 package com.qwery.database
 
+import com.qwery.database.types.ArrayBlock
+import org.slf4j.LoggerFactory
+
 import java.nio.ByteBuffer
 import java.sql.{Blob, Clob}
 import java.util.UUID
-
-import com.qwery.database.types.ArrayBlock
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
-import org.slf4j.LoggerFactory
-
 import scala.annotation.tailrec
 import scala.reflect.runtime.universe._
 
@@ -17,6 +16,14 @@ import scala.reflect.runtime.universe._
 object ColumnTypes extends Enumeration {
   private lazy val logger = LoggerFactory.getLogger(getClass)
   type ColumnType = Value
+
+  import spray.json._
+  import DefaultJsonProtocol._
+  implicit object ColumnTypeJsonFormat extends JsonFormat[ColumnType] {
+    override def read(json: JsValue): ColumnType = ColumnTypes.withName(json.convertTo[String])
+
+    override def write(columnType: ColumnType): JsValue = JsString(columnType.toString)
+  }
 
   // numeric fixed-length types
   val ByteType: ColumnType = Value(0x00) //........ 00000

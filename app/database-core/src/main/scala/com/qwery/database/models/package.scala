@@ -2,8 +2,6 @@ package com.qwery.database
 
 import com.qwery.models.expressions.implicits._
 import com.qwery.models.expressions.{Expression, Null}
-import net.liftweb.json.JsonAST.JField
-import net.liftweb.json.{JNothing, JNull, JObject, JValue, _}
 import spray.json.{JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue}
 
 package object models {
@@ -32,36 +30,6 @@ package object models {
       case JsNumber(value) => value.toDouble
       case js: JsObject => js.fields map { case (name, jsValue) => name -> jsValue.unwrapJSON }
       case JsString(value) => value
-      case x => die(s"Unsupported type $x (${x.getClass.getName})")
-    }
-  }
-
-  /**
-    * JValue Conversion (Lift JSON)
-    * @param jValue the [[JValue JSON value]]
-    */
-  final implicit class JValueConversion(val jValue: JValue) extends AnyVal {
-    @inline
-    def toSprayJs: JsValue = jValue match {
-      case JArray(values) => new JsArray(values.toVector.map(_.toSprayJs))
-      case JBool(value) => JsBoolean(value)
-      case JDouble(value) => JsNumber(value)
-      case JInt(value) => JsNumber(value)
-      case JNull | JNothing => JsNull
-      case JObject(values) => new JsObject(Map(values.map { case JField(k, v) => (k, v.toSprayJs) }: _*))
-      case JString(value) => JsString(value)
-      case x => die(s"Unsupported type $x (${x.getClass.getName})")
-    }
-
-    @inline
-    def unwrapJSON: Any = jValue match {
-      case JArray(array) => array.map(_.unwrapJSON)
-      case JBool(value) => value
-      case JDouble(value) => value
-      case JInt(value) => value
-      case JNull | JNothing => null
-      case js: JObject => js.values
-      case JString(value) => value
       case x => die(s"Unsupported type $x (${x.getClass.getName})")
     }
   }

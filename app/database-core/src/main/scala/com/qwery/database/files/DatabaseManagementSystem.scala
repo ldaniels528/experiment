@@ -1,9 +1,9 @@
 package com.qwery.database
-package server
+package files
 
-import com.qwery.database.models._
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.server.DatabaseManagementSystem.implicits._
+import com.qwery.database.files.DatabaseManagementSystem.implicits._
+import com.qwery.database.models._
 
 import java.text.SimpleDateFormat
 import java.time.ZoneId
@@ -14,7 +14,11 @@ import scala.util.Try
   * Database Management System
   */
 object DatabaseManagementSystem {
-  val tableTypes = Seq("COLUMNAR_TABLE", "TABLE", "LOGICAL_TABLE")
+  val COLUMNAR_TABLE = "COLUMNAR_TABLE"
+  val LOGICAL_TABLE = "LOGICAL_TABLE"
+  val TABLE = "TABLE"
+  val VIEW = "VIEW"
+  val tableTypes = Seq(COLUMNAR_TABLE, LOGICAL_TABLE, TABLE, VIEW)
 
   /**
     * Retrieves the summary for a database by name
@@ -35,15 +39,15 @@ object DatabaseManagementSystem {
           Try(readTableConfig(databaseName, tableName)).toOption map { config =>
             val dataFile = getTableDataFile(databaseName, tableName)
             val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
-            TableSummary(tableName, tableType = if (config.isColumnar) "COLUMNAR_TABLE" else "TABLE", description = config.description, lastModifiedTime = modifiedTime)
+            TableSummary(tableName, tableType = if (config.isColumnar) COLUMNAR_TABLE else TABLE, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
           }
         }
-        // is it a logical table?
+        // is it a view table?
         else if (isVirtualTable(databaseName, tableName)) {
           Try(readTableConfig(databaseName, tableName)).toOption map { config =>
             val dataFile = getViewDataFile(databaseName, tableName)
             val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
-            TableSummary(tableName, tableType = "LOGICAL_TABLE", description = config.description, lastModifiedTime = modifiedTime)
+            TableSummary(tableName, tableType = VIEW, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
           }
         }
         // unsupported file

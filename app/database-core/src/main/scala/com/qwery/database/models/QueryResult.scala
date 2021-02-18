@@ -1,16 +1,13 @@
 package com.qwery.database.models
 
 import com.qwery.database.DatabaseCPU.Solution
-import com.qwery.database.JSONSupport._
-import com.qwery.database.KeyValues
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.files.TableColumn
-import com.qwery.database.files.TableColumn._
+import com.qwery.database.{Column, KeyValues}
 import org.slf4j.Logger
 
 case class QueryResult(databaseName: String,
                        tableName: String,
-                       columns: Seq[TableColumn] = Nil,
+                       columns: Seq[Column] = Nil,
                        rows: Seq[Seq[Option[Any]]] = Nil,
                        count: Long = 0,
                        __ids: Seq[Long] = Nil) {
@@ -29,10 +26,12 @@ case class QueryResult(databaseName: String,
     for (row <- rows.take(limit)) logger.info(row.map(v => f"${v.orNull}%-12s").mkString(" | "))
   }
 
-  override def toString: String = this.toJSON
 }
 
 object QueryResult {
+  import com.qwery.database.models.DatabaseJsonProtocol._
+  import spray.json._
+  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat6(QueryResult.apply)
 
   final implicit class SolutionToQueryResult(val solution: Solution) extends AnyVal {
 
@@ -45,7 +44,7 @@ object QueryResult {
       QueryResult(
         databaseName = solution.databaseName,
         tableName = solution.tableName,
-        columns = columns.map(_.toTableColumn),
+        columns = columns,
         __ids = rows.map(_.id),
         count = count,
         rows = rows map { row =>
@@ -65,7 +64,7 @@ object QueryResult {
       QueryResult(
         databaseName = databaseName,
         tableName = tableName,
-        columns = columns.map(_.toTableColumn),
+        columns = columns,
         __ids = rows.map(_.id),
         count = rows.size,
         rows = rows map { row =>

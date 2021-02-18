@@ -2,12 +2,10 @@ package com.qwery.database.device
 
 import com.qwery.database.device.ExternalFileBlockDevice.DelimitedTextEnrichment
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
-import com.qwery.database.files.TableColumn._
 import com.qwery.database.files.TableConfig
+import com.qwery.database.models.DatabaseJsonProtocol.unwrap
 import com.qwery.database.{BinaryRow, Column, FieldMetadata, KeyValues, ROWID, RecursiveFileList, RowMetadata, die}
 import com.qwery.util.ResourceHelper._
-import net.liftweb.json
-import net.liftweb.json.{JNothing, JNull, JObject, JValue, _}
 
 import java.io.File
 import java.nio.ByteBuffer
@@ -44,7 +42,7 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
 
   override def close(): Unit = device.close()
 
-  override def columns: Seq[Column] = config.columns.map(_.toColumn)
+  override def columns: Seq[Column] = config.columns
 
   override def getPhysicalSize: Option[ROWID] = physicalSizeCache.getOrElseUpdate((), {
     val list = rootFile.listFilesRecursively.map(_.length())
@@ -105,28 +103,18 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
   }
 
   private def parseText(line: String): KeyValues = {
+    import spray.json._
     format match {
       case "CSV" =>
         val values = line.delimitedSplit(',')
         KeyValues(columns.map(_.name) zip values: _*)
       case "JSON" =>
-        unwrapJSON(json.parse(line)) match {
+        unwrap(line.parseJson) match {
           case m: Map[String, Any] => KeyValues(m)
           case other => die(s"JSON object expected '$other'")
         }
       case other => die(s"Unrecognized format '$other'")
     }
-  }
-
-  private def unwrapJSON(jValue: JValue): Any = jValue match {
-    case JArray(array) => array.map(unwrapJSON)
-    case JBool(value) => value
-    case JDouble(value) => value
-    case JInt(value) => value
-    case JNull | JNothing => null
-    case js: JObject => js.values
-    case JString(value) => value
-    case x => die(s"Unsupported type $x (${x.getClass.getName})")
   }
 
 }

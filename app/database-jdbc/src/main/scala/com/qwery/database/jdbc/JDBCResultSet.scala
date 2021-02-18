@@ -1,16 +1,14 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.files.TableColumn
+import com.qwery.database.models._
+import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
 
 import java.io.{InputStream, Reader}
 import java.net.URL
 import java.sql.{Array => SQLArray, _}
 import java.util
 import java.util.{Calendar, UUID}
-import com.qwery.database.models._
-import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
-
 import scala.beans.{BeanProperty, BooleanBeanProperty}
 
 /**
@@ -19,7 +17,7 @@ import scala.beans.{BeanProperty, BooleanBeanProperty}
  * @param databaseName the database name
  * @param schemaName   the schema name
  * @param tableName    the table name
- * @param columns      the [[TableColumn table columns]]
+ * @param columns      the [[Column table columns]]
  * @param data         the collection of row data
  * @param __ids        the collection of row identifiers
  */
@@ -27,7 +25,7 @@ class JDBCResultSet(connection: JDBCConnection,
                     databaseName: String,
                     schemaName: String,
                     tableName: String,
-                    columns: Seq[TableColumn],
+                    columns: Seq[Column],
                     data: Seq[Seq[Option[Any]]],
                     __ids: Seq[ROWID] = Nil) extends ResultSet with JDBCWrapper {
   private var isRowUpdated: Boolean = false

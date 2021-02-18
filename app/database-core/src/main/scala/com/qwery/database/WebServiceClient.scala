@@ -1,8 +1,8 @@
 package com.qwery.database
 
 import com.qwery.util.ResourceHelper._
-import net.liftweb.json.{DefaultFormats, JObject, JValue, parse}
 import org.apache.commons.io.IOUtils
+import spray.json._
 
 import java.io._
 import java.net.{HttpURLConnection, URL}
@@ -25,9 +25,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * <tr><td>Allowed in HTML forms</td> <td>No</td></tr>
    * </table>
    * @param url the web service URL
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def delete(url: String): JValue = httpXXX(method = "DELETE", url)
+  def delete(url: String): JsValue = httpXXX(method = "DELETE", url)
 
   /**
    * The HTTP DELETE request method deletes the specified resource.
@@ -41,9 +41,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url the web service URL
    * @param body the request body
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def delete(url: String, body: Array[Byte]): JValue = httpXXX(method = "DELETE", url, body, doInput = false)
+  def delete(url: String, body: Array[Byte]): JsValue = httpXXX(method = "DELETE", url, body, doInput = false)
 
   /**
    * The HTTP DELETE request method deletes the specified resource.
@@ -57,9 +57,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url  the web service URL
    * @param file the request body as a [[File file]]
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def delete(url: String, file: File): JValue = httpXXX(method = "DELETE", url, file, doInput = false)
+  def delete(url: String, file: File): JsValue = httpXXX(method = "DELETE", url, file, doInput = false)
 
   /**
    * The HTTP GET method requests a representation of the specified resource. Requests using GET should only retrieve data.
@@ -72,9 +72,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * <tr><td>Allowed in HTML forms</td> <td>Yes</td></tr>
    * </table>
    * @param url the web service URL
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def get(url: String): JValue = httpXXX(method = "GET", url)
+  def get(url: String): JsValue = httpXXX(method = "GET", url)
 
   /**
    * Downloads the resource as a byte array
@@ -109,9 +109,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * <tr><td>Allowed in HTML forms</td> <td>No</td></tr>
    * </table>
    * @param url the web service URL
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def patch(url: String): JValue = httpXXX(method = "PATCH", url)
+  def patch(url: String): JsValue = httpXXX(method = "PATCH", url)
 
   /**
    * The HTTP PATCH request method applies partial modifications to a resource.
@@ -125,9 +125,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url the web service URL
    * @param body the request body
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def patch(url: String, body: Array[Byte]): JValue = httpXXX(method = "PATCH", url, body, doInput = true)
+  def patch(url: String, body: Array[Byte]): JsValue = httpXXX(method = "PATCH", url, body, doInput = true)
 
   /**
    * The HTTP PATCH request method applies partial modifications to a resource.
@@ -141,9 +141,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url the web service URL
    * @param file the request body as a [[File file]]
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def patch(url: String, file: File): JValue = httpXXX(method = "PATCH", url, file, doInput = true)
+  def patch(url: String, file: File): JsValue = httpXXX(method = "PATCH", url, file, doInput = true)
 
   /**
    * The HTTP POST method sends data to the server.
@@ -156,9 +156,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * <tr><td>Allowed in HTML forms</td> <td>Yes</td></tr>
    * </table>
    * @param url the web service URL
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def post(url: String): JValue = httpXXX(method = "POST", url)
+  def post(url: String): JsValue = httpXXX(method = "POST", url)
 
   /**
    * The HTTP POST method sends data to the server. The type of the body of the request is indicated
@@ -173,9 +173,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url  the web service URL
    * @param body the request body
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def post(url: String, body: Array[Byte]): JValue = httpXXX(method = "POST", url, body, doInput = true)
+  def post(url: String, body: Array[Byte]): JsValue = httpXXX(method = "POST", url, body, doInput = true)
 
   /**
    * The HTTP POST method sends data to the server. The type of the body of the request is indicated
@@ -190,9 +190,9 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
    * </table>
    * @param url  the web service URL
    * @param file the request body as a [[File file]]
-   * @return the response as a [[JValue JSON value]]
+   * @return the response as a [[JsValue JSON value]]
    */
-  def post(url: String, file: File): JValue = httpXXX(method = "POST", url, file, doInput = true)
+  def post(url: String, file: File): JsValue = httpXXX(method = "POST", url, file, doInput = true)
 
   /**
    * Performs an HTTP PUT request
@@ -251,7 +251,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
     }
   }
 
-  private def httpXXX(method: String, url: String): JValue = {
+  private def httpXXX(method: String, url: String): JsValue = {
     new URL(url).openConnection() match {
       case conn: HttpURLConnection =>
         conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
@@ -263,7 +263,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
     }
   }
 
-  private def httpXXX(method: String, url: String, body: Array[Byte], doInput: Boolean): JValue = {
+  private def httpXXX(method: String, url: String, body: Array[Byte], doInput: Boolean): JsValue = {
     new URL(url).openConnection() match {
       case conn: HttpURLConnection =>
         conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
@@ -278,7 +278,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
         conn.getOutputStream.use(_.write(body))
         conn.getResponseCode match {
           case HttpURLConnection.HTTP_OK =>
-            if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JObject()
+            if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JsObject()
           case code =>
             throw new IllegalStateException(s"Server Error HTTP/$code: ${conn.getResponseMessage} [$method|$url]")
         }
@@ -287,7 +287,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
     }
   }
 
-  private def httpXXX(method: String, url: String, file: File, doInput: Boolean): JValue = {
+  private def httpXXX(method: String, url: String, file: File, doInput: Boolean): JsValue = {
     new URL(url).openConnection() match {
       case conn: HttpURLConnection =>
         conn.setConnectTimeout(connectionTimeout.toMillis.toInt)
@@ -302,7 +302,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
         new FileInputStream(file).use(in => conn.getOutputStream.use(out => IOUtils.copy(in, out)))
         conn.getResponseCode match {
           case HttpURLConnection.HTTP_OK =>
-            if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JObject()
+            if (doInput) toJSON(Source.fromInputStream(conn.getInputStream).use(_.mkString)) else JsObject()
           case code =>
             throw new IllegalStateException(s"Server Error HTTP/$code: ${conn.getResponseMessage} [$method|$url]")
         }
@@ -311,10 +311,7 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
     }
   }
 
-  private def toJSON(jsonString: String): JValue = {
-    implicit val formats: DefaultFormats = DefaultFormats
-    parse(jsonString)
-  }
+  private def toJSON(jsonString: String): JsValue = jsonString.parseJson
 
 }
 
@@ -323,13 +320,8 @@ class WebServiceClient(connectionTimeout: Duration = 5.second, readTimeout: Dura
  */
 object WebServiceClient {
 
-  final implicit class QweryResponseConversion(val response: JValue) extends AnyVal {
-
-    @inline
-    def as[T](implicit m: Manifest[T]): T = {
-      implicit val formats: DefaultFormats = DefaultFormats
-      response.extract[T]
-    }
+  final implicit class QweryResponseConversion(val response: JsValue) extends AnyVal {
+    @inline def as[T](implicit reader: JsonReader[T]): T = response.convertTo[T]
   }
 
 }

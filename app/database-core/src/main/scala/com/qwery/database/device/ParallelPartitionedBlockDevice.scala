@@ -1,6 +1,6 @@
 package com.qwery.database.device
 
-import com.qwery.database.device.BlockDevice.RowStatistics
+import com.qwery.database.models.RowStatistics
 import com.qwery.database.{BinaryRow, Column, ROWID, RowMetadata}
 
 import scala.concurrent.duration.Duration

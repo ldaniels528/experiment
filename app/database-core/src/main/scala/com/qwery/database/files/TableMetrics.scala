@@ -1,13 +1,18 @@
 package com.qwery.database.files
 
-import com.qwery.database.JSONSupport.JSONProductConversion
-import com.qwery.database.ROWID
+import com.qwery.database.{Column, ROWID}
 
 case class TableMetrics(databaseName: String,
                         tableName: String,
-                        columns: Seq[TableColumn],
+                        columns: Seq[Column],
                         physicalSize: Option[Long],
                         recordSize: Int,
-                        rows: ROWID) {
-  override def toString: String = this.toJSON
+                        rows: ROWID)
+
+object TableMetrics {
+  import com.qwery.database.models.DatabaseJsonProtocol._
+  import spray.json._
+
+  implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat6(TableMetrics.apply)
+
 }
