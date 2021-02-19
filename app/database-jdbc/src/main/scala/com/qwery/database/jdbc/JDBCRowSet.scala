@@ -1,8 +1,10 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.jdbc.JDBCRowSet.uninited
+import com.qwery.database.models.{Column, KeyValues}
+import com.qwery.database.util.Codec
 import org.slf4j.LoggerFactory
 
 import java.nio.ByteBuffer

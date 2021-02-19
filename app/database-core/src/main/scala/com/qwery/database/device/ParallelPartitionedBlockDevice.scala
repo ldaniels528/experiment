@@ -1,7 +1,7 @@
 package com.qwery.database.device
 
-import com.qwery.database.models.RowStatistics
-import com.qwery.database.{BinaryRow, Column, ROWID, RowMetadata}
+import com.qwery.database.models.{BinaryRow, Column, RowMetadata, RowStatistics}
+import com.qwery.database.{ROWID, models}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -56,7 +56,7 @@ class ParallelPartitionedBlockDevice(columns: Seq[Column],
         index = toPartitionIndex(globalOffset)
         partition = partitions(index)
         localOffset = toLocalOffset(globalOffset, index)
-      } yield Datum(partition, BinaryRow(localOffset, rmd, buf))).groupBy(_.partition).toSeq
+      } yield Datum(partition, models.BinaryRow(localOffset, rmd, buf))).groupBy(_.partition).toSeq
 
     // asynchronously write the blocks
     val outcome = Future.sequence(results map { case (partition, datum) =>

@@ -1,8 +1,9 @@
 package com.qwery.database.device
 
-import java.nio.ByteBuffer
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, RowMetadata}
 
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, ROWID, RowMetadata}
+import java.nio.ByteBuffer
+import com.qwery.database.ROWID
 
 /**
  * Hybrid Block Device

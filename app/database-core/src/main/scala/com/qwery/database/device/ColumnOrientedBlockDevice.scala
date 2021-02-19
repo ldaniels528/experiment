@@ -1,6 +1,7 @@
 package com.qwery.database.device
 
-import com.qwery.database.{Column, ROWID}
+import com.qwery.database.ROWID
+import com.qwery.database.models.Column
 
 /**
  * Column-Oriented Block Device

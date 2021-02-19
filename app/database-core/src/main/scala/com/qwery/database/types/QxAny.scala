@@ -1,7 +1,9 @@
 package com.qwery.database
 package types
 
-import com.qwery.database.ColumnTypes._
+import com.qwery.database.models.ColumnTypes._
+import com.qwery.database.models.{Column, ColumnTypes, FieldMetadata, JsValueConversion}
+import com.qwery.database.util.Codec
 import com.qwery.models.expressions.Null
 import org.apache.commons.io.IOUtils
 
@@ -112,11 +114,11 @@ sealed trait QxAny {
  * QxAny Companion
  */
 object QxAny {
-  import com.qwery.database.models.DatabaseJsonProtocol._
+  import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
 
   implicit object QxAnyJsonFormat extends JsonFormat[QxAny] {
-    override def read(value: JsValue): QxAny = QxAny(unwrap(value))
+    override def read(value: JsValue): QxAny = QxAny(value.unwrapJSON)
 
     override def write(value: QxAny): JsValue = value.value.toJson
   }
@@ -154,7 +156,7 @@ object QxAny {
    * @see [[Codec.decode]]
    */
   def decode(column: Column, buf: ByteBuffer): (FieldMetadata, QxAny) = {
-    import Codec.CodecByteBuffer
+    import com.qwery.database.util.Codec.CodecByteBuffer
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
     val value = column.metadata.`type` match {
       case ArrayType => QxArray(value = if (fmd.isNull) None else Some(Codec.decodeArray(column, buf)))

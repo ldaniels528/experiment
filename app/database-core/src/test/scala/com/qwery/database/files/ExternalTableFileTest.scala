@@ -1,6 +1,7 @@
 package com.qwery.database
 package files
 
+import com.qwery.database.models.KeyValues
 import com.qwery.models.{ColumnSpec, ExternalTable, StorageFormats}
 import com.qwery.util.ResourceHelper._
 import com.qwery.{models => mx}

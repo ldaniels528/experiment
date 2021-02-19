@@ -14,7 +14,7 @@ case class RowStatistics(active: ROWID, compressed: ROWID, deleted: ROWID, encry
 }
 
 object RowStatistics {
-  import com.qwery.database.models.DatabaseJsonProtocol._
+  import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
 
   implicit val rowStatisticsJsonFormat: RootJsonFormat[RowStatistics] = jsonFormat6(RowStatistics.apply)

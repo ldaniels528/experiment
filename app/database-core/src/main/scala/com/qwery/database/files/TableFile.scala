@@ -3,6 +3,7 @@ package files
 
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.models.{TableConfig, TableProperties}
 
 /**
  * Represents a physical table file

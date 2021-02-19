@@ -1,7 +1,8 @@
 package com.qwery.database
 package files
 
-import com.qwery.database.StockQuote.{randomDate, randomExchange, randomPrice, randomSymbol}
+import com.qwery.database.models.StockQuote.{randomDate, randomExchange, randomPrice, randomSymbol}
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, TableProperties}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -29,9 +30,9 @@ class VirtualTableFileTest extends AnyFunSpec {
         description = Some("table to test inserting records"),
         columns = Seq(
           Column.create(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column.create(name = "lastSaleTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+          Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DoubleType)),
+          Column.create(name = "lastSaleTime", comment = "the latest sale date/time", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DateType))
         ))) use { table =>
         table.truncate()
         logger.info(s"${table.tableName}: truncated - ${table.count()} records")

@@ -3,7 +3,7 @@ package jdbc
 
 import java.nio.ByteBuffer
 
-import com.qwery.database.Codec.CodecByteBuffer
+import com.qwery.database.util.Codec.CodecByteBuffer
 
 /**
  * Qwery JDBC Row ID

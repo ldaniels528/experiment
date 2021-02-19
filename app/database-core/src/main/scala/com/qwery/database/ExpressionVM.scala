@@ -1,7 +1,8 @@
 package com.qwery.database
 
-import com.qwery.database.ColumnTypes.ColumnType
+import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.functions.lookupTransformationFunction
+import com.qwery.database.models.KeyValues
 import com.qwery.database.types._
 import com.qwery.models.Invokable
 import com.qwery.models.expressions.Case.When

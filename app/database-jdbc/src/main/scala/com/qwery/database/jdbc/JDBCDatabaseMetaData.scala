@@ -1,8 +1,9 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.ColumnTypes._
+import com.qwery.database.models.ColumnTypes._
 import com.qwery.database.files.DatabaseManagementSystem
+import com.qwery.database.models.{Column, ColumnMetadata}
 
 import java.sql.{DatabaseMetaData, ResultSet, ResultSetMetaData, RowIdLifetime}
 import scala.beans.{BeanProperty, BooleanBeanProperty}

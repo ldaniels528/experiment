@@ -2,9 +2,9 @@ package com.qwery.database
 package device
 
 import java.util.Date
-
-import com.qwery.database.ColumnTypes.{DateType, DoubleType, StringType}
-//import com.qwery.database.server.DatabaseFiles._
+import com.qwery.database.models.ColumnTypes.{DateType, DoubleType, StringType}
+import com.qwery.database.models.Column
+import com.qwery.database.models.{ColumnMetadata, KeyValues, Row}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -20,9 +20,9 @@ class RowOrientedFileBlockDeviceTest extends AnyFunSpec {
     it("should read/write row data") {
       val columns = Seq(
         Column.create(name = "symbol", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
-        Column.create(name = "exchange", metadata = ColumnMetadata(`type` = StringType), maxSize = Some(8)),
-        Column.create(name = "lastSale", metadata = ColumnMetadata(`type` = DoubleType)),
-        Column.create(name = "lastSaleTime", metadata = ColumnMetadata(`type` = DateType))
+        Column.create(name = "exchange", metadata = models.ColumnMetadata(`type` = StringType), maxSize = Some(8)),
+        Column.create(name = "lastSale", metadata = models.ColumnMetadata(`type` = DoubleType)),
+        Column.create(name = "lastSaleTime", metadata = models.ColumnMetadata(`type` = DateType))
       )
 
       // get a reference to the file

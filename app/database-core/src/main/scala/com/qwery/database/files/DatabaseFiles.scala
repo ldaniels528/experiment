@@ -1,9 +1,10 @@
 package com.qwery.database.files
 
-import com.qwery.database.JSONSupport._
-import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice, TableIndexRef}
+import com.qwery.database.util.JSONSupport._
+import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
 import com.qwery.database.getServerRootDirectory
+import com.qwery.database.models.{DatabaseConfig, TableConfig, TableIndexRef}
 import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Invokable

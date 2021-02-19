@@ -1,7 +1,8 @@
 package com.qwery.database.clients
 
-import com.qwery.database.models.DatabaseJsonProtocol.unwrap
-import com.qwery.database.{KeyValues, ROWID, WebServiceClient, die}
+import com.qwery.database.models.{JsValueConversion, KeyValues}
+import com.qwery.database.util.WebServiceClient
+import com.qwery.database.{ROWID, die}
 import spray.json.JsObject
 
 import scala.util.{Failure, Success, Try}
@@ -19,7 +20,7 @@ case class MessageConsumer(host: String = "0.0.0.0", port: Int, databaseName: St
 
   def getMessage(offset: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, offset)) match {
-      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> unwrap(jv)}))
+      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> jv.unwrapJSON}))
       case js => die(s"Unexpected type returned $js")
     }
   }

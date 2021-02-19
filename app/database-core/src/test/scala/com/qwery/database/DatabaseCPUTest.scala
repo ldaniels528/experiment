@@ -1,6 +1,6 @@
 package com.qwery.database
 
-import com.qwery.database.StockQuote._
+import com.qwery.database.models.StockQuote._
 import com.qwery.database.files.DatabaseFiles
 import com.qwery.models.expressions.{Expression, Literal}
 import org.scalatest.funspec.AnyFunSpec

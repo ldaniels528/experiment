@@ -3,7 +3,7 @@ package jdbc
 
 import java.sql.ParameterMetaData
 
-import com.qwery.database.ColumnTypes.determineValueType
+import com.qwery.database.models.ColumnTypes.determineValueType
 
 /**
  * Qwery JDBC Parameter Metadata

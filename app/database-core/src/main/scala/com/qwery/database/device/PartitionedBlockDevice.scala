@@ -1,6 +1,7 @@
 package com.qwery.database.device
 
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, PartitionSizeException, ROWID, RowMetadata, createTempTable}
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, RowMetadata}
+import com.qwery.database.{PartitionSizeException, ROWID, createTempTable, models}
 
 import java.nio.ByteBuffer
 
@@ -61,7 +62,7 @@ class PartitionedBlockDevice(val columns: Seq[Column],
       index = toPartitionIndex(globalOffset)
       partition = partitions(index)
       blocks <- partition.readRows(toLocalOffset(globalOffset, index))
-        .map { case BinaryRow(_id, rmd, buf) => BinaryRow(toGlobalOffset(_id, index), rmd, buf) }
+        .map { case BinaryRow(_id, rmd, buf) => models.BinaryRow(toGlobalOffset(_id, index), rmd, buf) }
     } yield blocks
   }
 

@@ -2,8 +2,9 @@ package com.qwery.database.device
 
 import com.qwery.database.ExpressionVM.nextID
 import com.qwery.database.functions._
+import com.qwery.database.models.{Column, ColumnMetadata, Field, FieldMetadata, KeyValues, Row}
 import com.qwery.database.types.QxAny
-import com.qwery.database.{Column, ColumnMetadata, Field, FieldMetadata, KeyValues, Row, createTempTable, die}
+import com.qwery.database.{createTempTable, die, models}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicField, Condition, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
@@ -278,7 +279,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
         if (isBuiltinFunction(functionName)) {
           val fxTemplate = lookupBuiltinFunction(functionName)
           val fx = fxTemplate(fc.alias || nextID, args)
-          Seq(Column.create(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+          Seq(Column.create(name = fx.name, metadata = models.ColumnMetadata(`type` = fx.returnType)))
         }
         // is it a user-defined function?
         // TODO implement user-defined function

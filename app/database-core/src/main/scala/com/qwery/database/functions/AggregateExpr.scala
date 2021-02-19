@@ -1,6 +1,6 @@
 package com.qwery.database.functions
 
-import com.qwery.database.KeyValues
+import com.qwery.database.models.KeyValues
 
 /**
  * Represents an Aggregate Expression

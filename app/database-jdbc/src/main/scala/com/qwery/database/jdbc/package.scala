@@ -1,8 +1,9 @@
 package com.qwery.database
 
-import java.sql.Types
+import com.qwery.database.models.ColumnTypes
 
-import com.qwery.database.ColumnTypes.{BinaryType, BlobType, BooleanType, ByteType, ClobType, ColumnType, DateType, IntType, LongType, ShortType, StringType}
+import java.sql.Types
+import com.qwery.database.models.ColumnTypes.{BinaryType, BlobType, BooleanType, ByteType, ClobType, ColumnType, DateType, IntType, LongType, ShortType, StringType}
 
 package object jdbc {
   private val mapping = Map(

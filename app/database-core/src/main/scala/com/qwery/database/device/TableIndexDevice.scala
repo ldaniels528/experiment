@@ -1,10 +1,13 @@
 package com.qwery.database
 package device
 
-import com.qwery.database.ColumnTypes.IntType
-import com.qwery.database.OptionComparisonHelper.OptionComparator
+import com.qwery.database.models.ColumnTypes.IntType
+import com.qwery.database.util.OptionComparisonHelper.OptionComparator
 import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.models
+import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, KeyValues, Row, RowMetadata, TableIndexRef}
+import com.qwery.database.util.Codec
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
@@ -105,7 +108,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
   def insertRow(rowID: ROWID, newValue: Option[Any]): Unit = {
     refresh()
     isDirty = true
-    writeRow(BinaryRow(rowID, fields = Seq(toRowIDField(rowID), toIndexField(newValue))))
+    writeRow(models.BinaryRow(rowID, fields = Seq(toRowIDField(rowID), toIndexField(newValue))))
   }
 
   override def lastIndexOption: Option[ROWID] = throw UnsupportedFeature("lastIndexOption")
@@ -128,7 +131,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
       val input = source.getRow(srcRowID)
       if (input.metadata.isActive) {
         // build the data payload
-        val row = BinaryRow(dstRowID, fields = Seq(toRowIDField(srcRowID), source.readField(srcRowID, srcColumnID)))
+        val row = models.BinaryRow(dstRowID, fields = Seq(toRowIDField(srcRowID), source.readField(srcRowID, srcColumnID)))
 
         // write the index data to disk
         writeRow(row)
@@ -162,7 +165,7 @@ class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
    */
   def updateRow(rowID: ROWID, oldValue: Option[Any], newValue: Option[Any]): Unit = {
     binarySearch(oldValue) collectFirst { case row if row.getReferencedRowID.contains(rowID) =>
-      writeRow(BinaryRow(row.id, fields = Seq(toRowIDField(row.getReferencedRowID), toIndexField(newValue))))
+      writeRow(models.BinaryRow(row.id, fields = Seq(toRowIDField(row.getReferencedRowID), toIndexField(newValue))))
     } foreach (_ => isDirty = true)
   }
 

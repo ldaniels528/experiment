@@ -2,9 +2,9 @@ package com.qwery
 
 import java.io.File
 import java.nio.ByteBuffer
-
-import com.qwery.database.ColumnTypes.ColumnType
+import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.models.Column
 import org.slf4j.LoggerFactory
 
 /**
@@ -26,6 +26,9 @@ package object database {
   // row ID-related
   type ROWID = Long
   val ROWID_NAME = "__id"
+
+  // miscellaneous constants
+  val DEFAULT_DATABASE = "qwery"
 
   //////////////////////////////////////////////////////////////////////////////////////
   //  SERVER CONFIG

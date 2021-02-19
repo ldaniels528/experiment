@@ -1,6 +1,7 @@
 package com.qwery.database
 
 import com.qwery.database.Scope._
+import com.qwery.database.models.KeyValues
 import com.qwery.database.types.{QxAny, QxLong}
 
 import scala.collection.concurrent.TrieMap

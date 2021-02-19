@@ -3,9 +3,9 @@ package com.qwery.database.device
 import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
-
-import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, MathUtilsLong, ROWID, RowMetadata}
+import com.qwery.database.util.Codec.CodecByteBuffer
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, RowMetadata}
+import com.qwery.database.{MathUtilsLong, ROWID, models}
 
 import scala.language.postfixOps
 
@@ -62,7 +62,7 @@ case class ColumnOrientedFileBlockDevice(columns: Seq[Column], file: File) exten
 
   override def readRow(rowID: ROWID): BinaryRow = {
     val rmd = readRowMetaData(rowID)
-    BinaryRow(rowID, rmd, fields = rafN map { case (raf, column) =>
+    models.BinaryRow(rowID, rmd, fields = rafN map { case (raf, column) =>
       val columnBytes = new Array[Byte](column.maxPhysicalSize)
       raf.seek(toOffset(rowID, column))
       raf.read(columnBytes)

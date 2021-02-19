@@ -1,7 +1,8 @@
 package com.qwery.database
 package collections
 
-import com.qwery.database.collections.StockQuote.randomQuote
+import com.qwery.database.models.StockQuote
+import com.qwery.database.models.StockQuote.randomQuote
 import com.qwery.database.device.{BlockDevice, ColumnOrientedBlockDevice}
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory

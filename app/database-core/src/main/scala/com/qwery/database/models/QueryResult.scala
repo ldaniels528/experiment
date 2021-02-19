@@ -2,7 +2,6 @@ package com.qwery.database.models
 
 import com.qwery.database.DatabaseCPU.Solution
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.{Column, KeyValues}
 import org.slf4j.Logger
 
 case class QueryResult(databaseName: String,
@@ -29,7 +28,7 @@ case class QueryResult(databaseName: String,
 }
 
 object QueryResult {
-  import com.qwery.database.models.DatabaseJsonProtocol._
+  import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
   implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat6(QueryResult.apply)
 

@@ -1,8 +1,9 @@
 package com.qwery.database
 package collections
 
-import com.qwery.database.Codec._
+import com.qwery.database.util.Codec._
 import com.qwery.database.device._
+import com.qwery.database.models.{BinaryRow, Field, Row, RowMetadata}
 import com.qwery.util.ResourceHelper._
 
 import java.io.File

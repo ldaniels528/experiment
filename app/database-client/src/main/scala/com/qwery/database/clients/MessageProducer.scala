@@ -1,8 +1,9 @@
-package com.qwery.database.clients
+package com.qwery.database
+package clients
 
-import com.qwery.database.WebServiceClient
-import com.qwery.database.WebServiceClient.QweryResponseConversion
 import com.qwery.database.models.UpdateCount
+import com.qwery.database.util.WebServiceClient
+import com.qwery.database.util.WebServiceClient.QweryResponseConversion
 
 /**
  * Qwery Message Producer

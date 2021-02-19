@@ -1,7 +1,8 @@
 package com.qwery.database.device
 
-import com.qwery.database.files.{LoadMetrics, TableFile, TableProperties}
-import com.qwery.database.{Column, ColumnMetadata, ColumnTypes, KeyValues, time}
+import com.qwery.database.files.TableFile
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, LoadMetrics, TableIndexRef, TableProperties}
+import com.qwery.database.{models, time}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -31,9 +32,9 @@ class TableIndexDeviceTest extends AnyFunSpec {
         description = Some("index test table"),
         columns = Seq(
           Column.create(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column.create(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+          Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+          Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DoubleType)),
+          Column.create(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DateType))
         )))
 
       TableFile(databaseName, tableName).use { table =>

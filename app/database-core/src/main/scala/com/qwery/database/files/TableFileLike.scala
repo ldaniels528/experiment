@@ -2,8 +2,9 @@ package com.qwery.database
 package files
 
 import com.qwery.database.collections.PersistentSeq
-import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice, TableIndexRef}
+import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.writeTableConfig
+import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableIndexRef, TableMetrics}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._

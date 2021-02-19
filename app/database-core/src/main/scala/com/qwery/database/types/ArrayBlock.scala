@@ -1,6 +1,6 @@
 package com.qwery.database.types
 
-import com.qwery.database.ColumnTypes.ColumnType
+import com.qwery.database.models.ColumnTypes.ColumnType
 
 case class ArrayBlock(`type`: ColumnType, items: Seq[QxAny]) {
 

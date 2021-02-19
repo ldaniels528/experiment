@@ -1,7 +1,8 @@
 package com.qwery.database
 package clients
 
-import com.qwery.database.files.{TableFile, TableProperties}
+import com.qwery.database.files.TableFile
+import com.qwery.database.models
 import com.qwery.database.models._
 import com.qwery.database.server.testkit.DatabaseTestServer
 import com.qwery.util.ResourceHelper._
@@ -51,10 +52,10 @@ class DatabaseClientTest extends AnyFunSpec {
 
     it("should create a new table") {
       val columns = Seq(
-        Column.create(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-        Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-        Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-        Column.create(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.DateType))
+        Column.create(name = "symbol", comment = "the ticker symbol", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+        Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
+        Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DoubleType)),
+        Column.create(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DateType))
       )
       invoke(
         label = s"service.createTable($databaseName, $tableNameA, $columns)",

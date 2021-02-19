@@ -1,6 +1,8 @@
 package com.qwery.database
 package jdbc
 
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes}
+
 import java.sql.ResultSet
 import java.{sql, util}
 

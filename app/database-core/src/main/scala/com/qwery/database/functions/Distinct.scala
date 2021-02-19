@@ -1,7 +1,8 @@
 package com.qwery.database.functions
 
-import com.qwery.database.ColumnTypes.{ArrayType, ColumnType}
-import com.qwery.database.{KeyValues, die}
+import com.qwery.database.models.ColumnTypes.{ArrayType, ColumnType}
+import com.qwery.database.die
+import com.qwery.database.models.KeyValues
 import com.qwery.models.expressions.{BasicField, Expression}
 
 import scala.collection.mutable

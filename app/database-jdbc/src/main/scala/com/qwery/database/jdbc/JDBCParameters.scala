@@ -1,6 +1,6 @@
 package com.qwery.database.jdbc
 
-import com.qwery.database.ColumnTypes.determineValueType
+import com.qwery.database.models.ColumnTypes.determineValueType
 
 /**
  * Qwery JDBC Parameters

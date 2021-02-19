@@ -5,9 +5,9 @@ import java.io.{InputStream, Reader}
 import java.net.URL
 import java.sql.{Array => SQLArray, _}
 import java.util.Calendar
-
 import com.qwery.database.jdbc.JDBCPreparedStatement._
 import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
+import com.qwery.database.util.Codec
 
 import scala.beans.BeanProperty
 

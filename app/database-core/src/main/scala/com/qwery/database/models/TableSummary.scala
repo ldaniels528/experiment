@@ -8,7 +8,7 @@ case class TableSummary(tableName: String,
                         href: Option[String] = None)
 
 object TableSummary {
-  import com.qwery.database.models.DatabaseJsonProtocol._
+  import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
 
   implicit val tableSummaryJsonFormat: RootJsonFormat[TableSummary] = jsonFormat6(TableSummary.apply)

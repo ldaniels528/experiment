@@ -2,9 +2,9 @@ package com.qwery.database.device
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
-
-import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, OffsetOutOfRangeException, ROWID, Row, RowMetadata}
+import com.qwery.database.util.Codec.CodecByteBuffer
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, Row, RowMetadata}
+import com.qwery.database.{OffsetOutOfRangeException, ROWID, models}
 
 /**
  * Byte Array Block Device (row-oriented)
@@ -34,7 +34,7 @@ class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends 
     val bytes = new Array[Byte](recordSize)
     System.arraycopy(array, p0, bytes, 0, bytes.length)
     val buf = wrap(bytes)
-    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = Row.toFieldBuffers(buf)(this))
+    models.BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = Row.toFieldBuffers(buf)(this))
   }
 
   override def readFieldMetaData(rowID: ROWID, columnID: Int): FieldMetadata = {

@@ -1,10 +1,11 @@
 package com.qwery.database
 package files
 
-import com.qwery.database.Column.implicits._
+import com.qwery.database.models.Column.implicits._
 import com.qwery.database.device.ExternalFileBlockDevice
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.files.TableConfig.ExternalTableConfig
+import com.qwery.database.models.TableConfig.ExternalTableConfig
+import com.qwery.database.models.TableConfig
 import com.qwery.models.ExternalTable
 
 import java.io.File

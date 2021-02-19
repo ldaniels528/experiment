@@ -1,15 +1,17 @@
 package com.qwery.database
 
-import com.qwery.database.ColumnTypes.ColumnType
+import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.DatabaseCPU.implicits._
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
 import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
 import com.qwery.database.device.{BlockDevice, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.{isVirtualTable, readTableConfig}
 import com.qwery.database.files._
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, Row, TableMetrics, TableProperties}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions._
+import com.qwery.{models => mx, _}
 import com.qwery.models.{expressions => ex, _}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
@@ -97,9 +99,9 @@ class DatabaseCPU() {
     * @param tableName    the table name
     * @param rowID        the row ID
     * @param columnID     the column ID
-    * @return the [[Field field]]
+    * @return the [[models.Field field]]
     */
-  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Field = {
+  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): models.Field = {
     tableOf(databaseName, tableName).getField(rowID, columnID)
   }
 
@@ -245,7 +247,7 @@ class DatabaseCPU() {
     * Returns the columns
     * @param databaseName the database name
     * @param tableName    the table name
-    * @return the [[Column columns]]
+    * @return the [[models.Column columns]]
     */
   def getColumns(databaseName: String, tableName: String): Seq[Column] = getDevice(databaseName, tableName).columns
 
@@ -547,12 +549,12 @@ object DatabaseCPU {
       */
     final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
       @inline
-      def toColumn: Column = Column.create(
+      def toColumn: models.Column = Column.create(
         name = column.name,
         comment = column.comment.getOrElse(""),
         enumValues = column.enumValues,
         maxSize = column.spec.precision.headOption,
-        metadata = ColumnMetadata(
+        metadata = models.ColumnMetadata(
           isNullable = column.isNullable,
           `type` = lookupColumnType(column.spec.typeName)
         ))

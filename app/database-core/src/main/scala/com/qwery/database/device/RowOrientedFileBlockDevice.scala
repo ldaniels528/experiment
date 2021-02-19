@@ -1,7 +1,8 @@
 package com.qwery.database.device
 
-import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, ROWID, Row, RowMetadata}
+import com.qwery.database.util.Codec.CodecByteBuffer
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, Row, RowMetadata}
+import com.qwery.database.{ROWID, models}
 
 import java.io.{File, RandomAccessFile}
 import java.nio.ByteBuffer
@@ -47,7 +48,7 @@ class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends R
     raf.seek(toOffset(rowID))
     raf.read(payload)
     val buf = wrap(payload)
-    BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = Row.toFieldBuffers(buf)(this))
+    models.BinaryRow(id = rowID, metadata = buf.getRowMetadata, fields = Row.toFieldBuffers(buf)(this))
   }
 
   override def readRowMetaData(rowID: ROWID): RowMetadata = {

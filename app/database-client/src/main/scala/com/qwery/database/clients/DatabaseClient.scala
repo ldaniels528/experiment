@@ -1,11 +1,11 @@
 package com.qwery.database
 package clients
 
-import com.qwery.database.JSONSupport._
-import com.qwery.database.WebServiceClient._
-import com.qwery.database.files.{TableMetrics, TableProperties}
-import com.qwery.database.models.DatabaseJsonProtocol._
+import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.models._
+import com.qwery.database.util.JSONSupport._
+import com.qwery.database.util.WebServiceClient
+import com.qwery.database.util.WebServiceClient._
 import spray.json._
 
 import java.io.File
@@ -110,7 +110,7 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     */
   def findRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): Seq[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, condition, limit)) match {
-      case js: JsArray => js.elements.map(unwrap).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
+      case js: JsArray => js.elements.map(_.unwrapJSON).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
@@ -146,14 +146,14 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     */
   def getRange(databaseName: String, tableName: String, start: ROWID, length: ROWID): Seq[KeyValues] = {
     $http.get(url = s"${toRangeUrl(databaseName, tableName)}/$start/$length") match {
-      case js: JsArray => js.elements.map(unwrap).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
+      case js: JsArray => js.elements.map(_.unwrapJSON).map(m => KeyValues(m.asInstanceOf[Map[String, Any]]))
       case js => die(s"Unexpected type returned $js")
     }
   }
 
   def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, tableName, rowID)) match {
-      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> unwrap(jv)}))
+      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> jv.unwrapJSON}))
       case js => die(s"Unexpected type returned $js")
     }
   }

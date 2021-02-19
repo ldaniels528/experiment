@@ -2,6 +2,8 @@ package com.qwery.database
 package collections
 
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.models
+import com.qwery.database.models.StockQuoteWithID
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
 
@@ -19,7 +21,7 @@ class ShrinkTest extends AnyFunSpec {
       .loadTextFile(new File("./stocks.csv")) {
         _.split("[,]") match {
           case Array(symbol, exchange, price, date) =>
-            Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
+            Some(models.StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
           case _ => None
         }
       }

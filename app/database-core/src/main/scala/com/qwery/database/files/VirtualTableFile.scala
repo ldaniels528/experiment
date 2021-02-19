@@ -4,6 +4,7 @@ package files
 import com.qwery.database.DatabaseCPU.toCriteria
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.models.{Column, TableConfig}
 import com.qwery.models.{Invokable, Select, TableRef}
 
 /**

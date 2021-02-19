@@ -1,8 +1,9 @@
 package com.qwery.database
 package collections
 
-import com.qwery.database.collections.StockQuote._
 import com.qwery.database.device.BlockDevice
+import com.qwery.database.models.StockQuote.{randomURID, _}
+import com.qwery.database.models.{Field, FieldMetadata, GenericData, StockQuote, StockQuoteWithID}
 import com.qwery.database.types.QxString
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -159,7 +160,7 @@ class PersistentSeqTest extends AnyFunSpec {
         newCollection[StockQuoteWithID](partitionSize = 10).loadTextFile(new File("./stocks.csv")) {
           _.split("[,]") match {
             case Array(symbol, exchange, price, date) =>
-              Some(StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
+              Some(models.StockQuoteWithID(symbol, exchange, price.toDouble, date.toLong))
             case _ => None
           }
         }

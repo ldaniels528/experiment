@@ -1,7 +1,8 @@
 package com.qwery.database.functions
 
-import com.qwery.database.ColumnTypes.{ColumnType, IntType}
-import com.qwery.database.{KeyValues, die}
+import com.qwery.database.models.ColumnTypes.{ColumnType, IntType}
+import com.qwery.database.die
+import com.qwery.database.models.KeyValues
 import com.qwery.models.expressions.{AllFields, BasicField, Expression}
 
 /**

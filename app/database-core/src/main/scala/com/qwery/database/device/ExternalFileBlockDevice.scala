@@ -2,9 +2,8 @@ package com.qwery.database.device
 
 import com.qwery.database.device.ExternalFileBlockDevice.DelimitedTextEnrichment
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
-import com.qwery.database.files.TableConfig
-import com.qwery.database.models.DatabaseJsonProtocol.unwrap
-import com.qwery.database.{BinaryRow, Column, FieldMetadata, KeyValues, ROWID, RecursiveFileList, RowMetadata, die}
+import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
+import com.qwery.database.{ROWID, RecursiveFileList, die}
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -109,7 +108,7 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
         val values = line.delimitedSplit(',')
         KeyValues(columns.map(_.name) zip values: _*)
       case "JSON" =>
-        unwrap(line.parseJson) match {
+        line.parseJson.unwrapJSON match {
           case m: Map[String, Any] => KeyValues(m)
           case other => die(s"JSON object expected '$other'")
         }

@@ -1,11 +1,13 @@
 package com.qwery.database
 package device
 
-import com.qwery.database.Codec.CodecByteBuffer
-import com.qwery.database.KeyValues.isSatisfied
-import com.qwery.database.OptionComparisonHelper.OptionComparator
-import com.qwery.database.models.RowStatistics
+import com.qwery.database.util.Codec.CodecByteBuffer
+import com.qwery.database.util.OptionComparisonHelper.OptionComparator
+import com.qwery.database.models
+import com.qwery.database.models.KeyValues.isSatisfied
+import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, ColumnTypes, Field, FieldMetadata, KeyValues, Row, RowMetadata, RowStatistics}
 import com.qwery.database.types._
+import com.qwery.database.util.Codec
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -198,7 +200,7 @@ trait BlockDevice {
     val column = columns(columnID)
     val buf = readField(rowID, columnID)
     val (fmd, value_?) = QxAny.decode(column, buf)
-    Field(name = column.name, fmd, typedValue = value_?)
+    models.Field(name = column.name, fmd, typedValue = value_?)
   }
 
   def getKeyValues(rowID: ROWID): Option[KeyValues] = KeyValues(buf = readRowAsBinary(rowID))(this)
@@ -207,7 +209,7 @@ trait BlockDevice {
 
   def getRow(rowID: ROWID): Row = {
     val buf = readRowAsBinary(rowID)
-    Row(rowID, metadata = buf.getRowMetadata, fields = Row.toFields(buf)(this))
+    models.Row(rowID, metadata = buf.getRowMetadata, fields = Row.toFields(buf)(this))
   }
 
   def getRowStatistics: RowStatistics = {
@@ -470,7 +472,7 @@ object BlockDevice {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column.create(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = ColumnMetadata(
+      Column.create(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = models.ColumnMetadata(
         `type` = `type`,
         isCompressed = ci.exists(_.isCompressed),
         isEncrypted = ci.exists(_.isEncrypted),
