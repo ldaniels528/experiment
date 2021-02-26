@@ -102,12 +102,16 @@ case class ExternalFileBlockDevice(ref: TableRef, config: TableConfig) extends B
   }
 
   private def parseText(line: String): KeyValues = {
-    import spray.json._
     format.toUpperCase match {
       case "CSV" =>
         val values = line.delimitedSplit(',')
-        KeyValues(columns.map(_.name) zip values: _*)
+        val pairs = columns.map(_.name) zip values flatMap {
+          case (_, s) if nullValue.contains(s) => None
+          case x => Some(x)
+        }
+        KeyValues(pairs: _*)
       case "JSON" =>
+        import spray.json._
         line.parseJson.unwrapJSON match {
           case m: Map[String, Any] => KeyValues(m)
           case other => die(s"JSON object expected '$other'")

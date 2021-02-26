@@ -67,12 +67,13 @@ class DatabaseClientTest extends AnyFunSpec {
         XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
         XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
       )
+      val table = Table(
+        ref = new TableRef(databaseName, schemaName, tableNameA),
+        columns = columns,
+        description = Some("API created table"))
       invoke(
-        label = s"service.createTable($databaseName, $schemaName, $tableNameA, $columns)",
-        block = service.createTable(databaseName, schemaName, tableNameA, Table(
-          ref = new TableRef(databaseName, schemaName, tableNameA),
-          columns = columns,
-          description = Some("API created table")))
+        label = s"service.createTable($databaseName, $schemaName, $table)",
+        block = service.createTable(databaseName, schemaName, table)
       )
     }
 

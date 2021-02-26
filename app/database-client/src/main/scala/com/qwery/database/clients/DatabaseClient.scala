@@ -13,10 +13,10 @@ import java.io.File
 import java.net.URLEncoder
 
 /**
- * Qwery Database Client
- * @param host the remote hostname
- * @param port the remote port
- */
+  * Qwery Database Client
+  * @param host the remote hostname
+  * @param port the remote port
+  */
 case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   private val charSetName = "utf-8"
   private val $http = new WebServiceClient()
@@ -36,12 +36,11 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   /**
     * Creates a new table
     * @param databaseName the database name
-    * @param tableName    the table name
-    * @param table   the [[Table table properties]]
+    * @param table        the [[Table table properties]]
     * @return the [[UpdateCount update count]]
     */
-  def createTable(databaseName: String, schemaName: String, tableName: String, table: Table): UpdateCount = {
-    $http.put(toUrl(databaseName, schemaName, tableName), table.toJSON.getBytes(charSetName))
+  def createTable(databaseName: String, schemaName: String, table: Table): UpdateCount = {
+    $http.post(toUrl(databaseName, schemaName), table.toJSON.getBytes(charSetName))
     UpdateCount(count = 1, __id = None)
   }
 
@@ -154,7 +153,7 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
 
   def getRow(databaseName: String, schemaName: String, tableName: String, rowID: ROWID): Option[KeyValues] = {
     $http.get(toUrl(databaseName, schemaName, tableName, rowID)) match {
-      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> jv.unwrapJSON}))
+      case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> jv.unwrapJSON }))
       case js => die(s"Unexpected type returned $js")
     }
   }
@@ -237,6 +236,8 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   }
 
   private def toUrl(databaseName: String): String = s"http://$host:$port/d/$databaseName"
+
+  private def toUrl(databaseName: String, schemaName: String): String = s"http://$host:$port/d/$databaseName/$schemaName"
 
   private def toUrl(databaseName: String, schemaName: String, tableName: String): String = {
     s"http://$host:$port/d/$databaseName/$schemaName/$tableName"

@@ -343,7 +343,7 @@ object Codec extends Compression {
     @inline
     def getText(implicit fmd: FieldMetadata): String = {
       val length = buf.getShort
-      assert(length > 0, "Length must be positive")
+      assert(length >= 0, "Length must be positive")
       val bytes = new Array[Byte](length)
       buf.get(bytes)
       new String(bytes.decompressOrNah)

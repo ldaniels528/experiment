@@ -64,7 +64,6 @@ class SQLTemplateParserTest extends AnyFunSpec {
     }
 
     it("should parse location tags (%L)") {
-      verify(text = "LOCATION '/temp/assets/csv/'", template = "%L:location")(SQLTemplateParams(locations = Map("location" -> LocationRef("/temp/assets/csv/"))))
       verify(text = "TABLE assets", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("assets"))))
       verify(text = "TABLE `the assets`", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("the assets"))))
       verify(text = "assets", template = "%L:table")(SQLTemplateParams(locations = Map("table" -> Table("assets"))))

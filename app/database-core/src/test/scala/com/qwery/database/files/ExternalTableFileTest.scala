@@ -49,7 +49,7 @@ class ExternalTableFileTest extends AnyFunSpec {
         assert(row.map(_.toKeyValues.toMap) contains Map(
           "__id" -> rowID, "Sector" -> "Health Care", "Name" -> "American Shared Hospital Services",
           "SummaryQuote" -> "https://www.nasdaq.com/symbol/ams", "Industry" -> "Medical Specialities",
-          "Symbol" -> "AMS", "IPOyear" -> "n/a", "LastSale" -> "3.05", "MarketCap" -> "$17.43M"
+          "Symbol" -> "AMS", "LastSale" -> "3.05", "MarketCap" -> "$17.43M"
         ))
       }
     }
@@ -62,7 +62,7 @@ class ExternalTableFileTest extends AnyFunSpec {
           "Symbol" -> "AMS", "IPOyear" -> "n/a", "LastSale" -> "3.05", "MarketCap" -> "$17.43M"
         )))
         info(s"outcome: $outcome")
-        assert(outcome.isFailure && outcome.failed.get.getMessage == s"Table `$databaseName.$schemaName.$tableName` is read-only")
+        assert(outcome.isFailure && outcome.failed.get.getMessage == s"Table $databaseName.$schemaName.$tableName is read-only")
       }
     }
 

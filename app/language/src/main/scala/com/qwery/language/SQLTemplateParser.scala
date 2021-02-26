@@ -470,12 +470,11 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "query")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractLocationOrTable(name: String) = Try {
+  private def extractLocationOrTable(name: String): Try[SQLTemplateParams] = Try {
     val location: Location = stream match {
       case ts if ts nextIf "LOCATION" =>
         ts match {
           case _ts if _ts nextIf "@" => VariableLocationRef(@@(_ts.next().text))
-          case _ts if _ts.isQuoted => LocationRef(_ts.next().text)
           case _ts => _ts.die("expected a variable or string literal representing a location path")
         }
       case ts if ts nextIf "TABLE" =>

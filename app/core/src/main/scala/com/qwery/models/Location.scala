@@ -10,12 +10,6 @@ import com.qwery.models.expressions.LocalVariableRef
 sealed trait Location extends Queryable with Aliasable
 
 /**
-  * Represents the location path (e.g. '/securities/nasdaq')
-  * @param path the given location path
-  */
-case class LocationRef(path: String) extends Location
-
-/**
   * Represents a reference to a [[Table table]]
   * @param databaseName the optional name of the database
   * @param schemaName   the optional name of the schema
@@ -34,10 +28,10 @@ case class TableRef(databaseName: Option[String], schemaName: Option[String], ta
   override def toString: String = toSQL
 
   def toSQL: String = {
-    val sb = new StringBuilder().append("`")
+    val sb = new StringBuilder()
     databaseName.foreach(name => sb.append(name).append('.'))
     schemaName.foreach(name => sb.append(name).append('.'))
-    sb.append(tableName).append("`").toString()
+    sb.append(tableName).toString()
   }
 
   def withDatabase(databaseName: String): TableRef = this.copy(databaseName = Option(databaseName))

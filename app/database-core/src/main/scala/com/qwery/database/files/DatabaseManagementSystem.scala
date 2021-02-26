@@ -47,7 +47,11 @@ object DatabaseManagementSystem {
               Try(readTableConfig(table)).toOption map { config =>
                 val dataFile = getTableDataFile(table)
                 val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
-                TableSummary(tableName, schemaName, tableType = if (config.isColumnar) COLUMNAR_TABLE else TABLE, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
+                val tableType =
+                  if (config.isColumnar) COLUMNAR_TABLE
+                  else if (config.externalTable.nonEmpty) LOGICAL_TABLE
+                  else TABLE
+                TableSummary(tableName, schemaName, tableType, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
               }
             }
             // is it a view table?
