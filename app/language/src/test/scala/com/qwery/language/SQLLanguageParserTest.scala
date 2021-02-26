@@ -43,7 +43,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support CREATE FUNCTION statements") {
       val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
-      assert(results == Create(UserDefinedFunction(name = "myFunc", `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
+      assert(results == Create(UserDefinedFunction(ref = TableRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
     }
 
     it("should support CREATE INDEX statements") {
@@ -51,9 +51,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
         """|CREATE INDEX stocks_symbol ON stocks (symbol)
            |""".stripMargin)
       assert(results == Create(TableIndex(
-        name = "stocks_symbol",
+        ref = TableRef.parse("stocks_symbol"),
         columns = List("symbol").map(Field.apply),
-        table = TableRef("stocks"),
+        table = TableRef.parse("stocks"),
         ifNotExists = false
       )))
     }
@@ -64,7 +64,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
            |""".stripMargin)
       assert(results == Create(InlineTable(
-        name = "SpecialSecurities",
+        ref = TableRef.parse("SpecialSecurities"),
         columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
         values = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
       )))
@@ -79,7 +79,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |    WHERE Industry = @industry
            |  )
            |""".stripMargin)
-      assert(results == Create(Procedure(name = "testInserts",
+      assert(results == Create(Procedure(ref = TableRef.parse("testInserts"),
         params = List("industry STRING").map(Column.apply),
         code = Return(Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
@@ -96,10 +96,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |STORED AS INPUTFORMAT 'JSON' OUTPUTFORMAT 'JSON'
            |LOCATION './dataSets/customers/json/'
            |""".stripMargin)
-      assert(results2 == Create(ExternalTable(name = "Customers",
+      assert(results2 == Create(ExternalTable(
+        ref = TableRef.parse("Customers"),
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
-        format = StorageFormats.JSON,
+        format = "json",
         location = Some("./dataSets/customers/json/")
       )))
     }
@@ -108,7 +109,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       val results = SQLLanguageParser.parse(
         """|CREATE COLUMNAR TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |""".stripMargin)
-      assert(results == Create(Table(name = "Customers", isColumnar = true, isPartitioned = false,
+      assert(results == Create(Table(ref = TableRef.parse("Customers"), isColumnar = true,
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply)
       )))
     }
@@ -130,7 +131,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(ExternalTable(name = "Customers", description = Some("Customer information"),
+      assert(results == Create(ExternalTable(ref = TableRef.parse("Customers"), description = Some("Customer information"),
         columns = List(
           Column("customer_uid UUID").withComment("Unique Customer ID"),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
@@ -139,7 +140,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        format = StorageFormats.CSV,
+        format = "csv",
         location = Some("./dataSets/customers/csv/")
       )))
     }
@@ -150,15 +151,15 @@ class SQLLanguageParserTest extends AnyFunSpec {
             |  symbol STRING,
             |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC'),
             |  lastSale DOUBLE,
-            |  lastTradeTime DATE
+            |  lastSaleTime DATE
             |)
             |""".stripMargin
       )
-      assert(results == Create(Table(name = "Stocks",
-        isColumnar = false, isPartitioned = false,
+      assert(results == Create(Table(
+        ref = TableRef.parse("Stocks"),
         columns = List(
           Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
-          Column("lastSale DOUBLE"), Column("lastTradeTime DATE"))
+          Column("lastSale DOUBLE"), Column("lastSaleTime DATE"))
       )))
     }
 
@@ -173,13 +174,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(ExternalTable(name = "Customers",
+      assert(results == Create(ExternalTable(
+        ref = TableRef.parse("Customers"),
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        format = StorageFormats.CSV,
+        format = "csv",
         location = Some("./dataSets/customers/csv/")
       )))
     }
@@ -202,15 +204,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  'quoteChar'='\"',
            |  'separatorChar'=',')
            |STORED AS INPUTFORMAT
-           |  'org.apache.hadoop.mapred.TextInputFormat'
-           |OUTPUTFORMAT
-           |  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+           |  'csv'
            |LOCATION
            |  's3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page'
            |TBLPROPERTIES (
            |  'transient_lastDdlTime'='1555400098')
            |""".stripMargin)
-      assert(results == Create(ExternalTable(name = "kbb_mart.kbb_rev_per_page",
+      assert(results == Create(ExternalTable(
+        ref = TableRef.parse("kbb_mart.kbb_rev_per_page"),
         columns = List(
           Column("rank string"),
           Column("section string"),
@@ -220,7 +221,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
           Column("last_processed_ts_est string")
         ).map(_.withComment("from deserializer")),
         partitionBy = List(Column("hit_dt_est string"), Column("site_experience_desc string")),
-        format = StorageFormats.CSV,
+        format = "csv",
         location = Some("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),
         serdeProperties = Map("quoteChar" -> "\\\"", "separatorChar" -> ","),
         tableProperties = Map("transient_lastDdlTime" -> "1555400098")
@@ -233,7 +234,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
            |""".stripMargin)
       assert(results == Create(UserDefinedFunction(
-        name = "myFunc",
+        ref = TableRef.parse("myFunc"),
         `class` = "com.qwery.udf.MyFunc",
         jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
       )))
@@ -244,7 +245,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
            |""".stripMargin
       )
-      assert(results == Create(TypeAsEnum(name = "mood", values = Seq("sad", "ok", "happy"))))
+      assert(results == Create(TypeAsEnum(ref = TableRef.parse("mood"), values = Seq("sad", "ok", "happy"))))
     }
 
     it("should support CREATE VIEW statements") {
@@ -254,7 +255,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == Create(View(name = "OilAndGas", ifNotExists = true,
+      assert(results == Create(View(ref = TableRef.parse("OilAndGas"), ifNotExists = true,
         query = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
@@ -271,7 +272,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == Create(View(name = "OilAndGas", description = Some("AMEX Stock symbols sorted by last sale"), ifNotExists = true,
+      assert(results == Create(View(ref = TableRef.parse("OilAndGas"), description = Some("AMEX Stock symbols sorted by last sale"), ifNotExists = true,
         query = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
@@ -400,23 +401,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support INSERT-INTO-LOCATION-SELECT statements") {
-      val results = SQLLanguageParser.parse(
-        """|INSERT INTO LOCATION '/dir/subdir' (Symbol, Name, Sector, Industry, LastSale)
-           |SELECT Symbol, Name, Sector, Industry, LastSale
-           |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'
-           |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
-      assert(results == Insert(Into(LocationRef("/dir/subdir")),
-        Select(
-          fields = fields,
-          from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
-        fields = fields
-      ))
-    }
-
     it("should support INSERT-OVERWRITE-SELECT statements") {
       val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
@@ -447,23 +431,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
           List("AMD", "American Micro Devices, Inc.", "Technology", "Computers", 22.33)
         )),
         fields = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
-      ))
-    }
-
-    it("should support INSERT-OVERWRITE-LOCATION-SELECT statements") {
-      val results = SQLLanguageParser.parse(
-        """|INSERT OVERWRITE LOCATION '/dir/subdir' (Symbol, Name, Sector, Industry, LastSale)
-           |SELECT Symbol, Name, Sector, Industry, LastSale
-           |FROM Securities
-           |WHERE Industry = 'Oil/Gas Transmission'
-           |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
-      assert(results == Insert(Overwrite(LocationRef("/dir/subdir")),
-        Select(
-          fields = fields,
-          from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
-        fields = fields
       ))
     }
 
@@ -941,7 +908,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support TRUNCATE statements") {
       val results = SQLLanguageParser.parse("TRUNCATE stocks")
-      assert(results == Truncate(table = TableRef("stocks")))
+      assert(results == Truncate(table = TableRef.parse("stocks")))
     }
 
     it("should support UPDATE statements") {

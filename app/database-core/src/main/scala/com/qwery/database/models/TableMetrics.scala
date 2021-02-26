@@ -1,9 +1,9 @@
 package com.qwery.database.models
 
 import com.qwery.database.ROWID
+import com.qwery.models.TableRef
 
-case class TableMetrics(databaseName: String,
-                        tableName: String,
+case class TableMetrics(ref: TableRef,
                         columns: Seq[Column],
                         physicalSize: Option[Long],
                         recordSize: Int,
@@ -13,6 +13,6 @@ object TableMetrics {
   import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
 
-  implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat6(TableMetrics.apply)
+  implicit val tableMetricsJsonFormat: RootJsonFormat[TableMetrics] = jsonFormat5(TableMetrics.apply)
 
 }

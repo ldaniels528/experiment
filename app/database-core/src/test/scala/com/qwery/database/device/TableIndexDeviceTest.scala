@@ -1,8 +1,9 @@
 package com.qwery.database.device
 
 import com.qwery.database.files.TableFile
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, LoadMetrics, TableIndexRef, TableProperties}
-import com.qwery.database.{models, time}
+import com.qwery.database.models.{KeyValues, LoadMetrics, TableIndexRef}
+import com.qwery.database.time
+import com.qwery.models.{ColumnSpec, Table, TableRef, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -11,43 +12,46 @@ import java.io.File
 import java.util.Date
 
 /**
- * Table Index Device Test Suite
- * @author lawrence.daniels@gmail.com
- */
+  * Table Index Device Test Suite
+  * @author lawrence.daniels@gmail.com
+  */
 class TableIndexDeviceTest extends AnyFunSpec {
   private lazy val logger = LoggerFactory.getLogger(getClass)
 
   val databaseName = "test"
   val tableName = "stocks_idx_test"
+  val schemaName = "stocks"
   val indexColumn = "symbol"
+  val tableRef = new TableRef(databaseName, schemaName, tableName)
 
   describe(classOf[TableIndexDevice].getName) {
 
     it("should create and index a table") {
       // drop the previous table (if it exists)
-      TableFile.dropTable(databaseName, tableName, ifExists = true)
+      TableFile.dropTable(tableRef, ifExists = true)
 
       // create the table
-      TableFile.createTable(databaseName, tableName, ref = TableProperties.create(
+      TableFile.createTable(databaseName, table = Table(
+        ref = tableRef,
         description = Some("index test table"),
-        columns = Seq(
-          Column.create(name = "symbol", comment = "the ticker symbol", enumValues = Nil, ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "exchange", comment = "the stock exchange", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.StringType), maxSize = Some(8)),
-          Column.create(name = "lastSale", comment = "the latest sale price", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DoubleType)),
-          Column.create(name = "lastTradeTime", comment = "the latest sale date/time", enumValues = Nil, models.ColumnMetadata(`type` = ColumnTypes.DateType))
+        columns = List(
+          XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "String", precision = List(8))),
+          XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "String", precision = List(8))),
+          XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
+          XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
         )))
 
-      TableFile(databaseName, tableName).use { table =>
+      TableFile(tableRef).use { table =>
         // create the table index
-        val indexDevice = table.createIndex(indexColumn)
+        val indexDevice = table.createIndex(tableRef, indexColumn)
 
         // create some records
-        table.insertRow(makeRow(symbol = "AAPL", exchange = "NASDAQ", lastSale = 275.88, lastTradeTime = new Date()))
-        table.insertRow(makeRow(symbol = "MSFT", exchange = "NASDAQ", lastSale = 78.45, lastTradeTime = new Date()))
-        table.insertRow(makeRow(symbol = "GE", exchange = "NASDAQ", lastSale = 43.55, lastTradeTime = new Date()))
-        table.insertRow(makeRow(symbol = "AMD", exchange = "NASDAQ", lastSale = 67.11, lastTradeTime = new Date()))
-        table.insertRow(makeRow(symbol = "IBM", exchange = "NASDAQ", lastSale = 275.88, lastTradeTime = new Date()))
-        table.insertRow(makeRow(symbol = "TWTR", exchange = "NASDAQ", lastSale = 98.17, lastTradeTime = new Date()))
+        table.insertRow(makeRow(symbol = "AAPL", exchange = "NASDAQ", lastSale = 275.88, lastSaleTime = new Date()))
+        table.insertRow(makeRow(symbol = "MSFT", exchange = "NASDAQ", lastSale = 78.45, lastSaleTime = new Date()))
+        table.insertRow(makeRow(symbol = "GE", exchange = "NASDAQ", lastSale = 43.55, lastSaleTime = new Date()))
+        table.insertRow(makeRow(symbol = "AMD", exchange = "NASDAQ", lastSale = 67.11, lastSaleTime = new Date()))
+        table.insertRow(makeRow(symbol = "IBM", exchange = "NASDAQ", lastSale = 275.88, lastSaleTime = new Date()))
+        table.insertRow(makeRow(symbol = "TWTR", exchange = "NASDAQ", lastSale = 98.17, lastSaleTime = new Date()))
 
         // show the contents of the index
         indexDevice.rebuild()(table.device)
@@ -63,23 +67,23 @@ class TableIndexDeviceTest extends AnyFunSpec {
     }
 
     it("should update the index when updating a record") {
-      TableFile(databaseName, tableName).use { table =>
+      TableFile(tableRef).use { table =>
         // update some rows
         val (count, updateTime) = time(table.updateRows(values = KeyValues("symbol" -> "AMDX"), condition = KeyValues("symbol" -> "AMD")))
         logger.info(f"Updated $count rows via index in $updateTime%.2f msec")
 
-        val indexDevice = TableIndexDevice(TableIndexRef(databaseName, tableName, indexColumn))
+        val indexDevice = TableIndexDevice(TableIndexRef(tableRef, indexColumn))
         dump(indexDevice)
       }
     }
 
     it("should update the index when deleting a record") {
-      TableFile(databaseName, tableName).use { table =>
+      TableFile(tableRef).use { table =>
         // update some rows
         val (count, updateTime) = time(table.deleteRows(condition = KeyValues("symbol" -> "AMDX")))
         logger.info(f"Deleted $count rows via index in $updateTime%.2f msec")
 
-        val indexDevice = TableIndexDevice(TableIndexRef(databaseName, tableName, indexColumn))
+        val indexDevice = TableIndexDevice(TableIndexRef(tableRef, indexColumn))
         dump(indexDevice)
       }
     }
@@ -87,10 +91,10 @@ class TableIndexDeviceTest extends AnyFunSpec {
   }
 
   def copyInto(databaseName: String, tableName: String, file: File): LoadMetrics = {
-    TableFile(databaseName, tableName) use { table =>
+    TableFile(tableRef) use { table =>
       val metrics = table.ingestTextFile(file)(_.split("[,]") match {
         case Array(symbol, exchange, price, date) =>
-          Option(KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastTradeTime" -> new Date(date.toLong)))
+          Option(KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastSaleTime" -> new Date(date.toLong)))
         case _ => None
       })
       logger.info(s"metrics: $metrics")
@@ -106,8 +110,8 @@ class TableIndexDeviceTest extends AnyFunSpec {
     logger.info("")
   }
 
-  def makeRow(symbol: String, exchange: String, lastSale: Double, lastTradeTime: Date): KeyValues = {
-    KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastTradeTime" -> lastTradeTime)
+  def makeRow(symbol: String, exchange: String, lastSale: Double, lastSaleTime: Date): KeyValues = {
+    KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> lastSale, "lastSaleTime" -> lastSaleTime)
   }
 
 }

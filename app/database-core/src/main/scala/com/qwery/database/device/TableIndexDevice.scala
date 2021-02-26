@@ -1,13 +1,14 @@
 package com.qwery.database
 package device
 
-import com.qwery.database.models.ColumnTypes.IntType
-import com.qwery.database.util.OptionComparisonHelper.OptionComparator
 import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.models
+import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
+import com.qwery.database.models.ColumnTypes.IntType
 import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, KeyValues, Row, RowMetadata, TableIndexRef}
 import com.qwery.database.util.Codec
+import com.qwery.database.util.OptionComparisonHelper.OptionComparator
+import com.qwery.util.OptionHelper.OptionEnrichment
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
@@ -194,14 +195,14 @@ object TableIndexDevice {
 
   /**
    * Retrieves the table index by reference
-   * @param ref the [[TableIndexRef table index reference]]
+   * @param tableIndexRef the [[TableIndexRef table index reference]]
    * @return the [[TableIndexDevice table index]]
    */
-  def apply(ref: TableIndexRef): TableIndexDevice = {
-    val tableConfig = readTableConfig(ref.databaseName, ref.tableName)
-    val indexColumn = tableConfig.columns.find(_.name == ref.indexColumnName)
-      .getOrElse(throw ColumnNotFoundException(ref.tableName, ref.indexColumnName))
-    new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn))
+  def apply(tableIndexRef: TableIndexRef): TableIndexDevice = {
+    val tableConfig = readTableConfig(tableIndexRef.ref)
+    val indexColumn = tableConfig.columns.find(_.name == tableIndexRef.indexColumnName)
+      .getOrElse(throw ColumnNotFoundException(tableIndexRef.ref, tableIndexRef.indexColumnName))
+    new TableIndexDevice(tableIndexRef, columns = Seq(rowIDColumn, indexColumn))
   }
 
   /**
@@ -243,13 +244,13 @@ object TableIndexDevice {
   //  TABLE INDEX CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getTableIndexFile(databaseName: String, tableName: String, indexColumnName: String): File = {
-    val indexFileName = s"${tableName}_$indexColumnName.qdb"
-    new File(new File(new File(getServerRootDirectory, databaseName), tableName), indexFileName)
+  def getTableIndexFile(tableIndexRef: TableIndexRef, indexColumnName: String): File = {
+    val indexFileName = s"${tableIndexRef.ref.tableName}_$indexColumnName.qdb"
+    val databaseName = tableIndexRef.ref.databaseName || DEFAULT_DATABASE
+    val schemaName = tableIndexRef.ref.schemaName || DEFAULT_SCHEMA
+    getServerRootDirectory / databaseName / schemaName / tableIndexRef.ref.tableName / indexFileName
   }
 
-  def getTableIndexFile(ref: TableIndexRef): File = {
-    getTableIndexFile(ref.databaseName, ref.tableName, ref.indexColumnName)
-  }
+  def getTableIndexFile(tableIndexRef: TableIndexRef): File = getTableIndexFile(tableIndexRef, tableIndexRef.indexColumnName)
 
 }

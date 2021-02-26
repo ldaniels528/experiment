@@ -28,7 +28,7 @@ class JDBCConnection(val client: DatabaseClient, url: String) extends Connection
   @BeanProperty var clientInfo: java.util.Properties = new java.util.Properties()
   @BeanProperty var holdability: Int = ResultSet.HOLD_CURSORS_OVER_COMMIT
   @BooleanBeanProperty var readOnly: Boolean = false
-  @BeanProperty var schema: String = _
+  @BeanProperty var schema: String = DEFAULT_SCHEMA
   @BeanProperty var transactionIsolation: Int = Connection.TRANSACTION_NONE
   @BeanProperty var typeMap: java.util.Map[String, Class[_]] = new java.util.HashMap()
 

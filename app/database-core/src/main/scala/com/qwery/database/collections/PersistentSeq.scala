@@ -1,9 +1,11 @@
 package com.qwery.database
 package collections
 
-import com.qwery.database.util.Codec._
 import com.qwery.database.device._
+import com.qwery.database.files.DatabaseFiles
 import com.qwery.database.models.{BinaryRow, Field, Row, RowMetadata}
+import com.qwery.database.util.Codec._
+import com.qwery.models.TableRef
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -423,14 +425,14 @@ class PersistentSeq[T <: Product](val device: BlockDevice, `class`: Class[T]) ex
 object PersistentSeq {
 
   /**
-   * Creates a new persistent sequence implementation
+   * Creates a persistent sequence implementation
    * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](): PersistentSeq[A] = apply[A](BlockDevice.builder.withRowModel[A])
 
   /**
-    * Creates a new persistent sequence implementation
+    * Creates a persistent sequence implementation
     * @tparam A the [[Product product type]]
     * @param builder the [[BlockDevice.Builder device builder]]
     * @return a new [[PersistentSeq persistent sequence]]
@@ -442,13 +444,30 @@ object PersistentSeq {
   }
 
   /**
-   * Creates a new disk-based sequence implementation
+   * Creates a disk-based sequence implementation
    * @param persistenceFile the persistence [[File file]]
    * @tparam A the [[Product product type]]
    * @return a new [[PersistentSeq persistent sequence]]
    */
   def apply[A <: Product : ClassTag](persistenceFile: File): PersistentSeq[A] = {
     apply[A](BlockDevice.builder.withRowModel[A].withPersistenceFile(persistenceFile))
+  }
+
+  /**
+    * Creates a table-based sequence implementation
+    * @param databaseName the name of the database
+    * @param tableName    the name of the table
+    * @tparam A the [[Product product type]]
+    * @return a new [[PersistentSeq persistent sequence]]
+    */
+  def apply[A <: Product : ClassTag](ref: TableRef): PersistentSeq[A] = {
+    val (config, device) = DatabaseFiles.getTableDevice(ref)
+    val (columns, _class) = BlockDevice.toColumns[A]
+    val deviceColumns = config.columns.map(c => c.name -> c.metadata.`type`)
+    val productColumns = columns.map(c => c.name -> c.metadata.`type`)
+    val missingColumns = deviceColumns.collect { case t@(name, _type) if !productColumns.contains(t) => name + ':' + _type }
+    assert(missingColumns.isEmpty, s"Class ${_class.getName} does not contain columns: ${missingColumns.mkString(", ")}")
+    new PersistentSeq[A](device, _class)
   }
 
 }

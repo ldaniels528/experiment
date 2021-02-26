@@ -12,6 +12,7 @@ class MessageProducerConsumerTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val port = 12117
   private val databaseName = "test"
+  private val schemaName = "public"
   private val tableName = "messaging_client_test"
 
   // start the server
@@ -20,13 +21,13 @@ class MessageProducerConsumerTest extends AnyFunSpec {
   // create the clients
   private val databaseClient = DatabaseClient(port = port)
   private val messageProducer = MessageProducer(port = port)
-  private val messageConsumer = MessageConsumer(port = port, databaseName = databaseName, tableName = tableName)
+  private val messageConsumer = MessageConsumer(port = port, databaseName = databaseName, schemaName = schemaName, tableName = tableName)
 
   describe(classOf[DatabaseClient].getSimpleName) {
 
     it("should create a new table on the server") {
       // drop the table
-      databaseClient.dropTable(databaseName, tableName, ifExists = true)
+      databaseClient.dropTable(databaseName, schemaName, tableName, ifExists = true)
 
       // create the table
       databaseClient.executeQuery(databaseName,
@@ -44,10 +45,10 @@ class MessageProducerConsumerTest extends AnyFunSpec {
   describe(classOf[MessageProducer].getSimpleName) {
 
     it("should append messages to a table on the server") {
-      val message =  s"""{"symbol":"AAPL", "exchange":"NYSE", "lastSale":900, "lastSaleTime":1611772605427}"""
+      val message = s"""{"symbol":"AAPL", "exchange":"NYSE", "lastSale":900, "lastSaleTime":1611772605427}"""
       logger.info(s"message: $message")
 
-      val response = messageProducer.send(databaseName, tableName, message)
+      val response = messageProducer.send(databaseName, schemaName, tableName, message)
       logger.info(s"response = $response")
       assert(response.count == 1)
     }

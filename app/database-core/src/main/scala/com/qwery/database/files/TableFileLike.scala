@@ -5,7 +5,7 @@ import com.qwery.database.collections.PersistentSeq
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.writeTableConfig
 import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableIndexRef, TableMetrics}
-import com.qwery.models.OrderColumn
+import com.qwery.models.{OrderColumn, TableRef}
 import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
 import com.qwery.util.ResourceHelper._
 
@@ -23,10 +23,8 @@ trait TableFileLike {
 
   // load the indices for this table
   config.indices.foreach(ref => registerIndex(ref, TableIndexDevice(ref)))
-
-  def databaseName: String
-
-  def tableName: String
+  
+  def ref: TableRef
 
   /**
     * @return the [[BlockDevice block device]]
@@ -49,12 +47,12 @@ trait TableFileLike {
     * @param indexColumnName the name of the index [[Column column]]
     * @return a new binary search [[TableIndexDevice index]]
     */
-  def createIndex(indexColumnName: String): TableIndexDevice = {
-    val indexRef = TableIndexRef(databaseName, tableName, indexColumnName)
+  def createIndex(ref: TableRef, indexColumnName: String): TableIndexDevice = {
+    val indexRef = TableIndexRef(ref, indexColumnName)
     val indexColumn = getColumnByName(indexRef.indexColumnName)
     val tableIndex = TableIndexDevice.createIndex(indexRef, indexColumn)(device)
     registerIndex(indexRef, tableIndex)
-    writeTableConfig(databaseName, tableName, config.copy(indices = (indexRef :: config.indices.toList).distinct))
+    writeTableConfig(ref, config.copy(indices = (indexRef :: config.indices.toList).distinct))
     tableIndex
   }
 
@@ -230,10 +228,7 @@ trait TableFileLike {
     rows
   }
 
-  def getTableMetrics: TableMetrics = TableMetrics(
-    databaseName = databaseName, tableName = tableName, columns = device.columns.toList,
-    physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length
-  )
+  def getTableMetrics: TableMetrics = TableMetrics(ref, columns = device.columns.toList, physicalSize = device.getPhysicalSize, recordSize = device.recordSize, rows = device.length)
 
   /**
     * Facilitates a line-by-line ingestion of a text file
@@ -367,12 +362,7 @@ trait TableFileLike {
   }
 
   def toPersistentSeq[A <: Product : ClassTag]: PersistentSeq[A] = {
-    val (columns, _class) = BlockDevice.toColumns[A]
-    val deviceColumns = device.columns.map(c => c.name -> c.metadata.`type`)
-    val productColumns = columns.map(c => c.name -> c.metadata.`type`)
-    val missingColumns = deviceColumns.collect { case t@(name, _type) if !deviceColumns.contains(t) => name + ':' + _type }
-    assert(missingColumns.isEmpty, s"Class ${_class.getName} does not contain columns: ${missingColumns.mkString(", ")}")
-    new PersistentSeq[A](device, _class)
+    PersistentSeq[A](ref)
   }
 
   /**

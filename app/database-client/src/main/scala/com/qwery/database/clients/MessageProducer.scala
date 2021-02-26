@@ -21,14 +21,16 @@ case class MessageProducer(host: String = "0.0.0.0", port: Int) {
    * @param message      the JSON message to append
    * @return the [[UpdateCount response]]
    */
-  def send(databaseName: String, tableName: String, message: String): UpdateCount = {
-    $http.post(toUrl(databaseName, tableName), body = message.getBytes(charSetName)).as[UpdateCount]
+  def send(databaseName: String, schemaName: String, tableName: String, message: String): UpdateCount = {
+    $http.post(toUrl(databaseName, schemaName, tableName), body = message.getBytes(charSetName)).as[UpdateCount]
   }
 
   //////////////////////////////////////////////////////////////////////
   //      URL GENERATORS
   //////////////////////////////////////////////////////////////////////
 
-  private def toUrl(databaseName: String, tableName: String): String = s"http://$host:$port/m/$databaseName/$tableName"
+  private def toUrl(databaseName: String, schemaName: String, tableName: String): String = {
+    s"http://$host:$port/m/$databaseName/$schemaName/$tableName"
+  }
 
 }

@@ -1,13 +1,13 @@
 package com.qwery.database
 package device
 
-import com.qwery.database.util.Codec.CodecByteBuffer
-import com.qwery.database.util.OptionComparisonHelper.OptionComparator
-import com.qwery.database.models
 import com.qwery.database.models.KeyValues.isSatisfied
 import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, ColumnTypes, Field, FieldMetadata, KeyValues, Row, RowMetadata, RowStatistics}
 import com.qwery.database.types._
 import com.qwery.database.util.Codec
+import com.qwery.database.util.Codec.CodecByteBuffer
+import com.qwery.database.util.OptionComparisonHelper.OptionComparator
+import com.qwery.models.TableRef
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -188,7 +188,7 @@ trait BlockDevice {
    * @return the [[Column column]]
    */
   def getColumnByName(name: String): Column = {
-    columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(tableName = "???", columnName = name))
+    columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(TableRef.parse("???"), columnName = name))
   }
 
   def getField(rowID: ROWID, column: Symbol): Field = {

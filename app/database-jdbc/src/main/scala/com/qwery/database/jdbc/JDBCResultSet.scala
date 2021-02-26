@@ -3,6 +3,7 @@ package jdbc
 
 import com.qwery.database.models._
 import com.qwery.database.types.QxAny.{RichInputStream, RichReader}
+import com.qwery.util.OptionHelper.OptionEnrichment
 
 import java.io.{InputStream, Reader}
 import java.net.URL
@@ -433,9 +434,9 @@ object JDBCResultSet {
    */
   def apply(connection: JDBCConnection, queryResult: QueryResult) = new JDBCResultSet(
     connection = connection,
-    databaseName = queryResult.databaseName,
-    schemaName = queryResult.databaseName,
-    tableName = queryResult.tableName,
+    databaseName = queryResult.ref.databaseName || connection.catalog,
+    schemaName = queryResult.ref.schemaName || connection.schema,
+    tableName = queryResult.ref.tableName,
     columns = queryResult.columns,
     data = queryResult.rows,
     __ids = queryResult.__ids

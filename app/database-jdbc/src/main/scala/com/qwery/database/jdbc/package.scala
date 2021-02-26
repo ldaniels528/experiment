@@ -20,8 +20,8 @@ package object jdbc {
     ColumnTypes.DoubleType -> Types.DOUBLE,
     ColumnTypes.FloatType -> Types.FLOAT,
     ColumnTypes.IntType -> Types.INTEGER,
-    ColumnTypes.SerializableType -> Types.BLOB,
     ColumnTypes.LongType -> Types.BIGINT,
+    ColumnTypes.SerializableType -> Types.BLOB,
     ColumnTypes.ShortType -> Types.SMALLINT,
     ColumnTypes.StringType -> Types.VARCHAR,
     ColumnTypes.UUIDType -> Types.VARBINARY)
@@ -37,7 +37,7 @@ package object jdbc {
       case DATE | TIME | TIMESTAMP | TIME_WITH_TIMEZONE => DateType
       case JAVA_OBJECT | OTHER => BlobType
       case INTEGER => IntType
-      case ROWID => IntType
+      case ROWID => LongType
       case SMALLINT => ShortType
       case TINYINT => ByteType
       case LONGNVARCHAR | NVARCHAR | VARCHAR => StringType

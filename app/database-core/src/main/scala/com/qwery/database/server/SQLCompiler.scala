@@ -3,7 +3,7 @@ package server
 
 import com.qwery.database.ExpressionVM._
 import com.qwery.database.models.Column.implicits._
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, TableProperties}
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues}
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
 import com.qwery.database.server.SQLCompiler.implicits.{ExpressionFacade, InvokableFacade}
@@ -60,37 +60,36 @@ object SQLCompiler {
     final implicit class InvokableFacade(val invokable: Invokable) extends AnyVal {
       def compile(databaseName: String): DatabaseIORequest = invokable match {
         case mx.Create(table: mx.Table) =>
-          val props = TableProperties(description = table.description, columns = table.columns.map(_.toColumn), isColumnar = table.isColumnar, ifNotExists = table.ifNotExists)
-          cx.CreateTable(databaseName, table.name, props)
-        case mx.Create(TableIndex(_, TableRef(tableName), columns, ifNotExists)) =>
+          cx.CreateTable(databaseName, table.name, table)
+        case mx.Create(TableIndex(_, TableRef(databaseName_?, schemaName_?, tableName), columns, ifNotExists)) =>
           cx.CreateIndex(databaseName, tableName, indexColumnName = columns.map(_.name).onlyOne())
-        case mx.Create(mx.View(viewName, invokable, description, ifNotExists)) =>
-          cx.CreateView(databaseName, viewName, description, invokable, ifNotExists)
-        case mx.Delete(TableRef(tableName), where, limit) =>
+        case mx.Create(mx.View(ref, invokable, description, ifNotExists)) =>
+          cx.CreateView(databaseName, ref.tableName, description, invokable, ifNotExists)
+        case mx.Delete(TableRef(databaseName_?, schemaName_?, tableName), where, limit) =>
           cx.DeleteRows(databaseName, tableName, condition = toCriteria(where), limit)
-        case mx.DropTable(TableRef(tableName), ifExists) =>
+        case mx.DropTable(TableRef(databaseName_?, schemaName_?, tableName), ifExists) =>
           cx.DropTable(databaseName, tableName, ifExists)
-        case mx.DropView(TableRef(tableName), ifExists) =>
+        case mx.DropView(TableRef(databaseName_?, schemaName_?, tableName), ifExists) =>
           cx.DropView(databaseName, tableName, ifExists)
-        case mx.Insert(Into(TableRef(tableName)), mx.Insert.Values(values), fields) =>
+        case mx.Insert(Into(TableRef(databaseName_?, schemaName_?, tableName)), mx.Insert.Values(values), fields) =>
           cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values)
-        case mx.Insert(Into(TableRef(tableName)), queryable: mx.Queryable, fields) =>
+        case mx.Insert(Into(TableRef(databaseName_?, schemaName_?, tableName)), queryable: mx.Queryable, fields) =>
           cx.InsertSelect(databaseName, tableName, queryable.compile(databaseName) match {
             case select: cx.SelectRows => select
             case other => die(s"Unhandled sub-command $other for INSERT INTO")
           })
-        case mx.Insert(Overwrite(TableRef(tableName)), mx.Insert.Values(values), fields) =>
+        case mx.Insert(Overwrite(TableRef(databaseName_?, schemaName_?, tableName)), mx.Insert.Values(values), fields) =>
           cx.InsertRows(databaseName, tableName, columns = fields.map(_.name), values)
-        case mx.Insert(Overwrite(TableRef(tableName)), select: mx.Select, fields) =>
+        case mx.Insert(Overwrite(TableRef(databaseName_?, schemaName_?, tableName)), select: mx.Select, fields) =>
           cx.InsertSelect(databaseName, tableName, select.compile(databaseName) match {
             case select: cx.SelectRows => select
             case other => die(s"Unhandled sub-command $other for INSERT OVERWRITE")
           })
-        case mx.Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
+        case mx.Select(fields, Some(TableRef(databaseName_?, schemaName_?, tableName)), joins, groupBy, having, orderBy, where, limit) =>
           cx.SelectRows(databaseName, tableName, fields, toCriteria(where), groupBy, having, orderBy, limit)
-        case mx.Truncate(TableRef(tableName)) =>
+        case mx.Truncate(TableRef(databaseName_?, schemaName_?, tableName)) =>
           cx.TruncateTable(databaseName, tableName)
-        case mx.Update(TableRef(tableName), changes, where, limit) =>
+        case mx.Update(TableRef(databaseName_?, schemaName_?, tableName), changes, where, limit) =>
           cx.UpdateRows(databaseName, tableName, changes = changes, condition = toCriteria(where), limit)
         case unknown => die(s"Unsupported operation $unknown")
       }

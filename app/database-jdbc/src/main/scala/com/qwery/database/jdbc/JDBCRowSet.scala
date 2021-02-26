@@ -133,7 +133,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
   def insertRow(): Unit = {
     val newRow = constructRow
-    val w = connection.client.insertRow(databaseName, tableName, newRow)
+    val w = connection.client.insertRow(databaseName, schemaName, tableName, newRow)
     if (w.count > 0) {
       lastInsertedRowIndex = rows.length
       rows = rows.toList ::: (newRow.values.map(Option.apply) :: Nil)
@@ -141,14 +141,14 @@ class JDBCRowSet(connection: JDBCConnection,
     }
   }
 
-  def updateRow(): Unit = __id().foreach(connection.client.replaceRow(databaseName, tableName, _, constructRow))
+  def updateRow(): Unit = __id().foreach(connection.client.replaceRow(databaseName, schemaName, tableName, _, constructRow))
 
-  def deleteRow(): Unit = __id().foreach(connection.client.deleteRow(databaseName, tableName, _))
+  def deleteRow(): Unit = __id().foreach(connection.client.deleteRow(databaseName, schemaName, tableName, _))
 
   def refreshRow(): Unit = {
     val refreshedRow = for {
       rowID <- __id().toArray
-      row <- connection.client.getRow(databaseName, tableName, rowID).toArray
+      row <- connection.client.getRow(databaseName, schemaName, tableName, rowID).toArray
       name <- columns.map(_.name)
     } yield row.get(name)
 

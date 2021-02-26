@@ -8,6 +8,7 @@ import org.scalatest.funspec.AnyFunSpec
 class VhpKinesisSyncTest extends AnyFunSpec {
   private val port = 12118
   private val databaseName = "test"
+  private val schemaName = "vhp"
   private val tableName = "vhp_kinesis_stg"
 
   // start the server
@@ -43,6 +44,7 @@ class VhpKinesisSyncTest extends AnyFunSpec {
         host = "0.0.0.0",
         port = port,
         databaseName = databaseName,
+        schemaName = schemaName,
         tableName = tableName,
         applicationName = "test-tools-cbhp-kinesis-stg",
         streamName = "vhp-kinesis-stg",

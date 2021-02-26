@@ -2,23 +2,23 @@ package com.qwery.database
 package models
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.qwery.models.StorageFormats.StorageFormat
-import com.qwery.models.{StorageFormats, TypeAsEnum}
+import com.qwery.models.{ColumnSpec, Table, TableRef, TypeAsEnum}
+import com.qwery.util.OptionHelper.OptionEnrichment
+import com.qwery.{models => mx}
 import spray.json._
 
 import java.util.{Date, UUID}
 
 /**
- * Models JSON Protocol
- */
+  * Models JSON Protocol
+  */
 object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
-  import spray.json._
 
   ////////////////////////////////////////////////////////////////////////
   //      Utility Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  implicit object OptionAnyJsonFormat extends JsonFormat[Option[Any]] {
+  final implicit object OptionAnyJsonFormat extends JsonFormat[Option[Any]] {
     override def read(json: JsValue): Option[Any] = Option(json.unwrapJSON)
 
     override def write(value: Option[Any]): JsValue = {
@@ -39,7 +39,7 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
     }
   }
 
-  implicit object SeqSeqOptionAnyJsonFormat extends JsonFormat[Seq[Seq[Option[Any]]]] {
+  final implicit object SeqSeqOptionAnyJsonFormat extends JsonFormat[Seq[Seq[Option[Any]]]] {
     override def read(json: JsValue): Seq[Seq[Option[Any]]] = json match {
       case JsArray(rowsJs) => rowsJs collect {
         case JsArray(colsJs) => colsJs.map(v => Option(v.unwrapJSON))
@@ -52,19 +52,35 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   }
 
   ////////////////////////////////////////////////////////////////////////
-  //      Enumeration Implicits
+  //      Core Model Custom Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  implicit object StorageFormatJsonFormat extends JsonFormat[StorageFormat] {
-    override def read(json: JsValue): StorageFormat = StorageFormats.withName(json.convertTo[String])
+  case class TableRefJs(databaseName: String, schemaName: String, tableName: String)
 
-    override def write(storageFormat: StorageFormat): JsValue = JsString(storageFormat.toString)
+  final implicit val tableRefJsJsonFormat: RootJsonFormat[TableRefJs] = jsonFormat3(TableRefJs.apply)
+
+  final implicit object TableRefJsonFormat extends JsonFormat[TableRef] {
+    override def read(json: JsValue): TableRef = {
+      val js = json.convertTo[TableRefJs]
+      new TableRef(js.databaseName, js.schemaName, js.tableName)
+    }
+
+    override def write(ref: TableRef): JsValue = TableRefJs(
+      databaseName = ref.databaseName || DEFAULT_DATABASE,
+      schemaName = ref.schemaName || DEFAULT_SCHEMA,
+      tableName = ref.tableName).toJson
   }
 
   ////////////////////////////////////////////////////////////////////////
-  //      Model Implicits
+  //      Core Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
+  final implicit val columnSpecJsonFormat: RootJsonFormat[ColumnSpec] = jsonFormat2(ColumnSpec.apply)
+
+  final implicit val columnJsonFormat: RootJsonFormat[mx.Column] = jsonFormat5(mx.Column.apply)
+
+  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat6(Table.apply)
+
+  final implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
 
 }

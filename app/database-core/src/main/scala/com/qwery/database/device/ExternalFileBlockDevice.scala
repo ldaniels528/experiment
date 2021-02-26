@@ -1,9 +1,9 @@
-package com.qwery.database.device
+package com.qwery.database
+package device
 
-import com.qwery.database.device.ExternalFileBlockDevice.DelimitedTextEnrichment
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
 import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
-import com.qwery.database.{ROWID, RecursiveFileList, die}
+import com.qwery.models.TableRef
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -17,13 +17,13 @@ import scala.io.Source
   * @param tableName    the table name
   * @param config       the [[TableConfig table configuration]]
   */
-case class ExternalFileBlockDevice(databaseName: String, tableName: String, config: TableConfig) extends BlockDevice {
+case class ExternalFileBlockDevice(ref: TableRef, config: TableConfig) extends BlockDevice {
   // get the root file or directory
   private val rootFile: File = config.externalTable.flatMap(_.location.map(new File(_)))
-    .getOrElse(die(s"No file or directory could be determine for table '$databaseName.$tableName'"))
+    .getOrElse(die(s"No file or directory could be determine for table '$ref'"))
 
   // setup the device
-  private implicit val device: BlockDevice = new RowOrientedFileBlockDevice(columns, getTableDataFile(databaseName, tableName))
+  private implicit val device: BlockDevice = new RowOrientedFileBlockDevice(columns, getTableDataFile(ref))
   device.shrinkTo(newSize = 0)
 
   // get the config details
@@ -88,7 +88,7 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = dieReadOnly()
 
-  private def dieReadOnly(): Nothing = die(s"Table $databaseName.$tableName is read-only")
+  private def dieReadOnly(): Nothing = die(s"Table $ref is read-only")
 
   private def ensureData(rowID: ROWID): Unit = {
     while (offset <= rowID && files.hasNext) {
@@ -103,7 +103,7 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
 
   private def parseText(line: String): KeyValues = {
     import spray.json._
-    format match {
+    format.toUpperCase match {
       case "CSV" =>
         val values = line.delimitedSplit(',')
         KeyValues(columns.map(_.name) zip values: _*)
@@ -113,40 +113,6 @@ case class ExternalFileBlockDevice(databaseName: String, tableName: String, conf
           case other => die(s"JSON object expected '$other'")
         }
       case other => die(s"Unrecognized format '$other'")
-    }
-  }
-
-}
-
-/**
-  * External File Block Device Companion
-  */
-object ExternalFileBlockDevice {
-
-  /**
-    * Delimited Text Enrichment
-    * @param text the given Delimited text string
-    */
-  final implicit class DelimitedTextEnrichment(val text: String) extends AnyVal {
-
-    def delimitedSplit(delimiter: Char): List[String] = {
-      var inQuotes = false
-      val sb = new StringBuilder()
-      val values = text.toCharArray.foldLeft[List[String]](Nil) {
-        case (list, ch) if ch == '"' =>
-          inQuotes = !inQuotes
-          //sb.append(ch)
-          list
-        case (list, ch) if inQuotes & ch == delimiter =>
-          sb.append(ch); list
-        case (list, ch) if !inQuotes & ch == delimiter =>
-          val s = sb.toString().trim
-          sb.clear()
-          list ::: s :: Nil
-        case (list, ch) =>
-          sb.append(ch); list
-      }
-      if (sb.toString().trim.nonEmpty) values ::: sb.toString().trim :: Nil else values
     }
   }
 

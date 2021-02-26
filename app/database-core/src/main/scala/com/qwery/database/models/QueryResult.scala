@@ -2,14 +2,10 @@ package com.qwery.database.models
 
 import com.qwery.database.DatabaseCPU.Solution
 import com.qwery.database.device.BlockDevice
+import com.qwery.models.TableRef
 import org.slf4j.Logger
 
-case class QueryResult(databaseName: String,
-                       tableName: String,
-                       columns: Seq[Column] = Nil,
-                       rows: Seq[Seq[Option[Any]]] = Nil,
-                       count: Long = 0,
-                       __ids: Seq[Long] = Nil) {
+case class QueryResult(ref: TableRef, columns: Seq[Column] = Nil, rows: Seq[Seq[Option[Any]]] = Nil, count: Long = 0, __ids: Seq[Long] = Nil) {
 
   def foreachKVP(f: KeyValues => Unit): Unit = {
     val columnNames = columns.map(_.name)
@@ -30,7 +26,7 @@ case class QueryResult(databaseName: String,
 object QueryResult {
   import com.qwery.database.models.ModelsJsonProtocol._
   import spray.json._
-  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat6(QueryResult.apply)
+  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat5(QueryResult.apply)
 
   final implicit class SolutionToQueryResult(val solution: Solution) extends AnyVal {
 
@@ -41,8 +37,7 @@ object QueryResult {
         case Right(count) => (Nil, Nil, count)
       }
       QueryResult(
-        databaseName = solution.databaseName,
-        tableName = solution.tableName,
+        solution.ref,
         columns = columns,
         __ids = rows.map(_.id),
         count = count,
@@ -57,12 +52,11 @@ object QueryResult {
   final implicit class BlockDeviceToQueryResult(val device: BlockDevice) extends AnyVal {
 
     @inline
-    def toQueryResult(databaseName: String, tableName: String): QueryResult = {
+    def toQueryResult(ref: TableRef): QueryResult = {
       val rows = device.toList
       val columns = device.columns
       QueryResult(
-        databaseName = databaseName,
-        tableName = tableName,
+        ref,
         columns = columns,
         __ids = rows.map(_.id),
         count = rows.size,

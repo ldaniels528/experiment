@@ -18,7 +18,7 @@ class SQLDecompilerTest extends AnyFunSpec {
            |   exchange as market,
            |   lastSale,
            |   round(lastSale, 1) as roundedLastSale,
-           |   lastTradeTime as lastSaleTime
+           |   lastSaleTime
            |from securities
            |order by lastSale desc
            |limit 5

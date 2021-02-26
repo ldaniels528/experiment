@@ -3,72 +3,71 @@ package files
 
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.models.{TableConfig, TableProperties}
+import com.qwery.database.models.Column.implicits._
+import com.qwery.database.models.TableConfig
+import com.qwery.models.{Table, TableRef}
 
 /**
- * Represents a physical table file
- * @param databaseName the name of the database
- * @param tableName    the name of the table
- * @param config       the [[TableConfig table configuration]]
- * @param device       the [[BlockDevice block device]]
- */
-case class TableFile(databaseName: String, tableName: String, config: TableConfig, device: BlockDevice) extends TableFileLike
+  * Represents a physical table file
+  * @param ref    the [[TableRef table reference]]
+  * @param config the [[TableConfig table configuration]]
+  * @param device the [[BlockDevice block device]]
+  */
+case class TableFile(ref: TableRef, config: TableConfig, device: BlockDevice) extends TableFileLike
 
 /**
- * Table File Companion
- */
+  * Table File Companion
+  */
 object TableFile {
 
   /**
-   * Retrieves a table by name
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @return the [[TableFile]]
-   */
-  def apply(databaseName: String, tableName: String): TableFile = {
-    val (config, device) = getTableDevice(databaseName, tableName)
-    new TableFile(databaseName, tableName, config, device)
+    * Retrieves a table by name
+    * @param ref the [[TableRef]]
+    * @return the [[TableFile]]
+    */
+  def apply(ref: TableRef): TableFile = {
+    val (config, device) = getTableDevice(ref)
+    new TableFile(ref, config, device)
   }
 
   /**
     * Creates a new database table
-    * @param databaseName the name of the database
-    * @param tableName    the name of the table
-    * @param ref          the [[TableProperties table properties]]
+    * @param ref   the [[TableRef]]
+    * @param props the [[Table table properties]]
     * @return the new [[TableFile]]
     */
-  def createTable(databaseName: String, tableName: String, ref: TableProperties): TableFile = {
-    val dataFile = getTableDataFile(databaseName, tableName)
-    val configFile = getTableConfigFile(databaseName, tableName)
-    if (ref.ifNotExists && dataFile.exists() && configFile.exists()) apply(databaseName, tableName)
+  def createTable(databaseName: String, table: Table): TableFile = {
+    val dataFile = getTableDataFile(table.ref)
+    val configFile = getTableConfigFile(table.ref)
+    val columns = table.columns.map(_.toColumn)
+    if (table.ifNotExists && dataFile.exists() && configFile.exists()) apply(table.ref)
     else {
-      assert(!dataFile.exists(), s"Table '$databaseName.$tableName' already exists")
+      assert(!dataFile.exists(), s"Table '${table.ref}' already exists")
 
       // create the root directory
-      getTableRootDirectory(databaseName, tableName).mkdirs()
+      getTableRootDirectory(table.ref).mkdirs()
 
       // create the table configuration file
-      val config = TableConfig(columns = ref.columns, ref.isColumnar, indices = Nil, description = ref.description)
-      writeTableConfig(databaseName, tableName, config)
+      val config = TableConfig(columns, table.isColumnar, indices = Nil, description = table.description)
+      writeTableConfig(table.ref, config)
 
       // return the table
-      new TableFile(databaseName, tableName, config, new RowOrientedFileBlockDevice(ref.columns, dataFile))
+      new TableFile(table.ref, config, new RowOrientedFileBlockDevice(columns, dataFile))
     }
   }
 
   /**
-   * Deletes the table
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param ifExists     indicates whether an existence check before attempting to delete
-   * @return true, if the table was deleted
-   */
-  def dropTable(databaseName: String, tableName: String, ifExists: Boolean = false): Boolean = {
-    val dataFile = getViewDataFile(databaseName, tableName)
-    val configFile = getTableConfigFile(databaseName, tableName)
-    if (!ifExists && !dataFile.exists()) die(s"Table '$tableName' (${dataFile.getAbsolutePath}) does not exist")
-    if (!ifExists && !configFile.exists()) die(s"Table '$tableName' (${configFile.getAbsolutePath}) does not exist")
-    val directory = getTableRootDirectory(databaseName, tableName)
+    * Deletes the table
+    * @param ref      the [[TableRef]]
+    * @param ifExists indicates whether an existence check before attempting to delete
+    * @return true, if the table was deleted
+    */
+  def dropTable(ref: TableRef, ifExists: Boolean = false): Boolean = {
+    val dataFile = getViewDataFile(ref)
+    val configFile = getTableConfigFile(ref)
+    if (!ifExists && !dataFile.exists()) die(s"Table '$ref' (${dataFile.getAbsolutePath}) does not exist")
+    if (!ifExists && !configFile.exists()) die(s"Table '$ref' (${configFile.getAbsolutePath}) does not exist")
+    val directory = getTableRootDirectory(ref)
     val files = directory.listFilesRecursively
     files.forall(_.delete())
   }

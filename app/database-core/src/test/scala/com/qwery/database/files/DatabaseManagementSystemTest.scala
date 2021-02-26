@@ -16,7 +16,7 @@ class DatabaseManagementSystemTest extends AnyFunSpec {
     it("should retrieve the table summary for a specific database") {
       val databaseSummary = getDatabaseSummary(databaseName = "test")
       assert(databaseSummary.tables.nonEmpty)
-      logger.info(f"${"tableName"}%-25s ${"tableType"}%-20s")
+      info(f"${"tableName"}%-25s ${"tableType"}%-20s")
       databaseSummary.tables foreach { table =>
         logger.info(f"${table.tableName}%-25s ${table.tableType}%-20s")
       }
@@ -32,20 +32,20 @@ class DatabaseManagementSystemTest extends AnyFunSpec {
     }
 
     it("should search for tables within a database") {
-      val searchResults = searchTables(databaseNamePattern = Some("test"), tableNamePattern = Some("stock%"))
+      val searchResults = searchTables(databaseNamePattern = Some("test"), schemaNamePattern = Some("public"), tableNamePattern = Some("%"))
       assert(searchResults.nonEmpty)
-      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s")
+      logger.info(f"${"databaseName"}%-25s ${"schemaName"}%-25s ${"tableName"}%-25s")
       searchResults foreach { result =>
-        logger.info(f"${result.databaseName}%-25s ${result.tableName}%-25s")
+        logger.info(f"${result.databaseName}%-25s ${result.schemaName}%-25s ${result.tableName}%-25s")
       }
     }
 
     it("should search for columns from all tables within a database") {
-      val searchResults = searchColumns(databaseNamePattern = Some("test"), tableNamePattern = None, columnNamePattern = Some("symbol"))
+      val searchResults = searchColumns(databaseNamePattern = Some("test"), schemaNamePattern = Some("stocks"), tableNamePattern = Some("stocks%"), columnNamePattern = Some("symbol"))
       assert(searchResults.nonEmpty)
-      logger.info(f"${"databaseName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
-      searchResults foreach { tableInfo =>
-        logger.info(f"${tableInfo.databaseName}%-25s ${tableInfo.tableName}%-25s ${tableInfo.column.name}%-25s")
+      logger.info(f"${"databaseName"}%-25s ${"schemaName"}%-25s ${"tableName"}%-25s ${"columnName"}%-25s")
+      searchResults foreach { result =>
+        logger.info(f"${result.databaseName}%-25s ${result.schemaName}%-25s ${result.tableName}%-25s ${result.column.name}%-25s")
       }
     }
 

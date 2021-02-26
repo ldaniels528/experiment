@@ -16,6 +16,7 @@ class QweryDriverTest extends AnyFunSpec {
   private val logger = LoggerFactory.getLogger(getClass)
   private val port = 12121
   private val jdbcURL = s"jdbc:qwery://localhost:$port/test"
+  private val schemaName = "stocks"
   private val tableNameA = "stocks_jdbc"
   private val tableNameB = "stocks_jdbc_columnar"
 
@@ -41,31 +42,9 @@ class QweryDriverTest extends AnyFunSpec {
       }
     }
 
-    it("should retrieve the list of databases") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        iterateRows(conn.getMetaData.getCatalogs)(row => logger.info(s"row: $row"))
-      }
-    }
-
-    it("should retrieve the tables for a given database") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        iterateRows(conn.getMetaData.getTables( "test", null, null, null)) { row =>
-          logger.info(s"row: $row")
-        }
-      }
-    }
-
-    it("should retrieve the columns for a given database") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        iterateRows(conn.getMetaData.getColumns( "test", null, "stock", "symbol")) { row =>
-          logger.info(s"row: $row")
-        }
-      }
-    }
-
     it("should execute a DROP TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        val count = conn.createStatement().executeUpdate(s"DROP TABLE IF EXISTS $tableNameA")
+        val count = conn.createStatement().executeUpdate(s"DROP TABLE IF EXISTS `$schemaName.$tableNameA`")
         assert(count >= 0 && count <= 1)
       }
     }
@@ -73,11 +52,11 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute a CREATE TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val count = conn.createStatement().executeUpdate(
-          s"""|CREATE TABLE $tableNameA (
+          s"""|CREATE TABLE IF NOT EXISTS `$schemaName.$tableNameA` (
               |  symbol STRING(8) comment 'the ticker symbol',
               |  exchange STRING(8) AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
               |  lastSale DOUBLE comment 'the latest sale price',
-              |  lastTradeTime DATE comment 'the latest sale date/time'
+              |  lastSaleTime DATE comment 'the latest sale date/time'
               |)
               |WITH COMMENT 'securities table'
               |""".stripMargin
@@ -89,7 +68,7 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute an INSERT statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val count = conn.createStatement().executeUpdate(
-          s"""|INSERT INTO $tableNameA (symbol, exchange, lastSale, lastTradeTime)
+          s"""|INSERT INTO `$schemaName.$tableNameA` (symbol, exchange, lastSale, lastSaleTime)
               |VALUES ("MSFT", "NYSE", 56.55, now()), ("AAPL", "NASDAQ", 98.55, now())
               |""".stripMargin
         )
@@ -101,7 +80,7 @@ class QweryDriverTest extends AnyFunSpec {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val now = System.currentTimeMillis()
         val ps = conn.prepareStatement(
-          s"""|INSERT INTO $tableNameA (symbol, exchange, lastSale, lastTradeTime)
+          s"""|INSERT INTO `$schemaName.$tableNameA` (symbol, exchange, lastSale, lastSaleTime)
               |VALUES (?, ?, ?, ?), (?, ?, ?, ?)
               |""".stripMargin
         )
@@ -116,7 +95,7 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute an UPDATE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val count = conn.createStatement().executeUpdate(
-          s"""|UPDATE $tableNameA SET lastSale = 101.12, lastTradeTime = now() WHERE symbol = "GOOG"
+          s"""|UPDATE `$schemaName.$tableNameA` SET lastSale = 101.12, lastSaleTime = now() WHERE symbol = "GOOG"
               |""".stripMargin
         )
         assert(count == 1)
@@ -125,7 +104,7 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute a SELECT query") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA WHERE symbol = 'AAPL'") use { rs =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = 'AAPL'") use { rs =>
           rs.next()
           assert(rs.getString("symbol") == "AAPL")
         }
@@ -134,7 +113,7 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should execute a SELECT query with parameters") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.prepareStatement(s"SELECT * FROM $tableNameA WHERE symbol = ?") use { ps =>
+        conn.prepareStatement(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = ?") use { ps =>
           ps.setString(1, "AAPL")
           ps.executeQuery() use { rs =>
             rs.next()
@@ -147,7 +126,7 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute a COUNT query") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         conn.createStatement().executeQuery(
-          s"""|SELECT COUNT(*) FROM $tableNameA
+          s"""|SELECT COUNT(*) FROM `$schemaName.$tableNameA`
               |""".stripMargin) use { rs =>
           rs.next()
           assert(rs.getLong(1) == 4)
@@ -158,7 +137,7 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute a COUNT query with alias") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         conn.createStatement().executeQuery(
-          s"""|SELECT COUNT(*) AS transactions FROM $tableNameA
+          s"""|SELECT COUNT(*) AS transactions FROM `$schemaName.$tableNameA`
               |""".stripMargin) use { rs =>
           rs.next()
           assert(rs.getLong("transactions") == 4)
@@ -175,7 +154,7 @@ class QweryDriverTest extends AnyFunSpec {
               |   MIN(lastSale) AS minLastSale,
               |   MAX(lastSale) AS maxLastSale,
               |   SUM(lastSale) AS sumLastSale
-              |FROM $tableNameA
+              |FROM `$schemaName.$tableNameA`
               |""".stripMargin) use { rs =>
           rs.next()
           assert(rs.getDouble("sumLastSale") == 312.77)
@@ -189,7 +168,7 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should modify and insert a new record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA LIMIT 20") use { rs0 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` LIMIT 20") use { rs0 =>
           rs0.next()
           rs0.updateString("symbol", "CCC")
           rs0.updateDouble("lastSale", 15.44)
@@ -197,7 +176,7 @@ class QweryDriverTest extends AnyFunSpec {
         }
 
         // retrieve the row again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA WHERE symbol = 'CCC'") use { rs1 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = 'CCC'") use { rs1 =>
           rs1.next()
           assert(rs1.getString("symbol") == "CCC")
           assert(rs1.getDouble("lastSale") == 15.44)
@@ -207,16 +186,16 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should modify and update an existing record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA LIMIT 20") use { rs0 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` LIMIT 20") use { rs0 =>
           rs0.next()
           rs0.updateString("symbol", "AAA")
           rs0.updateDouble("lastSale", 78.99)
-          rs0.updateLong("lastTradeTime", System.currentTimeMillis())
+          rs0.updateLong("lastSaleTime", System.currentTimeMillis())
           rs0.updateRow()
         }
 
         // retrieve the row again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA WHERE symbol = 'AAA'") use { rs1 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = 'AAA'") use { rs1 =>
           rs1.next()
           assert(rs1.getString("symbol") == "AAA")
           assert(rs1.getDouble("lastSale") == 78.99)
@@ -226,13 +205,13 @@ class QweryDriverTest extends AnyFunSpec {
 
     it("should delete an existing record via the ResultSet") {
       DriverManager.getConnection(jdbcURL) use { conn =>
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA WHERE symbol = 'CCC'") use { rs0 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = 'CCC'") use { rs0 =>
           rs0.next()
           rs0.deleteRow()
         }
 
         // retrieve the row again
-        conn.createStatement().executeQuery(s"SELECT * FROM $tableNameA WHERE symbol = 'CCC'") use { rs1 =>
+        conn.createStatement().executeQuery(s"SELECT * FROM `$schemaName.$tableNameA` WHERE symbol = 'CCC'") use { rs1 =>
           assert(!rs1.next())
         }
       }
@@ -241,15 +220,15 @@ class QweryDriverTest extends AnyFunSpec {
     it("should execute a CREATE COLUMNAR TABLE statement") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         // drop the existing table
-        conn.createStatement().execute(s"DROP TABLE IF EXISTS $tableNameB")
+        conn.createStatement().execute(s"DROP TABLE IF EXISTS `$schemaName.$tableNameB`")
 
         // create a new table
         val count = conn.createStatement().executeUpdate(
-          s"""|CREATE COLUMNAR TABLE $tableNameB (
+          s"""|CREATE COLUMNAR TABLE `$schemaName.$tableNameB` (
               |  symbol STRING(8) comment 'the ticker symbol',
               |  exchange STRING(8) AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
               |  lastSale DOUBLE comment 'the latest sale price',
-              |  lastTradeTime DATE comment 'the latest sale date/time'
+              |  lastSaleTime DATE comment 'the latest sale date/time'
               |)
               |WITH COMMENT 'securities table (columnar)'
               |""".stripMargin
@@ -261,11 +240,39 @@ class QweryDriverTest extends AnyFunSpec {
     it("should insert records into a columnar table") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         val count = conn.createStatement().executeUpdate(
-          s"""|INSERT INTO $tableNameB (symbol, exchange, lastSale, lastTradeTime)
+          s"""|INSERT INTO `$schemaName.$tableNameB` (symbol, exchange, lastSale, lastSaleTime)
               |VALUES ("MSFT", "NYSE", 56.55, now()), ("AAPL", "NASDAQ", 98.55, now())
               |""".stripMargin
         )
         assert(count == 2)
+      }
+    }
+
+    it("should retrieve the list of databases") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        iterateRows(conn.getMetaData.getCatalogs)(row => logger.info(s"row: $row"))
+      }
+    }
+
+    it("should retrieve the list of schemas") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        iterateRows(conn.getMetaData.getSchemas)(row => logger.info(s"row: $row"))
+      }
+    }
+
+    it("should retrieve the tables for a given database") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        iterateRows(conn.getMetaData.getTables( "test", null, null, null)) { row =>
+          logger.info(s"row: $row")
+        }
+      }
+    }
+
+    it("should retrieve the columns for a given database") {
+      DriverManager.getConnection(jdbcURL) use { conn =>
+        iterateRows(conn.getMetaData.getColumns( "test", null, "stock", "symbol")) { row =>
+          logger.info(s"row: $row")
+        }
       }
     }
 

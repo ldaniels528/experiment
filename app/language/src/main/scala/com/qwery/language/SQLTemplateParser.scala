@@ -459,7 +459,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
         case other => throw new SyntaxException(s"String constant expected near '$other'")
       }
       val _type = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
-      columns = Column(name = colName, spec =_type, enumValues = enumValues, comment = comment) :: columns
+      columns = Column(name = colName, spec = _type, enumValues = enumValues, comment = comment) :: columns
     } while (stream nextIf ",")
 
     SQLTemplateParams(columns = Map(name -> columns.reverse))
@@ -599,7 +599,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractQueryOrVariable(name: String) = Try {
+  private def extractQueryOrVariable(name: String): Try[SQLTemplateParams] = Try {
     val result = parseNextQueryOrVariable(stream)
     if (!result.isQuery && !result.isVariable) stream.die("Query or variable expected")
     SQLTemplateParams(sources = Map(name -> result))
@@ -610,7 +610,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractQueryTableOrVariable(name: String) = Try {
+  private def extractQueryTableOrVariable(name: String): Try[SQLTemplateParams] = Try {
     SQLTemplateParams(sources = Map(name -> parseNextQueryTableOrVariable(stream)))
   }
 
@@ -619,7 +619,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractQuotedText(name: String) = Try {
+  private def extractQuotedText(name: String): Try[SQLTemplateParams] = Try {
     SQLTemplateParams(atoms = Map(name -> (if (stream.isQuoted) stream.next().text else stream.die("Quoted text value expected"))))
   }
 
@@ -628,7 +628,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param pattern the regular expression pattern
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractRegEx(pattern: String) = Try {
+  private def extractRegEx(pattern: String): Try[SQLTemplateParams] = Try {
     if (stream.matches(pattern)) SQLTemplateParams() else stream.die(s"Did not match the expected pattern '$pattern'")
   }
 
@@ -637,7 +637,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractRepeatedSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]) = Try {
+  private def extractRepeatedSequence(name: String, params: SQLTemplateParams, tags: PeekableIterator[String]): Try[SQLTemplateParams] = Try {
     if (!tags.nextOption.contains("{{")) stream.die("Start of sequence '{{' expected")
     else {
       // extract the repeated sequence
@@ -665,7 +665,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractStorageFormat(name: String) = Try {
+  private def extractStorageFormat(name: String): Try[SQLTemplateParams] = Try {
     var params = SQLTemplateParams()
     var done = false
     while (!done) {
@@ -683,7 +683,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the name of the property to set
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractTableName(name: String) = Try {
+  private def extractTableName(name: String): Try[SQLTemplateParams] = Try {
     val tableName = stream match {
       case ts if ts.isBackticks | ts.isText | ts.isQuoted => ts.next().text
       case ts => ts.die("Table or view expected")
@@ -696,7 +696,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractTableClause(name: String) = Try {
+  private def extractTableClause(name: String): Try[SQLTemplateParams] = Try {
     var template = SQLTemplateParams()
 
     // collect the Hive/Athena style configuration properties
@@ -751,7 +751,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the name of the property to set
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractType(name: String) = Try {
+  private def extractType(name: String): Try[SQLTemplateParams] = Try {
     // verify the type name
     val typeName = stream match {
       case ts if ts.hasNext => ts.next().text
@@ -771,7 +771,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the named identifier
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
-  private def extractVariableReference(name: String) = Try {
+  private def extractVariableReference(name: String): Try[SQLTemplateParams] = Try {
     val reference = stream match {
       case ts if ts nextIf "#" => @#(ts.next().text)
       case ts if ts nextIf "@" => @@(ts.next().text)

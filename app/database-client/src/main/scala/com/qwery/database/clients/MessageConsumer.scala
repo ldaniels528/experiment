@@ -14,12 +14,12 @@ import scala.util.{Failure, Success, Try}
  * @param databaseName the database name
  * @param tableName    the table name
  */
-case class MessageConsumer(host: String = "0.0.0.0", port: Int, databaseName: String, tableName: String) {
+case class MessageConsumer(host: String = "0.0.0.0", port: Int, databaseName: String, schemaName: String, tableName: String) {
   private val $http = new WebServiceClient()
   private var rowID: ROWID = 0
 
   def getMessage(offset: ROWID): Option[KeyValues] = {
-    $http.get(toUrl(databaseName, tableName, offset)) match {
+    $http.get(toUrl(databaseName, schemaName, tableName, offset)) match {
       case js: JsObject => Option(KeyValues(js.fields.map { case (name, jv) => name -> jv.unwrapJSON}))
       case js => die(s"Unexpected type returned $js")
     }
@@ -45,8 +45,8 @@ case class MessageConsumer(host: String = "0.0.0.0", port: Int, databaseName: St
   //      URL GENERATORS
   //////////////////////////////////////////////////////////////////////
 
-  private def toUrl(databaseName: String, tableName: String, rowID: ROWID): String = {
-    s"http://$host:$port/m/$databaseName/$tableName/$rowID"
+  private def toUrl(databaseName: String, schemaName: String, tableName: String, rowID: ROWID): String = {
+    s"http://$host:$port/m/$databaseName/$schemaName/$tableName/$rowID"
   }
 
 }

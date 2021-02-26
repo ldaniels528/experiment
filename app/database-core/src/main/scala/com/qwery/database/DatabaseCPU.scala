@@ -1,17 +1,16 @@
 package com.qwery.database
 
-import com.qwery.database.models.ColumnTypes.ColumnType
-import com.qwery.database.DatabaseCPU.implicits._
+import com.qwery.database.DatabaseCPU.implicits.InvokableWithDatabase
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
 import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
 import com.qwery.database.device.{BlockDevice, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.{isVirtualTable, readTableConfig}
 import com.qwery.database.files._
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, Row, TableMetrics, TableProperties}
+import com.qwery.database.models.ColumnTypes.ColumnType
+import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues, Row, TableMetrics}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions._
-import com.qwery.{models => mx, _}
 import com.qwery.models.{expressions => ex, _}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
@@ -27,136 +26,126 @@ import scala.io.Source
   */
 class DatabaseCPU() {
   private val logger = LoggerFactory.getLogger(getClass)
-  private val tables = TrieMap[(String, String), TableFileLike]()
+  private val tables = TrieMap[TableRef, TableFileLike]()
 
   /**
-   * Counts the number of rows matching the optional criteria
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @param condition    the optional [[Condition criteria]]
-   * @param limit        the optional limit
-   * @return the number of rows matching the optional criteria
-   */
-  def countRows(databaseName: String, tableName: String, condition: Option[Condition], limit: Option[Int] = None): Long = {
-    tableOf(databaseName, tableName).countRows(toCriteria(condition), limit)
+    * Counts the number of rows matching the optional criteria
+    * @param ref       the [[TableRef table reference]]
+    * @param condition the optional [[Condition criteria]]
+    * @param limit     the optional limit
+    * @return the number of rows matching the optional criteria
+    */
+  def countRows(ref: TableRef, condition: Option[Condition], limit: Option[Int] = None): Long = {
+    tableOf(ref).countRows(toCriteria(condition), limit)
   }
 
   /**
     * Creates a reference to an external table
     * @param databaseName the database name
-    * @param tableName    the table name
-    * @param ref          the [[ExternalTable table properties]]
+    * @param table        the [[ExternalTable table properties]]
     */
-  def createExternalTable(databaseName: String, tableName: String, ref: ExternalTable): Unit = {
-    tables(databaseName -> tableName) = ExternalTableFile.createTable(databaseName, ref)
+  def createExternalTable(databaseName: String, table: ExternalTable): Unit = {
+    tables(table.ref) = ExternalTableFile.createTable(databaseName, table)
   }
 
   /**
     * Creates a new column index on a database table
-    * @param databaseName    the database name
-    * @param tableName       the table name
+    * @param ref             the [[TableRef]]
     * @param indexColumnName the index column name
     * @param ifNotExists     if false, an error when the table already exists
     * @return the [[TableIndexDevice index device]]
     */
-  def createIndex(databaseName: String, tableName: String, indexColumnName: String, ifNotExists: Boolean = false): TableIndexDevice = {
-    tableOf(databaseName, tableName).createIndex(indexColumnName)
+  def createIndex(ref: TableRef, indexColumnName: String, ifNotExists: Boolean = false): TableIndexDevice = {
+    tableOf(ref).createIndex(ref, indexColumnName)
   }
 
   /**
     * Creates a new table
     * @param databaseName the database name
-    * @param tableName    the table name
-    * @param properties   the [[TableProperties table properties]]
+    * @param table        the [[Table table properties]]
     */
-  def createTable(databaseName: String, tableName: String, properties: TableProperties): Unit = {
-    tables(databaseName -> tableName) = TableFile.createTable(databaseName, tableName, properties)
+  def createTable(databaseName: String, table: Table): Unit = {
+    tables(table.ref) = TableFile.createTable(databaseName, table)
   }
 
   /**
     * Creates a new view (virtual table)
-    * @param databaseName the database name
-    * @param viewName     the view name
-    * @param description  the optional description or remarks
-    * @param invokable    the [[Invokable SQL query]]
-    * @param ifNotExists  if true, the operation will not fail
+    * @param ref         the [[TableRef table reference]]
+    * @param description the optional description or remarks
+    * @param invokable   the [[Invokable SQL query]]
+    * @param ifNotExists if true, the operation will not fail
     */
-  def createView(databaseName: String, viewName: String, description: Option[String], invokable: Invokable, ifNotExists: Boolean): Unit = {
-    tables(databaseName -> viewName) = VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)
+  def createView(ref: TableRef, description: Option[String], invokable: Invokable, ifNotExists: Boolean): Unit = {
+    tables(ref) = VirtualTableFile.createView(ref, description, invokable, ifNotExists)
   }
 
-  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Unit = {
-    tableOf(databaseName, tableName).deleteField(rowID, columnID)
+  def deleteField(ref: TableRef, rowID: ROWID, columnID: Int): Unit = {
+    tableOf(ref).deleteField(rowID, columnID)
   }
 
-  def deleteField(databaseName: String, tableName: String, rowID: ROWID, columnName: String): Unit = {
-    tableOf(databaseName, tableName).deleteField(rowID, columnName)
+  def deleteField(ref: TableRef, rowID: ROWID, columnName: String): Unit = {
+    tableOf(ref).deleteField(rowID, columnName)
   }
 
   /**
     * Retrieves a field by row and column IDs
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param rowID        the row ID
-    * @param columnID     the column ID
-    * @return the [[models.Field field]]
+    * @param ref      the [[TableRef table reference]]
+    * @param rowID    the row ID
+    * @param columnID the column ID
+    * @return the [[Field field]]
     */
-  def getField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): models.Field = {
-    tableOf(databaseName, tableName).getField(rowID, columnID)
+  def getField(ref: TableRef, rowID: ROWID, columnID: Int): models.Field = {
+    tableOf(ref).getField(rowID, columnID)
   }
 
-  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int, newValue: Option[Any]): Unit = {
-    tableOf(databaseName, tableName).updateField(rowID, columnID, newValue)
+  def updateField(ref: TableRef, rowID: ROWID, columnID: Int, newValue: Option[Any]): Unit = {
+    tableOf(ref).updateField(rowID, columnID, newValue)
   }
 
-  def updateField(databaseName: String, tableName: String, rowID: ROWID, columnName: String, newValue: Option[Any]): Unit = {
-    tableOf(databaseName, tableName).updateField(rowID, columnName, newValue)
+  def updateField(ref: TableRef, rowID: ROWID, columnName: String, newValue: Option[Any]): Unit = {
+    tableOf(ref).updateField(rowID, columnName, newValue)
   }
 
   /**
     * Deletes a row by ID
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param rowID        the ID of the row to delete
+    * @param ref   the [[TableRef table reference]]
+    * @param rowID the ID of the row to delete
     */
-  def deleteRow(databaseName: String, tableName: String, rowID: ROWID): Unit = {
-    tableOf(databaseName, tableName).deleteRow(rowID)
+  def deleteRow(ref: TableRef, rowID: ROWID): Unit = {
+    tableOf(ref).deleteRow(rowID)
   }
 
   /**
     * Deletes rows matching the given criteria (up to the optionally specified limit)
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param condition    the deletion criteria
-    * @param limit        the maximum number of records to delete
+    * @param ref       the [[TableRef table reference]]
+    * @param condition the deletion criteria
+    * @param limit     the maximum number of records to delete
     * @return the number of rows affected
     */
-  def deleteRows(databaseName: String, tableName: String, condition: Option[Condition], limit: Option[Int] = None): Long = {
-    tableOf(databaseName, tableName).deleteRows(condition = toCriteria(condition), limit)
+  def deleteRows(ref: TableRef, condition: Option[Condition], limit: Option[Int] = None): Long = {
+    tableOf(ref).deleteRows(condition = toCriteria(condition), limit)
   }
 
   /**
     * Deletes a database table
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param ifExists     indicates whether an existence check should be performed
+    * @param ref      the [[TableRef table reference]]
+    * @param ifExists indicates whether an existence check should be performed
     * @return true, if the table was dropped
     */
-  def dropTable(databaseName: String, tableName: String, ifExists: Boolean = false): Boolean = {
-    TableFile.dropTable(databaseName, tableName, ifExists)
-    tables.remove(databaseName -> tableName).nonEmpty
+  def dropTable(ref: TableRef, ifExists: Boolean = false): Boolean = {
+    TableFile.dropTable(ref, ifExists)
+    tables.remove(ref).nonEmpty
   }
 
   /**
     * Deletes a database view
-    * @param databaseName the database name
-    * @param viewName     the virtual table name
-    * @param ifExists     indicates whether an existence check should be performed
+    * @param ref      the [[TableRef table reference]]
+    * @param ifExists indicates whether an existence check should be performed
     * @return true, if the view was dropped
     */
-  def dropView(databaseName: String, viewName: String, ifExists: Boolean = false): Boolean = {
-    VirtualTableFile.dropView(databaseName, viewName, ifExists)
-    tables.remove(databaseName -> viewName).nonEmpty
+  def dropView(ref: TableRef, ifExists: Boolean = false): Boolean = {
+    VirtualTableFile.dropView(ref, ifExists)
+    tables.remove(ref).nonEmpty
   }
 
   /**
@@ -166,46 +155,39 @@ class DatabaseCPU() {
     * @return the [[Solution solution]] containing a result set or an update count
     */
   def execute(databaseName: String, invokable: Invokable): Option[Solution] = {
-    invokable match {
+    invokable.withDatabase(databaseName) match {
       case Console.Debug(message) => logger.debug(message); None
       case Console.Error(message) => logger.error(message); None
       case Console.Info(message) => logger.info(message); None
       case Console.Print(message) => println(message); None
       case Console.Warn(message) => logger.warn(message); None
-      case Create(ref: ExternalTable) =>
-        createExternalTable(databaseName, tableName = ref.name, ref = ref); None
-      case Create(Table(tableName, columns, ifNotExists, isColumnar, isPartitioned, description)) =>
-        Some(Solution(databaseName, tableName, createTable(databaseName, tableName, TableProperties(description, columns.map(_.toColumn), isColumnar, ifNotExists))))
-      case Create(TableIndex(_, TableRef(tableName), Seq(ex.Field(indexColumn)), ifNotExists)) =>
-        Some(Solution(databaseName, tableName, createIndex(databaseName, tableName, indexColumn, ifNotExists)))
-      case Create(View(viewName, invokable, description, ifNotExists)) =>
-        Some(Solution(databaseName, viewName, createView(databaseName, viewName, description, invokable, ifNotExists)))
-      case Delete(TableRef(tableName), where, limit) =>
-        Some(Solution(databaseName, tableName, deleteRows(databaseName, tableName, where, limit)))
-      case DropTable(TableRef(tableName), ifExists) =>
-        Some(Solution(databaseName, tableName, dropTable(databaseName, tableName, ifExists)))
-      case DropView(TableRef(viewName), ifExists) =>
-        Some(Solution(databaseName, viewName, dropView(databaseName, viewName, ifExists)))
+      case Create(table: ExternalTable) => createExternalTable(databaseName, table); None
+      case Create(table: Table) => Some(Solution(table.ref, createTable(databaseName, table)))
+      case Create(TableIndex(ref, table: TableRef, Seq(ex.Field(indexColumn)), ifNotExists)) =>
+        Some(Solution(ref, createIndex(table, indexColumn, ifNotExists)))
+      case Create(View(ref, invokable, description, ifNotExists)) =>
+        Some(Solution(ref, createView(ref, description, invokable, ifNotExists)))
+      case Delete(ref, where, limit) => Some(Solution(ref, deleteRows(ref, where, limit)))
+      case DropTable(ref, ifExists) => Some(Solution(ref, dropTable(ref, ifExists)))
+      case DropView(ref, ifExists) => Some(Solution(ref, dropView(ref, ifExists)))
       case ForLoop(variable, rows, invokable, isReverse) => forLoop(variable, rows, invokable, isReverse)
       case Include(path) => execute(databaseName, invokable = include(path))
-      case Insert(Into(TableRef(tableName)), Insert.Values(values), fields) =>
-        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, fields = fields.map(_.name), values = values)))
-      case Insert(Into(TableRef(tableName)), queryable, fields) =>
-        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, toDevice(databaseName, queryable), overwrite = false)))
-      case Insert(Overwrite(TableRef(tableName)), queryable, fields) =>
-        Some(Solution(databaseName, tableName, insertRows(databaseName, tableName, toDevice(databaseName, queryable), overwrite = true)))
-      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where@None, limit@None) =>
-        Some(Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => getDevice(databaseName, tableName).countRows(_.isActive))))
-      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(TableRef(tableName)), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
-        Some(Solution(databaseName, tableName, countRowsAsDevice(fc.alias || nextID, () => countRows(databaseName, tableName, where, limit))))
-      case Select(fields, Some(TableRef(tableName)), joins, groupBy, having, orderBy, where, limit) =>
-        Some(Solution(databaseName, tableName, selectRows(databaseName, tableName, fields, where, groupBy, having, orderBy, limit)))
+      case Insert(Into(ref: TableRef), Insert.Values(values), fields) =>
+        Some(Solution(ref, insertRows(ref, fields = fields.map(_.name), values = values)))
+      case Insert(Into(ref: TableRef), queryable, fields) =>
+        Some(Solution(ref, insertRows(ref, toDevice(databaseName, queryable), overwrite = false)))
+      case Insert(Overwrite(ref: TableRef), queryable, fields) =>
+        Some(Solution(ref, insertRows(ref, toDevice(ref.databaseName || databaseName, queryable), overwrite = true)))
+      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(ref: TableRef), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where@None, limit@None) =>
+        Some(Solution(ref, countRowsAsDevice(fc.alias || nextID, () => getDevice(ref).countRows(_.isActive))))
+      case Select(Seq(fc@FunctionCall("count", List(AllFields))), Some(ref: TableRef), joins@Nil, groupBy@Nil, having@None, orderBy@Nil, where, limit) =>
+        Some(Solution(ref, countRowsAsDevice(fc.alias || nextID, () => countRows(ref, where, limit))))
+      case Select(fields, Some(ref: TableRef), joins, groupBy, having, orderBy, where, limit) =>
+        Some(Solution(ref, selectRows(ref, fields, where, groupBy, having, orderBy, limit)))
       case Show(invokable, limit) => show(databaseName, invokable, limit)
       case SQL(ops) => ops.foldLeft[Option[Solution]](None) { (_, op) => execute(databaseName, op) }
-      case Truncate(TableRef(tableName)) =>
-        Some(Solution(databaseName, tableName, truncateTable(databaseName, tableName)))
-      case Update(TableRef(tableName), changes, where, limit) =>
-        Some(Solution(databaseName, tableName, updateRows(databaseName, tableName, changes, where, limit)))
+      case Truncate(ref: TableRef) => Some(Solution(ref, truncateTable(ref)))
+      case Update(ref: TableRef, changes, where, limit) => Some(Solution(ref, updateRows(ref, changes, where, limit)))
       case While(condition, invokable) => `while`(databaseName, condition, invokable)
       case unhandled => die(s"Unhandled instruction: $unhandled")
     }
@@ -241,80 +223,75 @@ class DatabaseCPU() {
   def forLoop(variable: RowSetVariableRef,
               rows: Invokable,
               invokable: Invokable,
-              isReverse: Boolean): Option[Solution] = ???
+              isReverse: Boolean): Option[Solution] = {
+    die("forLoop is not yet implemented")
+  }
 
   /**
     * Returns the columns
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @return the [[models.Column columns]]
+    * @param ref the [[TableRef table reference]]
+    * @return the [[Column columns]]
     */
-  def getColumns(databaseName: String, tableName: String): Seq[Column] = getDevice(databaseName, tableName).columns
+  def getColumns(ref: TableRef): Seq[Column] = getDevice(ref).columns
 
   /**
     * Deletes a range of rows in the database
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param start        the initial row ID
-    * @param length       the number of rows to delete
+    * @param ref    the [[TableRef table reference]]
+    * @param start  the initial row ID
+    * @param length the number of rows to delete
     * @return the update count
     */
-  def deleteRange(databaseName: String, tableName: String, start: ROWID, length: Int): Long = {
-    tableOf(databaseName, tableName).deleteRange(start, length)
+  def deleteRange(ref: TableRef, start: ROWID, length: Int): Long = {
+    tableOf(ref).deleteRange(start, length)
   }
 
   /**
     * Retrieves a range of records
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param start        the beginning of the range
-    * @param length       the number of records to retrieve
+    * @param ref    the [[TableRef table reference]]
+    * @param start  the beginning of the range
+    * @param length the number of records to retrieve
     * @return a [[BlockDevice]] containing the rows
     */
-  def getRange(databaseName: String, tableName: String, start: ROWID, length: Int): BlockDevice = {
-    tableOf(databaseName, tableName).getRange(start, length)
+  def getRange(ref: TableRef, start: ROWID, length: Int): BlockDevice = {
+    tableOf(ref).getRange(start, length)
   }
 
   /**
     * Retrieves a row by ID
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param rowID        the row ID
+    * @param ref   the [[TableRef table reference]]
+    * @param rowID the row ID
     * @return the option of a [[Row row]]
     */
-  def getRow(databaseName: String, tableName: String, rowID: ROWID): Option[Row] = {
-    val row = getDevice(databaseName, tableName).getRow(rowID)
+  def getRow(ref: TableRef, rowID: ROWID): Option[Row] = {
+    val row = getDevice(ref).getRow(rowID)
     if (row.metadata.isActive) Some(row) else None
   }
 
   /**
     * Retrieves rows matching the given condition up to the optional limit
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param condition    the given [[KeyValues condition]]
-    * @param limit        the optional limit
+    * @param ref       the [[TableRef table reference]]
+    * @param condition the given [[KeyValues condition]]
+    * @param limit     the optional limit
     * @return the [[BlockDevice results]]
     */
-  def getRows(databaseName: String, tableName: String, condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
-    tableOf(databaseName, tableName).getRows(condition, limit)
+  def getRows(ref: TableRef, condition: KeyValues, limit: Option[Int] = None): BlockDevice = {
+    tableOf(ref).getRows(condition, limit)
   }
 
   /**
-   * Returns the length of the given table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @return the length of the given table
-   */
-  def getTableLength(databaseName: String, tableName: String): Long = getDevice(databaseName, tableName).length
+    * Returns the length of the given table
+    * @param ref the [[TableRef table reference]]
+    * @return the length of the given table
+    */
+  def getTableLength(ref: TableRef): Long = getDevice(ref).length
 
   /**
-   * Returns the metrics for the given table
-   * @param databaseName the database name
-   * @param tableName    the table name
-   * @return the [[TableMetrics table metrics]]
-   */
-  def getTableMetrics(databaseName: String, tableName: String): TableMetrics = {
-    tableOf(databaseName, tableName).getTableMetrics
+    * Returns the metrics for the given table
+    * @param ref the [[TableRef table reference]]
+    * @return the [[TableMetrics table metrics]]
+    */
+  def getTableMetrics(ref: TableRef): TableMetrics = {
+    tableOf(ref).getTableMetrics
   }
 
   /**
@@ -330,71 +307,67 @@ class DatabaseCPU() {
 
   /**
     * Appends a new row to the specified database table
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param values       the list of [[Insert.DataRow value sets]]
+    * @param ref    the [[TableRef table reference]]
+    * @param values the list of [[Insert.DataRow value sets]]
     * @return the new row's ID
     */
-  def insertRow(databaseName: String, tableName: String, values: Seq[(String, Expression)]): ROWID = {
+  def insertRow(ref: TableRef, values: Seq[(String, Expression)]): ROWID = {
     implicit val scope: Scope = Scope()
     val _values = values.map { case (name, expr) => name -> evaluate(expr).value.orNull }
-    tableOf(databaseName, tableName).insertRow(KeyValues(_values: _*))
+    tableOf(ref).insertRow(KeyValues(_values: _*))
   }
 
   /**
     * Appends new rows to the specified database table
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param device       the [[BlockDevice]] containing the rows
+    * @param ref    the [[TableRef table reference]]
+    * @param device the [[BlockDevice]] containing the rows
     * @return the number of rows inserted
     */
-  def insertRows(databaseName: String, tableName: String, device: BlockDevice, overwrite: Boolean): Int = {
-    if (overwrite) getDevice(databaseName, tableName).shrinkTo(newSize = 0)
-    tableOf(databaseName, tableName).insertRows(device)
+  def insertRows(ref: TableRef, device: BlockDevice, overwrite: Boolean): Int = {
+    if (overwrite) getDevice(ref).shrinkTo(newSize = 0)
+    tableOf(ref).insertRows(device)
   }
 
   /**
     * Appends new rows to the specified database table
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param fields       the collection of field names
-    * @param values       the list of [[Insert.DataRow value sets]]
+    * @param ref    the [[TableRef table reference]]
+    * @param fields the collection of field names
+    * @param values the list of [[Insert.DataRow value sets]]
     * @return the collection of row IDs
     */
-  def insertRows(databaseName: String, tableName: String, fields: Seq[String], values: Seq[Seq[Expression]]): Seq[ROWID] = {
+  def insertRows(ref: TableRef, fields: Seq[String], values: Seq[Seq[Expression]]): Seq[ROWID] = {
     implicit val scope: Scope = Scope()
     val _values = values.map(_.map { expr => evaluate(expr).value.orNull })
-    tableOf(databaseName, tableName).insertRows(fields, _values)
+    tableOf(ref).insertRows(fields, _values)
   }
 
-  def replaceRow(databaseName: String, tableName: String, rowID: ROWID, values: KeyValues): Unit = {
-    tableOf(databaseName, tableName).replaceRow(rowID, values)
+  def replaceRow(ref: TableRef, rowID: ROWID, values: KeyValues): Unit = {
+    tableOf(ref).replaceRow(rowID, values)
   }
 
-  def lockRow(databaseName: String, tableName: String, rowID: ROWID): Unit = {
-    tableOf(databaseName, tableName).lockRow(rowID)
+  def lockRow(ref: TableRef, rowID: ROWID): Unit = {
+    tableOf(ref).lockRow(rowID)
   }
 
   /**
     * Executes a query
-    * @param databaseName the database name
-    * @param tableName    the table name
-    * @param fields       the [[Expression field projection]]
-    * @param where        the condition which determines which records are included
-    * @param groupBy      the optional aggregation columns
-    * @param having       the aggregate condition which determines which records are included
-    * @param orderBy      the columns to order by
-    * @param limit        the optional limit
+    * @param ref     the [[TableRef table reference]]
+    * @param fields  the [[Expression field projection]]
+    * @param where   the condition which determines which records are included
+    * @param groupBy the optional aggregation columns
+    * @param having  the aggregate condition which determines which records are included
+    * @param orderBy the columns to order by
+    * @param limit   the optional limit
     * @return a [[BlockDevice block device]] containing the rows
     */
-  def selectRows(databaseName: String, tableName: String,
+  def selectRows(ref: TableRef,
                  fields: Seq[Expression],
                  where: Option[Condition],
                  groupBy: Seq[ex.Field] = Nil,
                  having: Option[Condition] = None,
                  orderBy: Seq[OrderColumn] = Nil,
                  limit: Option[Int] = None): BlockDevice = {
-    tableOf(databaseName, tableName).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
+    tableOf(ref).selectRows(fields, where = toCriteria(where), groupBy, having, orderBy, limit)
   }
 
   def show(databaseName: String, invokable: Invokable, limit: Option[Int] = None): Option[Solution] = {
@@ -413,24 +386,20 @@ class DatabaseCPU() {
     * Truncates the table; removing all rows
     * @return the number of rows removed
     */
-  def truncateTable(databaseName: String, tableName: String): Long = {
-    tableOf(databaseName, tableName).truncate()
-  }
+  def truncateTable(ref: TableRef): Long = tableOf(ref).truncate()
 
-  def unlockRow(databaseName: String, tableName: String, rowID: ROWID, lockID: String): Unit = {
-    tableOf(databaseName, tableName).unlockRow(rowID)
-  }
+  def unlockRow(ref: TableRef, rowID: ROWID, lockID: String): Unit = tableOf(ref).unlockRow(rowID)
 
-  def updateRow(databaseName: String, tableName: String, rowID: ROWID, changes: Seq[(String, Expression)]): Unit = {
+  def updateRow(ref: TableRef, rowID: ROWID, changes: Seq[(String, Expression)]): Unit = {
     implicit val scope: Scope = Scope()
     val row = KeyValues(changes.map { case (name, expr) => (name, evaluate(expr)) }: _*)
-    tableOf(databaseName, tableName).updateRow(rowID, row)
+    tableOf(ref).updateRow(rowID, row)
   }
 
-  def updateRows(databaseName: String, tableName: String, changes: Seq[(String, Expression)], condition: Option[Condition], limit: Option[Int] = None): Long = {
+  def updateRows(ref: TableRef, changes: Seq[(String, Expression)], condition: Option[Condition], limit: Option[Int] = None): Long = {
     implicit val scope: Scope = Scope()
     val row = KeyValues(changes.map { case (name, expr) => (name, evaluate(expr)) }: _*)
-    tableOf(databaseName, tableName).updateRows(row, toCriteria(condition), limit)
+    tableOf(ref).updateRows(row, toCriteria(condition), limit)
   }
 
   def `while`(databaseName: String, condition: Condition, invokable: Invokable): Option[Solution] = {
@@ -450,20 +419,17 @@ class DatabaseCPU() {
 
   /**
     * Returns the block device
-    * @param databaseName the database name
-    * @param tableName    the table name
+    * @param ref the [[TableRef table reference]]
     * @return the [[BlockDevice block device]]
     */
-  private def getDevice(databaseName: String, tableName: String): BlockDevice = {
-    tableOf(databaseName, tableName).device
-  }
+  private def getDevice(ref: TableRef): BlockDevice = tableOf(ref).device
 
-  private def tableOf(databaseName: String, tableName: String): TableFileLike = {
-    tables.getOrElseUpdate(databaseName -> tableName, {
-      val config = readTableConfig(databaseName, tableName)
-      if (config.externalTable.nonEmpty) ExternalTableFile(databaseName, tableName)
-      else if (isVirtualTable(databaseName, tableName)) VirtualTableFile(databaseName, tableName)
-      else TableFile(databaseName, tableName)
+  private def tableOf(ref: TableRef): TableFileLike = {
+    tables.getOrElseUpdate(ref, {
+      val config = readTableConfig(ref)
+      if (config.externalTable.nonEmpty) ExternalTableFile(ref)
+      else if (isVirtualTable(ref)) VirtualTableFile.load(ref)
+      else TableFile(ref)
     })
   }
 
@@ -518,7 +484,7 @@ object DatabaseCPU {
     case None => KeyValues()
   }
 
-  case class Solution(databaseName: String, tableName: String, result: Any) {
+  case class Solution(ref: TableRef, result: Any) {
 
     /**
       * @return a normalized copy of then result as either a [[BlockDevice block device]] or [[Long update count]].
@@ -549,15 +515,43 @@ object DatabaseCPU {
       */
     final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
       @inline
-      def toColumn: models.Column = Column.create(
+      def toColumn: Column = Column.create(
         name = column.name,
         comment = column.comment.getOrElse(""),
         enumValues = column.enumValues,
         maxSize = column.spec.precision.headOption,
-        metadata = models.ColumnMetadata(
+        metadata = ColumnMetadata(
           isNullable = column.isNullable,
           `type` = lookupColumnType(column.spec.typeName)
         ))
+    }
+
+    final implicit class InvokableWithDatabase(val invokable: Invokable) extends AnyVal {
+      @inline
+      def withDatabase(databaseName: String): Invokable = invokable match {
+        case c@Create(table: ExternalTable) => c.copy(entity = table.copy(ref = table.ref.withDatabase(databaseName)))
+        case c@Create(table: Table) => c.copy(entity = table.copy(ref = table.ref.withDatabase(databaseName)))
+        case c@Create(view: View) => c.copy(entity = view.copy(ref = view.ref.withDatabase(databaseName), query = view.query.withDatabase(databaseName)))
+        case d: DropTable => d.copy(table = d.table.withDatabase(databaseName))
+        case d: DropView => d.copy(table = d.table.withDatabase(databaseName))
+        case i: Insert =>
+          i.copy(
+            source = i.source.withDatabase(databaseName).asInstanceOf[Queryable],
+            destination = i.destination match {
+              case d@Into(target: TableRef) => d.copy(target = target.withDatabase(databaseName))
+              case d@Overwrite(target: TableRef) => d.copy(target = target.withDatabase(databaseName))
+              case other => other
+            })
+        case s: Select =>
+          s.copy(from = s.from.map {
+            case t: TableRef => t.withDatabase(databaseName)
+            case other => other
+          })
+        case t: Truncate => t.copy(table = t.table.withDatabase(databaseName))
+        case u: Union => u.copy(query0 = u.query0.withDatabase(databaseName), query1 = u.query1.withDatabase(databaseName))
+        case u: Update => u.copy(table = u.table.withDatabase(databaseName))
+        case other => other
+      }
     }
 
   }

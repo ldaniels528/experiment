@@ -17,10 +17,11 @@ import scala.collection.JavaConverters._
  * @param databaseName the database name
  * @param tableName    the table name
  */
-class RecordProcessorFactory(host: String, port: Int, databaseName: String, tableName: String) extends IRecordProcessorFactory {
+class RecordProcessorFactory(host: String, port: Int, databaseName: String, schemaName: String, tableName: String)
+  extends IRecordProcessorFactory {
 
   override def createProcessor(): IRecordProcessor = {
-    new RecordProcessor(host, port, databaseName, tableName)
+    new RecordProcessor(host, port, databaseName, schemaName, tableName)
   }
 
 }
@@ -41,7 +42,7 @@ object RecordProcessorFactory {
    * @param databaseName the database name
    * @param tableName    the table name
    */
-  class RecordProcessor(host: String, port: Int, databaseName: String, tableName: String) extends IRecordProcessor {
+  class RecordProcessor(host: String, port: Int, databaseName: String, schemaName: String, tableName: String) extends IRecordProcessor {
     private val logger = LoggerFactory.getLogger(getClass)
     private val producer = MessageProducer(host, port)
 
@@ -53,7 +54,7 @@ object RecordProcessorFactory {
       try {
         incomingRecords.foreach { record =>
           val jsonString = new String(record.getData.array())
-          try producer.send(databaseName, tableName, jsonString) catch {
+          try producer.send(databaseName, schemaName, tableName, jsonString) catch {
             case e: Exception =>
               logger.error(s"${e.getMessage}: $jsonString")
           }

@@ -117,11 +117,11 @@ trait SparkCodeCompiler {
 
   def generateReader(tableLike: TableLike)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     tableLike match {
-      case InlineTable(name, columns, source, description) =>
+      case InlineTable(ref, columns, source, description) =>
         CodeBuilder(prepend = ".")
           .append(source.toCode)
           .append(generateCode(columns))
-          .append(withGlobalTempView(name))
+          .append(withGlobalTempView(ref))
           .build()
       case table: ExternalTable =>
         table.format.map(_.toString.toLowerCase()) match {
@@ -131,7 +131,7 @@ trait SparkCodeCompiler {
               .append(generateTableOptions(table))
               .append(s"""$format(${generatePath(table).orNull})""")
               .append(generateCode(table.columns))
-              .append(withGlobalTempView(table.name))
+              .append(withGlobalTempView(table.ref))
               .build()
           case None => ""
         }
@@ -259,7 +259,7 @@ trait SparkCodeCompiler {
     SQLLanguageParser.parse(file)
   }
 
-  def withGlobalTempView(name: String): String = s"""withGlobalTempView("$name")"""
+  def withGlobalTempView(ref: TableRef): String = s"""withGlobalTempView("${ref.toSQL}")"""
 
   def wrapIdentifier(name: String): String = name match {
     case s if s.contains("$") => s"`$s`"
@@ -387,7 +387,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case SetLocalVariable(name, expression) => s"""val $name = ${expression.toCode}"""
           case Show(rows, limit) => s"${rows.toCode}.show(${limit.getOrElse(20)})"
           case SQL(items) => items.map(_.toCode).mkString("\n")
-          case t: TableRef => t.name
+          case t: TableRef => t.tableName
           case v: Insert.Values => generateCode(v)
           case w: While => generateCode(w)
           case z => throw new IllegalStateException(s"Unsupported operation $z")
@@ -403,7 +403,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case s: Select => generateSQL(s)
           case SQL(statements) => statements.map(_.toSQL).mkString("\n")
           case t: TableRef =>
-            val tableName = s"${settings.defaultDB}.${t.name}"
+            val tableName = s"${settings.defaultDB}.${t.tableName}"
             t.alias.map(alias => s"$tableName as $alias") getOrElse tableName
           case Union(a, b, isDistinct) => s"${a.toSQL} union ${if (isDistinct) "distinct" else ""} ${b.toSQL}"
           case v: IN.Values => generateSQL(v)

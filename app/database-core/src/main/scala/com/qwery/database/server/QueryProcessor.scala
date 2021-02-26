@@ -16,7 +16,7 @@ import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._
 import com.qwery.database.server.QueryProcessor.implicits._
 import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
-import com.qwery.models.{Insert, Invokable, OrderColumn}
+import com.qwery.models.{Insert, Invokable, OrderColumn, Table, TableRef}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -52,11 +52,11 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
     * Creates a new table
     * @param databaseName the database name
     * @param tableName    the table name
-    * @param properties   the [[TableProperties table properties]]
+    * @param table   the [[Table table properties]]
     * @return the promise of an [[UpdateCount update count]]
     */
-  def createTable(databaseName: String, tableName: String,  properties: TableProperties)(implicit timeout: Timeout): Future[UpdateCount] = {
-    asUpdateCount(CreateTable(databaseName, tableName, properties))
+  def createTable(databaseName: String, tableName: String, table: Table)(implicit timeout: Timeout): Future[UpdateCount] = {
+    asUpdateCount(CreateTable(databaseName, tableName, table))
   }
 
   /**
@@ -452,8 +452,8 @@ object QueryProcessor {
       }
 
       request match {
-        case cmd: FindRows => if (isVirtualTable(cmd.databaseName, cmd.tableName)) launchVTW(cmd) else launchTW(cmd)
-        case cmd: SelectRows => if (isVirtualTable(cmd.databaseName, cmd.tableName)) launchVTW(cmd) else launchTW(cmd)
+        case cmd: FindRows => if (isVirtualTable(new TableRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
+        case cmd: SelectRows => if (isVirtualTable(new TableRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
         case cmd: VirtualTableIORequest => launchVTW(cmd)
         case cmd: TableIORequest => launchTW(cmd)
         case cmd => launchSW(cmd)
@@ -493,11 +493,11 @@ object QueryProcessor {
       case cmd@GetDatabaseMetrics(databaseName) =>
         invoke(cmd, sender())(getDatabaseSummary(databaseName)) { case (caller, metrics) => caller ! DatabaseMetricsRetrieved(metrics) }
       case cmd@SearchColumns(databaseNamePattern, tableNamePattern, columnNamePattern) =>
-        invoke(cmd, sender())(searchColumns(databaseNamePattern, tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! ColumnSearchResponse(data) }
+        invoke(cmd, sender())(searchColumns(databaseNamePattern, schemaNamePattern = Some(DEFAULT_SCHEMA), tableNamePattern, columnNamePattern)) { case (caller, data) => caller ! ColumnSearchResponse(data) }
       case cmd@SearchDatabases(pattern) =>
         invoke(cmd, sender())(searchDatabases(pattern)) { case (caller, metrics) => caller ! DatabaseSearchResponse(metrics) }
       case cmd@SearchTables(databaseNamePattern, tableNamePattern) =>
-        invoke(cmd, sender())(searchTables(databaseNamePattern, tableNamePattern)) { case (caller, data) => caller ! TableSearchResponse(data) }
+        invoke(cmd, sender())(searchTables(databaseNamePattern, schemaNamePattern = Some(DEFAULT_SCHEMA), tableNamePattern)) { case (caller, data) => caller ! TableSearchResponse(data) }
       case message =>
         logger.error(s"Unhandled D-CPU processing message $message")
         unhandled(message)
@@ -511,13 +511,14 @@ object QueryProcessor {
    */
   class TableCPU(databaseName: String, tableName: String) extends Actor {
     private val locks = TrieMap[ROWID, String]()
-    private lazy val table = TableFile(databaseName, tableName)
+    private val ref = new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName)
+    private lazy val table = TableFile(ref)
 
     override def receive: Receive = {
       case cmd@CreateIndex(_, _, indexColumn) =>
-        invoke(cmd, sender())(table.createIndex(indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
-      case cmd@CreateTable(_, _, TableProperties(description, columns, isColumnar, ifNotExists)) =>
-        invoke(cmd, sender())(TableFile.createTable(databaseName, tableName, TableProperties(description, columns, isColumnar, ifNotExists))) { case (caller, _) => caller ! RowsUpdated(1) }
+        invoke(cmd, sender())(table.createIndex(ref, indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
+      case cmd@CreateTable(_, _, table) =>
+        invoke(cmd, sender())(TableFile.createTable(databaseName, table)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
         invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteRange(_, _, start, length) =>
@@ -527,7 +528,7 @@ object QueryProcessor {
       case cmd@DeleteRows(_, _, condition, limit) =>
         invoke(cmd, sender())(table.deleteRows(condition, limit)) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@DropTable(_, tableName, ifExists) =>
-        invoke(cmd, sender())(TableFile.dropTable(databaseName, tableName, ifExists)) { case (caller, isDropped) => caller ! RowsUpdated(count = isDropped.toInt) }
+        invoke(cmd, sender())(TableFile.dropTable(ref, ifExists)) { case (caller, isDropped) => caller ! RowsUpdated(count = isDropped.toInt) }
       case cmd@FetchAndReplace(_, _, rowID, f) =>
         invoke(cmd, sender())(table.fetchAndReplace(rowID)(f)) { case (caller, row) => caller ! RowsRetrieved(Seq(row)) }
       case cmd@FindRows(_, _, condition, limit) =>
@@ -554,7 +555,7 @@ object QueryProcessor {
       case cmd@ReplaceRow(_, _, rowID, row) =>
         invoke(cmd, sender())(table.replaceRow(rowID, row)) { case (caller, _) => caller ! RowUpdated(rowID, isSuccess = true) }
       case cmd@SelectRows(_, _, fields, where, groupBy, having, orderBy, limit) =>
-        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, having, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, tableName))) }
+        invoke(cmd, sender())(table.selectRows(fields, where, groupBy, having, orderBy, limit)) { case (caller, result) => caller ! QueryResultRetrieved(result.use(_.toQueryResult(ref))) }
       case cmd: TruncateTable =>
         invoke(cmd, sender())(table.truncate()) { case (caller, n) => caller ! RowsUpdated(n) }
       case cmd@UnlockRow(_, _, rowID, lockID) => unlockRow(cmd, rowID, lockID)
@@ -601,18 +602,19 @@ object QueryProcessor {
     * @param viewName     the view name
     */
   class VirtualTableCPU(databaseName: String, viewName: String) extends Actor {
-    private lazy val vTable = VirtualTableFile(databaseName, viewName)
+    private val ref = new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, viewName)
+    private lazy val vTable = VirtualTableFile.load(ref)
 
     override def receive: Receive = {
       case cmd@CreateView(_, _, description, invokable, ifNotExists) =>
-        invoke(cmd, sender())(VirtualTableFile.createView(databaseName, viewName, description, invokable, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
+        invoke(cmd, sender())(VirtualTableFile.createView(ref, description, invokable, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DropView(_, _, ifExists) =>
-        invoke(cmd, sender())(VirtualTableFile.dropView(databaseName, viewName, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
+        invoke(cmd, sender())(VirtualTableFile.dropView(ref, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@FindRows(_, _, condition, limit) =>
         invoke(cmd, sender())(vTable.getRows(condition, limit)) { case (caller, rows) => caller ! RowsRetrieved(rows.use(_.toList)) }
       case cmd@SelectRows(_, _, fields, where, groupBy, having, orderBy, limit) =>
         invoke(cmd, sender())(vTable.selectRows(fields, where, groupBy, having, orderBy, limit)) { case (caller, result) =>
-          caller ! QueryResultRetrieved(result.use(_.toQueryResult(databaseName, viewName)))
+          caller ! QueryResultRetrieved(result.use(_.toQueryResult(ref)))
         }
       case message =>
         logger.error(s"Unhandled VT-CPU processing message $message")
@@ -709,7 +711,7 @@ object QueryProcessor {
 
     case class CreateIndex(databaseName: String, tableName: String, indexColumnName: String) extends TableUpdateRequest
 
-    case class CreateTable(databaseName: String, tableName: String, properties: TableProperties) extends TableUpdateRequest
+    case class CreateTable(databaseName: String, tableName: String, table: Table) extends TableUpdateRequest
 
     case class DeleteField(databaseName: String, tableName: String, rowID: ROWID, columnID: Int) extends TableUpdateRequest
 
@@ -815,8 +817,8 @@ object QueryProcessor {
         response match {
           case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
           case QueryResultRetrieved(result) => result
-          case RowUpdated(rowID, isSuccess) => QueryResult(databaseName, tableName, count = isSuccess.toInt, __ids = List(rowID))
-          case RowsUpdated(count) => QueryResult(databaseName, tableName, count = count)
+          case RowUpdated(rowID, isSuccess) => QueryResult(new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = isSuccess.toInt, __ids = List(rowID))
+          case RowsUpdated(count) => QueryResult(new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = count)
           case response => throw UnhandledCommandException(request, response)
         }
       }

@@ -1,19 +1,21 @@
 package com.qwery.database.models
 
-/**
-  * Represents a reference to a Table Index
-  * @param databaseName    the name of the database
-  * @param tableName       the name of the host table
-  * @param indexColumnName the name of the index column
-  */
-case class TableIndexRef(databaseName: String, tableName: String, indexColumnName: String)
+import com.qwery.database.models.ModelsJsonProtocol._
+import com.qwery.models.TableRef
+import spray.json._
 
 /**
- * Table Index Reference Companion
- */
+  * Represents a reference to a Table Index
+  * @param ref             the [[TableRef table reference]]
+  * @param indexColumnName the name of the index column
+  */
+case class TableIndexRef(ref: TableRef, indexColumnName: String)
+
+/**
+  * Table Index Reference Companion
+  */
 object TableIndexRef {
-  import spray.json._
-  import DefaultJsonProtocol._
-  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat3(TableIndexRef.apply)
+
+  implicit val tableIndexJsonFormat: RootJsonFormat[TableIndexRef] = jsonFormat2(TableIndexRef.apply)
 
 }

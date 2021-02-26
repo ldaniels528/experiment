@@ -7,17 +7,18 @@ import akka.http.scaladsl.model.{HttpResponse, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.ContentTypeResolver.Default
-import com.qwery.database.models.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.DatabaseManagementSystem._
 import com.qwery.database.files.{DatabaseManagementSystem, TableFile}
+import com.qwery.database.models.ColumnTypes.{ArrayType, BlobType, ClobType, ColumnType, StringType}
 import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.models.QueryResult.SolutionToQueryResult
 import com.qwery.database.models._
 import com.qwery.database.server.DatabaseServer.implicits._
 import com.qwery.database.util.Codec
 import com.qwery.models.expressions.Expression
+import com.qwery.models.{Table, TableRef}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import org.slf4j.LoggerFactory
 import spray.json._
@@ -25,11 +26,12 @@ import spray.json._
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 /**
- * Qwery Database Server
- */
+  * Qwery Database Server
+  */
 object DatabaseServer {
   private val logger = LoggerFactory.getLogger(getClass)
   private val nf = NumberFormat.getNumberInstance
@@ -37,9 +39,9 @@ object DatabaseServer {
   private val pidGenerator = new AtomicLong()
 
   /**
-   * Main program
-   * @param args the command line arguments
-   */
+    * Main program
+    * @param args the command line arguments
+    */
   def main(args: Array[String]): Unit = {
     val defaultPort = 8233
 
@@ -62,11 +64,19 @@ object DatabaseServer {
   }
 
   /**
-   * Starts the server
-   * @param host the server host (e.g. "0.0.0.0")
-   * @param port the server port
-   */
-  def startServer(host: String = "0.0.0.0", port: Int)(implicit as: ActorSystem, ec: ExecutionContext): Unit = {
+    * Starts the server; listens to 0.0.0.0:port
+    * @param port the server port
+    */
+  def startServer(port: Int)(implicit as: ActorSystem, ec: ExecutionContext): Unit = {
+    startServer(host = "0.0.0.0", port = port)
+  }
+
+  /**
+    * Starts the server
+    * @param host the server host (e.g. "0.0.0.0")
+    * @param port the server port
+    */
+  def startServer(host: String, port: Int)(implicit as: ActorSystem, ec: ExecutionContext): Unit = {
     Http().newServerAt(host, port).bindFlow(route(host, port)) onComplete {
       case Success(serverBinding) =>
         logger.info(s"listening to ${serverBinding.localAddress}")
@@ -76,113 +86,121 @@ object DatabaseServer {
   }
 
   /**
-   * Define the API routes
-   * @return the [[Route]]
-   */
+    * Define the API routes
+    * @return the [[Route]]
+    */
   def route(host: String, port: Int): Route = {
     // Database API routes
     // route: /d/<database> (e.g. "/d/portfolio")
     path("d" / Segment)(routesByDatabase(_, host, port)) ~
-      // route: /d/<database>/<table> (e.g. "/d/portfolio/stocks")
-      path("d" / Segment / Segment)(routesByDatabaseTable) ~
-      // route: /d/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
-      path("d" / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
-      // route: /d/<database>/<table>/<rowID>/<columnID> (e.g. "/d/portfolio/stocks/187/2")
-      path("d" / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableColumnID) ~
-      // route: /r/<database>/<table>/<rowID>/<count> (e.g. "/r/portfolio/stocks/187/23")
-      path("r" / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableRange) ~
-      // route: /d/<database>/<table>/export/<format>/<fileName> (e.g. "/d/portfolio/stocks/export/json/stocks.json")
-      path("d" / Segment / Segment / "export" / Segment / Segment)(routesByDatabaseTableExport) ~
-      // route: /d/<database>/<table>/length (e.g. "/d/portfolio/stocks/length")
-      path("d" / Segment / Segment / "length")(routesByDatabaseTableLength) ~
+      // route: /d/<database>/<schema>/<table> (e.g. "/d/portfolio/stocks")
+      path("d" / Segment / Segment / Segment)(routesByDatabaseTable) ~
+      // route: /d/<database>/<schema>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
+      path("d" / Segment / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
+      // route: /d/<database>/<schema>/<table>/<rowID>/<columnID> (e.g. "/d/portfolio/stocks/187/2")
+      path("d" / Segment / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableColumnID) ~
+      // route: /r/<database>/<schema>/<table>/<rowID>/<count> (e.g. "/r/portfolio/stocks/187/23")
+      path("r" / Segment / Segment / Segment / LongNumber / IntNumber)(routesByDatabaseTableRange) ~
+      // route: /d/<database>/<schema>/<table>/export/<format>/<fileName> (e.g. "/d/portfolio/stocks/export/json/stocks.json")
+      path("d" / Segment / Segment / Segment / "export" / Segment / Segment)(routesByDatabaseTableExport) ~
+      // route: /d/<database>/<schema>/<table>/length (e.g. "/d/portfolio/stocks/length")
+      path("d" / Segment / Segment / Segment / "length")(routesByDatabaseTableLength) ~
       // route: /q/<database> (e.g. "/q/portfolio")
       path("q" / Segment)(routesByDatabaseTableQuery) ~
       //
       // Message API routes
-      // route: /m/<database>/<table> (e.g. "/m/portfolio/stocks" <~ """{ "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }""")
-      path("m" / Segment / Segment)(routesMessaging) ~
-      // route: /m/<database>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
-      path("m" / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
+      // route: /m/<database>/<schema>/<table> (e.g. "/m/portfolio/stocks" <~ """{ "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 }""")
+      path("m" / Segment / Segment / Segment)(routesMessaging) ~
+      // route: /m/<database>/<schema>/<table>/<rowID> (e.g. "/d/portfolio/stocks/187")
+      path("m" / Segment / Segment / Segment / LongNumber)(routesByDatabaseTableRowID) ~
       //
       // Search API routes
       // route: /columns/?database=<pattern>&table=<pattern>&column=<pattern> (e.g. "/columns/?database=portfolios&table=stocks&column=symbol")
       path("columns")(routesSearchColumns) ~
       // route: /databases/?database=<pattern> (e.g. "/databases/?database=test%")
       path("databases")(routesSearchDatabases) ~
-      // route: /tables/?database=<pattern>&table=<pattern> (e.g. "/tables/?database=test%&table=stocks")
+      // route: /schemas/?database=<pattern>&schema=<pattern> (e.g. "/schemas/?database=test%&schema=stocks")
+      path("schemas")(routesSearchSchemas) ~
+      // route: /tables/?database=<pattern>&schema=<pattern&table=<pattern> (e.g. "/tables/?database=test%&table=stocks")
       path("tables")(routesSearchTables)
   }
 
   /**
-   * Database-specific API routes (e.g. "/d/portfolio")
-   * @param databaseName the name of the database
-   * @return the [[Route]]
-   */
+    * Database-specific API routes (e.g. "/d/portfolio")
+    * @param databaseName the name of the database
+    * @param host         the server host
+    * @param port         the server port
+    * @return the [[Route]]
+    */
   private def routesByDatabase(databaseName: String, host: String, port: Int): Route = {
     get {
       // retrieve the database summary (e.g. "GET /d/portfolio")
       val databaseSummary = DatabaseManagementSystem.getDatabaseSummary(databaseName)
       val databaseSummaryWithRefs = databaseSummary.copy(tables = databaseSummary.tables.map { ts =>
-        ts.copy(href = Some(s"http://$host:$port/d/$databaseName/${ts.tableName}"))
+        ts.copy(href = Some(s"http://$host:$port/d/$databaseName/${ts.schemaName}/${ts.tableName}"))
       })
       complete(databaseSummaryWithRefs)
     }
   }
 
   /**
-   * Database Table-specific API routes (e.g. "/d/portfolio/stocks")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTable(databaseName: String, tableName: String): Route = {
+    * Database Table-specific API routes (e.g. "/d/portfolio/stocks")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTable(databaseName: String, schemaName: String, tableName: String): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks")
-      complete(cpu.dropTable(databaseName, tableName, ifExists = true).toUpdateCount(1))
+      complete(cpu.dropTable(ref, ifExists = true).toUpdateCount(1))
     } ~
       get {
         // retrieve the table metrics (e.g. "GET /d/portfolio/stocks")
         // or query via query parameters (e.g. "GET /d/portfolio/stocks?exchange=AMEX&__limit=5")
         extract(_.request.uri.query()) { params =>
           val (limit, condition) = (params.get("__limit").map(_.toInt) ?? Some(20), toValues(params))
-          if (params.isEmpty) complete(cpu.getTableMetrics(databaseName, tableName))
-          else complete(cpu.getRows(databaseName, tableName, condition, limit).toList.map(_.toKeyValues))
+          if (params.isEmpty) complete(cpu.getTableMetrics(ref))
+          else complete(cpu.getRows(ref, condition, limit).toList.map(_.toKeyValues))
         }
       } ~
       post {
         // append the new record to the table
         // (e.g. "POST /d/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount(1))
+          complete(cpu.insertRow(ref, toExpressions(jsObject)).toUpdateCount(1))
         }
       } ~
       put {
-        // create the new table (e.g. "PUT /d/portfolio/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]})
-        entity(as[TableProperties]) { properties =>
-          complete(cpu.createTable(databaseName, tableName, properties).toUpdateCount(1))
+        // create the new table (e.g. "PUT /d/portfolio/public/stocks" <~ {"tableName":"stocks_client_test_0", "columns":[...]})
+        entity(as[Table]) { table =>
+          complete(cpu.createTable(databaseName, table).toUpdateCount(1))
         }
       }
   }
 
   /**
-   * Database Table Export-specific API routes (e.g. "/d/portfolio/stocks/export/csv/stocks.csv")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param format       the destination file format (e.g. "csv", "json", "bin")
-   * @param fileName     the name of the file to be downloaded
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTableExport(databaseName: String, tableName: String, format: String, fileName: String): Route = {
+    * Database Table Export-specific API routes (e.g. "/d/portfolio/stocks/export/csv/stocks.csv")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @param format       the destination file format (e.g. "csv", "json", "bin")
+    * @param fileName     the name of the file to be downloaded
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTableExport(databaseName: String, schemaName: String, tableName: String, format: String, fileName: String): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     val dataFile = format.toLowerCase() match {
       case "bin" | "binary" | "raw" =>
-        getTableDataFile(databaseName, tableName)
+        getTableDataFile(ref)
       case "csv" =>
         val csvFile = createTempFile()
-        TableFile(databaseName, tableName).exportAsCSV(csvFile)
+        TableFile(ref).exportAsCSV(csvFile)
         csvFile
       case "json" =>
         val jsonFile = createTempFile()
-        TableFile(databaseName, tableName).exportAsJSON(jsonFile)
+        TableFile(ref).exportAsJSON(jsonFile)
         jsonFile
       case other =>
         die(s"Unsupported file format '$other'")
@@ -192,38 +210,41 @@ object DatabaseServer {
   }
 
   /**
-   * Database Table Length-specific API routes (e.g. "/d/portfolio/stocks/length")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTableLength(databaseName: String, tableName: String): Route = {
+    * Database Table Length-specific API routes (e.g. "/d/portfolio/stocks/length")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTableLength(databaseName: String, schemaName: String, tableName: String): Route = {
     get {
       // retrieve the length of the table (e.g. "GET /d/portfolio/stocks/length")
-      complete(cpu.getTableLength(databaseName, tableName).toUpdateCount)
+      complete(cpu.getTableLength(new TableRef(databaseName, schemaName, tableName)).toUpdateCount)
     }
   }
 
   /**
-   * Database Table Field-specific API routes (e.g. "/d/portfolio/stocks/187/0")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param rowID        the desired row by ID
-   * @param columnID     the desired column by index
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTableColumnID(databaseName: String, tableName: String, rowID: ROWID, columnID: Int): Route = {
+    * Database Table Field-specific API routes (e.g. "/d/portfolio/stocks/187/0")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @param rowID        the desired row by ID
+    * @param columnID     the desired column by index
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTableColumnID(databaseName: String, schemaName: String, tableName: String, rowID: ROWID, columnID: Int): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     delete {
       // delete a field (e.g. "DELETE /d/portfolio/stocks/287/0")
-      complete(cpu.deleteField(databaseName, tableName, rowID, columnID).toUpdateCount(1))
+      complete(cpu.deleteField(ref, rowID, columnID).toUpdateCount(1))
     } ~
       get {
         // retrieve a field (e.g. "GET /d/portfolio/stocks/287/0" ~> "CAKE")
         parameters('__contentType.?) { contentType_? =>
-          val columns = cpu.getColumns(databaseName, tableName)
+          val columns = cpu.getColumns(ref)
           val column = columns(columnID)
           val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
-          val field = cpu.getField(databaseName, tableName, rowID, columnID)
+          val field = cpu.getField(ref, rowID, columnID)
           val fieldBytes = field.typedValue.encode(column)
           complete({
             if (fieldBytes.length <= FieldMetadata.BYTES_LENGTH) HttpResponse(status = StatusCodes.NoContent)
@@ -241,55 +262,57 @@ object DatabaseServer {
       put {
         // updates a field (e.g. "PUT /d/portfolio/stocks/287/3" <~ 124.56)
         entity(as[String]) { value =>
-          val columns = cpu.getColumns(databaseName, tableName)
+          val columns = cpu.getColumns(ref)
           assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
           val columnType = columns(columnID).metadata.`type`
-          complete(cpu.updateField(databaseName, tableName, rowID, columnID, Option(Codec.convertTo(value, columnType))).toUpdateCount(1))
+          complete(cpu.updateField(ref, rowID, columnID, Option(Codec.convertTo(value, columnType))).toUpdateCount(1))
         }
       }
   }
 
   /**
-   * Database Table Range-specific API routes (e.g. "/r/portfolio/stocks/187/23")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param start        the start of the range
-   * @param length       the number of rows referenced
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTableRange(databaseName: String, tableName: String, start: ROWID, length: Int): Route = {
+    * Database Table Range-specific API routes (e.g. "/r/portfolio/stocks/187/23")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @param start        the start of the range
+    * @param length       the number of rows referenced
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTableRange(databaseName: String, schemaName: String, tableName: String, start: ROWID, length: Int): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/287/20")
-      complete(cpu.deleteRange(databaseName, tableName, start, length).toUpdateCount)
+      complete(cpu.deleteRange(ref, start, length).toUpdateCount)
     } ~
       get {
         // retrieve the range of rows (e.g. "GET /r/portfolio/stocks/287/20")
-        complete(cpu.getRange(databaseName, tableName, start, length).toList.map(_.toKeyValues))
+        complete(cpu.getRange(ref, start, length).toList.map(_.toKeyValues))
       }
   }
 
   /**
-   * Database Table Query-specific API routes (e.g. "/q/portfolio")
-   * @param databaseName the name of the database
-   * @return the [[Route]]
-   */
+    * Database Table Query-specific API routes (e.g. "/q/portfolio")
+    * @param databaseName the name of the database
+    * @return the [[Route]]
+    */
   private def routesByDatabaseTableQuery(databaseName: String): Route = {
     post {
       // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
       entity(as[String]) { sql =>
         val pid = pidGenerator.addAndGet(1)
         val startTime = System.nanoTime()
-        logger.info(f"[$pid%04d] SQL: $sql")
+        logger.info(f"[$pid%05d] SQL: ${sql.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")}")
 
         try {
           cpu.executeQuery(databaseName, sql).map(_.toQueryResult) match {
             case Some(results) =>
               val elapsedTime = (System.nanoTime() - startTime) / 1e+6
-              logger.info(f"[$pid%04d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
+              logger.info(f"[$pid%05d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
               results.show(5)(logger)
               complete(results)
             case None =>
-              complete(QueryResult(databaseName, tableName = ""))
+              complete(QueryResult(TableRef.parse("???")))
           }
         } catch {
           case e: Exception =>
@@ -301,20 +324,22 @@ object DatabaseServer {
   }
 
   /**
-   * Database Table Length-specific API routes (e.g. "/portfolio/stocks/187")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @param rowID        the referenced row ID
-   * @return the [[Route]]
-   */
-  private def routesByDatabaseTableRowID(databaseName: String, tableName: String, rowID: ROWID): Route = {
+    * Database Table Length-specific API routes (e.g. "/portfolio/stocks/187")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @param rowID        the referenced row ID
+    * @return the [[Route]]
+    */
+  private def routesByDatabaseTableRowID(databaseName: String, schemaName: String, tableName: String, rowID: ROWID): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
-      complete(cpu.deleteRow(databaseName, tableName, rowID).toUpdateCount(1))
+      complete(cpu.deleteRow(ref, rowID).toUpdateCount(1))
     } ~
       get {
         // retrieve the row by ID (e.g. "GET /d/portfolio/stocks/287")
-        complete(cpu.getRow(databaseName, tableName, rowID) match {
+        complete(cpu.getRow(ref, rowID) match {
           case Some(row) => row.toKeyValues.toJson
           case None => JsObject()
         })
@@ -323,30 +348,32 @@ object DatabaseServer {
         // partially update the row by ID
         // (e.g. "POST /d/portfolio/stocks/287" <~ { "lastSale":2.23, "lastSaleTime":1596404391000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.updateRow(databaseName, tableName, rowID, toExpressions(jsObject)).toUpdateCount(1))
+          complete(cpu.updateRow(ref, rowID, toExpressions(jsObject)).toUpdateCount(1))
         }
       } ~
       put {
         // replace the row by ID
         // (e.g. "PUT /d/portfolio/stocks/287" <~ { "exchange":"OTCBB", "symbol":"EVRX", "lastSale":2.09, "lastSaleTime":1596403991000 })
         entity(as[JsObject]) { jsObject =>
-          complete(cpu.replaceRow(databaseName, tableName, rowID, toValues(jsObject)).toUpdateCount(1))
+          complete(cpu.replaceRow(ref, rowID, toValues(jsObject)).toUpdateCount(1))
         }
       }
   }
 
   /**
-   * Messaging-specific API routes (e.g. "/m/portfolio/stocks")
-   * @param databaseName the name of the database
-   * @param tableName    the name of the table
-   * @return the [[Route]]
-   */
-  private def routesMessaging(databaseName: String, tableName: String): Route = {
+    * Messaging-specific API routes (e.g. "/m/portfolio/stocks")
+    * @param databaseName the name of the database
+    * @param schemaName   the name of the schema
+    * @param tableName    the name of the table
+    * @return the [[Route]]
+    */
+  private def routesMessaging(databaseName: String, schemaName: String, tableName: String): Route = {
+    val ref = new TableRef(databaseName, schemaName, tableName)
     post {
       // append the new message to the table
       // (e.g. "POST /m/portfolio/stocks" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
       entity(as[JsObject]) { jsObject =>
-        complete(cpu.insertRow(databaseName, tableName, toExpressions(jsObject)).toUpdateCount(1))
+        complete(cpu.insertRow(ref, toExpressions(jsObject)).toUpdateCount(1))
       }
     }
   }
@@ -359,8 +386,10 @@ object DatabaseServer {
     get {
       // search for columns (e.g. "GET /columns?database=shocktrade&table=stock%&column=symbol")
       extract(_.request.uri.query()) { params =>
-        val (databasePattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("table"), params.get("column"))
-        complete(searchColumns(databasePattern_?, tablePattern_?, columnPattern_?))
+        val (databasePattern_?, schemaPattern_?, tablePattern_?, columnPattern_?) = (params.get("database"), params.get("schema"), params.get("table"), params.get("column"))
+        val results = searchColumns(databasePattern_?, schemaPattern_?, tablePattern_?, columnPattern_?)
+        show("SearchColumns", results)("database" -> databasePattern_?, "schema" -> schemaPattern_?, "table" -> tablePattern_?, "column" -> columnPattern_?)
+        complete(results)
       }
     }
   }
@@ -374,23 +403,46 @@ object DatabaseServer {
       // search for databases (e.g. "GET /databases?database=test%")
       extract(_.request.uri.query()) { params =>
         val databasePattern_? = params.get("database")
-        complete(searchDatabases(databasePattern_?))
+        val results = searchDatabases(databasePattern_?)
+        show("SearchDatabases", results)("database" -> databasePattern_?)
+        complete(results)
+      }
+    }
+  }
+
+  private def routesSearchSchemas: Route = {
+    get {
+      // search for tables (e.g. "GET /schemas?database=test%&schema=stock%"")
+      extract(_.request.uri.query()) { params =>
+        val (databasePattern_?, schemaPattern_?) = (params.get("database"), params.get("schema"))
+        val results = searchSchemas(databasePattern_?, schemaPattern_?)
+        show("SearchSchemas", results)("database" -> databasePattern_?, "schema" -> schemaPattern_?)
+        complete(results)
       }
     }
   }
 
   /**
-    * Table search API routes (e.g. "/tables?database=test%&table=stock%")
+    * Table search API routes (e.g. "/tables?database=test%&schema=public&table=stock%")
     * @return the [[Route]]
     */
   private def routesSearchTables: Route = {
     get {
       // search for tables (e.g. "GET /tables?database=test%&table=stock%"")
       extract(_.request.uri.query()) { params =>
-        val (databasePattern_?, tablePattern_?) = (params.get("database"), params.get("table"))
-        complete(searchTables(databasePattern_?, tablePattern_?))
+        val (databasePattern_?, schemaPattern_?, tablePattern_?) = (params.get("database"), params.get("schema"), params.get("table"))
+        val results = searchTables(databasePattern_?, schemaPattern_?, tablePattern_?)
+        show("SearchTables", results)("database" -> databasePattern_?, "schema" -> schemaPattern_?, "table" -> tablePattern_?)
+        complete(results)
       }
     }
+  }
+
+  private def show[A](label: String, results: Seq[A])(params: (String, Option[String])*)(implicit w: JsonWriter[A]): Unit = {
+    val pid = pidGenerator.addAndGet(1)
+    logger.info(f"[$pid%05d] $label - URI: ?${params.map { case (k, v) => s"$k=${v.getOrElse("")}" }.mkString("&")}")
+    results.zipWithIndex.foreach { case (r, n) => logger.info(f"${n + 1}%02d ${r.toJson}") }
+    logger.info("")
   }
 
   private def toContentType(`type`: String): ContentType = {
@@ -452,13 +504,16 @@ object DatabaseServer {
     final implicit class ResponseConversion(val response: Either[BlockDevice, Long]) extends AnyVal {
 
       @inline
-      def asResult(databaseName: String, tableName: String, limit: Option[Int]): QueryResult = response match {
-        case Left(device) =>
-          var rows: List[Seq[Option[Any]]] = Nil
-          device.whileRow(KeyValues(), limit ?? Some(20)) { row => rows = row.fields.map(_.value) :: rows }
-          QueryResult(databaseName, tableName, columns = device.columns, rows = rows)
-        case Right(count) =>
-          QueryResult(databaseName, tableName, columns = Nil, count = count)
+      def asResult(databaseName: String, schemaName: String, tableName: String, limit: Option[Int]): QueryResult = {
+        val ref = new TableRef(databaseName, schemaName, tableName)
+        response match {
+          case Left(device) =>
+            var rows: List[Seq[Option[Any]]] = Nil
+            device.whileRow(KeyValues(), limit ?? Some(20)) { row => rows = row.fields.map(_.value) :: rows }
+            QueryResult(ref, columns = device.columns, rows = rows)
+          case Right(count) =>
+            QueryResult(ref, columns = Nil, count = count)
+        }
       }
 
       @inline

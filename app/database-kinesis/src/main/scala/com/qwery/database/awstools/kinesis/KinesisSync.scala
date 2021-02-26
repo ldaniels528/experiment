@@ -48,7 +48,7 @@ object KinesisSync {
     // create the worker
     logger.info("Initializing the worker...")
     val worker = new Worker.Builder()
-      .recordProcessorFactory(new RecordProcessorFactory(config.host, config.port, config.databaseName, config.tableName))
+      .recordProcessorFactory(new RecordProcessorFactory(config.host, config.port, config.databaseName, config.schemaName, config.tableName))
       .kinesisClient(kinesisClient)
       .config(kinesisClientLibConfiguration)
       .build()
@@ -61,8 +61,8 @@ object KinesisSync {
   private def loadConfig(args: Array[String]): KinesisSyncConfig = {
     // get the config properties
     args match {
-      case Array(host, port, databaseName, tableName, applicationName, streamName, region) =>
-        KinesisSyncConfig(host, port.toInt, databaseName, tableName, applicationName, streamName, region)
+      case Array(host, port, databaseName, schemaName, tableName, applicationName, streamName, region) =>
+        KinesisSyncConfig(host, port.toInt, databaseName, schemaName, tableName, applicationName, streamName, region)
       case _ => throw new IllegalArgumentException(s"java ${getClass.getName.replaceAllLiterally("$", "")} <host> <port> <databaseName> <tableName> <applicationName> <streamName>")
     }
   }
@@ -70,6 +70,7 @@ object KinesisSync {
   case class KinesisSyncConfig(host: String,
                                port: Int,
                                databaseName: String,
+                               schemaName: String,
                                tableName: String,
                                applicationName: String,
                                streamName: String,

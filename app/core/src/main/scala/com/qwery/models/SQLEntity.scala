@@ -1,6 +1,5 @@
 package com.qwery.models
 
-import com.qwery.models.StorageFormats.StorageFormat
 import com.qwery.models.expressions.Field
 
 /**
@@ -12,13 +11,19 @@ sealed trait SQLEntity {
   /**
     * @return the name of the database entity
     */
-  def name: String
+  def name: String = ref.tableName
+
+  /**
+    * @return the [[TableRef fully-qualified name]]
+    */
+  def ref: TableRef
+
 }
 
 /**
- * Base class for table-like entities (e.g. tables, inline tables and views)
- * @author lawrence.daniels@gmail.com
- */
+  * Base class for table-like entities (e.g. tables, inline tables and views)
+  * @author lawrence.daniels@gmail.com
+  */
 sealed trait TableLike extends SQLEntity {
 
   /**
@@ -29,7 +34,7 @@ sealed trait TableLike extends SQLEntity {
 
 /**
   * Represents a Hive-compatible external table definition
-  * @param name            the name of the table
+  * @param ref             the [[TableRef fully-qualified name]]
   * @param columns         the table [[Column columns]]
   * @param ifNotExists     if true, the operation will not fail when the view exists
   * @param description     the optional description
@@ -56,7 +61,7 @@ sealed trait TableLike extends SQLEntity {
   * }}}
   * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
   */
-case class ExternalTable(name: String,
+case class ExternalTable(ref: TableRef,
                          columns: List[Column],
                          ifNotExists: Boolean = false,
                          description: Option[String] = None,
@@ -65,14 +70,14 @@ case class ExternalTable(name: String,
                          lineTerminator: Option[String] = None,
                          headersIncluded: Option[Boolean] = None,
                          nullValue: Option[String] = None,
-                         format: Option[StorageFormat] = None,
+                         format: Option[String] = None,
                          partitionBy: List[Column] = Nil,
                          serdeProperties: Map[String, String] = Map.empty,
                          tableProperties: Map[String, String] = Map.empty) extends TableLike
 
 /**
   * Represents an inline table definition
-  * @param name        the name of the table
+  * @param ref         the [[TableRef fully-qualified name]]
   * @param columns     the table columns
   * @param values      the collection of [[Insert.Values values]]
   * @param description the optional description
@@ -82,28 +87,19 @@ case class ExternalTable(name: String,
   *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
   * }}}
   */
-case class InlineTable(name: String, columns: List[Column], values: Insert.Values, description: Option[String] = None) extends TableLike
+case class InlineTable(ref: TableRef, columns: List[Column], values: Insert.Values, description: Option[String] = None) extends TableLike
 
 /**
- * Represents an executable procedure
- * @param name   the name of the procedure
- * @param params the procedure's parameters
- * @param code   the procedure's code
- */
-case class Procedure(name: String, params: Seq[Column], code: Invokable) extends SQLEntity
-
-/**
- * Enumeration of Storage Formats
- * @author lawrence.daniels@gmail.com
- */
-object StorageFormats extends Enumeration {
-  type StorageFormat = Value
-  val AVRO, CSV, JDBC, JSON, ORC, PARQUET: StorageFormat = Value
-}
+  * Represents an executable procedure
+  * @param ref    the [[TableRef fully-qualified name]]
+  * @param params the procedure's parameters
+  * @param code   the procedure's code
+  */
+case class Procedure(ref: TableRef, params: Seq[Column], code: Invokable) extends SQLEntity
 
 /**
   * Represents a table definition
-  * @param name        the name of the table
+  * @param ref         the [[TableRef fully-qualified name]]
   * @param columns     the table [[Column columns]]
   * @param ifNotExists if true, the operation will not fail when the view exists
   * @param description the optional description
@@ -123,7 +119,7 @@ object StorageFormats extends Enumeration {
   * }}}
   * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
   */
-case class Table(name: String,
+case class Table(ref: TableRef,
                  columns: List[Column],
                  ifNotExists: Boolean = false,
                  isColumnar: Boolean = false,
@@ -131,46 +127,47 @@ case class Table(name: String,
                  description: Option[String] = None) extends TableLike
 
 /**
- * Table Companion
- * @author lawrence.daniels@gmail.com
- */
+  * Table Companion
+  * @author lawrence.daniels@gmail.com
+  */
 object Table {
 
   /**
-   * Creates a reference to a table by name
-   * @param name the given table name
-   * @return a [[TableRef table reference]]
-   */
-  def apply(name: String): TableRef = TableRef(name)
+    * Creates a reference to a table by name
+    * @param path the given table path (e.g. "securities.stocks")
+    * @return a [[TableRef table reference]]
+    */
+  def apply(path: String): TableRef = TableRef.parse(path)
+
 }
 
 /**
- * Represents a Table Index definition
- * @param name    the name of the index
- * @param table   the host [[Location table reference]]
- * @param columns the [[Field columns]] for which to build the index
- */
-case class TableIndex(name: String, table: Location, columns: Seq[Field], ifNotExists: Boolean) extends SQLEntity
+  * Represents a Table Index definition
+  * @param ref     the [[TableRef fully-qualified name]]
+  * @param table   the host [[Location table reference]]
+  * @param columns the [[Field columns]] for which to build the index
+  */
+case class TableIndex(ref: TableRef, table: Location, columns: Seq[Field], ifNotExists: Boolean) extends SQLEntity
 
 /**
- * Represents an enumeration type definition
- * @param name   the name of the enumeration
- * @param values the enumeration values
- * @example CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
- */
-case class TypeAsEnum(name: String, values: Seq[String]) extends SQLEntity
+  * Represents an enumeration type definition
+  * @param ref    the [[TableRef fully-qualified name]]
+  * @param values the enumeration values
+  * @example CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
+  */
+case class TypeAsEnum(ref: TableRef, values: Seq[String]) extends SQLEntity
 
 /**
- * Represents a User-defined Function (UDF)
- * @param name        the name of the function
- * @param `class`     the fully-qualified function class name
- * @param jarLocation the optional Jar file path
- */
-case class UserDefinedFunction(name: String, `class`: String, jarLocation: Option[String]) extends SQLEntity
+  * Represents a User-defined Function (UDF)
+  * @param ref         the [[TableRef fully-qualified name]]
+  * @param `class`     the fully-qualified function class name
+  * @param jarLocation the optional Jar file path
+  */
+case class UserDefinedFunction(ref: TableRef, `class`: String, jarLocation: Option[String]) extends SQLEntity
 
 /**
   * Represents a View definition
-  * @param name        the name of the view
+  * @param ref         the [[TableRef fully-qualified name]]
   * @param query       the given [[Queryable query]]
   * @param description the optional description
   * @param ifNotExists if true, the operation will not fail when the view exists
@@ -182,7 +179,7 @@ case class UserDefinedFunction(name: String, `class`: String, jarLocation: Optio
   *   WHERE Industry = 'Oil/Gas Transmission'
   * }}}
   */
-case class View(name: String,
+case class View(ref: TableRef,
                 query: Invokable,
                 description: Option[String] = None,
                 ifNotExists: Boolean = false) extends TableLike with Queryable

@@ -1,9 +1,8 @@
 package com.qwery.language
 
 import com.qwery.language.SQLTemplateParams.MappedParameters
-import com.qwery.models.StorageFormats.StorageFormat
+import com.qwery.models._
 import com.qwery.models.expressions._
-import com.qwery.models.{StorageFormats, _}
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 
@@ -144,7 +143,7 @@ trait SQLLanguageParser {
     */
   def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %a:name AS %a:class ?USING +?JAR +?%a:jar")
-    Create(UserDefinedFunction(name = params.atoms("name"), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
+    Create(UserDefinedFunction(ref = TableRef.parse(params.atoms("name")), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
 
   /**
@@ -155,7 +154,7 @@ trait SQLLanguageParser {
   def parseCreateInlineTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INLINE TABLE ?%IFNE:exists %t:name ( %P:columns ) FROM %V:source")
     Create(InlineTable(
-      name = params.atoms("name"),
+      ref = TableRef.parse(params.atoms("name")),
       columns = params.columns.getOrElse("columns", Nil),
       values = params.sources.getOrElse("source", ts.die("No source specified")) match {
         case values: Insert.Values => values
@@ -171,7 +170,7 @@ trait SQLLanguageParser {
     */
   def parseCreateProcedure(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %a:name ( ?%P:params ) ?AS %N:code")
-    Create(Procedure(name = params.atoms("name"), params = params.columns("params"), code = params.sources("code")))
+    Create(Procedure(ref = TableRef.parse(params.atoms("name")), params = params.columns("params"), code = params.sources("code")))
   }
 
   /**
@@ -182,7 +181,7 @@ trait SQLLanguageParser {
   def parseCreateTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?%C(mode|COLUMNAR|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
     Create(Table(
-      name = params.atoms("name"),
+      ref = TableRef.parse(params.atoms("name")),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
@@ -209,13 +208,13 @@ trait SQLLanguageParser {
     }
 
     Create(ExternalTable(
-      name = params.atoms("name"),
+      ref = TableRef.parse(params.atoms("name")),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
-      format = (params.atoms.get("formats.input") ?? params.atoms.get("formats.output")).map(determineStorageFormat),
+      format = (params.atoms.get("formats.input") ?? params.atoms.get("formats.output")).map(_.toLowerCase),
       lineTerminator = params.atoms.get("line.delimiter").map(escapeChars),
       location = getLocation,
       nullValue = params.atoms.get("props.nullValue"),
@@ -236,7 +235,7 @@ trait SQLLanguageParser {
   def parseCreateTableIndex(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %a:name ON %L:table ( %F:columns )")
     Create(TableIndex(
-      name = params.atoms("name"),
+      ref = TableRef.parse(params.atoms("name")),
       columns = params.fields("columns"),
       table = params.locations("table"),
       ifNotExists = params.indicators.get("exists").contains(true)
@@ -253,7 +252,7 @@ trait SQLLanguageParser {
    */
   def parseCreateTypeAsEnum(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE TYPE ?%IFNE:exists %t:name AS ENUM ( %E:values )")
-    Create(TypeAsEnum(name = params.atoms("name"), values = params.expressions("values") map {
+    Create(TypeAsEnum(ref = TableRef.parse(params.atoms("name")), values = params.expressions("values") map {
       case Literal(value: String) => value
       case other => throw SyntaxException(s"String constant expected near '$other'", ts)
     }))
@@ -277,7 +276,7 @@ trait SQLLanguageParser {
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?%w:props ?AS %Q:query")
     Create(View(
-      name = params.atoms("name"),
+      ref = TableRef.parse(params.atoms("name")),
       query = params.sources("query"),
       description = params.atoms.get("description"),
       ifNotExists = params.indicators.get("exists").contains(true)))
@@ -298,7 +297,7 @@ trait SQLLanguageParser {
 
   def parseDelete(ts: TokenStream): Delete = {
     val params = SQLTemplateParams(ts, "DELETE FROM %t:name ?WHERE +?%c:condition ?LIMIT +?%n:limit")
-    Delete(Table(name = params.atoms("name")), where = params.conditions.get("condition"), limit = params.numerics.get("limit").map(_.toInt))
+    Delete(Table(path = params.atoms("name")), where = params.conditions.get("condition"), limit = params.numerics.get("limit").map(_.toInt))
   }
 
   /**
@@ -318,7 +317,7 @@ trait SQLLanguageParser {
    */
   def parseDropTable(ts: TokenStream): DropTable = {
     val params = SQLTemplateParams(ts, "DROP TABLE ?%IFE:exists %t:name")
-    DropTable(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
+    DropTable(Table(path = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
 
   /**
@@ -328,7 +327,7 @@ trait SQLLanguageParser {
     */
   def parseDropView(ts: TokenStream): DropView = {
     val params = SQLTemplateParams(ts, "DROP VIEW ?%IFE:exists %t:name")
-    DropView(Table(name = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
+    DropView(Table(path = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
 
   /**
@@ -438,10 +437,33 @@ trait SQLLanguageParser {
     * @return the resultant [[Select]], [[TableRef]] or [[VariableRef]]
     */
   def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
-    // table (e.g. "Months" or "`Months of the Year`")?
-    case ts if ts.isBackticks | ts.isDoubleQuoted | ts.isText => parseNextAlias(Table(ts.next().text), ts)
+    // table dot notation (e.g. "public"."stocks" or "public.stocks" or "`Months of the Year`")
+    case ts if ts.isBackticks | ts.isDoubleQuoted | ts.isText =>  parseNextAlias(parseTableDotNotation(ts), ts)
     // must be a sub-query or variable
     case ts => parseNextQueryOrVariable(ts)
+  }
+
+  private def parseTableDotNotation(ts: TokenStream): TableRef = {
+
+    def getNameComponent(ts: TokenStream): String = {
+      if (ts.isBackticks || ts.isQuoted || ts.isText) ts.next().text
+      else ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
+    }
+
+    // gather the table components
+    var list: List[String] = List(getNameComponent(ts))
+    while (list.size < 3 && ts.peek.exists(_.text == ".")) {
+      ts.next()
+      list = getNameComponent(ts) :: list
+    }
+
+    // return the table reference
+    list.reverse match {
+      case database :: schema :: table :: Nil => new TableRef(databaseName = database, schemaName = schema, tableName = table)
+      case schema :: table :: Nil => TableRef(databaseName = None, schemaName = Option(schema), tableName = table)
+      case path :: Nil => TableRef.parse(path)
+      case _ => ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
+    }
   }
 
   /**
@@ -623,22 +645,6 @@ trait SQLLanguageParser {
   def parseWhile(ts: TokenStream): While = {
     val params = SQLTemplateParams(ts, "WHILE %c:condition %N:command")
     While(condition = params.conditions("condition"), invokable = params.sources("command"))
-  }
-
-  /**
-    * Determines the storage format
-    * @param formatString the storage format class or string
-    * @return the [[StorageFormat]]
-    */
-  private def determineStorageFormat(formatString: String): StorageFormat = formatString.toUpperCase() match {
-    case s if s.contains("AVRO") => StorageFormats.AVRO
-    case s if s.contains("CSV") => StorageFormats.CSV
-    case s if s.contains("JDBC") => StorageFormats.JDBC
-    case s if s.contains("JSON") => StorageFormats.JSON
-    case s if s.contains("PARQUET") => StorageFormats.PARQUET
-    case s if s.contains("ORC") => StorageFormats.ORC
-    case s if s.contains("TEXT") => StorageFormats.CSV
-    case _ => throw new IllegalArgumentException(s"Could not determine storage format from '$formatString'")
   }
 
 }

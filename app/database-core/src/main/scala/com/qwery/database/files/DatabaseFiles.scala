@@ -1,13 +1,14 @@
 package com.qwery.database.files
 
-import com.qwery.database.util.JSONSupport._
 import com.qwery.database.device.{BlockDevice, ColumnOrientedFileBlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
-import com.qwery.database.getServerRootDirectory
+import com.qwery.database.{DEFAULT_DATABASE, DEFAULT_SCHEMA, getServerRootDirectory}
 import com.qwery.database.models.{DatabaseConfig, TableConfig, TableIndexRef}
+import com.qwery.database.util.JSONSupport._
 import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.Invokable
+import com.qwery.models.{Invokable, TableRef}
+import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
 import java.io._
@@ -46,15 +47,15 @@ object DatabaseFiles {
   //  TABLE CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getTableConfigFile(databaseName: String, tableName: String): File = {
-    getTableRootDirectory(databaseName, tableName) / s"$tableName.json"
+  def getTableConfigFile(ref: TableRef): File = {
+    getTableRootDirectory(ref) / s"${ref.tableName}.json"
   }
 
-  def getTableDevice(databaseName: String, tableName: String): (TableConfig, BlockDevice) = {
-    val (configFile, dataFile) = (getTableConfigFile(databaseName, tableName), getTableDataFile(databaseName, tableName))
-    assert(configFile.exists() && dataFile.exists(), s"Table '$databaseName.$tableName' does not exist")
+  def getTableDevice(ref: TableRef): (TableConfig, BlockDevice) = {
+    val (configFile, dataFile) = (getTableConfigFile(ref), getTableDataFile(ref))
+    assert(configFile.exists() && dataFile.exists(), s"Table '$ref' does not exist")
 
-    val config = readTableConfig(databaseName, tableName)
+    val config = readTableConfig(ref)
     val device = if (config.isColumnar)
       ColumnOrientedFileBlockDevice(columns = config.columns, dataFile)
     else
@@ -62,61 +63,61 @@ object DatabaseFiles {
     (config, device)
   }
 
-  def getTableRootDirectory(databaseName: String, tableName: String): File = {
-    getServerRootDirectory / databaseName / tableName
+  def getTableRootDirectory(ref: TableRef): File = {
+    getServerRootDirectory / (ref.databaseName || DEFAULT_DATABASE) / (ref.schemaName || DEFAULT_SCHEMA) / ref.tableName
   }
 
-  def getTableColumnFile(databaseName: String, tableName: String, columnID: Int): File = {
-    getTableRootDirectory(databaseName, tableName) / getTableFileName(tableName, columnID)
+  def getTableColumnFile(ref: TableRef, columnID: Int): File = {
+    getTableRootDirectory(ref) / getTableFileName(ref.tableName, columnID)
   }
 
-  def getTableDataFile(databaseName: String, tableName: String): File = {
-    getTableRootDirectory(databaseName, tableName) / getTableFileName(tableName)
+  def getTableDataFile(ref: TableRef): File = {
+    getTableRootDirectory(ref) / getTableFileName(ref.tableName)
   }
 
-  def getTableIndices(databaseName: String, tableName: String): Seq[TableIndexRef] = {
-    readTableConfig(databaseName, tableName).indices
+  def getTableIndices(ref: TableRef): Seq[TableIndexRef] = {
+    readTableConfig(ref).indices
   }
 
   def getTableFileName(tableName: String): String = s"$tableName.qdb"
 
   def getTableFileName(tableName: String, columnID: Int): String = s"$tableName-$columnID.qdb"
 
-  def isTableFile(databaseName: String, tableName: String): Boolean = {
-    getTableDataFile(databaseName, tableName).exists()
+  def isTableFile(ref: TableRef): Boolean = {
+    getTableDataFile(ref).exists()
   }
 
-  def readTableConfig(databaseName: String, tableName: String): TableConfig = {
-    Source.fromFile(getTableConfigFile(databaseName, tableName)).use(_.mkString.fromJSON[TableConfig])
+  def readTableConfig(ref: TableRef): TableConfig = {
+    Source.fromFile(getTableConfigFile(ref)).use(_.mkString.fromJSON[TableConfig])
   }
 
-  def writeTableConfig(databaseName: String, tableName: String, config: TableConfig): Unit = {
-    new PrintWriter(getTableConfigFile(databaseName, tableName)).use(_.println(config.toJSONPretty))
+  def writeTableConfig(ref: TableRef, config: TableConfig): Unit = {
+    new PrintWriter(getTableConfigFile(ref)).use(_.println(config.toJSONPretty))
   }
 
   //////////////////////////////////////////////////////////////////////////////////////
   //  VIRTUAL TABLE (VIEW) CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getViewDataFile(databaseName: String, viewName: String): File = {
-    getTableRootDirectory(databaseName, viewName) / getViewFileName(viewName)
+  def getViewDataFile(ref: TableRef): File = {
+    getTableRootDirectory(ref) / getViewFileName(ref.tableName)
   }
 
   def getViewFileName(viewName: String): String = s"$viewName.sql"
 
-  def isVirtualTable(databaseName: String, viewName: String): Boolean = {
-    getViewDataFile(databaseName, viewName).exists()
+  def isVirtualTable(ref: TableRef): Boolean = {
+    getViewDataFile(ref).exists()
   }
 
-  def readViewData(databaseName: String, viewName: String): Invokable = {
-    val file = getViewDataFile(databaseName, viewName)
-    assert(file.exists(), s"Table '$viewName' does not exist")
+  def readViewData(ref: TableRef): Invokable = {
+    val file = getViewDataFile(ref)
+    assert(file.exists(), s"Table '$ref' does not exist")
     val sql = Source.fromFile(file).use(_.mkString)
     SQLLanguageParser.parse(sql)
   }
 
-  def writeViewData(databaseName: String, viewName: String, query: Invokable): Unit = {
-    new PrintWriter(getViewDataFile(databaseName, viewName)).use(_.println(query.toSQL))
+  def writeViewData(ref: TableRef, query: Invokable): Unit = {
+    new PrintWriter(getViewDataFile(ref)).use(_.println(query.toSQL))
   }
 
   //////////////////////////////////////////////////////////////////////////////////////

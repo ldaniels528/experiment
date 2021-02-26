@@ -2,7 +2,6 @@ package com.qwery.database
 package models
 
 import com.qwery.database.util.JSONSupport._
-import com.qwery.database.models
 import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec
 import spray.json._
@@ -23,7 +22,7 @@ class ModelsJsonProtocolTest extends AnyFunSpec {
     }
 
     it("should serialize/deserialize a ColumnSearchResult") {
-      verifyJson(ColumnSearchResult(databaseName = "test", tableName = "students", column = Column(name = "symbol", comment = "stock ticker", metadata = models.ColumnMetadata(`type` = ColumnTypes.StringType), enumValues = Nil, sizeInBytes = 24)))
+      verifyJson(ColumnSearchResult(databaseName = "test", schemaName = "school", tableName = "students", column = Column(name = "symbol", comment = "stock ticker", metadata = models.ColumnMetadata(`type` = ColumnTypes.StringType), enumValues = Nil, sizeInBytes = 24)))
     }
 
     it("should serialize/deserialize a DatabaseSearchResult") {
@@ -37,7 +36,7 @@ class ModelsJsonProtocolTest extends AnyFunSpec {
     }
 
     it("should serialize/deserialize a TableSearchResult") {
-      verifyJson(TableSearchResult(databaseName = "test", tableName = "students"))
+      verifyJson(TableSearchResult(databaseName = "test", schemaName = "school", tableName = "students", tableType = "TABLE", description = Some("student database")))
     }
 
   }
