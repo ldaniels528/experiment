@@ -18,7 +18,7 @@ import com.qwery.database.models._
 import com.qwery.database.server.DatabaseServer.implicits._
 import com.qwery.database.util.Codec
 import com.qwery.models.expressions.Expression
-import com.qwery.models.{Table, TableRef}
+import com.qwery.models.{Table, EntityRef}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import org.slf4j.LoggerFactory
 import spray.json._
@@ -26,7 +26,6 @@ import spray.json._
 import java.text.NumberFormat
 import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.ExecutionContext
-import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 /**
@@ -37,6 +36,7 @@ object DatabaseServer {
   private val nf = NumberFormat.getNumberInstance
   private val cpu = new DatabaseCPU()
   private val pidGenerator = new AtomicLong()
+  private implicit val scope: Scope = Scope()
 
   /**
     * Main program
@@ -166,7 +166,7 @@ object DatabaseServer {
               results.show(5)(logger)
               complete(results)
             case None =>
-              complete(QueryResult(TableRef.parse("???")))
+              complete(QueryResult(EntityRef.parse("???")))
           }
         } catch {
           case e: Exception =>
@@ -197,7 +197,7 @@ object DatabaseServer {
       post {
         // create a new table (e.g. "POST /d/portfolio/stocks" <~ {"ref":{"databaseName":"test","schemaName":"stocks","tableName":"stocks_jdbc"}, "columns":[...]})
         entity(as[Table]) { table =>
-          complete(cpu.createTable(databaseName, table).toUpdateCount(1))
+          complete(cpu.createTable(table).toUpdateCount(1))
         }
       }
   }
@@ -210,7 +210,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesByDatabaseTable(databaseName: String, schemaName: String, tableName: String): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     delete {
       // drop the table by name (e.g. "DELETE /d/portfolio/stocks/amex")
       complete(cpu.dropTable(ref, ifExists = true).toUpdateCount(1))
@@ -243,7 +243,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesByDatabaseTableExport(databaseName: String, schemaName: String, tableName: String, format: String, fileName: String): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     val dataFile = format.toLowerCase() match {
       case "bin" | "binary" | "raw" =>
         getTableDataFile(ref)
@@ -272,7 +272,7 @@ object DatabaseServer {
   def routesByDatabaseTableLength(databaseName: String, schemaName: String, tableName: String): Route = {
     get {
       // retrieve the length of the table (e.g. "GET /d/portfolio/stocks/length")
-      complete(cpu.getTableLength(new TableRef(databaseName, schemaName, tableName)).toUpdateCount)
+      complete(cpu.getTableLength(new EntityRef(databaseName, schemaName, tableName)).toUpdateCount)
     }
   }
 
@@ -286,7 +286,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesByDatabaseTableColumnID(databaseName: String, schemaName: String, tableName: String, rowID: ROWID, columnID: Int): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     delete {
       // delete a field (e.g. "DELETE /d/portfolio/stocks/amex/287/0")
       complete(cpu.deleteField(ref, rowID, columnID).toUpdateCount(1))
@@ -333,7 +333,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesByDatabaseTableRange(databaseName: String, schemaName: String, tableName: String, start: ROWID, length: Int): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     delete {
       // delete the range of rows (e.g. "DELETE /r/portfolio/stocks/amex/287/20")
       complete(cpu.deleteRange(ref, start, length).toUpdateCount)
@@ -353,7 +353,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesByDatabaseTableRowID(databaseName: String, schemaName: String, tableName: String, rowID: ROWID): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     delete {
       // delete the row by ID (e.g. "DELETE /d/portfolio/stocks/129")
       complete(cpu.deleteRow(ref, rowID).toUpdateCount(1))
@@ -389,7 +389,7 @@ object DatabaseServer {
     * @return the [[Route]]
     */
   def routesMessaging(databaseName: String, schemaName: String, tableName: String): Route = {
-    val ref = new TableRef(databaseName, schemaName, tableName)
+    val ref = new EntityRef(databaseName, schemaName, tableName)
     post {
       // append the new message to the table
       // (e.g. "POST /m/portfolio/stocks/amex" <~ { "exchange":"OTCBB", "symbol":"EVRU", "lastSale":2.09, "lastSaleTime":1596403991000 })
@@ -526,7 +526,7 @@ object DatabaseServer {
 
       @inline
       def asResult(databaseName: String, schemaName: String, tableName: String, limit: Option[Int]): QueryResult = {
-        val ref = new TableRef(databaseName, schemaName, tableName)
+        val ref = new EntityRef(databaseName, schemaName, tableName)
         response match {
           case Left(device) =>
             var rows: List[Seq[Option[Any]]] = Nil

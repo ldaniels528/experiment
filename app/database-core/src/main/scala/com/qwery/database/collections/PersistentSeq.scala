@@ -5,7 +5,7 @@ import com.qwery.database.device._
 import com.qwery.database.files.DatabaseFiles
 import com.qwery.database.models.{BinaryRow, Field, Row, RowMetadata}
 import com.qwery.database.util.Codec._
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -460,7 +460,7 @@ object PersistentSeq {
     * @tparam A the [[Product product type]]
     * @return a new [[PersistentSeq persistent sequence]]
     */
-  def apply[A <: Product : ClassTag](ref: TableRef): PersistentSeq[A] = {
+  def apply[A <: Product : ClassTag](ref: EntityRef): PersistentSeq[A] = {
     val (config, device) = DatabaseFiles.getTableDevice(ref)
     val (columns, _class) = BlockDevice.toColumns[A]
     val deviceColumns = config.columns.map(c => c.name -> c.metadata.`type`)

@@ -7,7 +7,7 @@ import com.qwery.database.types._
 import com.qwery.database.util.Codec
 import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.util.OptionComparisonHelper.OptionComparator
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
@@ -188,7 +188,7 @@ trait BlockDevice {
    * @return the [[Column column]]
    */
   def getColumnByName(name: String): Column = {
-    columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(TableRef.parse("???"), columnName = name))
+    columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(EntityRef.parse("???"), columnName = name))
   }
 
   def getField(rowID: ROWID, column: Symbol): Field = {
@@ -501,14 +501,8 @@ object BlockDevice {
     def build: BlockDevice = {
       assert(columns.nonEmpty, "No columns specified")
 
-      // is it column-oriented?
-      if (isColumnModel) {
-        val file = if (persistenceFile != null) persistenceFile else createTempFile()
-        ColumnOrientedFileBlockDevice(columns, file)
-      }
-
       // is it partitioned?
-      else if (partitionSize > 0) {
+      if (partitionSize > 0) {
         if (executionContext == null) new PartitionedBlockDevice(columns, partitionSize, isInMemory = capacity > 0)
         else new ParallelPartitionedBlockDevice(columns, partitionSize)(executionContext)
       }

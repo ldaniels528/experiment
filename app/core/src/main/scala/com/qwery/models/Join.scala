@@ -10,7 +10,7 @@ import com.qwery.models.expressions.Condition
 sealed trait Join {
 
   /**
-    * @return the [[TableRef table]] or [[Invokable query]]
+    * @return the [[EntityRef table]] or [[Invokable query]]
     */
   def source: Invokable
 
@@ -29,7 +29,7 @@ object Join {
 
   /**
     * Creates a JOIN ON model
-    * @param source    the [[TableRef table]] or [[Invokable query]]
+    * @param source    the [[EntityRef table]] or [[Invokable query]]
     * @param condition the [[Condition conditional expression]]
     * @param `type`    the given [[JoinType]]
     */
@@ -37,7 +37,7 @@ object Join {
 
   /**
     * Creates a JOIN USING model
-    * @param source  the [[TableRef table]] or [[Invokable query]]
+    * @param source  the [[EntityRef table]] or [[Invokable query]]
     * @param columns the given columns for which to join
     * @param `type`  the given [[JoinType]]
     */
@@ -45,7 +45,7 @@ object Join {
 
   /**
     * Represents a JOIN ON clause
-    * @param source    the [[TableRef table]] or [[Invokable query]]
+    * @param source    the [[EntityRef table]] or [[Invokable query]]
     * @param condition the [[Condition conditional expression]]
     * @param `type`    the given [[JoinType]]
     */
@@ -53,7 +53,7 @@ object Join {
 
   /**
     * Represents a JOIN USING clause
-    * @param source  the [[TableRef table]] or [[Invokable query]]
+    * @param source  the [[EntityRef table]] or [[Invokable query]]
     * @param columns the given columns for which to join
     * @param `type`  the given [[JoinType]]
     */

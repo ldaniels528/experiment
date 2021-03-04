@@ -4,7 +4,7 @@ package files
 import com.qwery.database.models.KeyValues
 import com.qwery.database.models.StockQuote.{randomDate, randomExchange, randomPrice, randomSymbol}
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.{ColumnSpec, Table, TableRef, Column => XColumn}
+import com.qwery.models.{ColumnSpec, EntityRef, Table, View, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -20,8 +20,8 @@ class VirtualTableFileTest extends AnyFunSpec {
   val tableName = "tickers"
   val viewName = "tickers_NYSE"
 
-  val tableRef = new TableRef(databaseName, schemaName, tableName)
-  val viewRef = new TableRef(databaseName, schemaName, viewName)
+  val tableRef = new EntityRef(databaseName, schemaName, tableName)
+  val viewRef = new EntityRef(databaseName, schemaName, viewName)
 
   val newQuote: () => KeyValues = {
     () => KeyValues("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastSaleTime" -> randomDate)
@@ -31,7 +31,7 @@ class VirtualTableFileTest extends AnyFunSpec {
 
     it("should prepare a sample data table") {
       TableFile.dropTable(tableRef, ifExists = true)
-      TableFile.createTable(databaseName, Table(
+      TableFile.createTable(Table(
         ref = tableRef,
         description = Some("table to test inserting records"),
         columns = List(
@@ -41,7 +41,7 @@ class VirtualTableFileTest extends AnyFunSpec {
           XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
         ))) use { table =>
         table.truncate()
-        logger.info(s"${tableRef.tableName}: truncated - ${table.count()} records")
+        logger.info(s"${tableRef.name}: truncated - ${table.count()} records")
 
         val n_tickers = 1e+5.toInt
         for(_ <- 1 to n_tickers) table.insertRow(newQuote())
@@ -56,10 +56,9 @@ class VirtualTableFileTest extends AnyFunSpec {
     }
 
     it("should perform CREATE VIEW") {
-      VirtualTableFile.createView(viewRef,
+      VirtualTableFile.createView(View(viewRef,
         description = Some("AMEX Stock symbols sorted by last sale"),
-        ifNotExists = false,
-        invokable = SQLLanguageParser.parse(
+        query = SQLLanguageParser.parse(
           s"""|SELECT
               |   symbol AS ticker,
               |   exchange AS market,
@@ -71,7 +70,7 @@ class VirtualTableFileTest extends AnyFunSpec {
               |ORDER BY lastSale DESC
               |LIMIT 50
               |""".stripMargin
-        ))
+        )))
     }
 
   }

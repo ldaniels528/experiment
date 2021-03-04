@@ -4,7 +4,7 @@ package files
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.files.DatabaseManagementSystem.implicits._
 import com.qwery.database.models._
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 
 import java.text.SimpleDateFormat
 import java.time.ZoneId
@@ -15,11 +15,10 @@ import scala.util.Try
   * Database Management System
   */
 object DatabaseManagementSystem {
-  val COLUMNAR_TABLE = "COLUMNAR_TABLE"
   val LOGICAL_TABLE = "LOGICAL_TABLE"
   val TABLE = "TABLE"
   val VIEW = "VIEW"
-  val tableTypes = Seq(COLUMNAR_TABLE, LOGICAL_TABLE, TABLE, VIEW)
+  val tableTypes = Seq(LOGICAL_TABLE, TABLE, VIEW)
 
   /**
     * Retrieves the summary for a database by name
@@ -40,7 +39,7 @@ object DatabaseManagementSystem {
         tableDirectories.flatMap {
           case tableDirectory if tableDirectory.isDirectory & !tableDirectory.isHidden =>
             val tableName = tableDirectory.getName
-            val table = new TableRef(databaseName, schemaName, tableName)
+            val table = new EntityRef(databaseName, schemaName, tableName)
 
             // is it a physical table?
             if (isTableFile(table)) {
@@ -48,8 +47,7 @@ object DatabaseManagementSystem {
                 val dataFile = getTableDataFile(table)
                 val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
                 val tableType =
-                  if (config.isColumnar) COLUMNAR_TABLE
-                  else if (config.externalTable.nonEmpty) LOGICAL_TABLE
+                  if (config.externalTable.nonEmpty) LOGICAL_TABLE
                   else TABLE
                 TableSummary(tableName, schemaName, tableType, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
               }
@@ -85,7 +83,7 @@ object DatabaseManagementSystem {
       schemaName = schemaDirectory.getName if schemaNamePattern like schemaName
       tableFile <- Option(schemaDirectory.listFiles()).toList.flatten
       tableName = tableFile.getName if tableNamePattern like tableName
-      config <- Try(readTableConfig(new TableRef(databaseName, schemaName, tableFile.getName))).toOption.toList
+      config <- Try(readTableConfig(new EntityRef(databaseName, schemaName, tableFile.getName))).toOption.toList
       result <- config.columns collect {
         case column if columnNamePattern like column.name => ColumnSearchResult(databaseName, schemaName, tableName, column)
       }

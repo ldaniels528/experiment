@@ -340,7 +340,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
   private def extractListOfFields(name: String): Try[SQLTemplateParams] = Try {
-    var fields: List[Field] = Nil
+    var fields: List[FieldRef] = Nil
     do fields = parseField(stream) :: fields while (stream nextIf ",")
     SQLTemplateParams(fields = Map(name -> fields.reverse))
   }
@@ -471,12 +471,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
   private def extractLocationOrTable(name: String): Try[SQLTemplateParams] = Try {
-    val location: Location = stream match {
-      case ts if ts nextIf "LOCATION" =>
-        ts match {
-          case _ts if _ts nextIf "@" => VariableLocationRef(@@(_ts.next().text))
-          case _ts => _ts.die("expected a variable or string literal representing a location path")
-        }
+    val location: EntityRef = stream match {
       case ts if ts nextIf "TABLE" =>
         if (!ts.isBackticks && !ts.isText) ts.die("expected a string literal representing a table name")
         Table(ts.next().text)

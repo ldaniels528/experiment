@@ -1,7 +1,7 @@
 package com.qwery.language
 
 import com.qwery.models._
-import com.qwery.models.expressions.{Expression, Field}
+import com.qwery.models.expressions.{Expression, FieldRef}
 
 import scala.util.{Failure, Success, Try}
 
@@ -114,8 +114,8 @@ trait ExpressionTemplateProcessor {
     */
   private def extractField(name: String, stream: TokenStream): ExpressionTemplate = {
     val field = stream.next() match {
-      case t: AlphaToken => Field(t.text)
-      case t: QuotedToken if t.isBackTicks => Field(t.text)
+      case t: AlphaToken => FieldRef(t.text)
+      case t: QuotedToken if t.isBackTicks => FieldRef(t.text)
       case t => throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
     }
     ExpressionTemplate(fields = Map(name -> field))

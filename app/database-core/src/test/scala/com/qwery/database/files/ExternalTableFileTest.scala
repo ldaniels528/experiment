@@ -2,7 +2,7 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.KeyValues
-import com.qwery.models.{ColumnSpec, ExternalTable, TableRef}
+import com.qwery.models.{ColumnSpec, ExternalTable, EntityRef}
 import com.qwery.util.ResourceHelper._
 import com.qwery.{models => mx}
 import org.scalatest.funspec.AnyFunSpec
@@ -16,12 +16,12 @@ class ExternalTableFileTest extends AnyFunSpec {
   val databaseName = "test"
   val schemaName = "public"
   val tableName = "companyList"
-  val tableRef = new TableRef(databaseName, schemaName, tableName)
+  val tableRef = new EntityRef(databaseName, schemaName, tableName)
 
   describe(classOf[ExternalTableFile].getName) {
 
     it("should create an external table") {
-      val table = ExternalTableFile.createTable(databaseName,
+      val table = ExternalTableFile.createTable(
         table = ExternalTable(
           ref = tableRef,
           location = Some("./samples/companylist/csv/"),

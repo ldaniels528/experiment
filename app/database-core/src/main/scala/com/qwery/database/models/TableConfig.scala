@@ -1,18 +1,17 @@
 package com.qwery.database.models
 
 import com.qwery.database.models.TableConfig.ExternalTableConfig
+import com.qwery.models.TableIndex
 
 /**
   * Represents a Table Config
   * @param columns       the table [[Column column]]
-  * @param isColumnar    indicates whether the table is columnar
-  * @param indices       the collection of [[TableIndexRef index references]]
+  * @param indices       the collection of [[TableIndex index references]]
   * @param description   the table description
   * @param externalTable the [[ExternalTableConfig external table configuration]]
   */
 case class TableConfig(columns: Seq[Column],
-                       isColumnar: Boolean = false,
-                       indices: Seq[TableIndexRef] = Nil,
+                       indices: Seq[TableIndex] = Nil,
                        description: Option[String] = None,
                        externalTable: Option[ExternalTableConfig] = None)
 
@@ -20,12 +19,12 @@ case class TableConfig(columns: Seq[Column],
   * Table Config Companion
   */
 object TableConfig {
+  import ModelsJsonProtocol._
   import spray.json._
-  import DefaultJsonProtocol._
 
   implicit val extTableRefJsonFormat: RootJsonFormat[ExternalTableConfig] = jsonFormat6(ExternalTableConfig.apply)
 
-  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat5(TableConfig.apply)
+  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat4(TableConfig.apply)
 
   case class ExternalTableConfig(format: Option[String],
                                  location: Option[String],

@@ -4,7 +4,7 @@ package clients
 import com.qwery.database.files.TableFile
 import com.qwery.database.models._
 import com.qwery.database.server.testkit.DatabaseTestServer
-import com.qwery.models.{ColumnSpec, Table, TableRef, Column => XColumn}
+import com.qwery.models.{ColumnSpec, Table, EntityRef, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -68,7 +68,7 @@ class DatabaseClientTest extends AnyFunSpec {
         XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
       )
       val table = Table(
-        ref = new TableRef(databaseName, schemaName, tableNameA),
+        ref = new EntityRef(databaseName, schemaName, tableNameA),
         columns = columns,
         description = Some("API created table"))
       invoke(
@@ -183,7 +183,7 @@ class DatabaseClientTest extends AnyFunSpec {
   def copyInto(databaseName: String, schemaName: String, tableName: String, file: File): Unit = {
     invoke(
       label = s"copyInto($databaseName, $schemaName, $tableName, ${file.getName})",
-      block = TableFile(new TableRef(databaseName, schemaName, tableName)) use { table =>
+      block = TableFile(new EntityRef(databaseName, schemaName, tableName)) use { table =>
         table.ingestTextFile(file)(_.split("[,]") match {
           case Array(symbol, exchange, price, date) =>
             Option(KeyValues("symbol" -> symbol, "exchange" -> exchange, "lastSale" -> price.toDouble, "lastSaleTime" -> new Date(date.toLong)))

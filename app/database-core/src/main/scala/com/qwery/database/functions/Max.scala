@@ -4,7 +4,7 @@ import com.qwery.database.models.ColumnTypes.{ColumnType, DoubleType}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
 import com.qwery.database.types.{QxAny, QxNull, QxNumber}
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{BasicFieldRef, Expression}
 
 /**
  * Represents the SQL MAX function
@@ -24,7 +24,7 @@ case class Max(name: String, args: List[Expression]) extends AggregateFunction {
 
   override def append(keyValues: KeyValues): Unit = {
     expression match {
-      case BasicField(name) => QxAny(keyValues.get(name)) match {
+      case BasicFieldRef(name) => QxAny(keyValues.get(name)) match {
         case QxNumber(value_?) => value_?.foreach(n => maxValue = n max maxValue)
         case QxNull => maxValue = 0.0 max maxValue
         case qxAny => die(s"Unconverted expression: $qxAny")

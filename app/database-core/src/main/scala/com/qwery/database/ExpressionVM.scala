@@ -18,7 +18,7 @@ object ExpressionVM {
 
   def evaluate(expression: Expression)(implicit scope: Scope): QxAny = {
     expression match {
-      case BasicField(name) => QxAny(scope.get(name))
+      case BasicFieldRef(name) => QxAny(scope.get(name))
       case Case(whens, otherwise) =>
         (whens collectFirst {
           case When(cond, result) if isTrue(cond) => evaluate(result)
@@ -72,7 +72,7 @@ object ExpressionVM {
         (value >= a) && (value <= b)
       case ConditionalOp(expr0, expr1, operator, _) => isTrue(expr0, expr1, operator)
       case Exists(query) => compile(query).nonEmpty
-      case IN(BasicField(name), source) =>
+      case IN(BasicFieldRef(name), source) =>
         val (value, rows) = (scope.get(name), compile(source))
         rows.exists(_.get(name) == value)
       case IsNull(expr) => evaluate(expr).value.isEmpty

@@ -15,8 +15,8 @@ import com.qwery.database.server.QueryProcessor.RouterCPU
 import com.qwery.database.server.QueryProcessor.commands._
 import com.qwery.database.server.QueryProcessor.exceptions._
 import com.qwery.database.server.QueryProcessor.implicits._
-import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
-import com.qwery.models.{Insert, Invokable, OrderColumn, Table, TableRef}
+import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
+import com.qwery.models.{EntityRef, Insert, Invokable, OrderColumn, Table, View}
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -452,8 +452,8 @@ object QueryProcessor {
       }
 
       request match {
-        case cmd: FindRows => if (isVirtualTable(new TableRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
-        case cmd: SelectRows => if (isVirtualTable(new TableRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
+        case cmd: FindRows => if (isVirtualTable(new EntityRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
+        case cmd: SelectRows => if (isVirtualTable(new EntityRef(cmd.databaseName, schemaName = DEFAULT_SCHEMA, cmd.tableName))) launchVTW(cmd) else launchTW(cmd)
         case cmd: VirtualTableIORequest => launchVTW(cmd)
         case cmd: TableIORequest => launchTW(cmd)
         case cmd => launchSW(cmd)
@@ -511,14 +511,14 @@ object QueryProcessor {
    */
   class TableCPU(databaseName: String, tableName: String) extends Actor {
     private val locks = TrieMap[ROWID, String]()
-    private val ref = new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName)
+    private val ref = new EntityRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName)
     private lazy val table = TableFile(ref)
 
     override def receive: Receive = {
-      case cmd@CreateIndex(_, _, indexColumn) =>
-        invoke(cmd, sender())(table.createIndex(ref, indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
+      //case cmd@CreateIndex(_, _, indexColumn) =>
+      //  invoke(cmd, sender())(table.createIndex(ref, indexColumn)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@CreateTable(_, _, table) =>
-        invoke(cmd, sender())(TableFile.createTable(databaseName, table)) { case (caller, _) => caller ! RowsUpdated(1) }
+        invoke(cmd, sender())(TableFile.createTable(table)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteField(_, _, rowID, columnID) =>
         invoke(cmd, sender())(table.deleteField(rowID, columnID)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DeleteRange(_, _, start, length) =>
@@ -602,12 +602,12 @@ object QueryProcessor {
     * @param viewName     the view name
     */
   class VirtualTableCPU(databaseName: String, viewName: String) extends Actor {
-    private val ref = new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, viewName)
+    private val ref = new EntityRef(databaseName, schemaName = DEFAULT_SCHEMA, viewName)
     private lazy val vTable = VirtualTableFile.load(ref)
 
     override def receive: Receive = {
       case cmd@CreateView(_, _, description, invokable, ifNotExists) =>
-        invoke(cmd, sender())(VirtualTableFile.createView(ref, description, invokable, ifNotExists)) { case (caller, _) => caller ! RowsUpdated(1) }
+        invoke(cmd, sender())(VirtualTableFile.createView(View(ref, invokable, description, ifNotExists))) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@DropView(_, _, ifExists) =>
         invoke(cmd, sender())(VirtualTableFile.dropView(ref, ifExists)) { case (caller, _) => caller ! RowsUpdated(1) }
       case cmd@FindRows(_, _, condition, limit) =>
@@ -817,8 +817,8 @@ object QueryProcessor {
         response match {
           case FailureOccurred(command, cause) => throw FailedCommandException(command, cause)
           case QueryResultRetrieved(result) => result
-          case RowUpdated(rowID, isSuccess) => QueryResult(new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = isSuccess.toInt, __ids = List(rowID))
-          case RowsUpdated(count) => QueryResult(new TableRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = count)
+          case RowUpdated(rowID, isSuccess) => QueryResult(new EntityRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = isSuccess.toInt, __ids = List(rowID))
+          case RowsUpdated(count) => QueryResult(new EntityRef(databaseName, schemaName = DEFAULT_SCHEMA, tableName), count = count)
           case response => throw UnhandledCommandException(request, response)
         }
       }

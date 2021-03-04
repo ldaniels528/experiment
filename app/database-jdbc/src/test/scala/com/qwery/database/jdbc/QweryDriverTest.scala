@@ -217,37 +217,6 @@ class QweryDriverTest extends AnyFunSpec {
       }
     }
 
-    it("should execute a CREATE COLUMNAR TABLE statement") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        // drop the existing table
-        conn.createStatement().execute(s"DROP TABLE IF EXISTS `$schemaName.$tableNameB`")
-
-        // create a new table
-        val count = conn.createStatement().executeUpdate(
-          s"""|CREATE COLUMNAR TABLE `$schemaName.$tableNameB` (
-              |  symbol STRING(8) comment 'the ticker symbol',
-              |  exchange STRING(8) AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC') comment 'the stock exchange',
-              |  lastSale DOUBLE comment 'the latest sale price',
-              |  lastSaleTime DATE comment 'the latest sale date/time'
-              |)
-              |WITH COMMENT 'securities table (columnar)'
-              |""".stripMargin
-        )
-        assert(count == 1)
-      }
-    }
-
-    it("should insert records into a columnar table") {
-      DriverManager.getConnection(jdbcURL) use { conn =>
-        val count = conn.createStatement().executeUpdate(
-          s"""|INSERT INTO `$schemaName.$tableNameB` (symbol, exchange, lastSale, lastSaleTime)
-              |VALUES ("MSFT", "NYSE", 56.55, now()), ("AAPL", "NASDAQ", 98.55, now())
-              |""".stripMargin
-        )
-        assert(count == 2)
-      }
-    }
-
     it("should retrieve the list of databases") {
       DriverManager.getConnection(jdbcURL) use { conn =>
         iterateRows(conn.getMetaData.getCatalogs)(row => logger.info(s"row: $row"))

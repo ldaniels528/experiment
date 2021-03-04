@@ -17,7 +17,7 @@ import com.qwery.util.StringHelper._
   * @param joins         the named collection of join references (e.g. "INNER JOIN './stocks.csv' ON A.symbol = B.symbol")
   * @param keyValuePairs the named collection of key-value pairs (e.g. "key = 'Hello', value = 123")
   * @param keywords      the named collection of key words
-  * @param locations     the named collection of [[Location locations]]
+  * @param locations     the named collection of [[EntityRef locations]]
   * @param numerics      the named collection of numeric values (e.g. "TOP 100")
   * @param orderedFields the named collection of ordered fields (e.g. "ORDER BY symbol")
   * @param repeatedSets  the named collection of repeated sequences (e.g. "VALUES ('123', '456') VALUES ('789', '012')")
@@ -30,12 +30,12 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
                              columns: Map[String, List[Column]] = Map.empty,
                              conditions: Map[String, Condition] = Map.empty,
                              expressions: Map[String, List[Expression]] = Map.empty,
-                             fields: Map[String, List[Field]] = Map.empty,
+                             fields: Map[String, List[FieldRef]] = Map.empty,
                              indicators: Map[String, Boolean] = Map.empty,
                              joins: Map[String, List[Join]] = Map.empty,
                              keyValuePairs: Map[String, List[(String, Expression)]] = Map.empty,
                              keywords: Set[String] = Set.empty,
-                             locations: Map[String, Location] = Map.empty,
+                             locations: Map[String, EntityRef] = Map.empty,
                              numerics: Map[String, Double] = Map.empty,
                              orderedFields: Map[String, List[OrderColumn]] = Map.empty,
                              properties: Map[String, Map[String, String]] = Map.empty,

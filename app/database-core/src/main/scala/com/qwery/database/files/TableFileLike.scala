@@ -4,9 +4,9 @@ package files
 import com.qwery.database.collections.PersistentSeq
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.writeTableConfig
-import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableIndexRef, TableMetrics}
-import com.qwery.models.{OrderColumn, TableRef}
-import com.qwery.models.expressions.{Condition, Expression, Field => SQLField}
+import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableMetrics}
+import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
+import com.qwery.models.{EntityRef, OrderColumn, TableIndex}
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -23,14 +23,20 @@ trait TableFileLike {
 
   // load the indices for this table
   config.indices.foreach(ref => registerIndex(ref, TableIndexDevice(ref)))
-  
-  def ref: TableRef
+
+  /**
+   * @return the [[EntityRef entity reference]]
+   */
+  def ref: EntityRef
 
   /**
     * @return the [[BlockDevice block device]]
     */
   def device: BlockDevice
 
+  /**
+   * @return the [[TableConfig table configuration]]
+   */
   def config: TableConfig
 
   /**
@@ -44,11 +50,10 @@ trait TableFileLike {
 
   /**
     * Creates a new binary search index
-    * @param indexColumnName the name of the index [[Column column]]
+    * @param indexRef the [[TableIndex table index]]
     * @return a new binary search [[TableIndexDevice index]]
     */
-  def createIndex(ref: TableRef, indexColumnName: String): TableIndexDevice = {
-    val indexRef = TableIndexRef(ref, indexColumnName)
+  def createIndex(indexRef: TableIndex): TableIndexDevice = {
     val indexColumn = getColumnByName(indexRef.indexColumnName)
     val tableIndex = TableIndexDevice.createIndex(indexRef, indexColumn)(device)
     registerIndex(indexRef, tableIndex)
@@ -377,7 +382,7 @@ trait TableFileLike {
   }
 
   @inline
-  protected def registerIndex(indexRef: TableIndexRef, device: TableIndexDevice): Unit = {
+  protected def registerIndex(indexRef: TableIndex, device: TableIndexDevice): Unit = {
     indexFiles(indexRef.indexColumnName) = device
   }
 

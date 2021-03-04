@@ -3,12 +3,11 @@ package device
 
 import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
 import com.qwery.database.models.ColumnTypes.IntType
-import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, KeyValues, Row, RowMetadata, TableIndexRef}
+import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, KeyValues, Row, RowMetadata}
 import com.qwery.database.util.Codec
 import com.qwery.database.util.OptionComparisonHelper.OptionComparator
-import com.qwery.util.OptionHelper.OptionEnrichment
+import com.qwery.models.TableIndex
 
 import java.io.{File, PrintWriter}
 import java.nio.ByteBuffer
@@ -17,11 +16,11 @@ import scala.collection.mutable
 
 /**
  * Creates a new table index device
- * @param ref     the [[TableIndexRef table index reference]]
+ * @param ref     the [[TableIndex table index reference]]
  * @param columns the collection of [[Column columns]]
  */
-class TableIndexDevice(ref: TableIndexRef, columns: Seq[Column])
-  extends RowOrientedFileBlockDevice(columns, TableIndexDevice.getTableIndexFile(ref)) {
+class TableIndexDevice(ref: TableIndex, columns: Seq[Column])
+  extends RowOrientedFileBlockDevice(columns, getTableIndexFile(ref)) {
   private val indexColumnID: Int = columns.indexWhere(_.name == ref.indexColumnName)
   private val indexColumn: Column = columns(indexColumnID)
   private var isDirty: Boolean = false
@@ -195,10 +194,10 @@ object TableIndexDevice {
 
   /**
    * Retrieves the table index by reference
-   * @param tableIndexRef the [[TableIndexRef table index reference]]
+   * @param tableIndexRef the [[TableIndex table index reference]]
    * @return the [[TableIndexDevice table index]]
    */
-  def apply(tableIndexRef: TableIndexRef): TableIndexDevice = {
+  def apply(tableIndexRef: TableIndex): TableIndexDevice = {
     val tableConfig = readTableConfig(tableIndexRef.ref)
     val indexColumn = tableConfig.columns.find(_.name == tableIndexRef.indexColumnName)
       .getOrElse(throw ColumnNotFoundException(tableIndexRef.ref, tableIndexRef.indexColumnName))
@@ -207,12 +206,12 @@ object TableIndexDevice {
 
   /**
    * Creates a new binary search index
-   * @param ref         the [[TableIndexRef]]
+   * @param ref         the [[TableIndex]]
    * @param indexColumn the index [[Column column]]
    * @param source      the implicit [[BlockDevice table device]]
    * @return a new [[TableIndexDevice binary search index]]
    */
-  def createIndex(ref: TableIndexRef, indexColumn: Column)(implicit source: BlockDevice): TableIndexDevice = {
+  def createIndex(ref: TableIndex, indexColumn: Column)(implicit source: BlockDevice): TableIndexDevice = {
     new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn)).rebuild()
   }
 
@@ -239,18 +238,5 @@ object TableIndexDevice {
    */
   @inline
   private def _encode(column: Column, value: Option[Any]): ByteBuffer = wrap(Codec.encode(column, value))
-
-  //////////////////////////////////////////////////////////////////////////////////////
-  //  TABLE INDEX CONFIG
-  //////////////////////////////////////////////////////////////////////////////////////
-
-  def getTableIndexFile(tableIndexRef: TableIndexRef, indexColumnName: String): File = {
-    val indexFileName = s"${tableIndexRef.ref.tableName}_$indexColumnName.qdb"
-    val databaseName = tableIndexRef.ref.databaseName || DEFAULT_DATABASE
-    val schemaName = tableIndexRef.ref.schemaName || DEFAULT_SCHEMA
-    getServerRootDirectory / databaseName / schemaName / tableIndexRef.ref.tableName / indexFileName
-  }
-
-  def getTableIndexFile(tableIndexRef: TableIndexRef): File = getTableIndexFile(tableIndexRef, tableIndexRef.indexColumnName)
 
 }

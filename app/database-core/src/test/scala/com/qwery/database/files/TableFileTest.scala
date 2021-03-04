@@ -2,8 +2,8 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.{KeyValues, StockQuoteWithDate}
-import com.qwery.models.expressions.{AllFields, BasicField}
-import com.qwery.models.{ColumnSpec, Table, TableRef, Column => XColumn}
+import com.qwery.models.expressions.{AllFields, BasicFieldRef}
+import com.qwery.models.{ColumnSpec, Table, EntityRef, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -19,13 +19,13 @@ class TableFileTest extends AnyFunSpec {
   val databaseName = "test"
   val schemaName = "stocks"
   val tableName = "stocks_test"
-  val tableRef = new TableRef(databaseName, schemaName, tableName)
+  val tableRef = new EntityRef(databaseName, schemaName, tableName)
 
   describe(classOf[TableFile].getName) {
 
     it("should create a new table and insert new rows into it") {
       TableFile.dropTable(tableRef, ifExists = true)
-      TableFile.createTable(databaseName, Table(
+      TableFile.createTable(Table(
         ref = tableRef,
         description = Some("table to test inserting records"),
         columns = List(
@@ -35,7 +35,7 @@ class TableFileTest extends AnyFunSpec {
           XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DATETIME"))
         ))) use { table =>
         table.truncate()
-        logger.info(s"${tableRef.tableName}: truncated - ${table.count()} records")
+        logger.info(s"${tableRef.name}: truncated - ${table.count()} records")
 
         table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastSaleTime" -> new Date()))
         table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> new Date()))
@@ -61,9 +61,9 @@ class TableFileTest extends AnyFunSpec {
 
     it("should perform the equivalent of an INSERT-SELECT") {
       val newTableName = "stocks_insert_select"
-      val newTableRef = new TableRef(databaseName, schemaName, newTableName)
+      val newTableRef = new EntityRef(databaseName, schemaName, newTableName)
       TableFile.dropTable(newTableRef, ifExists = true)
-      TableFile.createTable(databaseName, Table(
+      TableFile.createTable(Table(
         ref = newTableRef,
         description = Some("table to test INSERT-SELECT"),
         columns = List(
@@ -163,7 +163,7 @@ class TableFileTest extends AnyFunSpec {
 
     it("should aggregate rows") {
       TableFile.dropTable(tableRef, ifExists = true)
-      TableFile.createTable(databaseName, Table(
+      TableFile.createTable(Table(
         ref = tableRef,
         description = Some("aggregation test table"),
         columns = List(
@@ -173,7 +173,7 @@ class TableFileTest extends AnyFunSpec {
           XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
         ))) use { table =>
         table.truncate()
-        logger.info(s"${tableRef.tableName}: truncated - ${table.count()} records")
+        logger.info(s"${tableRef.name}: truncated - ${table.count()} records")
 
         table.insertRow(KeyValues("symbol" -> "AMD", "exchange" -> "NASDAQ", "lastSale" -> 67.55, "lastSaleTime" -> new Date()))
         table.insertRow(KeyValues("symbol" -> "AAPL", "exchange" -> "NYSE", "lastSale" -> 123.55, "lastSaleTime" -> new Date()))
@@ -184,8 +184,8 @@ class TableFileTest extends AnyFunSpec {
 
         val agg = table.selectRows(
           where = KeyValues(),
-          groupBy = Seq(BasicField(name = "exchange")),
-          fields = Seq(BasicField(name = "exchange"))
+          groupBy = Seq(BasicFieldRef(name = "exchange")),
+          fields = Seq(BasicFieldRef(name = "exchange"))
         )
         agg foreachKVP { kvp =>
           logger.info(kvp.toString)

@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models._
 import com.qwery.models.expressions.implicits._
-import com.qwery.models.expressions.{Field, Literal}
+import com.qwery.models.expressions.{FieldRef, Literal}
 import org.scalatest.funspec.AnyFunSpec
 
 /**
@@ -25,7 +25,7 @@ class ExpressionTemplateProcessorTest extends AnyFunSpec {
     it("should process IF(LastSale < 1, 'Penny Stock', 'Stock')") {
       val ts = TokenStream("IF(LastSale < 1, 'Penny Stock', 'Stock')")
       val results = processor.process("IF ( %c:condition , %e:trueValue , %e:falseValue )", ts)
-      assert(results.conditions.get("condition").contains(Field('LastSale) < 1))
+      assert(results.conditions.get("condition").contains(FieldRef('LastSale) < 1))
       assert(results.expressions.get("trueValue").contains(Literal("Penny Stock")))
       assert(results.expressions.get("falseValue").contains(Literal("Stock")))
     }
@@ -45,7 +45,7 @@ class ExpressionTemplateProcessorTest extends AnyFunSpec {
     it("should process SUM(deptCode)") {
       val ts = TokenStream("SUM(deptCode)")
       val results = processor.process("SUM ( %f:field )", ts)
-      assert(results.fields.get("field").contains(Field("deptCode")))
+      assert(results.fields.get("field").contains(FieldRef("deptCode")))
     }
 
   }

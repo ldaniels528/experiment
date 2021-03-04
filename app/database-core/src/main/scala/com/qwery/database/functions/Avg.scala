@@ -4,7 +4,7 @@ import com.qwery.database.models.ColumnTypes.{ColumnType, DoubleType}
 import com.qwery.database.types.{QxAny, QxNull, QxNumber}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{BasicFieldRef, Expression}
 
 import scala.Double.NaN
 
@@ -30,7 +30,7 @@ case class Avg(name: String, args: List[Expression]) extends AggregateFunction {
   override def append(keyValues: KeyValues): Unit = {
     count += 1
     expression match {
-      case BasicField(fname) => QxAny(keyValues.get(fname)) match {
+      case BasicFieldRef(fname) => QxAny(keyValues.get(fname)) match {
         case QxNumber(value_?) => value_?.foreach(sum += _)
         case QxNull =>
         case qxAny => die(s"Unconverted expression '$qxAny' (${qxAny.getClass.getSimpleName})")

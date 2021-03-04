@@ -2,7 +2,7 @@ package com.qwery.database
 
 import com.qwery.database.models.StockQuote._
 import com.qwery.database.files.DatabaseFiles
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import com.qwery.models.expressions.{Expression, Literal}
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -19,8 +19,8 @@ class DatabaseCPUTest extends AnyFunSpec {
   private val schemaName = "stocks"
   private val viewName = "tickers_NYSE"
 
-  private val stocks_cpu_test = new TableRef(databaseName, schemaName, tableName)
-  private val tickers_NYSE = new TableRef(databaseName, schemaName, viewName)
+  private val stocks_cpu_test = new EntityRef(databaseName, schemaName, tableName)
+  private val tickers_NYSE = new EntityRef(databaseName, schemaName, viewName)
 
   private val newQuote: () => Seq[(String, Expression)] = { () =>
     Seq("symbol" -> randomSymbol, "exchange" -> randomExchange, "lastSale" -> randomPrice, "lastSaleTime" -> randomDate)
@@ -28,6 +28,7 @@ class DatabaseCPUTest extends AnyFunSpec {
   }
 
   describe(classOf[DatabaseCPU].getSimpleName) {
+    implicit val scope: Scope = Scope()
 
     it("should DROP the existing TABLE") {
       cpu.dropTable(stocks_cpu_test, ifExists = true)

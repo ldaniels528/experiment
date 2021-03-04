@@ -78,7 +78,7 @@ trait SparkCodeCompiler {
   def generateCode(model: Procedure)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     import model._
     CodeBuilder().append(
-      s"def $name(${params.map(_.toCode).mkString(",")}) = {",
+      s"def ${ref.name}(${params.map(_.toCode).mkString(",")}) = {",
       code.toCode,
       "}"
     ).build()
@@ -90,7 +90,7 @@ trait SparkCodeCompiler {
     * @return the Scala Code string
     */
   def generateCode(udf: UserDefinedFunction): String =
-    s"""registerUDF(name = "${udf.name}", `class` = "${udf.`class`}")\n"""
+    s"""registerUDF(name = "${udf.ref.name}", `class` = "${udf.`class`}")\n"""
 
   /**
     * Generates the SQL VALUES ( ... ) statement
@@ -140,7 +140,7 @@ trait SparkCodeCompiler {
           .append(query.toCode)
           .append(withGlobalTempView(name))
           .build()
-      case other => die(s"Table '${other.name}' could not be translated")
+      case other => die(s"Table '${other.ref.name}' could not be translated")
     }
   }
 
@@ -171,7 +171,7 @@ trait SparkCodeCompiler {
       .append(CodeBuilder(prepend = ",").append(model.fields.map(_.toSQL)))
       .append(model.from map { from =>
         val result = from match {
-          case tableRef: TableRef => tableRef.toSQL
+          case tableRef: EntityRef => tableRef.toSQL
           case query => s"(\n ${query.toSQL} \n)".withAlias(query)
         }
         s"from $result"
@@ -230,8 +230,8 @@ trait SparkCodeCompiler {
     */
   def generateWriter(insert: Insert)(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
     ctx.lookupTableOrView(insert.destination.target.toCode) match {
-      case table: InlineTable => die(s"Inline table '${table.name}' is read-only")
-      case table: Table => die(s"Physical table '${table.name}' is not supported")
+      case table: InlineTable => die(s"Inline table '${table.ref.name}' is read-only")
+      case table: Table => die(s"Physical table '${table.ref.name}' is not supported")
       case table: ExternalTable =>
         // determine the output type (e.g. "CSV" -> "csv") and mode (append or overwrite)
         val writer = table.format.orFail("Table output format was not specified").toString.toLowerCase()
@@ -244,7 +244,7 @@ trait SparkCodeCompiler {
           .append(s"""mode(${if (insert.destination.isAppend) "SaveMode.Append" else "SaveMode.Overwrite"})""")
           .append(s"""$writer(${generatePath(table).orNull})""")
           .build()
-      case view: View => die(s"View '${view.name}' is read-only")
+      case view: View => die(s"View '${view.ref.name}' is read-only")
     }
   }
 
@@ -259,7 +259,7 @@ trait SparkCodeCompiler {
     SQLLanguageParser.parse(file)
   }
 
-  def withGlobalTempView(ref: TableRef): String = s"""withGlobalTempView("${ref.toSQL}")"""
+  def withGlobalTempView(ref: EntityRef): String = s"""withGlobalTempView("${ref.toSQL}")"""
 
   def wrapIdentifier(name: String): String = name match {
     case s if s.contains("$") => s"`$s`"
@@ -339,13 +339,13 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       def toSQL(implicit settings: ApplicationSettings, ctx: CompileContext): String = {
         val result = expression match {
           case AllFields => "*"
-          case BasicField(name) => name.wrap
+          case BasicFieldRef(name) => name.wrap
           case c: Case => generateSQL(c)
           case Cast(value, toType) => s"cast(${value.toSQL} as ${toType.toSQL})"
           case CurrentRow => "current row"
           case Distinct(expressions) => s"distinct(${expressions.map(_.toSQL).mkString(", ")})"
           case FunctionCall(name, args) => s"$name(${args.map(_.toSQL).mkString(", ")})"
-          case JoinField(name, tableAlias) => tableAlias.map(alias => s"${alias.wrap}.${name.wrap}") getOrElse name.wrap
+          case JoinFieldRef(name, tableAlias) => tableAlias.map(alias => s"${alias.wrap}.${name.wrap}") getOrElse name.wrap
           case If(condition, trueValue, falseValue) => s"if(${condition.toSQL}, ${trueValue.toSQL}, ${falseValue.toSQL})"
           case Literal(value) => value.asSQL
           case LocalVariableRef(name) => name.asSQL.wrap
@@ -387,7 +387,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case SetLocalVariable(name, expression) => s"""val $name = ${expression.toCode}"""
           case Show(rows, limit) => s"${rows.toCode}.show(${limit.getOrElse(20)})"
           case SQL(items) => items.map(_.toCode).mkString("\n")
-          case t: TableRef => t.tableName
+          case t: EntityRef => t.name
           case v: Insert.Values => generateCode(v)
           case w: While => generateCode(w)
           case z => throw new IllegalStateException(s"Unsupported operation $z")
@@ -402,8 +402,8 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           case _: Return => die("RETURN is not supported in Spark SQL")
           case s: Select => generateSQL(s)
           case SQL(statements) => statements.map(_.toSQL).mkString("\n")
-          case t: TableRef =>
-            val tableName = s"${settings.defaultDB}.${t.tableName}"
+          case t: EntityRef =>
+            val tableName = s"${settings.defaultDB}.${t.name}"
             t.alias.map(alias => s"$tableName as $alias") getOrElse tableName
           case Union(a, b, isDistinct) => s"${a.toSQL} union ${if (isDistinct) "distinct" else ""} ${b.toSQL}"
           case v: IN.Values => generateSQL(v)
@@ -426,7 +426,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           // JOIN ... ON ...
           case Join.On(source, condition, joinType) =>
             val result = source match {
-              case tableRef: TableRef => tableRef.toSQL
+              case tableRef: EntityRef => tableRef.toSQL
               case query => s"(\n ${query.toSQL} \n)"
             }
             s"${joinType.toSQL} join $result on ${condition.toSQL}"
@@ -434,7 +434,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
           // JOIN ... USING ...
           case Join.Using(source, columns, joinType) =>
             val result = source match {
-              case tableRef: TableRef => tableRef.toSQL
+              case tableRef: EntityRef => tableRef.toSQL
               case query => s"(\n ${query.toSQL} \n)"
             }
             // TODO convert from JOIN ... USING to JOIN ... ON syntax

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.models.Column
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import org.slf4j.LoggerFactory
 
 /**
@@ -107,7 +107,7 @@ package object database {
   case class ColumnCapacityExceededException(column: Column, fieldLength: Int)
     extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
 
-  case class ColumnNotFoundException(ref: TableRef, columnName: String)
+  case class ColumnNotFoundException(ref: EntityRef, columnName: String)
     extends RuntimeException(s"Column '$columnName' does not exist in $ref")
 
   case class ColumnOutOfRangeException(columnIndex: Int)

@@ -4,7 +4,7 @@ import com.qwery.database.models.ColumnTypes.{ColumnType, DoubleType}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
 import com.qwery.database.types.{QxAny, QxNull, QxNumber}
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{BasicFieldRef, Expression}
 
 /**
   * Represents the SQL ROUND function
@@ -18,7 +18,7 @@ case class Round(name: String, args: List[Expression]) extends TransformationFun
   }
 
  override def execute(keyValues: KeyValues): Option[Double] = expression match {
-    case BasicField(fname) => QxAny(keyValues.get(fname)) match {
+    case BasicFieldRef(fname) => QxAny(keyValues.get(fname)) match {
       case QxNumber(value_?) => value_?.map(Math.round(_))
       case QxNull => None
       case qxAny => die(s"Unconverted expression '$qxAny' (${qxAny.getClass.getSimpleName})")

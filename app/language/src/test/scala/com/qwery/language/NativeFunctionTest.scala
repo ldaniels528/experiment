@@ -76,8 +76,8 @@ class NativeFunctionTest extends AnyFunSpec {
            |END
            |""".stripMargin,
         Case(
-          When(Field('Sector) === "Oil & Gas Production", "Oil-Gas"),
-          When(Field('Sector) === "Public Utilities", "Pub Utils")
+          When(FieldRef('Sector) === "Oil & Gas Production", "Oil-Gas"),
+          When(FieldRef('Sector) === "Public Utilities", "Pub Utils")
         )(otherwise = "Unknown": Expression))
     }
 
@@ -90,8 +90,8 @@ class NativeFunctionTest extends AnyFunSpec {
            |END
            |""".stripMargin,
         Case(
-          When(Field('Sector) === "Oil & Gas Production", "Oil-Gas"),
-          When(Field('Sector) === "Public Utilities", "Pub Utils")
+          When(FieldRef('Sector) === "Oil & Gas Production", "Oil-Gas"),
+          When(FieldRef('Sector) === "Public Utilities", "Pub Utils")
         )(otherwise = "Unknown": Expression))
     }
 
@@ -116,7 +116,7 @@ class NativeFunctionTest extends AnyFunSpec {
     }
 
     it("should parse: if(LastSale < 1, 'Penny Stock', 'Stock')") {
-      verify("if(LastSale < 1, 'Penny Stock', 'Stock')", If(Field('LastSale) < 1, "Penny Stock", "Stock"))
+      verify("if(LastSale < 1, 'Penny Stock', 'Stock')", If(FieldRef('LastSale) < 1, "Penny Stock", "Stock"))
     }
 
     it("should parse: max(LastSale)") {

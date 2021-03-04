@@ -6,7 +6,7 @@ import com.qwery.database.models.{Column, ColumnMetadata, Field, FieldMetadata, 
 import com.qwery.database.types.QxAny
 import com.qwery.database.{createTempTable, die, models}
 import com.qwery.models.OrderColumn
-import com.qwery.models.expressions.{AllFields, BasicField, Condition, Expression, FunctionCall, Distinct => SQLDistinct, Field => SQLField}
+import com.qwery.models.expressions.{AllFields, BasicFieldRef, Condition, Expression, FunctionCall, Distinct => SQLDistinct, FieldRef => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
 
@@ -126,7 +126,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   private def getAggregateProjection(expressions: Seq[Expression], tempName: Any => String): Seq[AggregateExpr] = {
     expressions map {
       case AllFields => die("Aggregation function or constant value expected")
-      case f: BasicField => AggregateField(name = f.alias || f.name, srcName = f.name)
+      case f: BasicFieldRef => AggregateField(name = f.alias || f.name, srcName = f.name)
       case fc@FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
         CountDistinct(fc.alias || tempName(fc), args)
       case fc@FunctionCall(functionName, args) =>
@@ -152,7 +152,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   private def getReferencedColumns(expressions: Seq[Expression]): Seq[Column] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
-      case f: BasicField => tableDevice.columns.find(_.name == f.name).toSeq
+      case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).toSeq
       case FunctionCall(functionName, List(SQLDistinct(args))) if functionName equalsIgnoreCase "count" =>
         getReferencedColumns(args.filterNot(_ == AllFields))
       case FunctionCall(_, args) => getReferencedColumns(args.filterNot(_ == AllFields))
@@ -244,7 +244,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   private def getTransformationColumns(expressions: Seq[Expression]): Seq[Column] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
-      case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
+      case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || nextID, args)
@@ -256,7 +256,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   private def getTransformationProjection(srcRow: Row, expressions: Seq[Expression]): Seq[Field] = {
     expressions flatMap {
       case AllFields => srcRow.fields
-      case f: BasicField => srcRow.fields.find(_.name == f.name).toSeq
+      case f: BasicFieldRef => srcRow.fields.find(_.name == f.name).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || nextID, args)
@@ -272,7 +272,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   private def getProjectionColumns(expressions: Seq[Expression]): Seq[Column] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
-      case f: BasicField => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
+      case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(_functionName, args) =>
         val functionName = _functionName.toLowerCase
         // is it a built-in function?

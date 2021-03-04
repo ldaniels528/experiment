@@ -3,7 +3,7 @@ package com.qwery.database.functions
 import com.qwery.database.models.ColumnTypes.{ColumnType, IntType}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
-import com.qwery.models.expressions.{AllFields, BasicField, Expression}
+import com.qwery.models.expressions.{AllFields, BasicFieldRef, Expression}
 
 /**
  * Represents the SQL COUNT function
@@ -20,7 +20,7 @@ case class Count(name: String, args: List[Expression]) extends AggregateFunction
   override def append(keyValues: KeyValues): Unit = {
     count += (expression match {
       case AllFields => 1
-      case BasicField(name) => keyValues.get(name).map(_ => 1).getOrElse(0)
+      case BasicFieldRef(name) => keyValues.get(name).map(_ => 1).getOrElse(0)
       case expression => die(s"Unconverted expression: $expression")
     })
   }
@@ -28,7 +28,7 @@ case class Count(name: String, args: List[Expression]) extends AggregateFunction
   override def collect: Int = count
 
   override def execute(keyValues: KeyValues): Option[Int] = expression match {
-    case BasicField(fname) => keyValues.get(fname).map(_ => 1)
+    case BasicFieldRef(fname) => keyValues.get(fname).map(_ => 1)
     case AllFields => Some(1)
     case expression => die(s"Unconverted expression: $expression")
   }

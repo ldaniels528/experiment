@@ -1,20 +1,20 @@
 package com.qwery.database.models
 
 import com.qwery.database.util.JSONSupport.JSONProductConversion
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import org.scalatest.funspec.AnyFunSpec
 import ModelsJsonProtocol._
 
 /**
   * Table Reference Test Suite
   */
-class TableRefTest extends AnyFunSpec {
+class EntityRefTest extends AnyFunSpec {
   val databaseName = "finance"
   val schemaName = "mortgage"
   val tableName = "securities"
 
-  describe(classOf[TableRef].getSimpleName) {
-    val table = new TableRef(databaseName, schemaName, tableName)
+  describe(classOf[EntityRef].getSimpleName) {
+    val table = new EntityRef(databaseName, schemaName, tableName)
 
     it("should render itself as JSON") {
       val jsString = table.toJSON
@@ -29,7 +29,7 @@ class TableRefTest extends AnyFunSpec {
     }
 
     it("parse/toSQL should be reciprocal") {
-      assert(table == TableRef.parse(table.toSQL))
+      assert(table == EntityRef.parse(table.toSQL))
     }
 
   }

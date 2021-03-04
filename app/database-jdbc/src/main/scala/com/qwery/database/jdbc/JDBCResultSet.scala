@@ -436,7 +436,7 @@ object JDBCResultSet {
     connection = connection,
     databaseName = queryResult.ref.databaseName || connection.catalog,
     schemaName = queryResult.ref.schemaName || connection.schema,
-    tableName = queryResult.ref.tableName,
+    tableName = queryResult.ref.name,
     columns = queryResult.columns,
     data = queryResult.rows,
     __ids = queryResult.__ids

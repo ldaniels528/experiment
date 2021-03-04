@@ -4,7 +4,7 @@ import com.qwery.database.models.ColumnTypes.{ColumnType, DoubleType}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
 import com.qwery.database.types.{QxAny, QxNull, QxNumber}
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{BasicFieldRef, Expression}
 
 /**
  * Represents the SQL SUM function
@@ -24,7 +24,7 @@ case class Sum(name: String, args: List[Expression]) extends AggregateFunction {
 
   override def append(keyValues: KeyValues): Unit = {
     expression match {
-      case BasicField(name) => QxAny(keyValues.get(name)) match {
+      case BasicFieldRef(name) => QxAny(keyValues.get(name)) match {
         case QxNumber(value_?) => value_?.foreach(sum += _)
         case QxNull =>
         case qxAny => die(s"Unconverted expression: $qxAny")

@@ -11,7 +11,7 @@ import com.qwery.models.expressions._
 object SQLDecompiler {
 
   def decompile(expression: Expression): String = expression match {
-    case f@BasicField(name) => name.withAlias(f.alias)
+    case f@BasicFieldRef(name) => name.withAlias(f.alias)
     case ConditionalOp(expr0, expr1, codeOp, sqlOp) => s"${expr0.toSQL} $sqlOp ${expr1.toSQL}"
     case f@FunctionCall(name, args) => decompileFunctionCall(name, args).withAlias(f.alias)
     case l@Literal(value) => decompileLiteral(value).withAlias(l.alias)
@@ -21,11 +21,11 @@ object SQLDecompiler {
   def decompile(invokable: Invokable): String = invokable match {
     case Create(View(name, query, description, ifNotExists)) => decompileCreateView(name, query, description, ifNotExists)
     case select: Select => decompileSelect(select).withAlias(select.alias)
-    case t: TableRef => t.toSQL.withAlias(t.alias)
+    case t: EntityRef => t.toSQL.withAlias(t.alias)
     case other => die(s"Failed to decompile - $other")
   }
 
-  private def decompileCreateView(name: TableRef, query: Invokable, description: Option[String], ifNotExists: Boolean): String = {
+  private def decompileCreateView(name: EntityRef, query: Invokable, description: Option[String], ifNotExists: Boolean): String = {
     s"create view ${name.toSQL} ${if (ifNotExists) "if not exists" else ""} as ${query.toSQL}".replaceAllLiterally("  ", " ")
   }
 

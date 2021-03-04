@@ -114,15 +114,15 @@ trait ExpressionParser {
   /**
     * Creates a new field from a token stream
     * @param stream the given [[TokenStream token stream]]
-    * @return a new [[Field field]] instance
+    * @return a new [[FieldRef field]] instance
     */
-  protected def parseField(stream: TokenStream): Field = {
+  protected def parseField(stream: TokenStream): FieldRef = {
     import TokenStreamHelpers._
     stream match {
       case ts if ts nextIf "*" => AllFields
       case ts if ts.isJoinColumn => parseJoinField(ts) getOrElse ts.die("Invalid field alias")
-      case ts if ts.isField => Field(ts.next().text)
-      case ts if ts.isNumeric => Field(ts.next().text)
+      case ts if ts.isField => FieldRef(ts.next().text)
+      case ts if ts.isNumeric => FieldRef(ts.next().text)
       case ts => ts.die(s"Token is not valid (type: ${ts.peek.map(_.getClass.getName).orNull})")
     }
   }
@@ -283,11 +283,11 @@ trait ExpressionParser {
   /**
     * Parses a field with an alias (e.g. "A.Symbol")
     * @param ts the given [[TokenStream token stream]]
-    * @return the option of a [[Field field]]
+    * @return the option of a [[FieldRef field]]
     */
-  protected def parseJoinField(ts: TokenStream): Option[JoinField] = {
+  protected def parseJoinField(ts: TokenStream): Option[JoinFieldRef] = {
     val results = processor.process("%a:alias . %a:name", ts)(this)
-    for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield JoinField(name, tableAlias = Option(alias))
+    for {name <- results.atoms.get("name"); alias <- results.atoms.get("alias")} yield JoinFieldRef(name, tableAlias = Option(alias))
   }
 
   /**

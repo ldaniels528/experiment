@@ -28,7 +28,7 @@ class CompileContext(tables: Seq[TableLike]) {
     */
   @throws[IllegalArgumentException]
   def lookupTableOrView(name: String): TableLike =
-    tables.find(_.name == name).getOrElse(throw new IllegalArgumentException(s"Table or view '$name' was not found"))
+    tables.find(_.ref.name == name).getOrElse(throw new IllegalArgumentException(s"Table or view '$name' was not found"))
 
 }
 

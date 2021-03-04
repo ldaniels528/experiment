@@ -2,10 +2,10 @@ package com.qwery.database.models
 
 import com.qwery.database.DatabaseCPU.Solution
 import com.qwery.database.device.BlockDevice
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import org.slf4j.Logger
 
-case class QueryResult(ref: TableRef, columns: Seq[Column] = Nil, rows: Seq[Seq[Option[Any]]] = Nil, count: Long = 0, __ids: Seq[Long] = Nil) {
+case class QueryResult(ref: EntityRef, columns: Seq[Column] = Nil, rows: Seq[Seq[Option[Any]]] = Nil, count: Long = 0, __ids: Seq[Long] = Nil) {
 
   def foreachKVP(f: KeyValues => Unit): Unit = {
     val columnNames = columns.map(_.name)
@@ -52,7 +52,7 @@ object QueryResult {
   final implicit class BlockDeviceToQueryResult(val device: BlockDevice) extends AnyVal {
 
     @inline
-    def toQueryResult(ref: TableRef): QueryResult = {
+    def toQueryResult(ref: EntityRef): QueryResult = {
       val rows = device.toList
       val columns = device.columns
       QueryResult(

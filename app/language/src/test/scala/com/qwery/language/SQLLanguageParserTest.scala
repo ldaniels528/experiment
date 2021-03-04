@@ -43,7 +43,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support CREATE FUNCTION statements") {
       val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
-      assert(results == Create(UserDefinedFunction(ref = TableRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
+      assert(results == Create(UserDefinedFunction(ref = EntityRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
     }
 
     it("should support CREATE INDEX statements") {
@@ -51,9 +51,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
         """|CREATE INDEX stocks_symbol ON stocks (symbol)
            |""".stripMargin)
       assert(results == Create(TableIndex(
-        ref = TableRef.parse("stocks_symbol"),
-        columns = List("symbol").map(Field.apply),
-        table = TableRef.parse("stocks"),
+        ref = EntityRef.parse("stocks_symbol"),
+        columns = List("symbol"),
+        table = EntityRef.parse("stocks"),
         ifNotExists = false
       )))
     }
@@ -64,7 +64,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
            |""".stripMargin)
       assert(results == Create(InlineTable(
-        ref = TableRef.parse("SpecialSecurities"),
+        ref = EntityRef.parse("SpecialSecurities"),
         columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
         values = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
       )))
@@ -79,12 +79,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |    WHERE Industry = @industry
            |  )
            |""".stripMargin)
-      assert(results == Create(Procedure(ref = TableRef.parse("testInserts"),
+      assert(results == Create(Procedure(ref = EntityRef.parse("testInserts"),
         params = List("industry STRING").map(Column.apply),
         code = Return(Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === @@(name = "industry")
+          where = FieldRef('Industry) === @@(name = "industry")
         ))
       )))
     }
@@ -97,20 +97,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |LOCATION './dataSets/customers/json/'
            |""".stripMargin)
       assert(results2 == Create(ExternalTable(
-        ref = TableRef.parse("Customers"),
+        ref = EntityRef.parse("Customers"),
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         format = "json",
         location = Some("./dataSets/customers/json/")
-      )))
-    }
-
-    it("should support CREATE COLUMNAR TABLE statements") {
-      val results = SQLLanguageParser.parse(
-        """|CREATE COLUMNAR TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
-           |""".stripMargin)
-      assert(results == Create(Table(ref = TableRef.parse("Customers"), isColumnar = true,
-        columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply)
       )))
     }
 
@@ -131,7 +122,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WITH NULL VALUES AS 'n/a'
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
-      assert(results == Create(ExternalTable(ref = TableRef.parse("Customers"), description = Some("Customer information"),
+      assert(results == Create(ExternalTable(ref = EntityRef.parse("Customers"), description = Some("Customer information"),
         columns = List(
           Column("customer_uid UUID").withComment("Unique Customer ID"),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
@@ -156,7 +147,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
             |""".stripMargin
       )
       assert(results == Create(Table(
-        ref = TableRef.parse("Stocks"),
+        ref = EntityRef.parse("Stocks"),
         columns = List(
           Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
           Column("lastSale DOUBLE"), Column("lastSaleTime DATE"))
@@ -175,7 +166,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |LOCATION './dataSets/customers/csv/'
            |""".stripMargin)
       assert(results == Create(ExternalTable(
-        ref = TableRef.parse("Customers"),
+        ref = EntityRef.parse("Customers"),
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
         fieldTerminator = ",",
@@ -211,7 +202,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  'transient_lastDdlTime'='1555400098')
            |""".stripMargin)
       assert(results == Create(ExternalTable(
-        ref = TableRef.parse("kbb_mart.kbb_rev_per_page"),
+        ref = EntityRef.parse("kbb_mart.kbb_rev_per_page"),
         columns = List(
           Column("rank string"),
           Column("section string"),
@@ -234,7 +225,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
            |""".stripMargin)
       assert(results == Create(UserDefinedFunction(
-        ref = TableRef.parse("myFunc"),
+        ref = EntityRef.parse("myFunc"),
         `class` = "com.qwery.udf.MyFunc",
         jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
       )))
@@ -245,7 +236,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
            |""".stripMargin
       )
-      assert(results == Create(TypeAsEnum(ref = TableRef.parse("mood"), values = Seq("sad", "ok", "happy"))))
+      assert(results == Create(TypeAsEnum(ref = EntityRef.parse("mood"), values = Seq("sad", "ok", "happy"))))
     }
 
     it("should support CREATE VIEW statements") {
@@ -255,11 +246,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == Create(View(ref = TableRef.parse("OilAndGas"), ifNotExists = true,
+      assert(results == Create(View(ref = EntityRef.parse("OilAndGas"), ifNotExists = true,
         query = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Oil/Gas Transmission"
+          where = FieldRef('Industry) === "Oil/Gas Transmission"
         ))))
     }
 
@@ -272,11 +263,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      assert(results == Create(View(ref = TableRef.parse("OilAndGas"), description = Some("AMEX Stock symbols sorted by last sale"), ifNotExists = true,
+      assert(results == Create(View(ref = EntityRef.parse("OilAndGas"), description = Some("AMEX Stock symbols sorted by last sale"), ifNotExists = true,
         query = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Oil/Gas Transmission"
+          where = FieldRef('Industry) === "Oil/Gas Transmission"
         ))))
     }
 
@@ -292,7 +283,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support DELETE statements") {
       val results = SQLLanguageParser.parse("DELETE FROM todo_list where item_id = 1238 LIMIT 25")
-      assert(results == Delete(table = Table("todo_list"), where = Field('item_id) === 1238, limit = Some(25)))
+      assert(results == Delete(table = Table("todo_list"), where = FieldRef('item_id) === 1238, limit = Some(25)))
     }
 
     it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN statements") {
@@ -315,7 +306,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Select(
         fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
         from = Table("Securities"),
-        where = Field('naics) === "12345"
+        where = FieldRef('naics) === "12345"
       ))
     }
 
@@ -327,7 +318,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |""".stripMargin)
       assert(results == ForLoop(
         variable = @#("item"),
-        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
+        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
         ),
@@ -344,7 +335,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |""".stripMargin)
       assert(results == ForLoop(
         variable = @#("item"),
-        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = Field('naics) === "12345"),
+        rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
         ),
@@ -373,12 +364,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
+      val fields: List[FieldRef] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
+          where = FieldRef('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -390,7 +381,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
            |  ('AMD', 'American Micro Devices, Inc.', 'Technology', 'Computers', 22.33)
            |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
+      val fields: List[FieldRef] = List('Symbol, 'Name, 'Sector, 'Industry, 'LastSale)
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Insert.Values(
           values = List(
@@ -408,12 +399,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
+      val fields: List[FieldRef] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
       assert(results == Insert(Overwrite(Table("OilGasSecurities")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
+          where = FieldRef('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -436,7 +427,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support simple SELECT statements without a FROM clause") {
       val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
-      assert(results == Select(fields = List(Field("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
+      assert(results == Select(fields = List(FieldRef("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
     }
 
     it("should support SELECT DISTINCT statements") {
@@ -446,7 +437,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         Select(
           fields = List(Distinct('Ticker_Symbol)),
           from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission")
+          where = FieldRef('Industry) === "Oil/Gas Transmission")
       )
     }
 
@@ -457,12 +448,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |FROM Securities
            |WHERE Industry = 'Oil/Gas Transmission'
            |""".stripMargin)
-      val fields: List[Field] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
+      val fields: List[FieldRef] = List('Symbol, 'Name, 'LastSale, 'MarketCap, 'IPOyear, 'Sector, 'Industry)
       assert(results == Insert(Into(Table("OilGasSecurities")),
         Select(
           fields = fields,
           from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
+          where = FieldRef('Industry) === "Oil/Gas Transmission"),
         fields = fields
       ))
     }
@@ -474,7 +465,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results ==
         Select(Seq('*),
           from = Table("Departments"),
-          where = Exists(Select(fields = Seq('employee_id), from = Table("Employees"), where = Field('role) === "MANAGER"))
+          where = Exists(Select(fields = Seq('employee_id), from = Table("Employees"), where = FieldRef('role) === "MANAGER"))
         ))
     }
 
@@ -504,7 +495,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fields = List('Sector, 'Industry, avg('LastSale).as('LastSale),
           count('*).as('total), count(Distinct('*)).as('distinctTotal)),
         from = Table("Customers"),
-        groupBy = List(Field("1"), Field("2"))
+        groupBy = List(FieldRef("1"), FieldRef("2"))
       ))
     }
 
@@ -518,7 +509,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Select(
         fields = List('Symbol, 'Name, 'Sector, 'Industry),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission",
+        where = FieldRef('Industry) === "Oil/Gas Transmission",
         limit = 100
       ))
     }
@@ -532,7 +523,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Select(
         fields = List('Symbol, 'Name, 'Sector, 'Industry),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission",
+        where = FieldRef('Industry) === "Oil/Gas Transmission",
         limit = 20
       ))
     }
@@ -547,7 +538,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Select(
         fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission",
+        where = FieldRef('Industry) === "Oil/Gas Transmission",
         orderBy = List('Symbol desc, 'Name asc)
       ))
     }
@@ -595,7 +586,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
               modifier = WindowBetween(RANGE, Preceding(Interval(7, DAY)), CurrentRow))
             .as("LastSaleMean")),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission"
+        where = FieldRef('Industry) === "Oil/Gas Transmission"
       ))
     }
 
@@ -624,7 +615,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
               modifier = WindowBetween(ROWS, Following(Interval(7, DAY)), CurrentRow))
             .as("LastSaleMean")),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission"
+        where = FieldRef('Industry) === "Oil/Gas Transmission"
       ))
     }
 
@@ -652,7 +643,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
               modifier = Option(Following(Unbounded(ROWS))))
             .as("LastSaleMean")),
         from = Table("Customers"),
-        where = Field('Industry) === "Oil/Gas Transmission"
+        where = FieldRef('Industry) === "Oil/Gas Transmission"
       ))
     }
 
@@ -670,11 +661,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
         query0 = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
+          where = FieldRef('Industry) === "Oil/Gas Transmission"),
         query1 = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Computer Manufacturing")
+          where = FieldRef('Industry) === "Computer Manufacturing")
       ))
     }
 
@@ -692,11 +683,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
         query0 = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Oil/Gas Transmission"),
+          where = FieldRef('Industry) === "Oil/Gas Transmission"),
         query1 = Select(
           fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
           from = Table("Customers"),
-          where = Field('Industry) === "Computer Manufacturing")
+          where = FieldRef('Industry) === "Computer Manufacturing")
       ))
     }
 
@@ -715,11 +706,11 @@ class SQLLanguageParserTest extends AnyFunSpec {
           query0 = Select(
             fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
             from = Table("Customers"),
-            where = Field('Industry) === "Oil/Gas Transmission"),
+            where = FieldRef('Industry) === "Oil/Gas Transmission"),
           query1 = Select(
             fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
             from = Table("Customers"),
-            where = Field('Industry) === "Computer Manufacturing"),
+            where = FieldRef('Industry) === "Computer Manufacturing"),
           isDistinct = modifier == "DISTINCT"
         ))
       }
@@ -773,13 +764,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
-          Join(Table("CustomerAddresses").as("CA"), Field("CA.customerId") === Field("C.customerId"), JoinTypes.CROSS),
-          Join(Table("Addresses").as("A"), Field("A.addressId") === Field("CA.addressId"), JoinTypes.CROSS)
+          Join(Table("CustomerAddresses").as("CA"), FieldRef("CA.customerId") === FieldRef("C.customerId"), JoinTypes.CROSS),
+          Join(Table("Addresses").as("A"), FieldRef("A.addressId") === FieldRef("CA.addressId"), JoinTypes.CROSS)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -792,13 +783,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
-          Join(Table("CustomerAddresses").as("CA"), Field("CA.customerId") === Field("C.customerId"), JoinTypes.INNER),
-          Join(Table("Addresses").as("A"), Field("A.addressId") === Field("CA.addressId"), JoinTypes.INNER)
+          Join(Table("CustomerAddresses").as("CA"), FieldRef("CA.customerId") === FieldRef("C.customerId"), JoinTypes.INNER),
+          Join(Table("Addresses").as("A"), FieldRef("A.addressId") === FieldRef("CA.addressId"), JoinTypes.INNER)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -811,13 +802,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
-          Join(Table("CustomerAddresses").as("CA"), Field("CA.customerId") === Field("C.customerId"), JoinTypes.FULL_OUTER),
-          Join(Table("Addresses").as("A"), Field("A.addressId") === Field("CA.addressId"), JoinTypes.FULL_OUTER)
+          Join(Table("CustomerAddresses").as("CA"), FieldRef("CA.customerId") === FieldRef("C.customerId"), JoinTypes.FULL_OUTER),
+          Join(Table("Addresses").as("A"), FieldRef("A.addressId") === FieldRef("CA.addressId"), JoinTypes.FULL_OUTER)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -830,13 +821,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
-          Join(Table("CustomerAddresses").as("CA"), Field("CA.customerId") === Field("C.customerId"), JoinTypes.LEFT_OUTER),
-          Join(Table("Addresses").as("A"), Field("A.addressId") === Field("CA.addressId"), JoinTypes.LEFT_OUTER)
+          Join(Table("CustomerAddresses").as("CA"), FieldRef("CA.customerId") === FieldRef("C.customerId"), JoinTypes.LEFT_OUTER),
+          Join(Table("Addresses").as("A"), FieldRef("A.addressId") === FieldRef("CA.addressId"), JoinTypes.LEFT_OUTER)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -849,13 +840,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
-          Join(Table("CustomerAddresses").as("CA"), Field("CA.customerId") === Field("C.customerId"), JoinTypes.RIGHT_OUTER),
-          Join(Table("Addresses").as("A"), Field("A.addressId") === Field("CA.addressId"), JoinTypes.RIGHT_OUTER)
+          Join(Table("CustomerAddresses").as("CA"), FieldRef("CA.customerId") === FieldRef("C.customerId"), JoinTypes.RIGHT_OUTER),
+          Join(Table("Addresses").as("A"), FieldRef("A.addressId") === FieldRef("CA.addressId"), JoinTypes.RIGHT_OUTER)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -868,13 +859,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
-        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(Field.apply),
+        fields = List("C.id", "C.firstName", "C.lastName", "A.city", "A.state", "A.zipCode").map(FieldRef.apply),
         from = Table("Customers").as("C"),
         joins = List(
           Join(Table("CustomerAddresses").as("CA"), columns = Seq("customerId"), JoinTypes.INNER),
           Join(Table("Addresses").as("A"), columns = Seq("addressId"), JoinTypes.INNER)
         ),
-        where = Field("C.firstName") === "Lawrence" && Field("C.lastName") === "Daniels"
+        where = FieldRef("C.firstName") === "Lawrence" && FieldRef("C.lastName") === "Daniels"
       ))
     }
 
@@ -894,9 +885,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |""".stripMargin)
       assert(results == SetRowVariable(name = "securities",
         Select(
-          fields = List('Symbol, 'Name, 'Sector, 'Industry, Field("Summary Quote")),
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, FieldRef("Summary Quote")),
           from = Table("Securities"),
-          where = Field('Industry) === "Oil/Gas Transmission",
+          where = FieldRef('Industry) === "Oil/Gas Transmission",
           orderBy = List('Symbol asc)
         )))
     }
@@ -908,7 +899,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support TRUNCATE statements") {
       val results = SQLLanguageParser.parse("TRUNCATE stocks")
-      assert(results == Truncate(table = TableRef.parse("stocks")))
+      assert(results == Truncate(table = EntityRef.parse("stocks")))
     }
 
     it("should support UPDATE statements") {
@@ -924,7 +915,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
           "Symbol" -> "AAPL", "Name" -> "Apple, Inc.",
           "Sector" -> "Technology", "Industry" -> "Computers", "LastSale" -> 203.45
         ),
-        where = Field('Symbol) === "AAPL",
+        where = FieldRef('Symbol) === "AAPL",
         limit = Some(25)
       ))
     }

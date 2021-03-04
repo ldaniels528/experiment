@@ -21,7 +21,7 @@ import com.qwery.models.expressions.Over.DataAccessTypes.DataAccessType
   * @see [[https://stackoverflow.com/questions/33207164/spark-window-functions-rangebetween-dates]]
   */
 case class Over(expression: Expression,
-                partitionBy: Seq[Field] = Nil,
+                partitionBy: Seq[FieldRef] = Nil,
                 orderBy: Seq[OrderColumn] = Nil,
                 modifier: Option[Expression] = None) extends Expression
 

@@ -3,7 +3,7 @@ package device
 
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
 import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
-import com.qwery.models.TableRef
+import com.qwery.models.EntityRef
 import com.qwery.util.ResourceHelper._
 
 import java.io.File
@@ -17,7 +17,7 @@ import scala.io.Source
   * @param tableName    the table name
   * @param config       the [[TableConfig table configuration]]
   */
-case class ExternalFileBlockDevice(ref: TableRef, config: TableConfig) extends BlockDevice {
+case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends BlockDevice {
   // get the root file or directory
   private val rootFile: File = config.externalTable.flatMap(_.location.map(new File(_)))
     .getOrElse(die(s"No file or directory could be determine for table '$ref'"))

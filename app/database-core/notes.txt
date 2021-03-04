@@ -14,7 +14,7 @@ Incoming Features
     a. GET - SMALL
     b. PUT - SMALL
     c. DELETE - TINY
-4. BLOBs in separate file [columnar] - MEDIUM -> DONE
+4. BLOBs in separate file [columnar] - MEDIUM
 5. indexed fields vs payload (event sourcing) - MEDIUM
 6. allocatable blocks for TEXT string types (all variable sized types) - MEDIUM/LARGE
 7. COMPRESS/DECOMPRESS columns - SMALL -> DONE

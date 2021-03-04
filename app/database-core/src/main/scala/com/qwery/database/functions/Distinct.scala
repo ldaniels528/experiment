@@ -3,7 +3,7 @@ package com.qwery.database.functions
 import com.qwery.database.models.ColumnTypes.{ArrayType, ColumnType}
 import com.qwery.database.die
 import com.qwery.database.models.KeyValues
-import com.qwery.models.expressions.{BasicField, Expression}
+import com.qwery.models.expressions.{BasicFieldRef, Expression}
 
 import scala.collection.mutable
 
@@ -21,7 +21,7 @@ case class Distinct(name: String, args: List[Expression]) extends AggregateFunct
   }
 
   override def append(keyValues: KeyValues): Unit = expression match {
-    case BasicField(name) => keyValues.get(name).foreach(values += _)
+    case BasicFieldRef(name) => keyValues.get(name).foreach(values += _)
     case expression => die(s"Unconverted expression: $expression")
   }
 

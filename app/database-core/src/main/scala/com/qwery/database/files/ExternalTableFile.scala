@@ -1,24 +1,22 @@
 package com.qwery.database
 package files
 
-import com.qwery.database.device.ExternalFileBlockDevice
-import com.qwery.database.device.BlockDevice
+import com.qwery.database.device.{BlockDevice, ExternalFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.models.Column.implicits._
 import com.qwery.database.models.TableConfig
 import com.qwery.database.models.TableConfig.ExternalTableConfig
-import com.qwery.models.{ExternalTable, TableRef}
-import com.qwery.util.OptionHelper.OptionEnrichment
+import com.qwery.models.{EntityRef, ExternalTable}
 
 import java.io.File
 
 /**
   * External Table File
-  * @param ref    the [[TableRef table reference]]
+  * @param ref    the [[EntityRef table reference]]
   * @param config the [[TableConfig table configuration]]
   * @param device the [[BlockDevice external file block device]]
   */
-case class ExternalTableFile(ref: TableRef, config: TableConfig, device: BlockDevice) extends TableFileLike
+case class ExternalTableFile(ref: EntityRef, config: TableConfig, device: BlockDevice) extends TableFileLike
 
 /**
   * External Table File Companion
@@ -27,35 +25,36 @@ object ExternalTableFile {
 
   /**
     * Loads an External Table File
-    * @param ref the [[TableRef table reference]]
+    * @param ref the [[EntityRef table reference]]
     * @return the [[ExternalTable external table]]
     */
-  def apply(ref: TableRef): ExternalTableFile = {
+  def apply(ref: EntityRef): ExternalTableFile = {
     ExternalTableFile(ref, config = readTableConfig(ref))
   }
 
   /**
     * Loads an External Table File
-    * @param ref    the [[TableRef table reference]]
+    * @param ref    the [[EntityRef table reference]]
     * @param config the [[TableConfig table configuration]]
     * @return the [[ExternalTable external table]]
     */
-  def apply(ref: TableRef, config: TableConfig): ExternalTableFile = {
+  def apply(ref: EntityRef, config: TableConfig): ExternalTableFile = {
     new ExternalTableFile(ref, config, device = ExternalFileBlockDevice(ref, config))
   }
 
   /**
     * Creates a new external table
-    * @param databaseName the database name
-    * @param table        the [[ExternalTable external table]]
+    * @param table the [[ExternalTable external table]]
     * @return a new [[ExternalTable external table]]
     */
-  def createTable(databaseName: String, table: ExternalTable): ExternalTableFile = {
+  def createTable(table: ExternalTable): ExternalTableFile = {
+    val ref = table.ref
+
     // create the root directory
-    getTableRootDirectory(table.ref).mkdirs()
+    getTableRootDirectory(ref).mkdirs()
 
     // get a reference to the file or directory
-    val rootFile = table.location map (path => new File(path)) getOrElse die("A Location property was expected")
+    val rootFile = table.location map (path => new File(path)) getOrElse die("A table reference property was expected")
 
     // create the table configuration file
     val config = TableConfig(
@@ -63,7 +62,7 @@ object ExternalTableFile {
       indices = Nil,
       description = table.description,
       externalTable = Some(ExternalTableConfig(
-        format = table.format.map(_.toString),
+        format = table.format.map(_.toLowerCase),
         location = Some(rootFile.getCanonicalPath),
         fieldTerminator = table.fieldTerminator,
         lineTerminator = table.lineTerminator,
@@ -73,10 +72,10 @@ object ExternalTableFile {
     )
 
     // write the config file
-    writeTableConfig(table.ref, config)
+    writeTableConfig(ref, config)
 
     // return the table
-    ExternalTableFile(table.ref, config)
+    ExternalTableFile(ref, config)
   }
 
 }

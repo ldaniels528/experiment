@@ -1,9 +1,9 @@
 package com.qwery.database.device
 
 import com.qwery.database.files.TableFile
-import com.qwery.database.models.{KeyValues, LoadMetrics, TableIndexRef}
+import com.qwery.database.models.{KeyValues, LoadMetrics}
 import com.qwery.database.time
-import com.qwery.models.{ColumnSpec, Table, TableRef, Column => XColumn}
+import com.qwery.models.{ColumnSpec, EntityRef, Table, TableIndex, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -22,7 +22,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
   val tableName = "stocks_idx_test"
   val schemaName = "stocks"
   val indexColumn = "symbol"
-  val tableRef = new TableRef(databaseName, schemaName, tableName)
+  val tableRef = new EntityRef(databaseName, schemaName, tableName)
 
   describe(classOf[TableIndexDevice].getName) {
 
@@ -31,7 +31,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
       TableFile.dropTable(tableRef, ifExists = true)
 
       // create the table
-      TableFile.createTable(databaseName, table = Table(
+      TableFile.createTable(table = Table(
         ref = tableRef,
         description = Some("index test table"),
         columns = List(
@@ -43,7 +43,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
 
       TableFile(tableRef).use { table =>
         // create the table index
-        val indexDevice = table.createIndex(tableRef, indexColumn)
+        val indexDevice = table.createIndex(TableIndex(tableRef, tableRef, columns = Seq(indexColumn), ifNotExists = false))
 
         // create some records
         table.insertRow(makeRow(symbol = "AAPL", exchange = "NASDAQ", lastSale = 275.88, lastSaleTime = new Date()))
@@ -72,7 +72,7 @@ class TableIndexDeviceTest extends AnyFunSpec {
         val (count, updateTime) = time(table.updateRows(values = KeyValues("symbol" -> "AMDX"), condition = KeyValues("symbol" -> "AMD")))
         logger.info(f"Updated $count rows via index in $updateTime%.2f msec")
 
-        val indexDevice = TableIndexDevice(TableIndexRef(tableRef, indexColumn))
+        val indexDevice = TableIndexDevice(TableIndex(tableRef, tableRef, columns = Seq(indexColumn), ifNotExists = false))
         dump(indexDevice)
       }
     }
@@ -83,14 +83,14 @@ class TableIndexDeviceTest extends AnyFunSpec {
         val (count, updateTime) = time(table.deleteRows(condition = KeyValues("symbol" -> "AMDX")))
         logger.info(f"Deleted $count rows via index in $updateTime%.2f msec")
 
-        val indexDevice = TableIndexDevice(TableIndexRef(tableRef, indexColumn))
+        val indexDevice = TableIndexDevice(TableIndex(tableRef, tableRef, columns = Seq(indexColumn), ifNotExists = false))
         dump(indexDevice)
       }
     }
 
   }
 
-  def copyInto(databaseName: String, tableName: String, file: File): LoadMetrics = {
+  def copyInto(tableRef: EntityRef, file: File): LoadMetrics = {
     TableFile(tableRef) use { table =>
       val metrics = table.ingestTextFile(file)(_.split("[,]") match {
         case Array(symbol, exchange, price, date) =>

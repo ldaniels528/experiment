@@ -124,7 +124,6 @@ trait SQLLanguageParser {
     * @return an [[Invokable]]
     */
   def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
-    "CREATE COLUMNAR TABLE" -> parseCreateTable,
     "CREATE EXTERNAL TABLE" -> parseCreateTableExternal,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INDEX" -> parseCreateTableIndex,
@@ -143,7 +142,7 @@ trait SQLLanguageParser {
     */
   def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %a:name AS %a:class ?USING +?JAR +?%a:jar")
-    Create(UserDefinedFunction(ref = TableRef.parse(params.atoms("name")), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
+    Create(UserDefinedFunction(ref = EntityRef.parse(params.atoms("name")), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
 
   /**
@@ -154,7 +153,7 @@ trait SQLLanguageParser {
   def parseCreateInlineTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INLINE TABLE ?%IFNE:exists %t:name ( %P:columns ) FROM %V:source")
     Create(InlineTable(
-      ref = TableRef.parse(params.atoms("name")),
+      ref = EntityRef.parse(params.atoms("name")),
       columns = params.columns.getOrElse("columns", Nil),
       values = params.sources.getOrElse("source", ts.die("No source specified")) match {
         case values: Insert.Values => values
@@ -170,22 +169,21 @@ trait SQLLanguageParser {
     */
   def parseCreateProcedure(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %a:name ( ?%P:params ) ?AS %N:code")
-    Create(Procedure(ref = TableRef.parse(params.atoms("name")), params = params.columns("params"), code = params.sources("code")))
+    Create(Procedure(ref = EntityRef.parse(params.atoms("name")), params = params.columns("params"), code = params.sources("code")))
   }
 
   /**
-    * Parses a CREATE [COLUMNAR|PARTITIONED] TABLE statement
+    * Parses a CREATE [PARTITIONED] TABLE statement
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
   def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|COLUMNAR|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
+    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
     Create(Table(
-      ref = TableRef.parse(params.atoms("name")),
+      ref = EntityRef.parse(params.atoms("name")),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
-      isColumnar = params.atoms.is("mode", _ equalsIgnoreCase "COLUMNAR"),
       isPartitioned = params.atoms.is("mode", _ equalsIgnoreCase "PARTITIONED")
     ))
   }
@@ -208,7 +206,7 @@ trait SQLLanguageParser {
     }
 
     Create(ExternalTable(
-      ref = TableRef.parse(params.atoms("name")),
+      ref = EntityRef.parse(params.atoms("name")),
       description = params.atoms.get("description"),
       columns = params.columns.getOrElse("columns", Nil),
       ifNotExists = params.indicators.get("exists").contains(true),
@@ -235,8 +233,8 @@ trait SQLLanguageParser {
   def parseCreateTableIndex(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %a:name ON %L:table ( %F:columns )")
     Create(TableIndex(
-      ref = TableRef.parse(params.atoms("name")),
-      columns = params.fields("columns"),
+      ref = EntityRef.parse(params.atoms("name")),
+      columns = params.fields("columns").map(_.name),
       table = params.locations("table"),
       ifNotExists = params.indicators.get("exists").contains(true)
     ))
@@ -252,7 +250,7 @@ trait SQLLanguageParser {
    */
   def parseCreateTypeAsEnum(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE TYPE ?%IFNE:exists %t:name AS ENUM ( %E:values )")
-    Create(TypeAsEnum(ref = TableRef.parse(params.atoms("name")), values = params.expressions("values") map {
+    Create(TypeAsEnum(ref = EntityRef.parse(params.atoms("name")), values = params.expressions("values") map {
       case Literal(value: String) => value
       case other => throw SyntaxException(s"String constant expected near '$other'", ts)
     }))
@@ -276,7 +274,7 @@ trait SQLLanguageParser {
   def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?%w:props ?AS %Q:query")
     Create(View(
-      ref = TableRef.parse(params.atoms("name")),
+      ref = EntityRef.parse(params.atoms("name")),
       query = params.sources("query"),
       description = params.atoms.get("description"),
       ifNotExists = params.indicators.get("exists").contains(true)))
@@ -434,7 +432,7 @@ trait SQLLanguageParser {
   /**
     * Parses the next query (selection), table or variable
     * @param stream the given [[TokenStream]]
-    * @return the resultant [[Select]], [[TableRef]] or [[VariableRef]]
+    * @return the resultant [[Select]], [[EntityRef]] or [[VariableRef]]
     */
   def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
     // table dot notation (e.g. "public"."stocks" or "public.stocks" or "`Months of the Year`")
@@ -443,7 +441,7 @@ trait SQLLanguageParser {
     case ts => parseNextQueryOrVariable(ts)
   }
 
-  private def parseTableDotNotation(ts: TokenStream): TableRef = {
+  private def parseTableDotNotation(ts: TokenStream): EntityRef = {
 
     def getNameComponent(ts: TokenStream): String = {
       if (ts.isBackticks || ts.isQuoted || ts.isText) ts.next().text
@@ -459,9 +457,9 @@ trait SQLLanguageParser {
 
     // return the table reference
     list.reverse match {
-      case database :: schema :: table :: Nil => new TableRef(databaseName = database, schemaName = schema, tableName = table)
-      case schema :: table :: Nil => TableRef(databaseName = None, schemaName = Option(schema), tableName = table)
-      case path :: Nil => TableRef.parse(path)
+      case database :: schema :: table :: Nil => new EntityRef(databaseName = database, schemaName = schema, tableName = table)
+      case schema :: table :: Nil => EntityRef(databaseName = None, schemaName = Option(schema), name = table)
+      case path :: Nil => EntityRef.parse(path)
       case _ => ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
     }
   }
@@ -547,8 +545,8 @@ trait SQLLanguageParser {
         source = select,
         destination = if (isOverwrite) Insert.Overwrite(target) else Insert.Into(target),
         fields = params.expressions("fields") map {
-          case field: Field => field
-          case expr: NamedExpression => BasicField(expr.name)
+          case field: FieldRef => field
+          case expr: NamedExpression => BasicFieldRef(expr.name)
           case expr => stream.die(s"Invalid field definition $expr")
         })
     } getOrElse select

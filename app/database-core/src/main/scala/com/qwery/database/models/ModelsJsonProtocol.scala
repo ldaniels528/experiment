@@ -2,7 +2,7 @@ package com.qwery.database
 package models
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import com.qwery.models.{ColumnSpec, Table, TableRef, TypeAsEnum}
+import com.qwery.models.{ColumnSpec, EntityRef, Table, TableIndex, TypeAsEnum}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.{models => mx}
 import spray.json._
@@ -59,16 +59,16 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   final implicit val tableRefJsJsonFormat: RootJsonFormat[TableRefJs] = jsonFormat3(TableRefJs.apply)
 
-  final implicit object TableRefJsonFormat extends JsonFormat[TableRef] {
-    override def read(json: JsValue): TableRef = {
+  final implicit object TableRefJsonFormat extends JsonFormat[EntityRef] {
+    override def read(json: JsValue): EntityRef = {
       val js = json.convertTo[TableRefJs]
-      new TableRef(js.databaseName, js.schemaName, js.tableName)
+      new EntityRef(js.databaseName, js.schemaName, js.tableName)
     }
 
-    override def write(ref: TableRef): JsValue = TableRefJs(
+    override def write(ref: EntityRef): JsValue = TableRefJs(
       databaseName = ref.databaseName || DEFAULT_DATABASE,
       schemaName = ref.schemaName || DEFAULT_SCHEMA,
-      tableName = ref.tableName).toJson
+      tableName = ref.name).toJson
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -79,7 +79,9 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   final implicit val columnJsonFormat: RootJsonFormat[mx.Column] = jsonFormat5(mx.Column.apply)
 
-  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat6(Table.apply)
+  final implicit val tableIndexJsonFormat: RootJsonFormat[TableIndex] = jsonFormat4(TableIndex.apply)
+
+  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat5(Table.apply)
 
   final implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
 

@@ -32,7 +32,7 @@ class SQLTemplateParserTest extends AnyFunSpec {
     }
 
     it("should parse condition tags (%c)") {
-      verify(text = "custId = 123", template = "%c:condition")(SQLTemplateParams(conditions = Map("condition" -> (Field('custId) === 123d))))
+      verify(text = "custId = 123", template = "%c:condition")(SQLTemplateParams(conditions = Map("condition" -> (FieldRef('custId) === 123d))))
     }
 
     it("should parse expression tags (%E)") {
@@ -40,7 +40,7 @@ class SQLTemplateParserTest extends AnyFunSpec {
     }
 
     it("should parse assignable expression tags (%e)") {
-      verify(text = "(x + 1) * 2", template = "%e:expression")(SQLTemplateParams(assignables = Map("expression" -> ((Field('x) + 1) * 2))))
+      verify(text = "(x + 1) * 2", template = "%e:expression")(SQLTemplateParams(assignables = Map("expression" -> ((FieldRef('x) + 1) * 2))))
     }
 
     it("should parse field tags (%F)") {
@@ -54,7 +54,7 @@ class SQLTemplateParserTest extends AnyFunSpec {
 
     it("should parse join tags (%J)") {
       verify(text = "INNER JOIN Securities AS A ON A.symbol = B.ticker", template = "%J:joins")(SQLTemplateParams(joins = Map("joins" -> List(
-        Join(source = Table("Securities").as("A"), condition = Field("A.symbol") === Field("B.ticker"), `type` = JoinTypes.INNER)
+        Join(source = Table("Securities").as("A"), condition = FieldRef("A.symbol") === FieldRef("B.ticker"), `type` = JoinTypes.INNER)
       ))))
     }
 

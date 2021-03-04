@@ -25,7 +25,7 @@ class ExpressionParserTest extends AnyFunSpec {
     }
 
     it("""should parse "DISTINCT A.Symbol, A.Exchange" """) {
-      verify("DISTINCT A.Symbol, A.Exchange", Distinct(JoinField("Symbol", tableAlias = "A"), JoinField("Exchange", tableAlias = "A")))
+      verify("DISTINCT A.Symbol, A.Exchange", Distinct(JoinFieldRef("Symbol", tableAlias = "A"), JoinFieldRef("Exchange", tableAlias = "A")))
     }
 
     it("""should parse "INTERVAL 7 DAYS" (expression)""") {
@@ -33,11 +33,11 @@ class ExpressionParserTest extends AnyFunSpec {
     }
 
     it("""should parse "A.Symbol" (expression)""") {
-      verify("A.Symbol", JoinField("Symbol", tableAlias = "A"))
+      verify("A.Symbol", JoinFieldRef("Symbol", tableAlias = "A"))
     }
 
     it("""should parse "A.Symbol IN ('AAPL', 'AMZN', 'AMD')" """) {
-      verify("A.Symbol IN ('AAPL', 'AMZN', 'AMD')", IN(JoinField("Symbol", tableAlias = "A"))("AAPL", "AMZN", "AMD"))
+      verify("A.Symbol IN ('AAPL', 'AMZN', 'AMD')", IN(JoinFieldRef("Symbol", tableAlias = "A"))("AAPL", "AMZN", "AMD"))
     }
 
     it("""should parse conditional expression "100 < 1" (conditional expression)""") {
@@ -49,55 +49,55 @@ class ExpressionParserTest extends AnyFunSpec {
     }
 
     it("""should parse "`Symbol` = 'AAPL'" (conditional expression)""") {
-      verify("`Symbol` = 'AAPL'", Field('Symbol) === "AAPL")
+      verify("`Symbol` = 'AAPL'", FieldRef('Symbol) === "AAPL")
     }
 
     it("""should parse "A.Symbol = 'AMD'" (conditional expression)""") {
-      verify("A.Symbol = 'AMD'", Field("A.Symbol") === "AMD")
+      verify("A.Symbol = 'AMD'", FieldRef("A.Symbol") === "AMD")
     }
 
     it("""should parse "y + (x * 2)" (expression)""") {
-      verify("y + (x * 2)", Field('y) + (Field('x) * 2))
+      verify("y + (x * 2)", FieldRef('y) + (FieldRef('x) * 2))
     }
 
     it("""should parse "y + (x / 2)" (expression)""") {
-      verify("y + (x / 2)", Field('y) + (Field('x) / 2))
+      verify("y + (x / 2)", FieldRef('y) + (FieldRef('x) / 2))
     }
 
     it("""should parse "(y - (x / 2)) AS 'calc'" (expression)""") {
-      verify("(y - (x / 2))  AS 'calc'", Field('y) - (Field('x) / 2).as("calc"))
+      verify("(y - (x / 2))  AS 'calc'", FieldRef('y) - (FieldRef('x) / 2).as("calc"))
     }
 
     it("""should parse "LastSale = 100" (equal)""") {
-      verify("LastSale = 100", Field('LastSale) === 100)
+      verify("LastSale = 100", FieldRef('LastSale) === 100)
     }
 
     it("""should parse "LastSale != 101" (not equal)""") {
-      verify("LastSale != 101", Field('LastSale) !== 101)
+      verify("LastSale != 101", FieldRef('LastSale) !== 101)
     }
 
     it("""should parse "LastSale <> 102" (not equal)""") {
-      verify("LastSale <> 102", Field('LastSale) !== 102)
+      verify("LastSale <> 102", FieldRef('LastSale) !== 102)
     }
 
     it("""should parse "NOT LastSale = 103" (not equal)""") {
-      verify("NOT LastSale = 103", NOT(Field('LastSale) === 103))
+      verify("NOT LastSale = 103", NOT(FieldRef('LastSale) === 103))
     }
 
     it("""should parse "LastSale > 104" (greater)""") {
-      verify("LastSale > 104", Field('LastSale) > 104)
+      verify("LastSale > 104", FieldRef('LastSale) > 104)
     }
 
     it("""should parse "LastSale >= 105" (greater or equal)""") {
-      verify("LastSale >= 105", Field('LastSale) >= 105)
+      verify("LastSale >= 105", FieldRef('LastSale) >= 105)
     }
 
     it("""should parse "LastSale < 106" (lesser)""") {
-      verify("LastSale < 106", Field('LastSale) < 106)
+      verify("LastSale < 106", FieldRef('LastSale) < 106)
     }
 
     it("""should parse "LastSale <= 107" (lesser or equal)""") {
-      verify("LastSale <= 107", Field('LastSale) <= 107)
+      verify("LastSale <= 107", FieldRef('LastSale) <= 107)
     }
 
     it("""should parse "Sector IS NULL" (IS NULL)""") {
@@ -110,21 +110,21 @@ class ExpressionParserTest extends AnyFunSpec {
 
     it("""should parse expressions containing 'AND'""") {
       verify("Sector = 'Basic Industries' AND Industry = 'Gas & Oil'",
-        Field('Sector) === "Basic Industries" && Field('Industry) === "Gas & Oil")
+        FieldRef('Sector) === "Basic Industries" && FieldRef('Industry) === "Gas & Oil")
     }
 
     it("""should parse expressions containing 'OR'""") {
       verify("Sector = 'Basic Industries' OR Industry = 'Gas & Oil'",
-        Field('Sector) === "Basic Industries" || Field('Industry) === "Gas & Oil")
+        FieldRef('Sector) === "Basic Industries" || FieldRef('Industry) === "Gas & Oil")
     }
 
     it("""should parse expressions containing 'AND' and 'OR'""") {
       verify("Sector = 'Basic Industries' AND Industry LIKE '%Gas%' OR Industry LIKE '%Oil%'",
-        Field('Sector) === "Basic Industries" && LIKE('Industry, "%Gas%") || LIKE('Industry, "%Oil%"))
+        FieldRef('Sector) === "Basic Industries" && LIKE('Industry, "%Gas%") || LIKE('Industry, "%Oil%"))
     }
 
     it("""should parse "(x + 3) * 2" (quantities)""") {
-      verify("(x + 3) * 2", (Field('x) + 3) * 2)
+      verify("(x + 3) * 2", (FieldRef('x) + 3) * 2)
     }
 
     it("should parse functions (Min)") {

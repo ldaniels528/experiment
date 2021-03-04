@@ -1,6 +1,6 @@
 package com.qwery.models
 
-import com.qwery.models.expressions.{AllFields, Condition, Expression, Field}
+import com.qwery.models.expressions.{AllFields, Condition, Expression, FieldRef}
 
 /**
   * Represents a queryable entity
@@ -44,7 +44,7 @@ case class ProcedureCall(name: String, args: List[Expression]) extends Queryable
 case class Select(fields: Seq[Expression] = Seq(AllFields),
                   from: Option[Queryable] = None,
                   joins: Seq[Join] = Nil,
-                  groupBy: Seq[Field] = Nil,
+                  groupBy: Seq[FieldRef] = Nil,
                   having: Option[Condition] = None,
                   orderBy: Seq[OrderColumn] = Nil,
                   where: Option[Condition] = None,

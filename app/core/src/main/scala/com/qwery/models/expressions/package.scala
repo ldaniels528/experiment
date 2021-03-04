@@ -91,9 +91,9 @@ package object expressions {
     /**
       * Symbol to Field conversion
       * @param symbol the given field name
-      * @return the equivalent [[Field]]
+      * @return the equivalent [[FieldRef]]
       */
-    final implicit def symbolToField(symbol: Symbol): Field = Field(symbol.name)
+    final implicit def symbolToField(symbol: Symbol): FieldRef = FieldRef(symbol.name)
 
     /**
       * Symbol to Ordered Column conversion
@@ -168,7 +168,7 @@ package object expressions {
 
       @inline def isNull: Condition = IsNull(expr0) // f.isnull(expr0)
 
-      @inline def over(partitionBy: Seq[Field] = Nil,
+      @inline def over(partitionBy: Seq[FieldRef] = Nil,
                        orderBy: Seq[OrderColumn] = Nil,
                        modifier: Option[Expression] = None): Over = {
         Over(
