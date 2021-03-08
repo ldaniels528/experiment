@@ -8,17 +8,19 @@ import com.qwery.{models => mx}
 
 /**
  * Represents a Column
- * @param name        the name of the column
- * @param comment     the column's optional comment/documentation
- * @param metadata    the [[ColumnMetadata column metadata]]
- * @param sizeInBytes the maximum size (in bytes) of the column
- * @param enumValues  the enumeration values (if any)
+ * @param name         the name of the column
+ * @param comment      the column's optional comment/documentation
+ * @param metadata     the [[ColumnMetadata column metadata]]
+ * @param enumValues   the enumeration values (if any)
+ * @param sizeInBytes  the maximum size (in bytes) of the column
+ * @param defaultValue the optional default value
  */
 case class Column(name: String,
                   comment: String,
                   enumValues: Seq[String],
                   metadata: ColumnMetadata,
-                  sizeInBytes: Int) {
+                  sizeInBytes: Int,
+                  defaultValue: Option[String] = None) {
 
   /**
    * @return true if the column is an enumeration type
@@ -59,7 +61,8 @@ case class Column(name: String,
         |comment=$comment,
         |enumValues=${enumValues.map(s => s"'$s'").mkString(",")},
         |sizeInBytes=$sizeInBytes,
-        |metadata=$metadata
+        |metadata=$metadata,
+        |defaultValue=${defaultValue.orNull}
         |)""".stripMargin.split("\n").mkString
 
 }
@@ -68,9 +71,6 @@ case class Column(name: String,
  * Column Companion
  */
 object Column {
-  import spray.json._
-  import DefaultJsonProtocol._
-  implicit val columnJsonFormat: RootJsonFormat[Column] = jsonFormat5(Column.apply)
 
   /**
    * Creates a new Column
@@ -81,12 +81,13 @@ object Column {
    * @return a new [[Column]]
    */
   def create(name: String,
-            comment: String = "",
-            enumValues: Seq[String] = Nil,
-            metadata: ColumnMetadata,
-            maxSize: Option[Int] = None): Column = {
+             comment: String = "",
+             defaultValue: Option[String] = None,
+             enumValues: Seq[String] = Nil,
+             metadata: ColumnMetadata,
+             maxSize: Option[Int] = None): Column = {
     val enumMaxLength = if (enumValues.nonEmpty) Some(enumValues.map(_.length).max) else None
-    new Column(name, comment, enumValues, metadata, sizeInBytes = (metadata.`type`.getFixedLength ?? enumMaxLength ?? maxSize)
+    new Column(name, comment, enumValues, metadata, defaultValue = defaultValue, sizeInBytes = (metadata.`type`.getFixedLength ?? enumMaxLength ?? maxSize)
       .getOrElse(die(s"The maximum length of '$name' could not be determined for type ${metadata.`type`}")))
   }
 
@@ -104,6 +105,7 @@ object Column {
       def toColumn: Column = Column.create(
         name = column.name,
         comment = column.comment.getOrElse(""),
+        defaultValue = column.defaultValue,
         enumValues = column.enumValues,
         maxSize = column.spec.precision.headOption,
         metadata = models.ColumnMetadata(

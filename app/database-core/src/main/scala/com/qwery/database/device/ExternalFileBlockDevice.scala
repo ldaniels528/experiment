@@ -20,10 +20,10 @@ import scala.io.Source
 case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends BlockDevice {
   // get the root file or directory
   private val rootFile: File = config.externalTable.flatMap(_.location.map(new File(_)))
-    .getOrElse(die(s"No file or directory could be determine for table '$ref'"))
+    .getOrElse(die(s"No file or directory could be determine for table '${ref.toSQL}'"))
 
   // setup the device
-  private implicit val device: BlockDevice = new RowOrientedFileBlockDevice(columns, getTableDataFile(ref))
+  private implicit val device: BlockDevice = new RowOrientedFileBlockDevice(columns, getTableDataFile(ref, config))
   device.shrinkTo(newSize = 0)
 
   // get the config details
@@ -88,7 +88,7 @@ case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends 
 
   override def writeRowMetaData(rowID: ROWID, metadata: RowMetadata): Unit = dieReadOnly()
 
-  private def dieReadOnly(): Nothing = die(s"Table $ref is read-only")
+  private def dieReadOnly(): Nothing = die(s"Table '${ref.toSQL}' is read-only")
 
   private def ensureData(rowID: ROWID): Unit = {
     while (offset <= rowID && files.hasNext) {

@@ -37,19 +37,20 @@ object TableFile {
     */
   def createTable(table: Table): TableFile = {
     val ref = table.ref
-    val dataFile = getTableDataFile(ref)
     val configFile = getTableConfigFile(ref)
     val columns = table.columns.map(_.toColumn)
-    if (table.ifNotExists && dataFile.exists() && configFile.exists()) apply(ref)
+    if (table.ifNotExists && configFile.exists()) apply(ref)
     else {
-      assert(!dataFile.exists(), s"Table '$ref' already exists")
-
       // create the root directory
       getTableRootDirectory(ref).mkdirs()
 
       // create the table configuration file
-      val config = TableConfig(columns, indices = Nil, description = table.description)
+      val config = TableConfig(columns, description = table.description)
       writeTableConfig(ref, config)
+
+      // get a reference to the data file
+      val dataFile = getTableDataFile(ref, config)
+      assert(!dataFile.exists(), s"Table '${ref.toSQL}' already exists")
 
       // return the table
       new TableFile(ref, config, new RowOrientedFileBlockDevice(columns, dataFile))
@@ -63,10 +64,8 @@ object TableFile {
     * @return true, if the table was deleted
     */
   def dropTable(ref: EntityRef, ifExists: Boolean = false): Boolean = {
-    val dataFile = getViewDataFile(ref)
     val configFile = getTableConfigFile(ref)
-    if (!ifExists && !dataFile.exists()) die(s"Table '$ref' (${dataFile.getAbsolutePath}) does not exist")
-    if (!ifExists && !configFile.exists()) die(s"Table '$ref' (${configFile.getAbsolutePath}) does not exist")
+    if (!ifExists && !configFile.exists()) die(s"Table '${ref.toSQL}' (${configFile.getAbsolutePath}) does not exist")
     val directory = getTableRootDirectory(ref)
     val files = directory.listFilesRecursively
     files.forall(_.delete())

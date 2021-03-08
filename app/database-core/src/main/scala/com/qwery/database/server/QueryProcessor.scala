@@ -603,7 +603,7 @@ object QueryProcessor {
     */
   class VirtualTableCPU(databaseName: String, viewName: String) extends Actor {
     private val ref = new EntityRef(databaseName, schemaName = DEFAULT_SCHEMA, viewName)
-    private lazy val vTable = VirtualTableFile.load(ref)
+    private lazy val vTable = VirtualTableFile(ref)
 
     override def receive: Receive = {
       case cmd@CreateView(_, _, description, invokable, ifNotExists) =>

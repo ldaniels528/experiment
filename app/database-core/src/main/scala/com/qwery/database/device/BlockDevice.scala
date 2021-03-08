@@ -51,6 +51,9 @@ trait BlockDevice {
    */
   def close(): Unit
 
+  /**
+   * @return the collection of [[Column columns]]
+   */
   def columns: Seq[Column]
 
   /**

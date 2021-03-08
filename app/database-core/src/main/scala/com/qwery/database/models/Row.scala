@@ -1,11 +1,10 @@
 package com.qwery.database
 package models
 
-import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models
 import com.qwery.database.types.{QxAny, QxInt}
 import com.qwery.database.util.Codec
+import com.qwery.database.util.Codec.CodecByteBuffer
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.{allocate, wrap}
@@ -83,9 +82,6 @@ case class Row(id: ROWID, metadata: RowMetadata, fields: Seq[Field]) {
  * Row Companion
  */
 object Row {
-  import com.qwery.database.models.ModelsJsonProtocol._
-  import spray.json._
-  implicit val rowJsonFormat: RootJsonFormat[Row] = jsonFormat3(Row.apply)
 
   def toFieldBuffers(buf: ByteBuffer)(implicit device: BlockDevice): Seq[ByteBuffer] = {
     device.physicalColumns.zipWithIndex map { case (column, index) =>

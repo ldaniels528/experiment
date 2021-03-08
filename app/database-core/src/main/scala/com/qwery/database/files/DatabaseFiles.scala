@@ -2,10 +2,11 @@ package com.qwery.database.files
 
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
+import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.models.{DatabaseConfig, TableConfig}
 import com.qwery.database.util.JSONSupport._
-import com.qwery.database.{DEFAULT_DATABASE, DEFAULT_SCHEMA, getServerRootDirectory}
-import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
+import com.qwery.database.{DEFAULT_DATABASE, DEFAULT_SCHEMA, die, getServerRootDirectory}
+import com.qwery.implicits.MagicImplicits
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.{EntityRef, Invokable, TableIndex}
 import com.qwery.util.OptionHelper.OptionEnrichment
@@ -13,6 +14,7 @@ import com.qwery.util.ResourceHelper._
 
 import java.io._
 import scala.io.Source
+import scala.util.Try
 
 /**
   * Database Files
@@ -47,15 +49,19 @@ object DatabaseFiles {
   //  TABLE CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getTableConfigFile(ref: EntityRef): File = {
-    getTableRootDirectory(ref) / s"${ref.name}.json"
-  }
+  def getTableConfigFile(ref: EntityRef): File = getTableRootDirectory(ref) / s"${ref.name}.json"
 
   def getTableDevice(ref: EntityRef): (TableConfig, BlockDevice) = {
-    val (configFile, dataFile) = (getTableConfigFile(ref), getTableDataFile(ref))
-    assert(configFile.exists() && dataFile.exists(), s"Table '$ref' does not exist")
-
+    // load the table configuration
+    val configFile = getTableConfigFile(ref)
+    assert(configFile.exists(), s"Table configuration file for '${ref.toSQL}' does not exist [${configFile.getAbsolutePath}]")
     val config = readTableConfig(ref)
+
+    // load the table data file
+    val dataFile = getTableDataFile(ref, config)
+    assert(dataFile.exists(), s"Table data file for '${ref.toSQL}' does not exist [${dataFile.getAbsolutePath}]")
+
+    // load the table device
     val device = new RowOrientedFileBlockDevice(columns = config.columns, dataFile)
     (config, device)
   }
@@ -65,20 +71,18 @@ object DatabaseFiles {
   }
 
   def getTableColumnFile(ref: EntityRef, columnID: Int): File = {
-    getTableRootDirectory(ref) / getTableFileName(ref.name, columnID)
+    getTableRootDirectory(ref) / getTableFileName(ref, columnID)
   }
 
-  def getTableDataFile(ref: EntityRef): File = {
-    getTableRootDirectory(ref) / getTableFileName(ref.name)
+  def getTableDataFile(ref: EntityRef, config: TableConfig): File = {
+    config.physicalTable.map(_.location).map(new File(_)) || getTableRootDirectory(ref) / getTableFileName(ref)
   }
 
   def getTableIndices(ref: EntityRef): Seq[TableIndex] = readTableConfig(ref).indices
 
-  def getTableFileName(tableName: String): String = s"$tableName.qdb"
+  def getTableFileName(ref: EntityRef): String = s"${ref.name}.qdb"
 
-  def getTableFileName(tableName: String, columnID: Int): String = s"$tableName-$columnID.qdb"
-
-  def isTableFile(ref: EntityRef): Boolean = getTableDataFile(ref).exists()
+  def getTableFileName(ref: EntityRef, columnID: Int): String = f"${ref.name}.c$columnID%03d.qdb"
 
   def readTableConfig(ref: EntityRef): TableConfig = {
     Source.fromFile(getTableConfigFile(ref)).use(_.mkString.fromJSON[TableConfig])
@@ -105,23 +109,12 @@ object DatabaseFiles {
   //  VIRTUAL TABLE (VIEW) CONFIG
   //////////////////////////////////////////////////////////////////////////////////////
 
-  def getViewDataFile(ref: EntityRef): File = {
-    getTableRootDirectory(ref) / getViewFileName(ref.name)
-  }
+  def isVirtualTable(ref: EntityRef): Boolean = Try(readTableConfig(ref)).toOption.flatMap(_.virtualTable).nonEmpty
 
-  def getViewFileName(viewName: String): String = s"$viewName.sql"
-
-  def isVirtualTable(ref: EntityRef): Boolean = getViewDataFile(ref).exists()
-
-  def readViewData(ref: EntityRef): Invokable = {
-    val file = getViewDataFile(ref)
-    assert(file.exists(), s"Table '$ref' does not exist")
-    val sql = Source.fromFile(file).use(_.mkString)
+  def readViewQuery(ref: EntityRef): Invokable = {
+    getTableConfigFile(ref) as { file => assert(file.exists(), s"View '${ref.toSQL}' does not exist [${file.getAbsolutePath}]") }
+    val sql = readTableConfig(ref).virtualTable.map(_.queryString).getOrElse(die(s"Object '${ref.toSQL}' is not a view"))
     SQLLanguageParser.parse(sql)
-  }
-
-  def writeViewData(ref: EntityRef, query: Invokable): Unit = {
-    new PrintWriter(getViewDataFile(ref)).use(_.println(query.toSQL))
   }
 
   //////////////////////////////////////////////////////////////////////////////////////
@@ -129,9 +122,17 @@ object DatabaseFiles {
   //////////////////////////////////////////////////////////////////////////////////////
 
   object implicits {
+
     final implicit class RichFiles(val parentFile: File) extends AnyVal {
       @inline def /(path: String) = new File(parentFile, path)
     }
+
+    final implicit class DBFilesConfig(val config: TableConfig) extends AnyVal {
+      @inline def isExternalTable: Boolean = config.externalTable.nonEmpty
+
+      @inline def isVirtualTable: Boolean = config.virtualTable.nonEmpty
+    }
+
   }
 
 }

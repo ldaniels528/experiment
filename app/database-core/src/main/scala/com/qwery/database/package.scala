@@ -108,7 +108,7 @@ package object database {
     extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
 
   case class ColumnNotFoundException(ref: EntityRef, columnName: String)
-    extends RuntimeException(s"Column '$columnName' does not exist in $ref")
+    extends RuntimeException(s"Column '$columnName' does not exist in '${ref.toSQL}'")
 
   case class ColumnOutOfRangeException(columnIndex: Int)
     extends RuntimeException(s"Column index is out of range: $columnIndex")

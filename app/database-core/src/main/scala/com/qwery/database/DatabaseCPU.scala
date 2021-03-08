@@ -4,11 +4,13 @@ import com.qwery.database.DatabaseCPU.implicits.InvokableWithDatabase
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
 import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.files.DatabaseFiles.{isVirtualTable, readTableConfig}
+import com.qwery.database.files.DatabaseFiles.implicits.DBFilesConfig
+import com.qwery.database.files.DatabaseFiles.readTableConfig
 import com.qwery.database.files._
 import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, Field, KeyValues, Row, TableMetrics}
 import com.qwery.language.SQLLanguageParser
+import com.qwery.models.AlterTable._
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions._
 import com.qwery.models.{expressions => ex, _}
@@ -29,13 +31,22 @@ class DatabaseCPU() {
   private val tables = TrieMap[EntityRef, TableFileLike]()
 
   /**
+   * Alters a table; adding or moving columns
+   * @param ref         the [[EntityRef table reference]]
+   * @param alterations the collection of [[Alteration alterations]]
+   */
+  def alterTable(ref: EntityRef, alterations: Seq[Alteration]): Unit = {
+    tables(ref) = tableOf(ref).alterTable(alterations)
+  }
+
+  /**
     * Counts the number of rows matching the optional criteria
     * @param ref       the [[EntityRef table reference]]
     * @param condition the optional [[Condition criteria]]
     * @param limit     the optional limit
     * @return the number of rows matching the optional criteria
     */
-  def countRows(ref: EntityRef, condition: Option[Condition], limit: Option[Int] = None): Long = {
+  def countRows(ref: EntityRef, condition: Option[Condition] = None, limit: Option[Int] = None): Long = {
     tableOf(ref).countRows(toCriteria(condition), limit)
   }
 
@@ -135,6 +146,7 @@ class DatabaseCPU() {
     */
   def execute(databaseName: String, invokable: Invokable)(implicit scope: Scope): Option[Solution] = {
     invokable.withDatabase(databaseName) match {
+      case AlterTable(table, alterations) => alterTable(table, alterations); None
       case Console.Debug(message) => logger.debug(message); None
       case Console.Error(message) => logger.error(message); None
       case Console.Info(message) => logger.info(message); None
@@ -404,8 +416,8 @@ class DatabaseCPU() {
   private def tableOf(ref: EntityRef): TableFileLike = {
     tables.getOrElseUpdate(ref, {
       val config = readTableConfig(ref)
-      if (config.externalTable.nonEmpty) ExternalTableFile(ref)
-      else if (isVirtualTable(ref)) VirtualTableFile.load(ref)
+      if (config.isExternalTable) ExternalTableFile(ref)
+      else if (config.isVirtualTable) VirtualTableFile(ref)
       else TableFile(ref)
     })
   }

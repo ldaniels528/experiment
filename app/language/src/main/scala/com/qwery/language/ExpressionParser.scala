@@ -108,7 +108,7 @@ trait ExpressionParser {
     * @return the option of a new [[Condition]]
     */
   protected def parseExists(stream: TokenStream): Option[Condition] = {
-    Option(Exists(slp.parseNextQueryOrVariable(stream)))
+    Option(Exists(slp.nextQueryOrVariable(stream)))
   }
 
   /**
@@ -172,11 +172,11 @@ trait ExpressionParser {
   protected def parseIn(expression: Option[Expression], stream: TokenStream): Option[Condition] = {
     expression map { expr =>
       stream match {
-        case ts if ts.isSubQuery => IN(expr, slp.parseIndirectQuery(stream)(slp.parseNextQueryOrVariable))
+        case ts if ts.isSubQuery => IN(expr, slp.nextIndirectQuery(stream)(slp.nextQueryOrVariable))
         case ts =>
           processor.processOpt("( %E:args )", ts)(this) match {
             case Some(template) => IN(expr)(template.expressionLists.getOrElse("args", ts.die("Unexpected empty list")): _*)
-            case None => IN(expr, slp.parseNextQueryOrVariable(stream))
+            case None => IN(expr, slp.nextQueryOrVariable(stream))
           }
       }
     }

@@ -1,30 +1,28 @@
 package com.qwery.database.models
 
-import com.qwery.database.models.TableConfig.ExternalTableConfig
+import com.qwery.database.models.TableConfig.{ExternalTableConfig, PhysicalTableConfig, VirtualTableConfig}
 import com.qwery.models.TableIndex
 
 /**
-  * Represents a Table Config
-  * @param columns       the table [[Column column]]
-  * @param indices       the collection of [[TableIndex index references]]
-  * @param description   the table description
-  * @param externalTable the [[ExternalTableConfig external table configuration]]
+  * Represents a Table Configuration
+  * @param columns       the table [[Column columns]]
+  * @param description   the optional table description
+  * @param externalTable the optional [[ExternalTableConfig external table configuration]]
+  * @param indices       the optional collection of [[TableIndex index references]]
+  * @param physicalTable the optional [[PhysicalTableConfig physical table configuration]]
+  * @param virtualTable  the optional [[VirtualTableConfig virtual table configuration]]
   */
 case class TableConfig(columns: Seq[Column],
-                       indices: Seq[TableIndex] = Nil,
                        description: Option[String] = None,
-                       externalTable: Option[ExternalTableConfig] = None)
+                       externalTable: Option[ExternalTableConfig] = None,
+                       indices: Seq[TableIndex] = Nil,
+                       physicalTable: Option[PhysicalTableConfig] = None,
+                       virtualTable: Option[VirtualTableConfig] = None)
 
 /**
   * Table Config Companion
   */
 object TableConfig {
-  import ModelsJsonProtocol._
-  import spray.json._
-
-  implicit val extTableRefJsonFormat: RootJsonFormat[ExternalTableConfig] = jsonFormat6(ExternalTableConfig.apply)
-
-  implicit val tableConfigJsonFormat: RootJsonFormat[TableConfig] = jsonFormat4(TableConfig.apply)
 
   case class ExternalTableConfig(format: Option[String],
                                  location: Option[String],
@@ -32,5 +30,9 @@ object TableConfig {
                                  lineTerminator: Option[String] = None,
                                  headersIncluded: Option[Boolean] = None,
                                  nullValue: Option[String] = None)
+
+  case class PhysicalTableConfig(location: String)
+
+  case class VirtualTableConfig(queryString: String)
 
 }

@@ -1,6 +1,7 @@
 package com.qwery.database
 package models
 
+import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.util.JSONSupport._
 import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec

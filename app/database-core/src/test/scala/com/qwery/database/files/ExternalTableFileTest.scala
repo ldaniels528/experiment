@@ -62,7 +62,7 @@ class ExternalTableFileTest extends AnyFunSpec {
           "Symbol" -> "AMS", "IPOyear" -> "n/a", "LastSale" -> "3.05", "MarketCap" -> "$17.43M"
         )))
         info(s"outcome: $outcome")
-        assert(outcome.isFailure && outcome.failed.get.getMessage == s"Table $databaseName.$schemaName.$tableName is read-only")
+        assert(outcome.isFailure && outcome.failed.get.getMessage == s"Table '${tableRef.toSQL}' is read-only")
       }
     }
 

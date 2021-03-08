@@ -5,6 +5,7 @@ import com.qwery.database.models.ColumnTypes._
 import com.qwery.database.models.{Column, ColumnMetadata, FieldMetadata, RowMetadata}
 import com.qwery.database.types.{ArrayBlock, QxAny}
 import com.qwery.database.util.Compression.CompressionByteArrayExtensions
+import com.qwery.util.OptionHelper.OptionEnrichment
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import java.math.BigInteger
@@ -169,7 +170,7 @@ object Codec extends Compression {
   }
 
   def encodeValue(column: Column, value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
-    value_?.map(convertTo(_, column.metadata.`type`)) map {
+    (value_? ?? column.defaultValue).map(convertTo(_, column.metadata.`type`)) map {
       case a: Array[_] if column.metadata.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
       case a: ArrayBlock => encodeArray(column, a)
       case b: BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)

@@ -2,9 +2,13 @@ package com.qwery.database
 package files
 
 import com.qwery.database.collections.PersistentSeq
-import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, TableIndexDevice}
-import com.qwery.database.files.DatabaseFiles.writeTableConfig
+import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, RowOrientedFileBlockDevice, TableIndexDevice}
+import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
+import com.qwery.database.files.DatabaseFiles.{writeTableConfig, _}
+import com.qwery.database.models.TableConfig.PhysicalTableConfig
 import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableMetrics}
+import com.qwery.implicits.MagicImplicits
+import com.qwery.models.AlterTable._
 import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
 import com.qwery.models.{EntityRef, OrderColumn, TableIndex}
 import com.qwery.util.ResourceHelper._
@@ -12,6 +16,7 @@ import com.qwery.util.ResourceHelper._
 import java.io.File
 import scala.collection.concurrent.TrieMap
 import scala.io.Source
+import scala.language.postfixOps
 import scala.reflect.ClassTag
 
 /**
@@ -35,9 +40,53 @@ trait TableFileLike {
   def device: BlockDevice
 
   /**
-   * @return the [[TableConfig table configuration]]
+   * @return the [[TableConfig entity configuration]]
    */
   def config: TableConfig
+
+  /**
+   * Alters a table; adding or removing columns and/or constraints
+   * @param alterations the collection of [[Alteration alterations]]
+   * @return a reference to the altered [[TableFile table]]
+   */
+  def alterTable(alterations: Seq[Alteration]): TableFile = {
+    import Column.implicits._
+
+    // determine the new column list
+    val newColumns = alterations.foldLeft[List[Column]](config.columns.toList) {
+      case (columns, AddColumn(column)) => columns ::: column.toColumn :: Nil
+      case (columns, AppendColumn(column)) => columns ::: column.toColumn :: Nil
+      case (columns, DropColumn(columnName)) => columns.filterNot(_.name == columnName)
+      case (columns, PrependColumn(column)) => column.toColumn :: columns
+      case (_, alteration) => die(s"Unhandled table alteration '${alteration.toSQL}'")
+    } distinct
+
+    // determine which indices will be kept
+    val droppedColumnNames = alterations.collect { case op: DropColumn => op.columnName }
+    val newIndices = config.indices.filterNot(_.columns.exists(droppedColumnNames.contains))
+
+    // determine the new file's name and location
+    val newFile = getTableDataFile(ref, config) as { file => file.getParentFile / (ref.name + "_" + System.currentTimeMillis()) }
+
+    // create a new configuration
+    val newConfig = config.copy(
+      columns = newColumns,
+      indices = newIndices,
+      physicalTable = Some(PhysicalTableConfig(location = newFile.getAbsolutePath))
+    )
+
+    // duplicate the device with the modifications
+    val newDevice = new RowOrientedFileBlockDevice(newColumns, newFile)
+    device foreachKVP { row =>
+      newDevice.writeRow(row.toBinaryRow(newDevice))
+    }
+
+    // update the config to point to the new version
+    writeTableConfig(ref, newConfig)
+
+    // return a reference to the altered table
+    TableFile(ref, newConfig, newDevice)
+  }
 
   /**
     * Closes the underlying file handle

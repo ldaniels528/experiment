@@ -63,9 +63,6 @@ case class ColumnMetadata(`type`: ColumnTypes.ColumnType,
  * Column Metadata Companion
  */
 object ColumnMetadata {
-  import spray.json._
-  import DefaultJsonProtocol._
-  implicit val columnMetadataJsonFormat: RootJsonFormat[ColumnMetadata] = jsonFormat7(ColumnMetadata.apply)
 
   // bit enumerations
   val COMPRESSED_BIT = 0x0200

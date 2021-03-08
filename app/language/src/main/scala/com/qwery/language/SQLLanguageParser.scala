@@ -1,6 +1,9 @@
 package com.qwery.language
 
+import com.qwery.die
+import com.qwery.language.SQLLanguageParser.implicits.ItemSeqUtilities
 import com.qwery.language.SQLTemplateParams.MappedParameters
+import com.qwery.models.AlterTable._
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.util.OptionHelper._
@@ -28,7 +31,7 @@ trait SQLLanguageParser {
       ts.hasNext
     }
 
-    override def next(): Invokable = parseNext(ts)
+    override def next(): Invokable = nextOpCode(ts)
   }
 
   /**
@@ -36,9 +39,10 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  def parseNext(stream: TokenStream): Invokable = stream.decode(tuples =
-    "(" -> (ts => parseIndirectQuery(ts)(parseNextSubQuery)),
+  def nextOpCode(stream: TokenStream): Invokable = stream.decode(tuples =
+    "(" -> (ts => nextIndirectQuery(ts)(nextSubQuery)),
     "{" -> (ts => parseSequence(ts, startElem = "{", endElem = "}")),
+    "ALTER" -> parseAlterTable,
     "BEGIN" -> (ts => parseSequence(ts, startElem = "BEGIN", endElem = "END")),
     "CALL" -> parseCall,
     "CREATE" -> parseCreate,
@@ -63,13 +67,94 @@ trait SQLLanguageParser {
   )
 
   /**
+   * Optionally parses an alias (e.g. "( ... ) AS O")
+   * @param entity the given [[Invokable]]
+   * @param ts     the given [[TokenStream]]
+   * @return the resultant [[Invokable]]
+   */
+  def nextOpCodeAlias(entity: Invokable, ts: TokenStream): Invokable = {
+    import Aliasable._
+    if (ts nextIf "AS") entity.as(alias = ts.next().text) else entity
+  }
+
+  /**
+   * Parses an indirect query from the stream (e.g. "( SELECT * FROM Customers ) AS C")
+   * @param ts the given [[TokenStream token stream]]
+   * @return an [[Invokable]]
+   */
+  def nextIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
+    nextOpCodeAlias(ts.extract(begin = "(", end = ")")(f), ts)
+  }
+
+  /**
+   * Parses the next query from the stream
+   * @param stream the given [[TokenStream token stream]]
+   * @return an [[Invokable]]
+   */
+  def nextQueryOrVariable(stream: TokenStream): Invokable = stream match {
+    // indirect query?
+    case ts if ts is "(" => nextIndirectQuery(ts)(nextQueryOrVariable)
+    // row variable (e.g. "@results")?
+    case ts if ts nextIf "#" => nextOpCodeAlias(@#(ts.next().text), ts)
+    // field variable (e.g. "$name")?
+    case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
+    // sub-query?
+    case ts => nextSubQuery(ts)
+  }
+
+  /**
+   * Parses the next query (selection), table or variable
+   * @param stream the given [[TokenStream]]
+   * @return the resultant [[Select]], [[EntityRef]] or [[VariableRef]]
+   */
+  def nextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
+    // table dot notation (e.g. "public"."stocks" or "public.stocks" or "`Months of the Year`")
+    case ts if ts.isBackticks | ts.isDoubleQuoted | ts.isText =>  nextOpCodeAlias(parseTableDotNotation(ts), ts)
+    // must be a sub-query or variable
+    case ts => nextQueryOrVariable(ts)
+  }
+
+  /**
+   * Parses the next query from the stream
+   * @param stream the given [[TokenStream token stream]]
+   * @return an [[Invokable]]
+   */
+  def nextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
+    "CALL" -> parseCall,
+    "SELECT" -> parseSelect
+  )
+
+  /**
+   * Parses an ALTER TABLE statement from the stream
+   * @param stream the given [[TokenStream token stream]]
+   * @return an [[AlterTable ALTER TABLE statement]]
+   */
+  private def parseAlterTable(stream: TokenStream): AlterTable = {
+    val verbs = Seq("ADD", "APPEND", "DROP", "PREPEND")
+    val name = SQLTemplateParams(stream, "ALTER TABLE %t:name").atoms("name")
+    var alterations: List[Alteration] = Nil
+    while (stream.peek.exists(token => verbs.exists(verb => token is verb))) {
+      val params = SQLTemplateParams(stream, "%a:verb ?%C(type|COLUMN)")
+      val alteration = params.atoms("verb") match {
+        case "ADD" => AddColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
+        case "APPEND" => AppendColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
+        case "DROP" => DropColumn(columnName = SQLTemplateParams(stream, "%a:columnName").atoms("columnName"))
+        case "PREPEND" => PrependColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
+        case _ => stream.die("Expected ADD, APPEND, DROP or PREPEND")
+      }
+      alterations = alteration :: alterations
+    }
+    AlterTable(ref = EntityRef.parse(name), alterations = alterations.reverse)
+  }
+
+  /**
     * Parses a CALL statement
     * @example {{{ CALL testInserts('Oil/Gas Transmission') }}}
     * @param ts the given [[TokenStream token stream]]
-    * @return
+    * @return a [[ProcedureCall]]
     */
-  def parseCall(ts: TokenStream): ProcedureCall = {
-    val params = SQLTemplateParams(ts, "CALL %a:name ( %E:args )")
+  private def parseCall(ts: TokenStream): ProcedureCall = {
+    val params = SQLTemplateParams(ts, "CALL %t:name ( %E:args )")
     ProcedureCall(name = params.atoms("name"), args = params.expressions("args"))
   }
 
@@ -79,7 +164,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Debug]]
     */
-  def parseConsoleDebug(ts: TokenStream): Console.Debug =
+  private def parseConsoleDebug(ts: TokenStream): Console.Debug =
     Console.Debug(text = SQLTemplateParams(ts, "DEBUG %a:text").atoms("text"))
 
   /**
@@ -88,7 +173,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Error]]
     */
-  def parseConsoleError(ts: TokenStream): Console.Error =
+  private def parseConsoleError(ts: TokenStream): Console.Error =
     Console.Error(text = SQLTemplateParams(ts, "ERROR %a:text").atoms("text"))
 
   /**
@@ -97,7 +182,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Info]]
     */
-  def parseConsoleInfo(ts: TokenStream): Console.Info =
+  private def parseConsoleInfo(ts: TokenStream): Console.Info =
     Console.Info(text = SQLTemplateParams(ts, "INFO %a:text").atoms("text"))
 
   /**
@@ -106,7 +191,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Print]]
     */
-  def parseConsolePrint(ts: TokenStream): Console.Print =
+  private def parseConsolePrint(ts: TokenStream): Console.Print =
     Console.Print(text = SQLTemplateParams(ts, "PRINT %a:text").atoms("text"))
 
   /**
@@ -115,7 +200,7 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the [[Console.Warn]]
     */
-  def parseConsoleWarn(ts: TokenStream): Console.Warn =
+  private def parseConsoleWarn(ts: TokenStream): Console.Warn =
     Console.Warn(text = SQLTemplateParams(ts, "WARN %a:text").atoms("text"))
 
   /**
@@ -123,7 +208,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Invokable]]
     */
-  def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
+  private def parseCreate(ts: TokenStream): Invokable = ts.decode(tuples =
     "CREATE EXTERNAL TABLE" -> parseCreateTableExternal,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INDEX" -> parseCreateTableIndex,
@@ -140,8 +225,8 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  def parseCreateFunction(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %a:name AS %a:class ?USING +?JAR +?%a:jar")
+  private def parseCreateFunction(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %t:name AS %a:class ?USING +?JAR +?%a:jar")
     Create(UserDefinedFunction(ref = EntityRef.parse(params.atoms("name")), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
   }
 
@@ -150,7 +235,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  def parseCreateInlineTable(ts: TokenStream): Create = {
+  private def parseCreateInlineTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE INLINE TABLE ?%IFNE:exists %t:name ( %P:columns ) FROM %V:source")
     Create(InlineTable(
       ref = EntityRef.parse(params.atoms("name")),
@@ -167,8 +252,8 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Create]]
     */
-  def parseCreateProcedure(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %a:name ( ?%P:params ) ?AS %N:code")
+  private def parseCreateProcedure(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %t:name ( ?%P:params ) ?AS %N:code")
     Create(Procedure(ref = EntityRef.parse(params.atoms("name")), params = params.columns("params"), code = params.sources("code")))
   }
 
@@ -177,7 +262,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  def parseCreateTable(ts: TokenStream): Create = {
+  private def parseCreateTable(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE ?%C(mode|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
     Create(Table(
       ref = EntityRef.parse(params.atoms("name")),
@@ -193,7 +278,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Create executable]]
     */
-  def parseCreateTableExternal(ts: TokenStream): Create = {
+  private def parseCreateTableExternal(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE EXTERNAL TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
 
     def escapeChars(string: String): String = {
@@ -201,9 +286,7 @@ trait SQLLanguageParser {
       replacements.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }
     }
 
-    def getLocation: Option[String] = {
-      if (params.atoms.contains("path")) Option(params.atoms("path")) else None
-    }
+    def getLocation: Option[String] = params.atoms.get("path")
 
     Create(ExternalTable(
       ref = EntityRef.parse(params.atoms("name")),
@@ -230,8 +313,8 @@ trait SQLLanguageParser {
    * CREATE INDEX stocks_symbol ON stocks (name)
    * }}}
    */
-  def parseCreateTableIndex(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %a:name ON %L:table ( %F:columns )")
+  private def parseCreateTableIndex(ts: TokenStream): Create = {
+    val params = SQLTemplateParams(ts, "CREATE INDEX ?%IFNE:exists %t:name ON %L:table ( %F:columns )")
     Create(TableIndex(
       ref = EntityRef.parse(params.atoms("name")),
       columns = params.fields("columns").map(_.name),
@@ -248,7 +331,7 @@ trait SQLLanguageParser {
    * CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
    * }}}
    */
-  def parseCreateTypeAsEnum(ts: TokenStream): Create = {
+  private def parseCreateTypeAsEnum(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE TYPE ?%IFNE:exists %t:name AS ENUM ( %E:values )")
     Create(TypeAsEnum(ref = EntityRef.parse(params.atoms("name")), values = params.expressions("values") map {
       case Literal(value: String) => value
@@ -271,7 +354,7 @@ trait SQLLanguageParser {
     * ORDER BY Symbol DESC
     * }}}
     */
-  def parseCreateView(ts: TokenStream): Create = {
+  private def parseCreateView(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE VIEW ?%IFNE:exists %t:name ?%w:props ?AS %Q:query")
     Create(View(
       ref = EntityRef.parse(params.atoms("name")),
@@ -286,14 +369,14 @@ trait SQLLanguageParser {
     * @example DECLARE EXTERNAL @firstnames STRING
     * @return an [[Invokable invokable]]
     */
-  def parseDeclare(ts: TokenStream): Invokable = {
+  private def parseDeclare(ts: TokenStream): Invokable = {
     val params = SQLTemplateParams(ts, "DECLARE ?%C(mode|EXTERNAL) %v:variable %a:type")
     val `type` = params.atoms("type")
     val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
     Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
   }
 
-  def parseDelete(ts: TokenStream): Delete = {
+  private def parseDelete(ts: TokenStream): Delete = {
     val params = SQLTemplateParams(ts, "DELETE FROM %t:name ?WHERE +?%c:condition ?LIMIT +?%n:limit")
     Delete(Table(path = params.atoms("name")), where = params.conditions.get("condition"), limit = params.numerics.get("limit").map(_.toInt))
   }
@@ -303,7 +386,7 @@ trait SQLLanguageParser {
    * @param ts the given [[TokenStream token stream]]
    * @return an [[Invokable invokable]]
    */
-  def parseDrop(ts: TokenStream): Invokable = ts.decode(tuples =
+  private def parseDrop(ts: TokenStream): Invokable = ts.decode(tuples =
     "DROP TABLE" -> parseDropTable,
     "DROP VIEW" -> parseDropView,
   )
@@ -313,7 +396,7 @@ trait SQLLanguageParser {
    * @param ts the given [[TokenStream token stream]]
    * @return a [[DropTable]]
    */
-  def parseDropTable(ts: TokenStream): DropTable = {
+  private def parseDropTable(ts: TokenStream): DropTable = {
     val params = SQLTemplateParams(ts, "DROP TABLE ?%IFE:exists %t:name")
     DropTable(Table(path = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
@@ -323,7 +406,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return a [[DropView]]
     */
-  def parseDropView(ts: TokenStream): DropView = {
+  private def parseDropView(ts: TokenStream): DropView = {
     val params = SQLTemplateParams(ts, "DROP VIEW ?%IFE:exists %t:name")
     DropView(Table(path = params.atoms("name")), ifExists = params.indicators.get("exists").contains(true))
   }
@@ -342,7 +425,7 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[While]]
     */
-  def parseForLoop(stream: TokenStream): ForLoop = {
+  private def parseForLoop(stream: TokenStream): ForLoop = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
     val variable = params.variables("variable") match {
       case v: RowSetVariableRef => v
@@ -351,7 +434,7 @@ trait SQLLanguageParser {
     ForLoop(variable, rows = params.sources("rows"),
       invokable = stream match {
         case ts if ts is "LOOP" => parseSequence(ts, startElem = "LOOP", endElem = "END LOOP")
-        case ts => parseNext(ts)
+        case ts => nextOpCode(ts)
       },
       isReverse = params.keywords.exists(_ equalsIgnoreCase "REVERSE"))
   }
@@ -362,17 +445,8 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Include]]
     */
-  def parseInclude(ts: TokenStream): Include = {
+  private def parseInclude(ts: TokenStream): Include = {
     Include(path = SQLTemplateParams(ts, "INCLUDE %a:path").atoms("path"))
-  }
-
-  /**
-    * Parses an indirect query from the stream (e.g. "( SELECT * FROM Customers ) AS C")
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Invokable]]
-    */
-  def parseIndirectQuery(ts: TokenStream)(f: TokenStream => Invokable): Invokable = {
-    parseNextAlias(ts.extract(begin = "(", end = ")")(f), ts)
   }
 
   /**
@@ -391,7 +465,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[Insert]]
     */
-  def parseInsert(ts: TokenStream): Insert = {
+  private def parseInsert(ts: TokenStream): Insert = {
     val params = SQLTemplateParams(ts, "INSERT %C(mode|INTO|OVERWRITE) %L:target ?( +?%F:fields +?) %V:source")
     val fields = params.fields.getOrElse("fields", Nil)
     val isOverwrite = params.atoms.get("mode").exists(_ equalsIgnoreCase "OVERWRITE")
@@ -403,83 +477,11 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Optionally parses an alias (e.g. "( ... ) AS O")
-    * @param entity the given [[Invokable]]
-    * @param ts     the given [[TokenStream]]
-    * @return the resultant [[Invokable]]
-    */
-  def parseNextAlias(entity: Invokable, ts: TokenStream): Invokable = {
-    import Aliasable._
-    if (ts nextIf "AS") entity.as(alias = ts.next().text) else entity
-  }
-
-  /**
-    * Parses the next query from the stream
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Invokable]]
-    */
-  def parseNextQueryOrVariable(stream: TokenStream): Invokable = stream match {
-    // indirect query?
-    case ts if ts is "(" => parseIndirectQuery(ts)(parseNextQueryOrVariable)
-    // row variable (e.g. "@results")?
-    case ts if ts nextIf "#" => parseNextAlias(@#(ts.next().text), ts)
-    // field variable (e.g. "$name")?
-    case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
-    // sub-query?
-    case ts => parseNextSubQuery(ts)
-  }
-
-  /**
-    * Parses the next query (selection), table or variable
-    * @param stream the given [[TokenStream]]
-    * @return the resultant [[Select]], [[EntityRef]] or [[VariableRef]]
-    */
-  def parseNextQueryTableOrVariable(stream: TokenStream): Invokable = stream match {
-    // table dot notation (e.g. "public"."stocks" or "public.stocks" or "`Months of the Year`")
-    case ts if ts.isBackticks | ts.isDoubleQuoted | ts.isText =>  parseNextAlias(parseTableDotNotation(ts), ts)
-    // must be a sub-query or variable
-    case ts => parseNextQueryOrVariable(ts)
-  }
-
-  private def parseTableDotNotation(ts: TokenStream): EntityRef = {
-
-    def getNameComponent(ts: TokenStream): String = {
-      if (ts.isBackticks || ts.isQuoted || ts.isText) ts.next().text
-      else ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
-    }
-
-    // gather the table components
-    var list: List[String] = List(getNameComponent(ts))
-    while (list.size < 3 && ts.peek.exists(_.text == ".")) {
-      ts.next()
-      list = getNameComponent(ts) :: list
-    }
-
-    // return the table reference
-    list.reverse match {
-      case database :: schema :: table :: Nil => new EntityRef(databaseName = database, schemaName = schema, tableName = table)
-      case schema :: table :: Nil => EntityRef(databaseName = None, schemaName = Option(schema), name = table)
-      case path :: Nil => EntityRef.parse(path)
-      case _ => ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
-    }
-  }
-
-  /**
-    * Parses the next query from the stream
-    * @param stream the given [[TokenStream token stream]]
-    * @return an [[Invokable]]
-    */
-  def parseNextSubQuery(stream: TokenStream): Invokable = stream.decode(tuples =
-    "CALL" -> parseCall,
-    "SELECT" -> parseSelect
-  )
-
-  /**
     * Parses a RETURN statement
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Return]]
     */
-  def parseReturn(ts: TokenStream): Return =
+  private def parseReturn(ts: TokenStream): Return =
     Return(value = SQLTemplateParams(ts, "RETURN ?%q:value").sources.get("value"))
 
   /**
@@ -499,9 +501,9 @@ trait SQLLanguageParser {
     * @param stream the given [[TokenStream token stream]]
     * @return an [[Invokable executable]]
     */
-  def parseSelect(stream: TokenStream): Invokable = {
+  private def parseSelect(stream: TokenStream): Invokable = {
     val params = SQLTemplateParams(stream,
-      """|SELECT ?TOP +?%n:top %E:fields
+      """|SELECT %E:fields
          |?%C(mode|INTO|OVERWRITE) +?%L:target
          |?FROM +?%q:source %J:joins
          |?WHERE +?%c:condition
@@ -559,8 +561,8 @@ trait SQLLanguageParser {
     * @param endElem   the given ending element (e.g. "}")
     * @return an [[SQL code block]]
     */
-  def parseSequence(ts: TokenStream, startElem: String, endElem: String): SQL = {
-    SQL(ts.captureIf(startElem, endElem, delimiter = Some(";"))(parseNext))
+  private def parseSequence(ts: TokenStream, startElem: String, endElem: String): SQL = {
+    SQL(ts.captureIf(startElem, endElem, delimiter = Some(";"))(nextOpCode))
   }
 
   /**
@@ -570,7 +572,7 @@ trait SQLLanguageParser {
     * @example {{{ SET @customers = ( SELECT * FROM Customers WHERE deptId = 31 ) }}}
     * @example {{{ SET $customers = $customers + 1 }}}
     */
-  def parseSet(ts: TokenStream): Invokable = {
+  private def parseSet(ts: TokenStream): Invokable = {
     val params = SQLTemplateParams(ts, "SET %v:variable =")
     params.variables("variable") match {
       case v: LocalVariableRef => SetLocalVariable(v.name, SQLTemplateParams(ts, "%e:expr").assignables("expr"))
@@ -587,9 +589,32 @@ trait SQLLanguageParser {
     * @param ts the [[TokenStream token stream]]
     * @return a [[Show]]
     */
-  def parseShow(ts: TokenStream): Show = {
+  private def parseShow(ts: TokenStream): Show = {
     val params = SQLTemplateParams(ts, "SHOW %V:rows ?LIMIT +?%n:limit")
     Show(rows = params.sources("rows"), limit = params.numerics.get("limit").map(_.toInt))
+  }
+
+  private def parseTableDotNotation(ts: TokenStream): EntityRef = {
+
+    def getNameComponent(ts: TokenStream): String = {
+      if (ts.isBackticks || ts.isQuoted || ts.isText) ts.next().text
+      else ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
+    }
+
+    // gather the table components
+    var list: List[String] = List(getNameComponent(ts))
+    while (list.size < 3 && ts.peek.exists(_.text == ".")) {
+      ts.next()
+      list = getNameComponent(ts) :: list
+    }
+
+    // return the table reference
+    list.reverse match {
+      case database :: schema :: table :: Nil => new EntityRef(databaseName = database, schemaName = schema, tableName = table)
+      case schema :: table :: Nil => EntityRef(databaseName = None, schemaName = Option(schema), name = table)
+      case path :: Nil => EntityRef.parse(path)
+      case _ => ts.die("""Table notation expected (e.g. "public"."stocks" or "public.stocks" or `Months of the Year`)""")
+    }
   }
 
   /**
@@ -601,7 +626,7 @@ trait SQLLanguageParser {
    * @param ts the given [[TokenStream token stream]]
    * @return a [[Truncate]]
    */
-  def parseTruncate(ts: TokenStream): Truncate = {
+  private def parseTruncate(ts: TokenStream): Truncate = {
     val params = SQLTemplateParams(ts, "TRUNCATE %L:target")
     Truncate(table = params.locations("target"))
   }
@@ -618,7 +643,7 @@ trait SQLLanguageParser {
    * @param ts the given [[TokenStream token stream]]
    * @return an [[Update]]
    */
-  def parseUpdate(ts: TokenStream): Update = {
+  private def parseUpdate(ts: TokenStream): Update = {
     val params = SQLTemplateParams(ts, "UPDATE %t:name SET %U:assignments ?WHERE +?%c:condition ?LIMIT +?%n:limit")
     Update(
       table = Table(params.atoms("name")),
@@ -640,7 +665,7 @@ trait SQLLanguageParser {
     * @param ts the given [[TokenStream token stream]]
     * @return an [[While]]
     */
-  def parseWhile(ts: TokenStream): While = {
+  private def parseWhile(ts: TokenStream): While = {
     val params = SQLTemplateParams(ts, "WHILE %c:condition %N:command")
     While(condition = params.conditions("condition"), invokable = params.sources("command"))
   }
@@ -685,6 +710,23 @@ object SQLLanguageParser {
       case op :: Nil => op
       case ops => SQL(ops)
     }
+  }
+
+  object implicits {
+
+    /**
+     * Item Sequence Utilities
+     * @param items the collection of items
+     * @tparam A the item type
+     */
+    final implicit class ItemSeqUtilities[A](val items: Seq[A]) extends AnyVal {
+      @inline
+      def onlyOne(label: => String = "column"): A = items.toList match {
+        case value :: Nil => value
+        case _ => die(s"Multiple ${label}s are not supported")
+      }
+    }
+
   }
 
 }

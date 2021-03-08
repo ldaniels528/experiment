@@ -254,7 +254,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       case ts if ts nextIf "#" => @#(ts.next().text)
       case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
       // any supported query ...
-      case ts => parseNextQueryOrVariable(ts)
+      case ts => nextQueryOrVariable(ts)
     }
     SQLTemplateParams(sources = Map(name -> source))
   }
@@ -451,15 +451,31 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
   private def extractListOfParameters(name: String): Try[SQLTemplateParams] = Try {
     var columns: List[Column] = Nil
     do {
-      val params = SQLTemplateParams(stream, template = "%a:name %T:type ?AS +?ENUM +?( +?%E:values +?) ?COMMENT +?%z:comment")
-      val colName = params.atoms.getOrElse("name", stream.die("Column name not provided"))
-      val comment = params.atoms.get("comment").flatMap(_.noneIfBlank)
-      val enumValues = params.expressions.getOrElse("values", Nil) map {
-        case Literal(value: String) => value
-        case other => throw new SyntaxException(s"String constant expected near '$other'")
-      }
-      val _type = params.types.getOrElse("type", stream.die(s"Column type not provided for column $colName"))
-      columns = Column(name = colName, spec = _type, enumValues = enumValues, comment = comment) :: columns
+      // get the basic options
+      var params = SQLTemplateParams(stream, template = "%a:name %T:type ?AS +?ENUM +?( +?%E:values +?)")
+
+      // get the extended options
+      var result: Option[SQLTemplateParams] = None
+      do {
+        result = stream match {
+          case ts if ts nextIf "COMMENT" => Some(SQLTemplateParams(ts, template = "%z:comment"))
+          case ts if ts nextIf "DEFAULT" => Some(SQLTemplateParams(ts, template = "%a:default"))
+          case ts if ts nextIf "NOT NULL" => Some(SQLTemplateParams())
+          case _ => None
+        }
+        result.foreach(params += _)
+      } while (result.nonEmpty)
+
+      // build the column
+      columns = Column(
+        name = params.atoms.getOrElse("name", stream.die("Column name not provided")),
+        spec = params.types.getOrElse("type", stream.die("Column type not provided")),
+        comment = params.atoms.get("comment").flatMap(_.noneIfBlank),
+        defaultValue = params.atoms.get("default"),
+        enumValues = params.expressions.getOrElse("values", Nil) map {
+          case Literal(value: String) => value
+          case other => throw new SyntaxException(s"String constant expected near '$other'")
+        }) :: columns
     } while (stream nextIf ",")
 
     SQLTemplateParams(columns = Map(name -> columns.reverse))
@@ -501,7 +517,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @param name the given identifier name (e.g. "code")
     * @return a [[SQLTemplateParams template]] representing the parsed outcome
     */
-  private def extractNextStatement(name: String) = Try(SQLTemplateParams(sources = Map(name -> parseNext(stream))))
+  private def extractNextStatement(name: String) = Try(SQLTemplateParams(sources = Map(name -> nextOpCode(stream))))
 
   /**
     * Extracts a numeric value from the token stream
@@ -594,7 +610,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractQueryOrVariable(name: String): Try[SQLTemplateParams] = Try {
-    val result = parseNextQueryOrVariable(stream)
+    val result = nextQueryOrVariable(stream)
     if (!result.isQuery && !result.isVariable) stream.die("Query or variable expected")
     SQLTemplateParams(sources = Map(name -> result))
   }
@@ -605,7 +621,7 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
     * @return the [[SQLTemplateParams SQL template parameters]]
     */
   private def extractQueryTableOrVariable(name: String): Try[SQLTemplateParams] = Try {
-    SQLTemplateParams(sources = Map(name -> parseNextQueryTableOrVariable(stream)))
+    SQLTemplateParams(sources = Map(name -> nextQueryTableOrVariable(stream)))
   }
 
   /**

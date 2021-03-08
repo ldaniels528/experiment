@@ -48,10 +48,8 @@ object ExternalTableFile {
     * @return a new [[ExternalTable external table]]
     */
   def createTable(table: ExternalTable): ExternalTableFile = {
-    val ref = table.ref
-
     // create the root directory
-    getTableRootDirectory(ref).mkdirs()
+    getTableRootDirectory(table.ref).mkdirs()
 
     // get a reference to the file or directory
     val rootFile = table.location map (path => new File(path)) getOrElse die("A table reference property was expected")
@@ -72,10 +70,10 @@ object ExternalTableFile {
     )
 
     // write the config file
-    writeTableConfig(ref, config)
+    writeTableConfig(table.ref, config)
 
     // return the table
-    ExternalTableFile(ref, config)
+    ExternalTableFile(table.ref, config)
   }
 
 }

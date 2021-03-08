@@ -10,8 +10,8 @@ import java.nio.ByteBuffer.wrap
 
 /**
  * Row-Oriented File Block Device
- * @param columns         the collection of [[Column columns]]
- * @param file the persistence [[File file]]
+ * @param columns the collection of [[Column columns]]
+ * @param file    the persistence [[File file]]
  */
 class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends RowOrientedBlockDevice {
   private val raf = new RandomAccessFile(file, "rw")

@@ -190,7 +190,7 @@ class TableIndexDevice(ref: TableIndex, columns: Seq[Column])
  * @author lawrence.daniels@gmail.com
  */
 object TableIndexDevice {
-  private val rowIDColumn = Column.create(name = ROWID_NAME, comment = "unique row ID", enumValues = Nil, ColumnMetadata(`type` = IntType))
+  private val rowIDColumn = Column.create(name = ROWID_NAME, comment = "unique row ID", metadata = ColumnMetadata(`type` = IntType))
 
   /**
    * Retrieves the table index by reference

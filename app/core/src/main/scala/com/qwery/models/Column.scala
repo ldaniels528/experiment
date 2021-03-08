@@ -5,14 +5,16 @@ import java.lang.{Boolean => JBoolean}
 
 /**
  * Represents a table column
- * @param name       the column name
- * @param spec       the given [[ColumnSpec column type]]
- * @param enumValues the enumeration values (if any)
- * @param isNullable indicates whether the column may contain nulls
- * @param comment    the optional comment
+ * @param name         the column name
+ * @param spec         the given [[ColumnSpec column type]]
+ * @param defaultValue the optional default value
+ * @param enumValues   the enumeration values (if any)
+ * @param isNullable   indicates whether the column may contain nulls
+ * @param comment      the optional comment
  */
 case class Column(name: String,
                   spec: ColumnSpec,
+                  defaultValue: Option[String] = None,
                   enumValues: Seq[String] = Nil,
                   isNullable: Boolean = true,
                   comment: Option[String] = None) {
@@ -21,6 +23,15 @@ case class Column(name: String,
    * @return true, if the column is an enumeration type
    */
   def isEnum: Boolean = enumValues.nonEmpty
+
+  def toSQL: String = {
+    val sb = new StringBuilder(s"$name $spec")
+    if (enumValues.nonEmpty) sb.append(s" AS ENUM (${enumValues.map(v => s"'$v'").mkString(",")})")
+    comment.foreach(remark => s" COMMENT '$remark'")
+    if (!isNullable) sb.append(" NOT NULL")
+    sb.toString()
+  }
+
 }
 
 /**
@@ -47,7 +58,13 @@ object Column {
     * @param column the given [[Column]]
     */
   final implicit class ColumnEnriched(val column: Column) extends AnyRef {
+
     @inline def withComment(text: String): Column = column.copy(comment = Option(text))
+
+    @inline def withDefault(defaultValue: Option[String]): Column = column.copy(defaultValue = defaultValue)
+
+    @inline def withEnums(enumValues: Seq[String]): Column = column.copy(enumValues = enumValues)
+
   }
 
 }

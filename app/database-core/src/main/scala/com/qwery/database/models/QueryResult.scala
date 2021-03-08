@@ -24,9 +24,6 @@ case class QueryResult(ref: EntityRef, columns: Seq[Column] = Nil, rows: Seq[Seq
 }
 
 object QueryResult {
-  import com.qwery.database.models.ModelsJsonProtocol._
-  import spray.json._
-  implicit val queryResultJsonFormat: RootJsonFormat[QueryResult] = jsonFormat5(QueryResult.apply)
 
   final implicit class SolutionToQueryResult(val solution: Solution) extends AnyVal {
 

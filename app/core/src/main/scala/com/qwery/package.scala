@@ -13,4 +13,12 @@ package object qwery {
     */
   def die[A](message: String): A = throw new IllegalStateException(message)
 
+  object implicits {
+
+    final implicit class MagicImplicits[A](val value: A) extends AnyVal {
+      @inline def as[B](f: A => B): B = f(value)
+    }
+
+  }
+
 }

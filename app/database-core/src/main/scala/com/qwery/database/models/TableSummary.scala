@@ -17,14 +17,3 @@ case class TableSummary(tableName: String,
                         lastModifiedTime: String,
                         fileSize: Long,
                         href: Option[String] = None)
-
-/**
-  * Table Summary Companion
-  */
-object TableSummary {
-  import com.qwery.database.models.ModelsJsonProtocol._
-  import spray.json._
-
-  implicit val tableSummaryJsonFormat: RootJsonFormat[TableSummary] = jsonFormat7(TableSummary.apply)
-
-}

@@ -1,5 +1,6 @@
 package com.qwery.language
 
+import com.qwery.models.AlterTable.{AddColumn, AppendColumn, DropColumn, PrependColumn}
 import com.qwery.models.Console.Print
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
@@ -17,6 +18,46 @@ class SQLLanguageParserTest extends AnyFunSpec {
   describe(classOf[SQLLanguageParser].getSimpleName) {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
+
+    it("should support ALTER TABLE .. ADD column statements") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT"))))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").withDefault(Some("N/A")))))
+    }
+
+    it("should support ALTER TABLE .. APPEND column statements") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").withDefault(Some("N/A")))))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND COLUMN comments TEXT")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT"))))
+    }
+
+    it("should support ALTER TABLE .. DROP column statements") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks DROP comments")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks DROP COLUMN comments")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
+    }
+
+    it("should support ALTER TABLE .. PREPEND column statements") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND comments TEXT")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND COLUMN comments TEXT")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
+    }
+
+    it("should support ALTER TABLE with multiple alterations") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT DROP remarks")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DROP remarks")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
+    }
 
     it("should support BEGIN ... END statements") {
       // test type 1
@@ -511,20 +552,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
         from = Table("Customers"),
         where = FieldRef('Industry) === "Oil/Gas Transmission",
         limit = 100
-      ))
-    }
-
-    it("should support SELECT TOP n ... statements") {
-      val results = SQLLanguageParser.parse(
-        """|SELECT TOP 20 Symbol, Name, Sector, Industry
-           |FROM Customers
-           |WHERE Industry = 'Oil/Gas Transmission'
-           |""".stripMargin)
-      assert(results == Select(
-        fields = List('Symbol, 'Name, 'Sector, 'Industry),
-        from = Table("Customers"),
-        where = FieldRef('Industry) === "Oil/Gas Transmission",
-        limit = 20
       ))
     }
 

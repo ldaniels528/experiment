@@ -3,8 +3,7 @@ import sbt._
 
 import scala.language.postfixOps
 
-val scalaVersion_2_11 = "2.11.12"
-val scalaVersion_2_12 = "2.12.12"
+val scalaVersion_2_12 = "2.12.13"
 val scalaVersion_2_13 = "2.13.4"
 
 val appVersion = "0.4.0"
@@ -30,7 +29,7 @@ lazy val testDependencies = Seq(
     "org.scalatest" %% "scalatest" % scalaTestVersion % Test
   ))
 
-crossScalaVersions := Seq(scalaVersion_2_11, scalaVersion_2_12)
+crossScalaVersions := Seq(scalaVersion_2_12)
 
 /////////////////////////////////////////////////////////////////////////////////
 //      Root Project - builds all artifacts

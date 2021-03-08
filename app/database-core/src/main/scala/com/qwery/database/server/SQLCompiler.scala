@@ -7,9 +7,10 @@ import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
 import com.qwery.database.server.SQLCompiler.implicits.{ExpressionFacade, InvokableFacade}
 import com.qwery.language.SQLLanguageParser
+import com.qwery.language.SQLLanguageParser.implicits.ItemSeqUtilities
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions.{Condition, ConditionalOp, Expression, Literal}
-import com.qwery.models.{Invokable, TableIndex, EntityRef, expressions => ex}
+import com.qwery.models.{EntityRef, Invokable, TableIndex, expressions => ex}
 import com.qwery.{models => mx}
 
 /**
@@ -93,19 +94,6 @@ object SQLCompiler {
         case unknown => die(s"Unsupported operation $unknown")
       }
 
-    }
-
-    /**
-     * Item Sequence Utilities
-     * @param items the collection of items
-     * @tparam A the item type
-     */
-    final implicit class ItemSeqUtilities[A](val items: Seq[A]) extends AnyVal {
-      @inline
-      def onlyOne(label: => String = "column"): A = items.toList match {
-        case value :: Nil => value
-        case _ => die(s"Multiple ${label}s are not supported")
-      }
     }
 
   }

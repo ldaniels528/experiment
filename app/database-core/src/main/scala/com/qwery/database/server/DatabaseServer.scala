@@ -246,7 +246,7 @@ object DatabaseServer {
     val ref = new EntityRef(databaseName, schemaName, tableName)
     val dataFile = format.toLowerCase() match {
       case "bin" | "binary" | "raw" =>
-        getTableDataFile(ref)
+        getTableDataFile(ref, config = readTableConfig(ref))
       case "csv" =>
         val csvFile = createTempFile()
         TableFile(ref).exportAsCSV(csvFile)

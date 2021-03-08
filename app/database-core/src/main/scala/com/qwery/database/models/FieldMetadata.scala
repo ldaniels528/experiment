@@ -62,10 +62,6 @@ object FieldMetadata {
   // the length of the encoded metadata
   val BYTES_LENGTH = 1
 
-  import com.qwery.database.models.ModelsJsonProtocol._
-  import spray.json._
-  implicit val fieldMetadataJsonFormat: RootJsonFormat[FieldMetadata] = jsonFormat4(FieldMetadata.apply)
-
   /**
    * Creates new field metadata based on existing column metadata
    * @param metadata the [[ColumnMetadata column metadata]]

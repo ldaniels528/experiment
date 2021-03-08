@@ -2,6 +2,7 @@ package com.qwery.database
 package files
 
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.files.DatabaseFiles.implicits.DBFilesConfig
 import com.qwery.database.files.DatabaseManagementSystem.implicits._
 import com.qwery.database.models._
 import com.qwery.models.EntityRef
@@ -41,27 +42,26 @@ object DatabaseManagementSystem {
             val tableName = tableDirectory.getName
             val table = new EntityRef(databaseName, schemaName, tableName)
 
-            // is it a physical table?
-            if (isTableFile(table)) {
-              Try(readTableConfig(table)).toOption map { config =>
-                val dataFile = getTableDataFile(table)
+            Try(readTableConfig(table)).toOption map { config =>
+              // is it a external table?
+              if (config.isExternalTable) {
+                val configFile = getTableConfigFile(table)
+                val modifiedTime = sdf.format(new Date(configFile.lastModified()))
+                TableSummary(tableName, schemaName, tableType = LOGICAL_TABLE, description = config.description, lastModifiedTime = modifiedTime, fileSize = configFile.length())
+              }
+              // is it a view table?
+              else if (config.isVirtualTable) {
+                val configFile = getTableConfigFile(table)
+                val modifiedTime = sdf.format(new Date(configFile.lastModified()))
+                TableSummary(tableName, schemaName, tableType = VIEW, description = config.description, lastModifiedTime = modifiedTime, fileSize = configFile.length())
+              }
+              // it must be a physical table
+              else {
+                val dataFile = getTableDataFile(table, config)
                 val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
-                val tableType =
-                  if (config.externalTable.nonEmpty) LOGICAL_TABLE
-                  else TABLE
-                TableSummary(tableName, schemaName, tableType, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
+                TableSummary(tableName, schemaName, tableType = TABLE, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
               }
             }
-            // is it a view table?
-            else if (isVirtualTable(table)) {
-              Try(readTableConfig(table)).toOption map { config =>
-                val dataFile = getViewDataFile(table)
-                val modifiedTime = sdf.format(new Date(dataFile.lastModified()))
-                TableSummary(tableName, schemaName, tableType = VIEW, description = config.description, lastModifiedTime = modifiedTime, fileSize = dataFile.length())
-              }
-            }
-            // unsupported file
-            else None
         }
       case _ => None
     })

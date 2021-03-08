@@ -1,6 +1,7 @@
 package com.qwery.database
 package clients
 
+import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.models.UpdateCount
 import com.qwery.database.util.WebServiceClient
 import com.qwery.database.util.WebServiceClient.QweryResponseConversion

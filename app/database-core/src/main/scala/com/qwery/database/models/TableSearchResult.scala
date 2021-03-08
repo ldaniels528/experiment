@@ -9,14 +9,3 @@ package com.qwery.database.models
   * @param description  the table description
   */
 case class TableSearchResult(databaseName: String, schemaName: String, tableName: String, tableType: String, description: Option[String])
-
-/**
-  * Table Search Result Companion
-  */
-object TableSearchResult {
-  import com.qwery.database.models.ModelsJsonProtocol._
-  import spray.json._
-
-  final implicit val tableSearchResultJsonFormat: RootJsonFormat[TableSearchResult] = jsonFormat5(TableSearchResult.apply)
-
-}

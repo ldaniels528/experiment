@@ -4,7 +4,9 @@ package files
 import com.qwery.database.DatabaseCPU.toCriteria
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
+import com.qwery.database.models.TableConfig.VirtualTableConfig
 import com.qwery.database.models.{Column, TableConfig}
+import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
 import com.qwery.models.{EntityRef, Invokable, Select, View}
 
 /**
@@ -25,7 +27,7 @@ object VirtualTableFile {
    * @param ref the [[EntityRef]]
    * @return the [[VirtualTableFile virtual table]]
    */
-  def load(ref: EntityRef): VirtualTableFile = {
+  def apply(ref: EntityRef): VirtualTableFile = {
     new VirtualTableFile(ref, config = readTableConfig(ref), device = getViewDevice(ref))
   }
 
@@ -36,34 +38,35 @@ object VirtualTableFile {
    */
   def createView(view: View): VirtualTableFile = {
     val ref = view.ref
-    val viewFile = getViewDataFile(ref)
-    if (viewFile.exists() && !view.ifNotExists) die(s"View '$ref' already exists")
+    val viewFile = getTableConfigFile(ref)
+    if (viewFile.exists() && !view.ifNotExists) die(s"View '${ref.toSQL}' already exists")
     else {
       // create the root directory
       getTableRootDirectory(ref).mkdirs()
 
       // create the virtual table configuration file
-      val config = TableConfig(columns = getProjectionColumns(ref, view.query), indices = Nil, description = view.description)
-      writeTableConfig(ref, config)
+      val config = TableConfig(
+        columns = getProjectionColumns(ref, view.query),
+        description = view.description,
+        virtualTable = Some(VirtualTableConfig(view.query.toSQL))
+      )
 
-      // write the virtual table data
-      writeViewData(ref, view.query)
+      // write the virtual table config
+      writeTableConfig(ref, config)
     }
-    VirtualTableFile.load(ref)
+    VirtualTableFile(ref)
   }
 
   def dropView(ref: EntityRef, ifExists: Boolean): Boolean = {
-    val dataFile = getViewDataFile(ref)
     val configFile = getTableConfigFile(ref)
-    if (!ifExists && !dataFile.exists()) die(s"View '$ref' (${dataFile.getAbsolutePath}) does not exist")
-    if (!ifExists && !configFile.exists()) die(s"View '$ref' (${configFile.getAbsolutePath}) does not exist")
+    if (!ifExists && !configFile.exists()) die(s"View '${ref.toSQL}' (${configFile.getAbsolutePath}) does not exist")
     val directory = getTableRootDirectory(ref)
     val files = directory.listFilesRecursively
     files.forall(_.delete())
   }
 
   def getViewDevice(ref: EntityRef): BlockDevice = {
-    readViewData(ref) match {
+    readViewQuery(ref) match {
       case Select(fields, Some(hostTable: EntityRef), joins, groupBy, having, orderBy, where, limit) =>
         TableFile(hostTable).selectRows(fields, toCriteria(where), groupBy, having, orderBy, limit)
       case other => die(s"Unhandled view query model - $other")

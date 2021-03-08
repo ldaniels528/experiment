@@ -2,8 +2,9 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.{KeyValues, StockQuoteWithDate}
+import com.qwery.models.AlterTable.AppendColumn
 import com.qwery.models.expressions.{AllFields, BasicFieldRef}
-import com.qwery.models.{ColumnSpec, Table, EntityRef, Column => XColumn}
+import com.qwery.models.{ColumnSpec, EntityRef, Table, Column => XColumn}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -18,8 +19,8 @@ class TableFileTest extends AnyFunSpec {
 
   val databaseName = "test"
   val schemaName = "stocks"
-  val tableName = "stocks_test"
-  val tableRef = new EntityRef(databaseName, schemaName, tableName)
+  val tableRef = new EntityRef(databaseName, schemaName, tableName = "stocks_test")
+  val newTableRef = new EntityRef(databaseName, schemaName, tableName = "stocks_insert_select")
 
   describe(classOf[TableFile].getName) {
 
@@ -45,7 +46,7 @@ class TableFileTest extends AnyFunSpec {
         table.insertRow(KeyValues("symbol" -> "INTC", "exchange" -> "NYSE", "lastSale" -> 56.55, "lastSaleTime" -> new Date()))
 
         val count = table.count()
-        logger.info(s"$databaseName.$tableName: inserted $count records")
+        logger.info(s"${tableRef.toSQL}: inserted $count records")
         assert(count == 6)
       }
     }
@@ -60,8 +61,6 @@ class TableFileTest extends AnyFunSpec {
     }
 
     it("should perform the equivalent of an INSERT-SELECT") {
-      val newTableName = "stocks_insert_select"
-      val newTableRef = new EntityRef(databaseName, schemaName, newTableName)
       TableFile.dropTable(newTableRef, ifExists = true)
       TableFile.createTable(Table(
         ref = newTableRef,
@@ -77,8 +76,30 @@ class TableFileTest extends AnyFunSpec {
           newTable.insertRows(table.device)
         }
         val count = newTable.count()
-        logger.info(s"Inserted $count rows into $newTableName from $tableName")
+        logger.info(s"Inserted $count rows into ${newTableRef.toSQL} from ${tableRef.toSQL}")
         assert(count == 6)
+      }
+    }
+
+    it("should perform an ALTER TABLE to add new columns") {
+      TableFile(newTableRef) use { table =>
+        // add a new column
+        table.alterTable(Seq(
+          AppendColumn(XColumn(
+            name = "description",
+            comment = Some("the company description"),
+            spec = ColumnSpec(typeName = "String", precision = List(255)),
+            defaultValue = Some("N/A")
+          ))
+        ))
+      }
+
+      TableFile(newTableRef) use { table =>
+        // check the results
+        val results = table.getRows(condition = KeyValues()).toList
+        results.zipWithIndex foreach { case (result, index) =>
+          logger.info(s"[$index] ${result.toMap}")
+        }
       }
     }
 
@@ -100,8 +121,8 @@ class TableFileTest extends AnyFunSpec {
     it("should find rows via a condition in a table") {
       TableFile(tableRef) use { table =>
         val results = table.getRows(limit = None, condition = KeyValues("exchange" -> "NASDAQ")).toList
-        table.device.columns zip results.zipWithIndex foreach { case (column, (result, index)) =>
-          logger.info(s"[$index] ${column.name}: $result")
+        results.zipWithIndex foreach { case (result, index) =>
+          logger.info(s"[$index] ${result.toMap}")
         }
       }
     }

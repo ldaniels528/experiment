@@ -32,7 +32,7 @@ class DatabaseCPUTest extends AnyFunSpec {
 
     it("should DROP the existing TABLE") {
       cpu.dropTable(stocks_cpu_test, ifExists = true)
-      assert(!DatabaseFiles.isTableFile(stocks_cpu_test))
+      assert(!DatabaseFiles.getTableConfigFile(stocks_cpu_test).exists())
     }
 
     it("should CREATE a new TABLE") {
@@ -123,8 +123,8 @@ class DatabaseCPUTest extends AnyFunSpec {
     }
 
     it("should DROP a VIEW") {
-      cpu.executeQuery(databaseName, sql = s"DROP VIEW IF EXISTS `$schemaName.$viewName`")
-      assert(!DatabaseFiles.isVirtualTable(tickers_NYSE))
+      cpu.executeQuery(databaseName, sql = s"DROP VIEW IF EXISTS `${tickers_NYSE.toSQL}`")
+      assert(!DatabaseFiles.getTableConfigFile(tickers_NYSE).exists())
     }
 
     it("should CREATE a VIEW") {
@@ -144,7 +144,7 @@ class DatabaseCPUTest extends AnyFunSpec {
             |LIMIT 50
             |""".stripMargin
       )
-      assert(DatabaseFiles.isVirtualTable(tickers_NYSE))
+      assert(DatabaseFiles.getTableConfigFile(tickers_NYSE).exists())
     }
 
     it("should query rows from the VIEW") {
