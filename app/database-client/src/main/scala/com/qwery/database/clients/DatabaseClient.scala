@@ -6,6 +6,7 @@ import com.qwery.database.models._
 import com.qwery.database.util.JSONSupport._
 import com.qwery.database.util.WebServiceClient
 import com.qwery.database.util.WebServiceClient._
+import com.qwery.implicits.MagicImplicits
 import com.qwery.models.Table
 import spray.json._
 
@@ -94,10 +95,11 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
     * Executes a SQL statement or query
     * @param databaseName the database name
     * @param sql          the SQL statement or query
+    * @param limit        the optional results limit
     * @return the [[QueryResult]]
     */
-  def executeQuery(databaseName: String, sql: String): QueryResult = {
-    $http.post(toQueryUrl(databaseName), body = sql.getBytes(charSetName)).convertTo[QueryResult]
+  def executeQuery(databaseName: String, sql: String, limit: Option[Int] = None): QueryResult = {
+    $http.post(toQueryUrl(databaseName, limit), body = sql.getBytes(charSetName)).convertTo[QueryResult]
   }
 
   /**
@@ -218,7 +220,9 @@ case class DatabaseClient(host: String = "0.0.0.0", port: Int) {
   //      URL GENERATORS
   //////////////////////////////////////////////////////////////////////
 
-  private def toQueryUrl(databaseName: String): String = s"http://$host:$port/q/$databaseName"
+  private def toQueryUrl(databaseName: String, limit: Option[Int]): String = {
+    s"http://$host:$port/q/$databaseName" as { url => limit.map(n => s"$url?__limit=$n").getOrElse(url) }
+  }
 
   private def toRangeUrl(databaseName: String, schemaName: String, tableName: String): String = {
     s"http://$host:$port/r/$databaseName/$schemaName/$tableName"

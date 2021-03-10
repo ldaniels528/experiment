@@ -1,17 +1,17 @@
 package com.qwery.database.device
 
-import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, RowMetadata}
+import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, RowMetadata}
 
 import java.nio.ByteBuffer
 import com.qwery.database.ROWID
 
 /**
  * Hybrid Block Device
- * @param columns  the collection of [[Column columns]]
+ * @param columns  the collection of [[TableColumn columns]]
  * @param capacity the maximum number of item the collection may contain
  * @param disk     the overflow [[BlockDevice device]]
  */
-class HybridBlockDevice(val columns: Seq[Column], val capacity: Int, disk: BlockDevice) extends BlockDevice {
+class HybridBlockDevice(val columns: Seq[TableColumn], val capacity: Int, disk: BlockDevice) extends BlockDevice {
   private val mem = new ByteArrayBlockDevice(columns, capacity)
 
   override def close(): Unit = {

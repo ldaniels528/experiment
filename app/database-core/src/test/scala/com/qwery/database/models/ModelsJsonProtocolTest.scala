@@ -15,15 +15,11 @@ class ModelsJsonProtocolTest extends AnyFunSpec {
   describe(ModelsJsonProtocol.getClass.getSimpleName) {
 
     it("should serialize/deserialize a Column") {
-      verifyJson(Column(name = "symbol", comment = "stock ticker", metadata = models.ColumnMetadata(`type` = ColumnTypes.StringType), enumValues = Nil, sizeInBytes = 24))
-    }
-
-    it("should serialize/deserialize a ColumnMetadata") {
-      verifyJson(models.ColumnMetadata(`type` = ColumnTypes.StringType))
+      verifyJson(TableColumn(name = "symbol", comment = Some("stock ticker"), `type` = ColumnTypes.StringType, sizeInBytes = 24))
     }
 
     it("should serialize/deserialize a ColumnSearchResult") {
-      verifyJson(ColumnSearchResult(databaseName = "test", schemaName = "school", tableName = "students", column = Column(name = "symbol", comment = "stock ticker", metadata = models.ColumnMetadata(`type` = ColumnTypes.StringType), enumValues = Nil, sizeInBytes = 24)))
+      verifyJson(ColumnSearchResult(databaseName = "test", schemaName = "school", tableName = "students", column = TableColumn(name = "symbol", comment = Some("stock ticker"), `type` = ColumnTypes.StringType, sizeInBytes = 24)))
     }
 
     it("should serialize/deserialize a DatabaseSearchResult") {
@@ -32,7 +28,7 @@ class ModelsJsonProtocolTest extends AnyFunSpec {
 
     it("should serialize/deserialize a TableConfig") {
       verifyJson(TableConfig(description = Some("test config") , columns = Seq(
-        Column(name = "symbol", comment = "stock ticker", metadata = models.ColumnMetadata(`type` = ColumnTypes.StringType), enumValues = Nil, sizeInBytes = 24)
+        TableColumn(name = "symbol", comment = Some("stock ticker"), `type` = ColumnTypes.StringType, sizeInBytes = 24)
       )))
     }
 

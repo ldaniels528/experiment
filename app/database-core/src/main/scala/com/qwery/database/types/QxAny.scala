@@ -2,7 +2,7 @@ package com.qwery.database
 package types
 
 import com.qwery.database.models.ColumnTypes._
-import com.qwery.database.models.{Column, ColumnTypes, FieldMetadata, JsValueConversion}
+import com.qwery.database.models.{TableColumn, ColumnTypes, FieldMetadata, JsValueConversion}
 import com.qwery.database.util.Codec
 import com.qwery.models.expressions.Null
 import org.apache.commons.io.IOUtils
@@ -38,11 +38,11 @@ sealed trait QxAny {
 
   /**
    * Encodes this value into a byte array
-   * @param column  the given [[Column column]]
+   * @param column  the given [[TableColumn column]]
    * @return the byte array
    * @see [[Codec.encode]]
    */
-  def encode(column: Column): Array[Byte] = Codec.encode(column, value)
+  def encode(column: TableColumn): Array[Byte] = Codec.encode(column, value)
 
   def isNumeric: Boolean = this.isInstanceOf[QxNumber]
 
@@ -150,15 +150,15 @@ object QxAny {
 
   /**
    * Decodes the buffer as a value based on the given column
-   * @param column the given [[Column column]]
+   * @param column the given [[TableColumn column]]
    * @param buf    the [[ByteBuffer buffer]]
    * @return a tuple of [[FieldMetadata]] and the [[QxAny value]]
    * @see [[Codec.decode]]
    */
-  def decode(column: Column, buf: ByteBuffer): (FieldMetadata, QxAny) = {
+  def decode(column: TableColumn, buf: ByteBuffer): (FieldMetadata, QxAny) = {
     import com.qwery.database.util.Codec.CodecByteBuffer
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
-    val value = column.metadata.`type` match {
+    val value = column.`type` match {
       case ArrayType => QxArray(value = if (fmd.isNull) None else Some(Codec.decodeArray(column, buf)))
       case BigDecimalType => QxBigDecimal(value = if (fmd.isNull) None else Some(buf.getBigDecimal))
       case BigIntType => QxBigInt(value = if (fmd.isNull) None else Some(buf.getBigInteger))
@@ -575,7 +575,7 @@ case class QxSerializable(value: Option[Serializable]) extends QxAny {
 
   override def dataType: ColumnType = ColumnTypes.SerializableType
 
-  override def encode(column: Column): Array[Byte] = Codec.encodeObject(value)
+  override def encode(column: TableColumn): Array[Byte] = Codec.encodeObject(value)
 }
 
 case class QxShort(value: Option[Short]) extends QxNumber {

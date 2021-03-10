@@ -463,8 +463,8 @@ object PersistentSeq {
   def apply[A <: Product : ClassTag](ref: EntityRef): PersistentSeq[A] = {
     val (config, device) = DatabaseFiles.getTableDevice(ref)
     val (columns, _class) = BlockDevice.toColumns[A]
-    val deviceColumns = config.columns.map(c => c.name -> c.metadata.`type`)
-    val productColumns = columns.map(c => c.name -> c.metadata.`type`)
+    val deviceColumns = config.columns.map(c => c.name -> c.`type`)
+    val productColumns = columns.map(c => c.name -> c.`type`)
     val missingColumns = deviceColumns.collect { case t@(name, _type) if !productColumns.contains(t) => name + ':' + _type }
     assert(missingColumns.isEmpty, s"Class ${_class.getName} does not contain columns: ${missingColumns.mkString(", ")}")
     new PersistentSeq[A](device, _class)

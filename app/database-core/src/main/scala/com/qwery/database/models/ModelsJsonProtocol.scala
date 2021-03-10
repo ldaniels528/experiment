@@ -2,10 +2,10 @@ package com.qwery.database
 package models
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.models.TableConfig.{ExternalTableConfig, PhysicalTableConfig, VirtualTableConfig}
 import com.qwery.implicits.MagicImplicits
-import com.qwery.models.{ColumnSpec, EntityRef, Table, TableIndex, TypeAsEnum}
-import com.qwery.{models => mx}
+import com.qwery.models.{Column, ColumnTypeSpec, EntityRef, Table, TableIndex, TypeAsEnum}
 import spray.json._
 
 import java.util.{Date, UUID}
@@ -22,21 +22,21 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   final implicit object OptionAnyJsonFormat extends JsonFormat[Option[Any]] {
     override def read(json: JsValue): Option[Any] = Option(json.unwrapJSON)
 
-    override def write(value: Option[Any]): JsValue = {
-      value match {
-        case Some(v: Boolean) => v.toJson
-        case Some(v: Byte) => v.toJson
-        case Some(v: Date) => v.getTime.toJson
-        case Some(v: Double) => v.toJson
-        case Some(v: Float) => v.toJson
-        case Some(v: Int) => v.toJson
-        case Some(v: Long) => v.toJson
-        case Some(v: Short) => v.toJson
-        case Some(v: String) => v.toJson
-        case Some(v: UUID) => v.toString.toJson
-        case Some(v: Any) => JsString(v.toString)
-        case None => JsNull
-      }
+    override def write(value: Option[Any]): JsValue = value match {
+      case Some(v: BigDecimal) => v.toJson
+      case Some(v: BigInt) => v.toJson
+      case Some(v: Boolean) => v.toJson
+      case Some(v: Byte) => v.toJson
+      case Some(v: Date) => v.getTime.toJson
+      case Some(v: Double) => v.toJson
+      case Some(v: Float) => v.toJson
+      case Some(v: Int) => v.toJson
+      case Some(v: Long) => v.toJson
+      case Some(v: Short) => v.toJson
+      case Some(v: String) => v.toJson
+      case Some(v: UUID) => v.toString.toJson
+      case Some(v) => die(s"Failed to deserialize '$v' (${Option(v).map(_.getClass.getName).orNull})")
+      case None => JsNull
     }
   }
 
@@ -74,25 +74,29 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   //      Core Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  final implicit val columnSpecJsonFormat: RootJsonFormat[ColumnSpec] = jsonFormat2(ColumnSpec.apply)
+  final implicit val columnTypeSpecJsonFormat: RootJsonFormat[ColumnTypeSpec] = jsonFormat3(ColumnTypeSpec.apply)
 
-  final implicit val columnModelJsonFormat: RootJsonFormat[mx.Column] = jsonFormat6(mx.Column.apply)
+  final implicit val columnModelJsonFormat: RootJsonFormat[Column] = jsonFormat8(Column.apply)
+
+  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat5(Table.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Column Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  final implicit val columnMetadataJsonFormat: RootJsonFormat[ColumnMetadata] = jsonFormat7(ColumnMetadata.apply)
+  final implicit object ColumnTypeJsonFormat extends JsonFormat[ColumnType] {
+    override def read(json: JsValue): ColumnType = ColumnTypes.withName(json.convertTo[String])
 
-  final implicit val columnJsonFormat: RootJsonFormat[Column] = jsonFormat6(Column.apply)
+    override def write(columnType: ColumnType): JsValue = JsString(columnType.toString)
+  }
 
-  final implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
+  final implicit val columnJsonFormat: RootJsonFormat[TableColumn] = jsonFormat10(TableColumn.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Field Model Implicits
   ////////////////////////////////////////////////////////////////////////
 
-  final implicit val fieldMetadataJsonFormat: RootJsonFormat[FieldMetadata] = jsonFormat4(FieldMetadata.apply)
+  final implicit val fieldMetadataJsonFormat: RootJsonFormat[FieldMetadata] = jsonFormat3(FieldMetadata.apply)
 
   final implicit val fieldJsonFormat: RootJsonFormat[Field] = jsonFormat3(Field.apply)
 
@@ -102,9 +106,13 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   final implicit val typeAsEnumJsonFormat: RootJsonFormat[TypeAsEnum] = jsonFormat2(TypeAsEnum.apply)
 
-  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat5(Table.apply)
-
   final implicit val tableIndexJsonFormat: RootJsonFormat[TableIndex] = jsonFormat4(TableIndex.apply)
+
+  ////////////////////////////////////////////////////////////////////////
+  //      Config Model Implicits
+  ////////////////////////////////////////////////////////////////////////
+
+  final implicit val databaseConfigJsonFormat: RootJsonFormat[DatabaseConfig] = jsonFormat1(DatabaseConfig.apply)
 
   final implicit val externalTableConfigJsonFormat: RootJsonFormat[ExternalTableConfig] = jsonFormat6(ExternalTableConfig.apply)
 

@@ -1,7 +1,7 @@
-package com.qwery.database.models
+package com.qwery.database
+package models
 
 import com.qwery.database.types.ArrayBlock
-import com.qwery.database.{INT_BYTES, LONG_BYTES, ONE_BYTE, SHORT_BYTES}
 import org.slf4j.LoggerFactory
 
 import java.nio.ByteBuffer
@@ -12,19 +12,11 @@ import scala.annotation.tailrec
 import scala.reflect.runtime.universe._
 
 /**
- * Column Types
+ * Column Types Enumeration
  */
 object ColumnTypes extends Enumeration {
   private lazy val logger = LoggerFactory.getLogger(getClass)
   type ColumnType = Value
-
-  import spray.json._
-  import DefaultJsonProtocol._
-  implicit object ColumnTypeJsonFormat extends JsonFormat[ColumnType] {
-    override def read(json: JsValue): ColumnType = ColumnTypes.withName(json.convertTo[String])
-
-    override def write(columnType: ColumnType): JsValue = JsString(columnType.toString)
-  }
 
   // numeric fixed-length types
   val ByteType: ColumnType = Value(0x00) //........ 00000
@@ -108,7 +100,7 @@ object ColumnTypes extends Enumeration {
     case t if t =:= typeOf[Some[String]] => StringType
     case t if t =:= typeOf[Some[UUID]] => UUIDType
     case t if t =:= typeOf[Some[Serializable]] => SerializableType
-    case t => SerializableType
+    case _ => SerializableType
   }
 
   /**
@@ -149,14 +141,49 @@ object ColumnTypes extends Enumeration {
       case _: String => StringType
       case _: UUID => UUIDType
       case x =>
-        logger.info(s"Class '${x.getClass.getName}' is assumed to be a $SerializableType")
+        logger.warn(s"Class '${x.getClass.getName}' is assumed to be a $SerializableType")
         SerializableType
     }
   }
 
   /**
+   * Column type lookup closure
+   */
+  val lookupColumnType: String => ColumnType = {
+    val typeMappings = Map(
+      "ARRAY" -> ArrayType,
+      "BIGINT" -> BigIntType,
+      "BINARY" -> BinaryType,
+      "BLOB" -> BlobType,
+      "BOOLEAN" -> BooleanType,
+      "CHAR" -> StringType,
+      "CLOB" -> ClobType,
+      "DATE" -> DateType,
+      "DATETIME" -> DateType,
+      "DECIMAL" -> BigDecimalType,
+      "DOUBLE" -> DoubleType,
+      "FLOAT" -> FloatType,
+      "INT" -> IntType,
+      "INTEGER" -> IntType,
+      "LONG" -> LongType,
+      "OBJECT" -> SerializableType,
+      "REAL" -> DoubleType,
+      "SHORT" -> ShortType,
+      "SMALLINT" -> ShortType,
+      "STRING" -> StringType,
+      "TEXT" -> ClobType,
+      "TIMESTAMP" -> DateType,
+      "TINYINT" -> ByteType,
+      "UUID" -> UUIDType,
+      "VARBINARY" -> BinaryType,
+      "VARCHAR" -> StringType
+    )
+    typeName => typeMappings.getOrElse(typeName.toUpperCase, die(s"Unrecognized data type '$typeName'"))
+  }
+
+  /**
    * Column Type Extensions
-   * @param `type` the [[ColumnType]]
+   * @param `type` the [[ColumnType column type]]
    */
   final implicit class ColumnTypeExtensions(val `type`: ColumnType) extends AnyVal {
 
@@ -174,21 +201,6 @@ object ColumnTypes extends Enumeration {
       case UUIDType => Some(2 * LONG_BYTES)
       case _ => None
     }
-
-    @inline
-    def getPrecision: Int = getFixedLength getOrElse 128 // TODO revisit this soon!
-
-    @inline
-    def getScale: Int = 0 // TODO revisit this soon!
-
-    @inline
-    def isExternal: Boolean = `type` match {
-      case ArrayType | BlobType | ClobType => true
-      case _ => false
-    }
-
-    @inline
-    def isNullable: Boolean = getFixedLength.isEmpty || `type` == ColumnTypes.DateType || `type` == ColumnTypes.UUIDType
 
     @inline
     def isSigned: Boolean = `type` match {

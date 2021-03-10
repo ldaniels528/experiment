@@ -4,7 +4,7 @@ import com.qwery.database.ROWID
 import com.qwery.models.EntityRef
 
 case class TableMetrics(ref: EntityRef,
-                        columns: Seq[Column],
+                        columns: Seq[TableColumn],
                         physicalSize: Option[Long],
                         recordSize: Int,
                         rows: ROWID)

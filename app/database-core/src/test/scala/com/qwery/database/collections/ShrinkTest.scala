@@ -2,7 +2,6 @@ package com.qwery.database
 package collections
 
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models
 import com.qwery.database.models.StockQuoteWithID
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory

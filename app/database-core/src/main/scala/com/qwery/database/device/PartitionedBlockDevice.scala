@@ -1,16 +1,16 @@
 package com.qwery.database.device
 
-import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, RowMetadata}
+import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, RowMetadata}
 import com.qwery.database.{PartitionSizeException, ROWID, createTempTable, models}
 
 import java.nio.ByteBuffer
 
 /**
  * Represents a partitioned block device
- * @param columns       the collection of [[Column columns]]
+ * @param columns       the collection of [[TableColumn columns]]
  * @param partitionSize the size of each partition
  */
-class PartitionedBlockDevice(val columns: Seq[Column],
+class PartitionedBlockDevice(val columns: Seq[TableColumn],
                              val partitionSize: Int,
                              isInMemory: Boolean = false) extends RowOrientedBlockDevice {
   protected var partitions: List[BlockDevice] = Nil

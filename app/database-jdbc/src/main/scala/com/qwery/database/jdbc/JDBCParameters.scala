@@ -1,7 +1,5 @@
 package com.qwery.database.jdbc
 
-import com.qwery.database.models.ColumnTypes.determineValueType
-
 /**
  * Qwery JDBC Parameters
  * @param initialCapacity the initial capacity of the collection
@@ -15,7 +13,7 @@ class JDBCParameters(initialCapacity: Int = 20, growthFactor: Int = 20) {
 
   def clear(): Unit = parameterCount = 0
 
-  def isNullable(parameterNumber: Int): Boolean = determineValueType(apply(parameterNumber)).isNullable
+  def isNullable(parameterNumber: Int): Boolean = false // TODO need type with nullability info here
 
   def size: Int = parameterCount
 

@@ -2,9 +2,10 @@ package com.qwery.database
 package util
 
 import com.qwery.database.models.ColumnTypes._
-import com.qwery.database.models.{Column, ColumnMetadata, FieldMetadata, RowMetadata}
+import com.qwery.database.models.{TableColumn, ColumnTypes, FieldMetadata, RowMetadata}
 import com.qwery.database.types.{ArrayBlock, QxAny}
 import com.qwery.database.util.Compression.CompressionByteArrayExtensions
+import com.qwery.implicits.MagicImplicits
 import com.qwery.util.OptionHelper.OptionEnrichment
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
@@ -70,25 +71,25 @@ object Codec extends Compression {
 
   /**
    * Decodes the buffer as a value based on the given column
-   * @param column the given [[Column column]]
+   * @param column the given [[TableColumn column]]
    * @param buf    the [[ByteBuffer buffer]]
    * @return a tuple of [[FieldMetadata]] and the option of a value
    * @see [[QxAny.decode]]
    */
-  def decode(column: Column, buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
+  def decode(column: TableColumn, buf: ByteBuffer): (FieldMetadata, Option[Any]) = {
     implicit val fmd: FieldMetadata = buf.getFieldMetadata
     (fmd, decodeValue(column, buf))
   }
 
   /**
    * Encodes the given value into a byte array
-   * @param column the given [[Column column]]
+   * @param column the given [[TableColumn column]]
    * @param value  the option of a value
    * @return the byte array
    * @see [[QxAny.encode]]
    */
-  def encode(column: Column, value: Option[Any]): Array[Byte] = {
-    implicit val fmd: FieldMetadata = FieldMetadata(column.metadata)
+  def encode(column: TableColumn, value: Option[Any]): Array[Byte] = {
+    implicit val fmd: FieldMetadata = FieldMetadata(column)
     encodeValue(column, value) match {
       case Some(fieldBuf) =>
         val bytes = fieldBuf.array()
@@ -112,7 +113,7 @@ object Codec extends Compression {
     baos.toByteArray
   }
 
-  def decodeArray(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): ArrayBlock = {
+  def decodeArray(column: TableColumn, buf: ByteBuffer)(implicit fmd: FieldMetadata): ArrayBlock = {
     // read the collection as a block
     val blockSize = buf.getInt
     val count = buf.getInt
@@ -121,14 +122,14 @@ object Codec extends Compression {
 
     // decode the items
     val block = wrap(bytes.decompressOrNah)
-    ArrayBlock(`type` = block.getColumnMetadata.`type`, for {
+    ArrayBlock(`type` = block.getColumnType, for {
       _ <- 0 until count
       (fmd, rawValue) = decode(column, block)
       value = if (fmd.isActive) QxAny(rawValue) else null
     } yield value)
   }
 
-  def encodeArray(column: Column, array: ArrayBlock)(implicit fmd: FieldMetadata): ByteBuffer = {
+  def encodeArray(column: TableColumn, array: ArrayBlock)(implicit fmd: FieldMetadata): ByteBuffer = {
     // create the data block
     val compressedBytes = (for {
       value_? <- array.items.toArray
@@ -137,15 +138,16 @@ object Codec extends Compression {
 
     // encode the items as a block
     val block = allocate(2 * INT_BYTES + compressedBytes.length)
+    block.putColumnType(column.`type`)
     block.putInt(compressedBytes.length)
     block.putInt(array.length)
     block.put(compressedBytes)
     block
   }
 
-  def decodeValue(column: Column, buf: ByteBuffer)(implicit fmd: FieldMetadata): Option[Any] = {
+  def decodeValue(column: TableColumn, buf: ByteBuffer)(implicit fmd: FieldMetadata): Option[Any] = {
     if (fmd.isNull) None else {
-      column.metadata.`type` match {
+      column.`type` match {
         case ArrayType => Some(decodeArray(column, buf))
         case BigDecimalType => Some(buf.getBigDecimal)
         case BigIntType => Some(buf.getBigInteger)
@@ -169,9 +171,9 @@ object Codec extends Compression {
     }
   }
 
-  def encodeValue(column: Column, value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
-    (value_? ?? column.defaultValue).map(convertTo(_, column.metadata.`type`)) map {
-      case a: Array[_] if column.metadata.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
+  def encodeValue(column: TableColumn, value_? : Option[Any])(implicit fmd: FieldMetadata): Option[ByteBuffer] = {
+    (value_? ?? column.defaultValue).map(convertTo(_, column.`type`)) map {
+      case a: Array[_] if column.`type` == BinaryType => allocate(INT_BYTES + a.length).putBinary(a.asInstanceOf[Array[Byte]])
       case a: ArrayBlock => encodeArray(column, a)
       case b: BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
       case b: java.math.BigDecimal => allocate(sizeOf(b)).putBigDecimal(b)
@@ -195,7 +197,7 @@ object Codec extends Compression {
         val bytes = s.getBytes.compressOrNah
         allocate(SHORT_BYTES + bytes.length).putShort(bytes.length.toShort).put(bytes)
       case u: UUID => allocate(LONG_BYTES * 2).putLong(u.getMostSignificantBits).putLong(u.getLeastSignificantBits)
-      case v => throw TypeConversionException(v, column.metadata.`type`)
+      case v => throw TypeConversionException(v, column.`type`)
     }
   }
 
@@ -275,24 +277,9 @@ object Codec extends Compression {
       buf.putInt(bytes.length).put(bytes)
     }
 
-    @inline
-    def getColumn: Column = {
-      Column(name = buf.getString, comment = buf.getString, metadata = buf.getColumnMetadata, enumValues = Nil, sizeInBytes = buf.getInt)
-    }
+    @inline def getColumnType: ColumnType = buf.getShort as { n => ColumnTypes.values.toList(n.toInt) }
 
-    @inline
-    def putColumn(column: Column): ByteBuffer = {
-      buf.putString(column.name)
-        .putString(column.comment)
-        .putColumnMetadata(column.metadata)
-        .putInt(column.sizeInBytes)
-    }
-
-    @inline
-    def getColumnMetadata: ColumnMetadata = ColumnMetadata.decode(buf.getShort)
-
-    @inline
-    def putColumnMetadata(metadata: ColumnMetadata): ByteBuffer = buf.putShort(metadata.encode)
+    @inline def putColumnType(columnType: ColumnType): ByteBuffer = buf.putShort(columnType.id.toShort)
 
     @inline def getDate: java.util.Date = new java.util.Date(buf.getLong)
 

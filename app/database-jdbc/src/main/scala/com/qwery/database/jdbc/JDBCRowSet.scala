@@ -3,7 +3,7 @@ package jdbc
 
 import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.jdbc.JDBCRowSet.uninited
-import com.qwery.database.models.{Column, KeyValues}
+import com.qwery.database.models.{TableColumn, KeyValues}
 import com.qwery.database.util.Codec
 import org.slf4j.LoggerFactory
 
@@ -16,7 +16,7 @@ import java.sql.RowId
   * @param databaseName the database name
   * @param schemaName   the schema name
   * @param tableName    the table name
-  * @param columns      the collection of [[Column columns]]
+  * @param columns      the collection of [[TableColumn columns]]
   * @param rows         the row data
   * @param __ids        the collection of row identifiers
   */
@@ -24,7 +24,7 @@ class JDBCRowSet(connection: JDBCConnection,
                  databaseName: String,
                  schemaName: String,
                  tableName: String,
-                 columns: Seq[Column],
+                 columns: Seq[TableColumn],
                  var rows: Seq[Seq[Option[Any]]],
                  var __ids: Seq[ROWID]) {
   private val logger = LoggerFactory.getLogger(getClass)
@@ -55,7 +55,7 @@ class JDBCRowSet(connection: JDBCConnection,
 
     // lookup the value by column name
     val column = columns(columnIndex - 1)
-    val columnType = column.metadata.`type`
+    val columnType = column.`type`
     val rawValue_? = matrix(offset)
     val value = rawValue_?.flatMap(rv => safeCast[T](Codec.convertTo(rv, columnType)))
     logger.debug(s"getColumnValueOpt($columnIndex) => $value [rowIndex=$rowIndex]")
@@ -227,17 +227,17 @@ object JDBCRowSet {
     * @param databaseName the database name
     * @param schemaName   the schema name
     * @param tableName    the table name
-    * @param columns      the collection of [[Column columns]]
+    * @param columns      the collection of [[TableColumn columns]]
     * @param rows         the row data
     * @param __ids        the collection of row identifiers
     */
   def apply(connection: JDBCConnection,
-                       databaseName: String,
-                       schemaName: String,
-                       tableName: String,
-                       columns: Seq[Column],
-                       rows: Seq[Seq[Option[Any]]],
-                       __ids: Seq[ROWID]): JDBCRowSet = {
+            databaseName: String,
+            schemaName: String,
+            tableName: String,
+            columns: Seq[TableColumn],
+            rows: Seq[Seq[Option[Any]]],
+            __ids: Seq[ROWID]): JDBCRowSet = {
     new JDBCRowSet(connection, databaseName, schemaName, tableName, columns, rows, __ids)
   }
 

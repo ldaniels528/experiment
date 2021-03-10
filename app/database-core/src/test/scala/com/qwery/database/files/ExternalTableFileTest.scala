@@ -2,9 +2,8 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.KeyValues
-import com.qwery.models.{ColumnSpec, ExternalTable, EntityRef}
+import com.qwery.models.{Column, ColumnTypeSpec, EntityRef, ExternalTable}
 import com.qwery.util.ResourceHelper._
-import com.qwery.{models => mx}
 import org.scalatest.funspec.AnyFunSpec
 
 import scala.util.Try
@@ -28,15 +27,15 @@ class ExternalTableFileTest extends AnyFunSpec {
           format = Some("csv"),
           nullValue = Some("n/a"),
           columns = List(
-            mx.Column(name = "Symbol", spec = ColumnSpec(typeName = "String", precision = List(10))),
-            mx.Column(name = "Name", spec = ColumnSpec(typeName = "String", precision = List(70))),
-            mx.Column(name = "LastSale", spec = ColumnSpec(typeName = "String", precision = List(12))),
-            mx.Column(name = "MarketCap", spec = ColumnSpec(typeName = "String", precision = List(20))),
-            mx.Column(name = "IPOyear", spec = ColumnSpec(typeName = "String", precision = List(8))),
-            mx.Column(name = "Sector", spec = ColumnSpec(typeName = "String", precision = List(70))),
-            mx.Column(name = "Industry", spec = ColumnSpec(typeName = "String", precision = List(70))),
-            mx.Column(name = "SummaryQuote", spec = ColumnSpec(typeName = "String", precision = List(50))),
-            mx.Column(name = "Reserved", spec = ColumnSpec(typeName = "String", precision = List(20)))
+            Column(name = "Symbol", spec = new ColumnTypeSpec(`type` = "String", size = 10)),
+            Column(name = "Name", spec = new ColumnTypeSpec(`type` = "String", size = 70)),
+            Column(name = "LastSale", spec = new ColumnTypeSpec(`type` = "String", size = 12)),
+            Column(name = "MarketCap", spec = new ColumnTypeSpec(`type` = "String", size = 20)),
+            Column(name = "IPOyear", spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+            Column(name = "Sector", spec = new ColumnTypeSpec(`type` = "String", size = 70)),
+            Column(name = "Industry", spec = new ColumnTypeSpec(`type` = "String", size = 70)),
+            Column(name = "SummaryQuote", spec = new ColumnTypeSpec(`type` = "String", size = 50)),
+            Column(name = "Reserved", spec = new ColumnTypeSpec(`type` = "String", size = 20))
           )))
       table.close()
     }

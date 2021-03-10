@@ -16,14 +16,7 @@ public @interface ColumnInfo {
 
     boolean isNullable() default true;
 
-    /**
-     * For future-use
-     */
-    boolean isPrimary() default false;
-
     boolean isCompressed() default false;
-
-    boolean isEncrypted() default false;
 
     int maxSize() default 0;
 

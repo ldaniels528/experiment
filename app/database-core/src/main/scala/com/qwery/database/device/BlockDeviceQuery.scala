@@ -2,9 +2,9 @@ package com.qwery.database.device
 
 import com.qwery.database.ExpressionVM.nextID
 import com.qwery.database.functions._
-import com.qwery.database.models.{Column, ColumnMetadata, Field, FieldMetadata, KeyValues, Row}
+import com.qwery.database.models.{TableColumn, Field, FieldMetadata, KeyValues, Row}
 import com.qwery.database.types.QxAny
-import com.qwery.database.{createTempTable, die, models}
+import com.qwery.database.{createTempTable, die}
 import com.qwery.models.OrderColumn
 import com.qwery.models.expressions.{AllFields, BasicFieldRef, Condition, Expression, FunctionCall, Distinct => SQLDistinct, FieldRef => SQLField}
 import com.qwery.util.OptionHelper.OptionEnrichment
@@ -47,7 +47,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
    * @param projection the [[Expression field projection]]
    * @return a [[BlockDevice device]] containing the rows
    */
-  def explainColumns(projection: Seq[Expression]): Seq[Column] = {
+  def explainColumns(projection: Seq[Expression]): Seq[TableColumn] = {
     if (isSummarization(projection)) getSummarizationColumns(projection)(getAggregateProjection(projection, tempName))
     else getTransformationColumns(projection)
   }
@@ -77,16 +77,16 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     }
 
     // determine the projection columns
-    val projectionColumns: Seq[Column] = {
+    val projectionColumns: Seq[TableColumn] = {
       val aggExpressions: Seq[AggregateExpr] = getAggregateProjection(projection, determineName)
       (aggExpressions.map(_.name) zip getProjectionColumns(projection))
         .map { case (name, column) => column.copy(name = name) }
     }
 
     // determine the reference and group by columns
-    val referenceColumns: Seq[Column] = getReferencedColumns(projection)
+    val referenceColumns: Seq[TableColumn] = getReferencedColumns(projection)
     val referenceColumnNames: Set[String] = referenceColumns.map(_.name).toSet
-    val groupByColumns: Seq[Column] = getColumnsByName(groupBy.map(_.name))
+    val groupByColumns: Seq[TableColumn] = getColumnsByName(groupBy.map(_.name))
     val groupByColumnNames: Seq[String] = groupByColumns.map(_.name)
 
     // partition the rows into temporary tables per grouped key
@@ -136,7 +136,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     }
   }
 
-  private def getColumnsByName(names: Seq[String]): Seq[Column] = {
+  private def getColumnsByName(names: Seq[String]): Seq[TableColumn] = {
     val projectionColumnsMap = Map(tableDevice.columns.map(c => c.name -> c): _*)
     (for {
       name <- names
@@ -147,9 +147,9 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   /**
     * Returns all columns referenced within the expressions
     * @param expressions the collection of expressions
-    * @return the referenced [[Column columns]]
+    * @return the referenced [[TableColumn columns]]
     */
-  private def getReferencedColumns(expressions: Seq[Expression]): Seq[Column] = {
+  private def getReferencedColumns(expressions: Seq[Expression]): Seq[TableColumn] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
       case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).toSeq
@@ -186,7 +186,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     val dstKV = KeyValues(aggExpressions.map { expr => expr.name -> expr.collect }: _*)
 
     // ensure temporary column names are honored
-    val projectionColumns: Seq[Column] = getSummarizationColumns(projection)
+    val projectionColumns: Seq[TableColumn] = getSummarizationColumns(projection)
 
     // write the summarized key-values as a row
     implicit val results: BlockDevice = createTempTable(projectionColumns, fixedRowCount = 1)
@@ -194,7 +194,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     sortResults(results, orderBy)
   }
 
-  private def getSummarizationColumns(projection: Seq[Expression])(implicit aggExpressions: Seq[AggregateExpr]): Seq[Column] = {
+  private def getSummarizationColumns(projection: Seq[Expression])(implicit aggExpressions: Seq[AggregateExpr]): Seq[TableColumn] = {
     // ensure temporary column names are honored
     (aggExpressions.map(_.name) zip getProjectionColumns(projection)).map { case (name, column) => column.copy(name = name) }
   }
@@ -241,14 +241,14 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
     sortResults(results, orderBy)
   }
 
-  private def getTransformationColumns(expressions: Seq[Expression]): Seq[Column] = {
+  private def getTransformationColumns(expressions: Seq[Expression]): Seq[TableColumn] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
       case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
       case fc@FunctionCall(functionName, args) =>
         val fxTemplate = lookupTransformationFunction(functionName)
         val fx = fxTemplate(fc.alias || nextID, args)
-        Seq(Column.create(name = fx.name, metadata = ColumnMetadata(`type` = fx.returnType)))
+        Seq(TableColumn.create(name = fx.name, `type` = fx.returnType))
       case expression => die(s"Unconverted expression: $expression")
     } distinct
   }
@@ -269,7 +269,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
   //      COMMON
   //////////////////////////////////////////////////////////////////
 
-  private def getProjectionColumns(expressions: Seq[Expression]): Seq[Column] = {
+  private def getProjectionColumns(expressions: Seq[Expression]): Seq[TableColumn] = {
     expressions flatMap {
       case AllFields => tableDevice.columns
       case f: BasicFieldRef => tableDevice.columns.find(_.name == f.name).map(_.copy(name = f.alias || f.name)).toSeq
@@ -279,7 +279,7 @@ class BlockDeviceQuery(tableDevice: BlockDevice) {
         if (isBuiltinFunction(functionName)) {
           val fxTemplate = lookupBuiltinFunction(functionName)
           val fx = fxTemplate(fc.alias || nextID, args)
-          Seq(Column.create(name = fx.name, metadata = models.ColumnMetadata(`type` = fx.returnType)))
+          Seq(TableColumn.create(name = fx.name, `type` = fx.returnType))
         }
         // is it a user-defined function?
         // TODO implement user-defined function

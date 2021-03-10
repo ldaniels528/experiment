@@ -3,15 +3,15 @@ package com.qwery.database.device
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.wrap
 import com.qwery.database.util.Codec.CodecByteBuffer
-import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, Row, RowMetadata}
+import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, Row, RowMetadata}
 import com.qwery.database.{OffsetOutOfRangeException, ROWID, models}
 
 /**
  * Byte Array Block Device (row-oriented)
- * @param columns  the collection of [[Column columns]]
+ * @param columns  the collection of [[TableColumn columns]]
  * @param capacity the maximum number of item the collection may contain
  */
-class ByteArrayBlockDevice(val columns: Seq[Column], val capacity: Int) extends RowOrientedBlockDevice {
+class ByteArrayBlockDevice(val columns: Seq[TableColumn], val capacity: Int) extends RowOrientedBlockDevice {
   private val _capacity = toOffset(capacity)
   private val array = new Array[Byte](_capacity.toInt)
   private var limit: ROWID = 0

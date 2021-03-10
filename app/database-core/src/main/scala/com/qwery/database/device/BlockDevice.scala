@@ -2,13 +2,12 @@ package com.qwery.database
 package device
 
 import com.qwery.database.models.KeyValues.isSatisfied
-import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, ColumnTypes, Field, FieldMetadata, KeyValues, Row, RowMetadata, RowStatistics}
+import com.qwery.database.models.{BinaryRow, TableColumn, ColumnTypes, Field, FieldMetadata, KeyValues, Row, RowMetadata, RowStatistics}
 import com.qwery.database.types._
 import com.qwery.database.util.Codec
 import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.util.OptionComparisonHelper.OptionComparator
 import com.qwery.models.EntityRef
-import com.qwery.util.OptionHelper._
 import com.qwery.util.ResourceHelper._
 import org.slf4j.LoggerFactory
 
@@ -34,15 +33,15 @@ trait BlockDevice {
     }.list.reverse
   }
 
-  val nameToColumnMap: Map[String, Column] = Map(columns.map(c => c.name -> c): _*)
+  val nameToColumnMap: Map[String, TableColumn] = Map(columns.map(c => c.name -> c): _*)
 
-  val physicalColumns: Seq[Column] = columns.filterNot(_.isLogical)
+  val physicalColumns: Seq[TableColumn] = columns.filterNot(_.isLogical)
 
   /**
    * defines a closure to dynamically create the optional rowID field for type T
    */
   val toRowIdField: ROWID => Option[Field] = {
-    val rowIdColumn_? = columns.find(_.metadata.isRowID)
+    val rowIdColumn_? = columns.find(_.isRowID)
     (rowID: ROWID) => rowIdColumn_?.map(c => Field(name = c.name, FieldMetadata(), typedValue = QxLong(Some(rowID))))
   }
 
@@ -52,9 +51,9 @@ trait BlockDevice {
   def close(): Unit
 
   /**
-   * @return the collection of [[Column columns]]
+   * @return the collection of [[TableColumn columns]]
    */
-  def columns: Seq[Column]
+  def columns: Seq[TableColumn]
 
   /**
    * Counts the number of rows matching the predicate
@@ -181,16 +180,16 @@ trait BlockDevice {
   /**
    * Retrieves a column by ID
    * @param columnID the column ID
-   * @return the [[Column column]]
+   * @return the [[TableColumn column]]
    */
-  def getColumnByID(columnID: Int): Column = columns(columnID)
+  def getColumnByID(columnID: Int): TableColumn = columns(columnID)
 
   /**
    * Retrieves a column by name
    * @param name the column name
-   * @return the [[Column column]]
+   * @return the [[TableColumn column]]
    */
-  def getColumnByName(name: String): Column = {
+  def getColumnByName(name: String): TableColumn = {
     columns.find(_.name == name).getOrElse(throw ColumnNotFoundException(EntityRef.parse("???"), columnName = name))
   }
 
@@ -242,15 +241,10 @@ trait BlockDevice {
 
   /**
    * @return the number of records in the file, including the deleted ones.
-   * The [[count]] method is probably the method you truly want.
-   * @see [[count]]
+   * The [[countRows]] method is probably the method you truly want.
+   * @see [[countRows]]
    */
   def length: ROWID
-
-  def readColumnMetaData(columnID: Int): ColumnMetadata = {
-    assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
-    columns(columnID).metadata
-  }
 
   def readField(rowID: ROWID, columnID: Int): ByteBuffer
 
@@ -363,11 +357,13 @@ trait BlockDevice {
     newLength
   }
 
-  def toList: List[Row] = {
+  def toList: List[Row] = toList(limit = None)
+
+  def toList(limit: Option[Int]): List[Row] = {
     var list: List[Row] = Nil
     var rowID: ROWID = 0
     val eof: ROWID = length
-    while (rowID < eof) {
+    while (rowID < eof && (limit.isEmpty || limit.exists(_ > rowID))) {
       val row = getRow(rowID)
       if (row.metadata.isActive) list = row :: list
       rowID += 1
@@ -378,7 +374,7 @@ trait BlockDevice {
   def updateField(rowID: ROWID, columnID: Int, value: Option[Any]): Unit = {
     assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
     val column = columns(columnID)
-    val fmd = FieldMetadata(column.metadata)
+    val fmd = FieldMetadata(column)
     Codec.encodeValue(column, value)(fmd).foreach(writeField(rowID, columnID, _))
   }
 
@@ -454,19 +450,19 @@ object BlockDevice {
   /**
     * Retrieves the columns that represent the [[Product product type]]
     * @tparam T the [[Product product type]]
-    * @return a tuple of collection of [[Column columns]]
+    * @return a tuple of collection of [[TableColumn columns]]
     */
-  def toColumns[T <: Product : ClassTag]: (List[Column], Class[T]) = {
+  def toColumns[T <: Product : ClassTag]: (List[TableColumn], Class[T]) = {
     val `class` = classTag[T].runtimeClass
     val declaredFields = `class`.getDeclaredFields.toList
-    val defaultMaxLen = 128
     val columns = declaredFields map { field =>
-      val ci = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
+      val columnInfo_? = Option(field.getDeclaredAnnotation(classOf[ColumnInfo]))
       val `type` = ColumnTypes.determineClassType(field.getType)
-      val maxSize = ci.map(_.maxSize)
+      val maxSize = columnInfo_?.map(_.maxSize)
       if (`type`.getFixedLength.isEmpty && maxSize.isEmpty) {
         logger.warn(
-          s"""|Column '${field.getName}' has no maximum value (default: $defaultMaxLen). Set one with the @ColumnInfo annotation:
+          s"""|Column '${field.getName}' has no maximum size.
+              |Set the maximum size with the @ColumnInfo annotation:
               |
               |case class StockQuote(@(ColumnInfo@field)(maxSize = 8)    symbol: String,
               |                      @(ColumnInfo@field)(maxSize = 8)    exchange: String,
@@ -475,13 +471,10 @@ object BlockDevice {
               |                      @(ColumnInfo@field)(isRowID = true) rowID: ROWID)
               |""".stripMargin)
       }
-      Column.create(name = field.getName, maxSize = maxSize ?? Some(defaultMaxLen), metadata = models.ColumnMetadata(
-        `type` = `type`,
-        isCompressed = ci.exists(_.isCompressed),
-        isEncrypted = ci.exists(_.isEncrypted),
-        isNullable = ci.exists(_.isNullable),
-        isPrimary = ci.exists(_.isPrimary),
-        isRowID = ci.exists(_.isRowID)))
+      TableColumn.create(name = field.getName, `type` = `type`, maxSize = maxSize,
+        isCompressed = columnInfo_?.exists(_.isCompressed),
+        isNullable = columnInfo_?.exists(_.isNullable),
+        isRowID = columnInfo_?.exists(_.isRowID))
     }
     (columns, `class`.asInstanceOf[Class[T]])
   }
@@ -490,7 +483,7 @@ object BlockDevice {
     * Block Device Builder
     */
   class Builder() {
-    private var columns: Seq[Column] = Nil
+    private var columns: Seq[TableColumn] = Nil
     private var capacity: Int = 0
     private var executionContext: ExecutionContext = _
     private var partitionSize: Int = 0
@@ -530,13 +523,13 @@ object BlockDevice {
       this
     }
 
-    def withColumnModel(columns: Seq[Column]): this.type = {
+    def withColumnModel(columns: Seq[TableColumn]): this.type = {
       this.columns = columns
       this.isColumnModel = true
       this
     }
 
-    def withColumns(columns: Seq[Column]): this.type = {
+    def withColumns(columns: Seq[TableColumn]): this.type = {
       this.columns = columns
       this
     }
@@ -570,7 +563,7 @@ object BlockDevice {
       this
     }
 
-    def withRowModel(columns: Seq[Column]): this.type = {
+    def withRowModel(columns: Seq[TableColumn]): this.type = {
       this.columns = columns
       this.isColumnModel = false
       this

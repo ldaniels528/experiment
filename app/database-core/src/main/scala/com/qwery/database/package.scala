@@ -4,7 +4,8 @@ import java.io.File
 import java.nio.ByteBuffer
 import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, RowOrientedFileBlockDevice}
-import com.qwery.database.models.Column
+import com.qwery.database.models.TableColumn
+import com.qwery.implicits.MagicImplicits
 import com.qwery.models.EntityRef
 import org.slf4j.LoggerFactory
 
@@ -47,16 +48,14 @@ package object database {
   //////////////////////////////////////////////////////////////////////////////////////
 
   def createTempFile(): File = {
-    val file = File.createTempFile("qwery", ".lldb")
-    file.deleteOnExit()
-    file
+    File.createTempFile("qwery", ".lldb") as { file => file.deleteOnExit(); file }
   }
 
-  def createTempTable(columns: Seq[Column]): BlockDevice = {
+  def createTempTable(columns: Seq[TableColumn]): BlockDevice = {
     new RowOrientedFileBlockDevice(columns, createTempFile())
   }
 
-  def createTempTable(columns: Seq[Column], fixedRowCount: Int): BlockDevice = {
+  def createTempTable(columns: Seq[TableColumn], fixedRowCount: Int): BlockDevice = {
     new ByteArrayBlockDevice(columns, fixedRowCount)
   }
 
@@ -104,7 +103,7 @@ package object database {
   //      EXCEPTIONS
   /////////////////////////////////////////////////////////////////////////////////////////////////
 
-  case class ColumnCapacityExceededException(column: Column, fieldLength: Int)
+  case class ColumnCapacityExceededException(column: TableColumn, fieldLength: Int)
     extends RuntimeException(s"Column '${column.name}' is too long: $fieldLength > ${column.maxPhysicalSize}")
 
   case class ColumnNotFoundException(ref: EntityRef, columnName: String)

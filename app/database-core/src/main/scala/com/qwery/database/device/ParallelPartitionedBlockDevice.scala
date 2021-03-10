@@ -1,6 +1,6 @@
 package com.qwery.database.device
 
-import com.qwery.database.models.{BinaryRow, Column, RowMetadata, RowStatistics}
+import com.qwery.database.models.{BinaryRow, TableColumn, RowMetadata, RowStatistics}
 import com.qwery.database.{ROWID, models}
 
 import scala.concurrent.duration.Duration
@@ -8,11 +8,11 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
  * Parallel Partitioned Block Device
- * @param columns       the collection of [[Column columns]]
+ * @param columns       the collection of [[TableColumn columns]]
  * @param partitionSize the size of each partition
  * @param ec            the implicit [[ExecutionContext]]
  */
-class ParallelPartitionedBlockDevice(columns: Seq[Column],
+class ParallelPartitionedBlockDevice(columns: Seq[TableColumn],
                                      partitionSize: Int,
                                      isInMemory: Boolean = false)(implicit ec: ExecutionContext)
   extends PartitionedBlockDevice(columns, partitionSize, isInMemory) {

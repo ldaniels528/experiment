@@ -4,7 +4,7 @@ package files
 import com.qwery.database.models.{KeyValues, StockQuoteWithDate}
 import com.qwery.models.AlterTable.AppendColumn
 import com.qwery.models.expressions.{AllFields, BasicFieldRef}
-import com.qwery.models.{ColumnSpec, EntityRef, Table, Column => XColumn}
+import com.qwery.models.{ColumnTypeSpec, EntityRef, Table, Column}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -30,10 +30,10 @@ class TableFileTest extends AnyFunSpec {
         ref = tableRef,
         description = Some("table to test inserting records"),
         columns = List(
-          XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "STRING", precision = List(8))),
-          XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "STRING", precision = List(8))),
-          XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "DOUBLE")),
-          XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DATETIME"))
+          Column(name = "symbol", comment = Some("the ticker symbol"), spec = new ColumnTypeSpec(`type` = "STRING", size = 8)),
+          Column(name = "exchange", comment = Some("the stock exchange"), spec = new ColumnTypeSpec(`type` = "STRING", size = 8)),
+          Column(name = "lastSale", comment = Some("the latest sale price"), spec = new ColumnTypeSpec(`type` = "DOUBLE")),
+          Column(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = new ColumnTypeSpec(`type` = "DATETIME"))
         ))) use { table =>
         table.truncate()
         logger.info(s"${tableRef.name}: truncated - ${table.count()} records")
@@ -66,10 +66,10 @@ class TableFileTest extends AnyFunSpec {
         ref = newTableRef,
         description = Some("table to test INSERT-SELECT"),
         columns = List(
-          XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
-          XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
+          Column(name = "symbol", comment = Some("the ticker symbol"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "exchange", comment = Some("the stock exchange"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "lastSale", comment = Some("the latest sale price"), spec = new ColumnTypeSpec(`type` = "Double")),
+          Column(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = new ColumnTypeSpec(`type` = "DateTime"))
         ))) use { newTable =>
         newTable.truncate()
         TableFile(tableRef) use { table =>
@@ -85,10 +85,10 @@ class TableFileTest extends AnyFunSpec {
       TableFile(newTableRef) use { table =>
         // add a new column
         table.alterTable(Seq(
-          AppendColumn(XColumn(
+          AppendColumn(Column(
             name = "description",
             comment = Some("the company description"),
-            spec = ColumnSpec(typeName = "String", precision = List(255)),
+            spec = new ColumnTypeSpec(`type` = "String", size = 255),
             defaultValue = Some("N/A")
           ))
         ))
@@ -188,10 +188,10 @@ class TableFileTest extends AnyFunSpec {
         ref = tableRef,
         description = Some("aggregation test table"),
         columns = List(
-          XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
-          XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
+          Column(name = "symbol", comment = Some("the ticker symbol"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "exchange", comment = Some("the stock exchange"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "lastSale", comment = Some("the latest sale price"), spec = new ColumnTypeSpec(`type` = "Double")),
+          Column(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = new ColumnTypeSpec(`type` = "DateTime"))
         ))) use { table =>
         table.truncate()
         logger.info(s"${tableRef.name}: truncated - ${table.count()} records")

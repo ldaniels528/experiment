@@ -7,8 +7,7 @@ import com.qwery.database.device.BlockDevice
 import com.qwery.database.files.DatabaseFiles.implicits.DBFilesConfig
 import com.qwery.database.files.DatabaseFiles.readTableConfig
 import com.qwery.database.files._
-import com.qwery.database.models.ColumnTypes.ColumnType
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, Field, KeyValues, Row, TableMetrics}
+import com.qwery.database.models.{TableColumn, ColumnTypes, Field, KeyValues, Row, TableMetrics}
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.AlterTable._
 import com.qwery.models.Insert.{Into, Overwrite}
@@ -16,7 +15,6 @@ import com.qwery.models.expressions._
 import com.qwery.models.{expressions => ex, _}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
-import com.qwery.{models => mx}
 import org.slf4j.LoggerFactory
 
 import java.io.File
@@ -221,9 +219,9 @@ class DatabaseCPU() {
   /**
    * Returns the columns
    * @param ref the [[EntityRef table reference]]
-   * @return the [[Column columns]]
+   * @return the [[TableColumn columns]]
    */
-  def getColumns(ref: EntityRef): Seq[Column] = getDevice(ref).columns
+  def getColumns(ref: EntityRef): Seq[TableColumn] = getDevice(ref).columns
 
   /**
    * Retrieves a field by row and column IDs
@@ -396,7 +394,7 @@ class DatabaseCPU() {
   }
 
   private def countRowsAsDevice(name: String, counter: () => Long): BlockDevice = {
-    val rows = createTempTable(columns = Seq(Column.create(name, metadata = ColumnMetadata(`type` = ColumnTypes.LongType))), fixedRowCount = 1)
+    val rows = createTempTable(columns = Seq(TableColumn.create(name, `type` = ColumnTypes.LongType)), fixedRowCount = 1)
     rows.writeRow(KeyValues(name -> counter()).toBinaryRow(rows))
     rows
   }
@@ -436,41 +434,6 @@ class DatabaseCPU() {
   */
 object DatabaseCPU {
 
-  /**
-   * Column type lookup closure
-   */
-  val lookupColumnType: String => ColumnType = {
-    val typeMappings = Map(
-      "ARRAY" -> ColumnTypes.ArrayType,
-      "BIGINT" -> ColumnTypes.BigIntType,
-      "BINARY" -> ColumnTypes.BinaryType,
-      "BLOB" -> ColumnTypes.BlobType,
-      "BOOLEAN" -> ColumnTypes.BooleanType,
-      "CHAR" -> ColumnTypes.StringType,
-      "CLOB" -> ColumnTypes.ClobType,
-      "DATE" -> ColumnTypes.DateType,
-      "DATETIME" -> ColumnTypes.DateType,
-      "DECIMAL" -> ColumnTypes.BigDecimalType,
-      "DOUBLE" -> ColumnTypes.DoubleType,
-      "FLOAT" -> ColumnTypes.FloatType,
-      "INT" -> ColumnTypes.IntType,
-      "INTEGER" -> ColumnTypes.IntType,
-      "LONG" -> ColumnTypes.LongType,
-      "OBJECT" -> ColumnTypes.SerializableType,
-      "REAL" -> ColumnTypes.DoubleType,
-      "SHORT" -> ColumnTypes.ShortType,
-      "SMALLINT" -> ColumnTypes.ShortType,
-      "STRING" -> ColumnTypes.StringType,
-      "TEXT" -> ColumnTypes.ClobType,
-      "TIMESTAMP" -> ColumnTypes.DateType,
-      "TINYINT" -> ColumnTypes.ByteType,
-      "UUID" -> ColumnTypes.UUIDType,
-      "VARBINARY" -> ColumnTypes.BinaryType,
-      "VARCHAR" -> ColumnTypes.StringType
-    )
-    typeName => typeMappings.getOrElse(typeName.toUpperCase, die(s"Unrecognized data type '$typeName'"))
-  }
-
   def toCriteria(condition_? : Option[Condition]): KeyValues = condition_? match {
     case Some(ConditionalOp(ex.FieldRef(name), Literal(value), "==", "=")) => KeyValues(name -> value)
     case Some(condition) => die(s"Unsupported condition $condition")
@@ -501,23 +464,6 @@ object DatabaseCPU {
     * Implicit definitions
     */
   object implicits {
-
-    /**
-      * SQL Column-To-Column Conversion
-      * @param column the [[mx.Column SQL Column]]
-      */
-    final implicit class SQLToColumnConversion(val column: mx.Column) extends AnyVal {
-      @inline
-      def toColumn: Column = Column.create(
-        name = column.name,
-        comment = column.comment.getOrElse(""),
-        enumValues = column.enumValues,
-        maxSize = column.spec.precision.headOption,
-        metadata = ColumnMetadata(
-          isNullable = column.isNullable,
-          `type` = lookupColumnType(column.spec.typeName)
-        ))
-    }
 
     final implicit class InvokableWithDatabase(val invokable: Invokable) extends AnyVal {
       @inline

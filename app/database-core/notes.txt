@@ -22,5 +22,5 @@ Incoming Features
 9. Circular tables - MEDIUM
 10. implement: TableFile.onRowUpdate { (row:  BinaryRow) => ... } | onDelete/onInsert - MEDIUM
 11. To support large gaps in RIDs, we could use offset translation to localized offsets/files like partition device (hashmap)
-
+12. INCREMENT/DECREMENT columns - SMALL
 

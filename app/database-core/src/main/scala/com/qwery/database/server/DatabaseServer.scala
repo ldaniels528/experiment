@@ -152,26 +152,30 @@ object DatabaseServer {
     */
   def routesByDatabaseQuery(databaseName: String): Route = {
     post {
-      // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
-      entity(as[String]) { sql =>
-        val pid = pidGenerator.addAndGet(1)
-        val startTime = System.nanoTime()
-        logger.info(f"[$pid%05d] SQL: ${sql.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")}")
+      extract(_.request.uri.query()) { params =>
+        // execute the SQL query (e.g. "POST /d/portfolio" <~ "TRUNCATE TABLE staging")
+        entity(as[String]) { sql =>
+          val pid = pidGenerator.addAndGet(1)
+          val limit = params.get("__limit").map(_.toInt)
+          val startTime = System.nanoTime()
+          logger.info(f"[$pid%05d] SQL: ${sql.replaceAllLiterally("\n", " ").replaceAllLiterally("  ", " ")}")
 
-        try {
-          cpu.executeQuery(databaseName, sql).map(_.toQueryResult) match {
-            case Some(results) =>
-              val elapsedTime = (System.nanoTime() - startTime) / 1e+6
-              logger.info(f"[$pid%05d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
-              results.show(5)(logger)
-              complete(results)
-            case None =>
-              complete(QueryResult(EntityRef.parse("???")))
+          try {
+            cpu.executeQuery(databaseName, sql).map(_.toQueryResult(limit)) match {
+              case Some(results) =>
+                val elapsedTime = (System.nanoTime() - startTime) / 1e+6
+                logger.info(f"[$pid%05d] ${nf.format(results.rows.length)} results returned in $elapsedTime%.1f msec")
+                results.show(4)(logger)
+                logger.info("")
+                complete(results)
+              case None =>
+                complete(QueryResult(EntityRef(databaseName = Some(databaseName), schemaName = None, name = "???")))
+            }
+          } catch {
+            case e: Exception =>
+              logger.error(f"[$pid%04d] ${e.getMessage}")
+              complete(StatusCodes.InternalServerError.copy()(reason = e.getMessage, defaultMessage = e.getMessage))
           }
-        } catch {
-          case e: Exception =>
-            logger.error(f"[$pid%04d] ${e.getMessage}")
-            complete(StatusCodes.InternalServerError.copy()(reason = e.getMessage, defaultMessage = e.getMessage))
         }
       }
     }
@@ -187,7 +191,7 @@ object DatabaseServer {
     */
   def routesByDatabaseSchema(databaseName: String, schemaName: String, host: String, port: Int): Route = {
     get {
-      // retrieve the database summary by schema (e.g. "GET /d/portfolio/stocks")
+      // retrieve the database summary by schema (e.g. "GET /d/portfolio/public/stocks")
       val databaseSummary = DatabaseManagementSystem.getDatabaseSummary(databaseName, Option(schemaName))
       val databaseSummaryWithRefs = databaseSummary.copy(tables = databaseSummary.tables.map { ts =>
         ts.copy(href = Some(ts.toURL(databaseName, host, port)))
@@ -195,7 +199,7 @@ object DatabaseServer {
       complete(databaseSummaryWithRefs)
     } ~
       post {
-        // create a new table (e.g. "POST /d/portfolio/stocks" <~ {"ref":{"databaseName":"test","schemaName":"stocks","tableName":"stocks_jdbc"}, "columns":[...]})
+        // create a new table (e.g. "POST /d/portfolio/public/stocks" <~ {"ref":{"databaseName":"test","schemaName":"stocks","tableName":"stocks_jdbc"}, "columns":[...]})
         entity(as[Table]) { table =>
           complete(cpu.createTable(table).toUpdateCount(1))
         }
@@ -296,7 +300,7 @@ object DatabaseServer {
         parameters('__contentType.?) { contentType_? =>
           val columns = cpu.getColumns(ref)
           val column = columns(columnID)
-          val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.metadata.`type`))
+          val contentType = contentType_?.map(toContentType).getOrElse(toContentType(column.`type`))
           val field = cpu.getField(ref, rowID, columnID)
           val fieldBytes = field.typedValue.encode(column)
           complete({
@@ -317,7 +321,7 @@ object DatabaseServer {
         entity(as[String]) { value =>
           val columns = cpu.getColumns(ref)
           assert(columns.indices isDefinedAt columnID, throw ColumnOutOfRangeException(columnID))
-          val columnType = columns(columnID).metadata.`type`
+          val columnType = columns(columnID).`type`
           complete(cpu.updateField(ref, rowID, columnID, Option(Codec.convertTo(value, columnType))).toUpdateCount(1))
         }
       }
@@ -462,7 +466,7 @@ object DatabaseServer {
   private def show[A](label: String, results: Seq[A])(params: (String, Option[String])*)(implicit w: JsonWriter[A]): Unit = {
     val pid = pidGenerator.addAndGet(1)
     logger.info(f"[$pid%05d] $label - URI: ?${params.map { case (k, v) => s"$k=${v.getOrElse("")}" }.mkString("&")}")
-    results.zipWithIndex.foreach { case (r, n) => logger.info(f"${n + 1}%02d ${r.toJson}") }
+    results.zipWithIndex take 4 foreach { case (r, n) => logger.info(f"${n + 1}%02d ${r.toJson}") }
     logger.info("")
   }
 

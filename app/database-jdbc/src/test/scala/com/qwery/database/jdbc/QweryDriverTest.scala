@@ -18,7 +18,6 @@ class QweryDriverTest extends AnyFunSpec {
   private val jdbcURL = s"jdbc:qwery://localhost:$port/test"
   private val schemaName = "stocks"
   private val tableNameA = "stocks_jdbc"
-  private val tableNameB = "stocks_jdbc_columnar"
 
   // start the server
   DatabaseTestServer.startServer(port)

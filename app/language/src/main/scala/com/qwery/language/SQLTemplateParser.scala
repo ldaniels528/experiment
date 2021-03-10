@@ -773,7 +773,14 @@ class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLa
       if (!ts.isNumeric) ts.die("Numeric value expected") else ts.next().text.toDouble.toInt
     }
 
-    SQLTemplateParams(types = Map(name -> ColumnSpec(typeName.toUpperCase, precision)))
+    // determine the column spec
+    val columnSpec = precision match {
+      case size :: precision :: _ => new ColumnTypeSpec(typeName.toUpperCase, size, precision)
+      case size :: Nil => new ColumnTypeSpec(typeName.toUpperCase, size)
+      case Nil => new ColumnTypeSpec(typeName.toUpperCase)
+    }
+
+    SQLTemplateParams(types = Map(name -> columnSpec))
   }
 
   /**

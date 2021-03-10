@@ -2,7 +2,7 @@ package com.qwery.database
 package device
 
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
-import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
+import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
 import com.qwery.models.EntityRef
 import com.qwery.util.ResourceHelper._
 
@@ -41,7 +41,7 @@ case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends 
 
   override def close(): Unit = device.close()
 
-  override def columns: Seq[Column] = config.columns
+  override def columns: Seq[TableColumn] = config.columns
 
   override def getPhysicalSize: Option[ROWID] = physicalSizeCache.getOrElseUpdate((), {
     val list = rootFile.listFilesRecursively.map(_.length())

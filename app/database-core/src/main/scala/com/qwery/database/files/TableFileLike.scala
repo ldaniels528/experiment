@@ -6,7 +6,7 @@ import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, RowOrientedFile
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
 import com.qwery.database.files.DatabaseFiles.{writeTableConfig, _}
 import com.qwery.database.models.TableConfig.PhysicalTableConfig
-import com.qwery.database.models.{Column, Field, KeyValues, LoadMetrics, Row, TableConfig, TableMetrics}
+import com.qwery.database.models.{TableColumn, Field, KeyValues, LoadMetrics, Row, TableConfig, TableMetrics}
 import com.qwery.implicits.MagicImplicits
 import com.qwery.models.AlterTable._
 import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
@@ -50,14 +50,14 @@ trait TableFileLike {
    * @return a reference to the altered [[TableFile table]]
    */
   def alterTable(alterations: Seq[Alteration]): TableFile = {
-    import Column.implicits._
+    import TableColumn.implicits._
 
     // determine the new column list
-    val newColumns = alterations.foldLeft[List[Column]](config.columns.toList) {
-      case (columns, AddColumn(column)) => columns ::: column.toColumn :: Nil
-      case (columns, AppendColumn(column)) => columns ::: column.toColumn :: Nil
+    val newColumns = alterations.foldLeft[List[TableColumn]](config.columns.toList) {
+      case (columns, AddColumn(column)) => columns ::: column.toTableColumn :: Nil
+      case (columns, AppendColumn(column)) => columns ::: column.toTableColumn :: Nil
       case (columns, DropColumn(columnName)) => columns.filterNot(_.name == columnName)
-      case (columns, PrependColumn(column)) => column.toColumn :: columns
+      case (columns, PrependColumn(column)) => column.toTableColumn :: columns
       case (_, alteration) => die(s"Unhandled table alteration '${alteration.toSQL}'")
     } distinct
 
@@ -191,21 +191,21 @@ trait TableFileLike {
   /**
     * Retrieves a column by ID
     * @param columnID the column ID
-    * @return the [[Column column]]
+    * @return the [[TableColumn column]]
     */
-  def getColumnByID(columnID: Int): Column = device.getColumnByID(columnID)
+  def getColumnByID(columnID: Int): TableColumn = device.getColumnByID(columnID)
 
   /**
     * Retrieves a column by name
     * @param name the column name
-    * @return the [[Column column]]
+    * @return the [[TableColumn column]]
     */
-  def getColumnByName(name: String): Column = device.getColumnByName(name)
+  def getColumnByName(name: String): TableColumn = device.getColumnByName(name)
 
   /**
     * Retrieves a column ID
     * @param name the column name
-    * @return the [[Column column]]
+    * @return the [[TableColumn column]]
     */
   def getColumnIdByName(name: String): Int = device.columns.indexWhere(_.name == name)
 

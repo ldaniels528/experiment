@@ -3,7 +3,7 @@ package files
 
 import com.qwery.database.device.{BlockDevice, ExternalFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.models.Column.implicits._
+import com.qwery.database.models.TableColumn.implicits._
 import com.qwery.database.models.TableConfig
 import com.qwery.database.models.TableConfig.ExternalTableConfig
 import com.qwery.models.{EntityRef, ExternalTable}
@@ -56,7 +56,7 @@ object ExternalTableFile {
 
     // create the table configuration file
     val config = TableConfig(
-      columns = table.columns.map(_.toColumn),
+      columns = table.columns.map(_.toTableColumn),
       indices = Nil,
       description = table.description,
       externalTable = Some(ExternalTableConfig(

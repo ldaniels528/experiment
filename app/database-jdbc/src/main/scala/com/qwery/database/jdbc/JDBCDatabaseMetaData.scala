@@ -3,7 +3,7 @@ package jdbc
 
 import com.qwery.database.files.DatabaseManagementSystem
 import com.qwery.database.models.ColumnTypes._
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes}
+import com.qwery.database.models.{TableColumn, ColumnTypes}
 
 import java.sql.{DatabaseMetaData, ResultSet, ResultSetMetaData, RowIdLifetime}
 import scala.beans.{BeanProperty, BooleanBeanProperty}
@@ -370,8 +370,8 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
       mkColumn(name = "IS_GENERATEDCOLUMN", columnType = StringType))
     val results = connection.client.searchColumns(databaseNamePattern = Option(catalog), schemaNamePattern = Option(schemaPattern), tableNamePattern = Option(tableNamePattern), columnNamePattern = Option(columnNamePattern))
     new JDBCResultSet(connection, systemDatabase, systemSchema, tableName = "Columns", columns, data = results map { r =>
-      Seq(r.databaseName, r.schemaName, r.tableName, r.column.name, r.column.metadata.`type`.getJDBCType,
-        r.column.metadata.`type`.toString, r.column.sizeInBytes, 0, 0, 10, 0, r.column.comment, "", null, null, r.column.sizeInBytes,
+      Seq(r.databaseName, r.schemaName, r.tableName, r.column.name, r.column.`type`.getJDBCType,
+        r.column.`type`.toString, r.column.sizeInBytes, 0, 0, 10, 0, r.column.comment.orNull, "", null, null, r.column.sizeInBytes,
         results.indexOf(r), "YES", null, null, null, 0, "NO", "NO").map(Option.apply)
     })
   }
@@ -689,8 +689,7 @@ class JDBCDatabaseMetaData(@BeanProperty val connection: JDBCConnection, @BeanPr
   }
 
   private def mkColumn(name: String, columnType: ColumnType, sizeInBytes: Int = 256) = {
-    Column(name = name, metadata = ColumnMetadata(`type` = columnType), comment = "", enumValues = Nil,
-      sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
+    TableColumn(name = name, `type` = columnType, sizeInBytes = columnType.getFixedLength.getOrElse(sizeInBytes))
   }
 
 }

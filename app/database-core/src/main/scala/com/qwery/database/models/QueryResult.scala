@@ -5,7 +5,7 @@ import com.qwery.database.device.BlockDevice
 import com.qwery.models.EntityRef
 import org.slf4j.Logger
 
-case class QueryResult(ref: EntityRef, columns: Seq[Column] = Nil, rows: Seq[Seq[Option[Any]]] = Nil, count: Long = 0, __ids: Seq[Long] = Nil) {
+case class QueryResult(ref: EntityRef, columns: Seq[TableColumn] = Nil, rows: Seq[Seq[Option[Any]]] = Nil, count: Long = 0, __ids: Seq[Long] = Nil) {
 
   def foreachKVP(f: KeyValues => Unit): Unit = {
     val columnNames = columns.map(_.name)
@@ -28,9 +28,9 @@ object QueryResult {
   final implicit class SolutionToQueryResult(val solution: Solution) extends AnyVal {
 
     @inline
-    def toQueryResult: QueryResult = {
+    def toQueryResult(limit: Option[Int] = None): QueryResult = {
       val (columns, rows, count: Long) = solution.get match {
-        case Left(device) => (device.columns, device.toList, 0L)
+        case Left(device) => (device.columns, device.toList(limit), 0L)
         case Right(count) => (Nil, Nil, count)
       }
       QueryResult(

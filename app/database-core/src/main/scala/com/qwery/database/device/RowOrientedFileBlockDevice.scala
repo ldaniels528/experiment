@@ -1,7 +1,7 @@
 package com.qwery.database.device
 
 import com.qwery.database.util.Codec.CodecByteBuffer
-import com.qwery.database.models.{BinaryRow, Column, FieldMetadata, Row, RowMetadata}
+import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, Row, RowMetadata}
 import com.qwery.database.{ROWID, models}
 
 import java.io.{File, RandomAccessFile}
@@ -10,10 +10,10 @@ import java.nio.ByteBuffer.wrap
 
 /**
  * Row-Oriented File Block Device
- * @param columns the collection of [[Column columns]]
+ * @param columns the collection of [[TableColumn columns]]
  * @param file    the persistence [[File file]]
  */
-class RowOrientedFileBlockDevice(val columns: Seq[Column], file: File) extends RowOrientedBlockDevice {
+class RowOrientedFileBlockDevice(val columns: Seq[TableColumn], file: File) extends RowOrientedBlockDevice {
   private val raf = new RandomAccessFile(file, "rw")
 
   override def close(): Unit = raf.close()

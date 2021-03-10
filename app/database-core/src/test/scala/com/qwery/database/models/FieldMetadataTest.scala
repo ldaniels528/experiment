@@ -15,13 +15,11 @@ class FieldMetadataTest extends AnyFunSpec {
     it("should encode/decode every permutation of metadata") {
       for {
         c <- Seq(true, false)
-        e <- Seq(true, false)
         n <- Seq(true, false)
         x <- Seq(true, false)
       } yield {
         verify(FieldMetadata(
           isCompressed = c,
-          isEncrypted = e,
           isActive = n,
           isExternal = x))
       }

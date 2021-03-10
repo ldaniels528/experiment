@@ -1,35 +1,54 @@
 package com.qwery
 package models
 
-import java.lang.{Boolean => JBoolean}
-
 /**
- * Represents a table column
+ * Represents a logical column having a yet-to-be realized content type
  * @param name         the column name
- * @param spec         the given [[ColumnSpec column type]]
+ * @param spec         the logical [[ColumnTypeSpec column type]]
+ * @param comment      the optional comment/remarks
  * @param defaultValue the optional default value
  * @param enumValues   the enumeration values (if any)
+ * @param isCompressed indicates whether the data is to be compressed
  * @param isNullable   indicates whether the column may contain nulls
- * @param comment      the optional comment
+ * @param isRowID      indicates whether the column returns the row ID
  */
 case class Column(name: String,
-                  spec: ColumnSpec,
+                  spec: ColumnTypeSpec,
+                  comment: Option[String] = None,
                   defaultValue: Option[String] = None,
                   enumValues: Seq[String] = Nil,
+                  isCompressed: Boolean = false,
                   isNullable: Boolean = true,
-                  comment: Option[String] = None) {
+                  isRowID: Boolean = false) {
 
   /**
    * @return true, if the column is an enumeration type
    */
-  def isEnum: Boolean = enumValues.nonEmpty
+  @inline def isEnum: Boolean = enumValues.nonEmpty
 
+  /**
+   * @return the SQL representation of this column
+   */
   def toSQL: String = {
-    val sb = new StringBuilder(s"$name $spec")
+    val sb = new StringBuilder(s"$name ${spec.toSQL}")
     if (enumValues.nonEmpty) sb.append(s" AS ENUM (${enumValues.map(v => s"'$v'").mkString(",")})")
-    comment.foreach(remark => s" COMMENT '$remark'")
     if (!isNullable) sb.append(" NOT NULL")
+    defaultValue.foreach(value => s"DEFAULT '$value'")
+    comment.foreach(remark => s" COMMENT '$remark'")
     sb.toString()
+  }
+
+  override def toString: String = {
+    f"""|${getClass.getSimpleName}(
+        |name=$name,
+        |spec=$spec,
+        |comment=${comment.orNull},
+        |defaultValue=${defaultValue.orNull},
+        |enumValues=[${enumValues.map(s => s"'$s'").mkString(",")}],
+        |isCompressed=$isCompressed,
+        |isNullable=$isNullable,
+        |isRowID=$isRowID
+        |)""".stripMargin.split("\n").mkString
   }
 
 }
@@ -41,30 +60,16 @@ object Column {
 
   /**
     * Constructs a new column from the given descriptor
-    * @param descriptor the column descriptor (e.g. "symbol:string:true")
+    * @param descriptor the column descriptor (e.g. "symbol string true")
     * @return a new [[Column]]
     */
   def apply(descriptor: String): Column = descriptor.split("[ ]").toList match {
     case name :: _type :: nullable :: Nil =>
-      new Column(name = name, spec = ColumnSpec(_type.toUpperCase), isNullable = JBoolean.valueOf(nullable))
+      new Column(name, spec = new ColumnTypeSpec(_type.toUpperCase), isNullable = nullable.toBoolean)
     case name :: _type :: Nil =>
-      new Column(name = name, spec = ColumnSpec(_type.toUpperCase))
+      new Column(name, spec = new ColumnTypeSpec(_type.toUpperCase))
     case unknown =>
       die(s"Invalid column descriptor '$unknown'")
-  }
-
-  /**
-    * Column Enriched
-    * @param column the given [[Column]]
-    */
-  final implicit class ColumnEnriched(val column: Column) extends AnyRef {
-
-    @inline def withComment(text: String): Column = column.copy(comment = Option(text))
-
-    @inline def withDefault(defaultValue: Option[String]): Column = column.copy(defaultValue = defaultValue)
-
-    @inline def withEnums(enumValues: Seq[String]): Column = column.copy(enumValues = enumValues)
-
   }
 
 }

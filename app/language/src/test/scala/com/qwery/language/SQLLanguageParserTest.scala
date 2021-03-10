@@ -24,12 +24,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results1 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT"))))
 
       val results2 = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").withDefault(Some("N/A")))))
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
     }
 
     it("should support ALTER TABLE .. APPEND column statements") {
       val results1 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").withDefault(Some("N/A")))))
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
 
       val results2 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND COLUMN comments TEXT")
       assert(results2 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT"))))
@@ -165,7 +165,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |""".stripMargin)
       assert(results == Create(ExternalTable(ref = EntityRef.parse("Customers"), description = Some("Customer information"),
         columns = List(
-          Column("customer_uid UUID").withComment("Unique Customer ID"),
+          Column("customer_uid UUID").copy(comment = Some("Unique Customer ID")),
           Column("name STRING"), Column("address STRING"), Column("ingestion_date LONG")
         ),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
@@ -251,7 +251,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
           Column("page_name string"),
           Column("rev string"),
           Column("last_processed_ts_est string")
-        ).map(_.withComment("from deserializer")),
+        ).map(_.copy(comment = Some("from deserializer"))),
         partitionBy = List(Column("hit_dt_est string"), Column("site_experience_desc string")),
         format = "csv",
         location = Some("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),

@@ -18,7 +18,7 @@ import scala.beans.{BeanProperty, BooleanBeanProperty}
  * @param databaseName the database name
  * @param schemaName   the schema name
  * @param tableName    the table name
- * @param columns      the [[Column table columns]]
+ * @param columns      the [[TableColumn table columns]]
  * @param data         the collection of row data
  * @param __ids        the collection of row identifiers
  */
@@ -26,7 +26,7 @@ class JDBCResultSet(connection: JDBCConnection,
                     databaseName: String,
                     schemaName: String,
                     tableName: String,
-                    columns: Seq[Column],
+                    columns: Seq[TableColumn],
                     data: Seq[Seq[Option[Any]]],
                     __ids: Seq[ROWID] = Nil) extends ResultSet with JDBCWrapper {
   private var isRowUpdated: Boolean = false

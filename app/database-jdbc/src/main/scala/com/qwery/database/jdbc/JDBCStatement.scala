@@ -19,7 +19,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   @BeanProperty var cursorName: String = _
   @BeanProperty var escapeProcessing: Boolean = _
   @BeanProperty var fetchDirection: Int = ResultSet.FETCH_FORWARD
-  @BeanProperty var fetchSize: Int = 20
+  @BeanProperty var fetchSize: Int = 100
   @BeanProperty var maxFieldSize: Int = _
   @BeanProperty var maxRows: Int = _
   @BeanProperty var queryTimeout: Int = _
@@ -47,7 +47,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   }
 
   override def execute(sql: String): Boolean = {
-    val outcome = connection.client.executeQuery(connection.getCatalog, sql)
+    val outcome = connection.client.executeQuery(connection.getCatalog, sql, limit = Some(fetchSize))
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count.toInt
     outcome.rows.nonEmpty
@@ -60,7 +60,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   override def execute(sql: String, columnNames: Array[String]): Boolean = execute(sql)
 
   override def executeQuery(sql: String): ResultSet = {
-    val outcome = connection.client.executeQuery(connection.getCatalog, sql)
+    val outcome = connection.client.executeQuery(connection.getCatalog, sql, limit = Some(fetchSize))
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count.toInt
     resultSet
@@ -73,7 +73,7 @@ class JDBCStatement(@BeanProperty val connection: JDBCConnection)
   override def executeUpdate(sql: String, columnNames: Array[String]): Int = executeUpdate(sql)
 
   override def executeUpdate(sql: String): Int = {
-    val outcome = connection.client.executeQuery(connection.getCatalog, sql)
+    val outcome = connection.client.executeQuery(connection.getCatalog, sql, limit = Some(fetchSize))
     resultSet = JDBCResultSet(connection, outcome)
     updateCount = outcome.count.toInt
     updateCount

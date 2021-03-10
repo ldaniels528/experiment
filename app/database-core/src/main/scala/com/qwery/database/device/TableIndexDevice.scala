@@ -4,7 +4,7 @@ package device
 import com.qwery.database.device.TableIndexDevice.{_encode, toRowIDField}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.models.ColumnTypes.IntType
-import com.qwery.database.models.{BinaryRow, Column, ColumnMetadata, KeyValues, Row, RowMetadata}
+import com.qwery.database.models.{BinaryRow, TableColumn, KeyValues, Row, RowMetadata}
 import com.qwery.database.util.Codec
 import com.qwery.database.util.OptionComparisonHelper.OptionComparator
 import com.qwery.models.TableIndex
@@ -17,12 +17,12 @@ import scala.collection.mutable
 /**
  * Creates a new table index device
  * @param ref     the [[TableIndex table index reference]]
- * @param columns the collection of [[Column columns]]
+ * @param columns the collection of [[TableColumn columns]]
  */
-class TableIndexDevice(ref: TableIndex, columns: Seq[Column])
+class TableIndexDevice(ref: TableIndex, columns: Seq[TableColumn])
   extends RowOrientedFileBlockDevice(columns, getTableIndexFile(ref)) {
   private val indexColumnID: Int = columns.indexWhere(_.name == ref.indexColumnName)
-  private val indexColumn: Column = columns(indexColumnID)
+  private val indexColumn: TableColumn = columns(indexColumnID)
   private var isDirty: Boolean = false
 
   /**
@@ -190,7 +190,7 @@ class TableIndexDevice(ref: TableIndex, columns: Seq[Column])
  * @author lawrence.daniels@gmail.com
  */
 object TableIndexDevice {
-  private val rowIDColumn = Column.create(name = ROWID_NAME, comment = "unique row ID", metadata = ColumnMetadata(`type` = IntType))
+  private val rowIDColumn = TableColumn.create(name = ROWID_NAME, comment = Some("unique row ID"), `type` = IntType)
 
   /**
    * Retrieves the table index by reference
@@ -207,11 +207,11 @@ object TableIndexDevice {
   /**
    * Creates a new binary search index
    * @param ref         the [[TableIndex]]
-   * @param indexColumn the index [[Column column]]
+   * @param indexColumn the index [[TableColumn column]]
    * @param source      the implicit [[BlockDevice table device]]
    * @return a new [[TableIndexDevice binary search index]]
    */
-  def createIndex(ref: TableIndex, indexColumn: Column)(implicit source: BlockDevice): TableIndexDevice = {
+  def createIndex(ref: TableIndex, indexColumn: TableColumn)(implicit source: BlockDevice): TableIndexDevice = {
     new TableIndexDevice(ref, columns = Seq(rowIDColumn, indexColumn)).rebuild()
   }
 
@@ -237,6 +237,6 @@ object TableIndexDevice {
    * @return the [[ByteBuffer binary representation]] of the value
    */
   @inline
-  private def _encode(column: Column, value: Option[Any]): ByteBuffer = wrap(Codec.encode(column, value))
+  private def _encode(column: TableColumn, value: Option[Any]): ByteBuffer = wrap(Codec.encode(column, value))
 
 }

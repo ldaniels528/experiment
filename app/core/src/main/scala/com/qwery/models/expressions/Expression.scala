@@ -17,7 +17,7 @@ case class ArrayExpression(values: Any*) extends Expression
   * Casts the value `expr` to the target data type type.
   * @example cast(expr AS type)
   */
-case class Cast(value: Expression, toType: ColumnSpec) extends Expression
+case class Cast(value: Expression, toType: ColumnTypeSpec) extends Expression
 
 /**
   * Current Row

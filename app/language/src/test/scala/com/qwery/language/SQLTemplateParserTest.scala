@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.models._
 import com.qwery.models.expressions._
-import ColumnSpec.implicits._
+import ColumnTypeSpec.implicits._
 import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec
 
@@ -83,7 +83,7 @@ class SQLTemplateParserTest extends AnyFunSpec {
     it("should parse parameter tags (%P)") {
       verify(text = "name STRING(32), age INTEGER, dob DATE", template = "%P:params")(SQLTemplateParams(columns = Map(
         "params" -> List(
-          Column(name = "name", spec = ColumnSpec("STRING", precision = List(32))),
+          Column(name = "name", spec = new ColumnTypeSpec("STRING", size = 32)),
           Column(name = "age", "INTEGER"),
           Column(name = "dob", "DATE"))
       )))

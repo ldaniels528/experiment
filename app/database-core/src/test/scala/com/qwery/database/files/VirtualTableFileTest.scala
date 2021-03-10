@@ -4,7 +4,7 @@ package files
 import com.qwery.database.models.KeyValues
 import com.qwery.database.models.StockQuote.{randomDate, randomExchange, randomPrice, randomSymbol}
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.{ColumnSpec, EntityRef, Table, View, Column => XColumn}
+import com.qwery.models.{ColumnTypeSpec, EntityRef, Table, View, Column}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -35,10 +35,10 @@ class VirtualTableFileTest extends AnyFunSpec {
         ref = tableRef,
         description = Some("table to test inserting records"),
         columns = List(
-          XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-          XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
-          XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
+          Column(name = "symbol", comment = Some("the ticker symbol"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "exchange", comment = Some("the stock exchange"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+          Column(name = "lastSale", comment = Some("the latest sale price"), spec = new ColumnTypeSpec(`type` = "Double")),
+          Column(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = new ColumnTypeSpec(`type` = "DateTime"))
         ))) use { table =>
         table.truncate()
         logger.info(s"${tableRef.name}: truncated - ${table.count()} records")

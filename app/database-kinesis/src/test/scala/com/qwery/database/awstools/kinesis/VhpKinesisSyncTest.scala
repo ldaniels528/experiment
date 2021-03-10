@@ -1,7 +1,7 @@
 package com.qwery.database.awstools.kinesis
 
-import com.qwery.database.clients.DatabaseClient
 import com.qwery.database.awstools.kinesis.KinesisSync.KinesisSyncConfig
+import com.qwery.database.clients.DatabaseClient
 import com.qwery.database.server.testkit.DatabaseTestServer
 import org.scalatest.funspec.AnyFunSpec
 
@@ -21,11 +21,11 @@ class VhpKinesisSyncTest extends AnyFunSpec {
 
     it("should create a new table on the server") {
       // drop the table
-      //databaseClient.dropTable(databaseName, tableName, ifExists = true)
+      databaseClient.dropTable(databaseName, schemaName, tableName, ifExists = true)
 
       // create the table
       databaseClient.executeQuery(databaseName,
-        s"""|CREATE TABLE IF NOT EXISTS $tableName (
+        s"""|CREATE TABLE IF NOT EXISTS '$schemaName.$tableName' (
             |  visitorId STRING(128) comment 'the visitor ID',
             |  dealerCode STRING(128) comment 'the dealer code',
             |  pageType STRING(128) comment 'the page type',

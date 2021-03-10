@@ -1,7 +1,7 @@
 package com.qwery.database
 package jdbc
 
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes}
+import com.qwery.database.models.{TableColumn, ColumnTypes}
 
 import java.sql.ResultSet
 import java.{sql, util}
@@ -45,8 +45,8 @@ case class JDBCArray(connection: JDBCConnection, typeName: String, elements: Arr
   private def createResultSet(start: Long, count: Int): ResultSet = {
     val columnType = ColumnTypes.withName(typeName)
     val columns = elements.zipWithIndex map { case (_, index) =>
-      Column(name = f"elem$index%02d", metadata = ColumnMetadata(`type` = ColumnTypes.withName(typeName)),
-        comment = s"Array element $index", enumValues = Nil, sizeInBytes = columnType.getFixedLength.getOrElse(255))
+      TableColumn(name = f"elem$index%02d", `type` = ColumnTypes.withName(typeName),
+        comment = Some(s"Array element $index"), enumValues = Nil, sizeInBytes = columnType.getFixedLength.getOrElse(255))
     }
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "#Array", columns = columns, data = getArray(start, count) map { elem =>
       Seq(Option(elem))

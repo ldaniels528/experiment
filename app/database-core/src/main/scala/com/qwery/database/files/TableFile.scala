@@ -3,7 +3,7 @@ package files
 
 import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
-import com.qwery.database.models.Column.implicits._
+import com.qwery.database.models.TableColumn.implicits._
 import com.qwery.database.models.TableConfig
 import com.qwery.models.{Table, EntityRef}
 
@@ -38,7 +38,7 @@ object TableFile {
   def createTable(table: Table): TableFile = {
     val ref = table.ref
     val configFile = getTableConfigFile(ref)
-    val columns = table.columns.map(_.toColumn)
+    val columns = table.columns.map(_.toTableColumn)
     if (table.ifNotExists && configFile.exists()) apply(ref)
     else {
       // create the root directory

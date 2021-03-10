@@ -4,7 +4,7 @@ package clients
 import com.qwery.database.files.TableFile
 import com.qwery.database.models._
 import com.qwery.database.server.testkit.DatabaseTestServer
-import com.qwery.models.{ColumnSpec, Table, EntityRef, Column => XColumn}
+import com.qwery.models.{ColumnTypeSpec, Table, EntityRef, Column}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -62,10 +62,10 @@ class DatabaseClientTest extends AnyFunSpec {
 
     it("should create a new table") {
       val columns = List(
-        XColumn(name = "symbol", comment = Some("the ticker symbol"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-        XColumn(name = "exchange", comment = Some("the stock exchange"), spec = ColumnSpec(typeName = "String", precision = List(8))),
-        XColumn(name = "lastSale", comment = Some("the latest sale price"), spec = ColumnSpec(typeName = "Double")),
-        XColumn(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = ColumnSpec(typeName = "DateTime"))
+        Column(name = "symbol", comment = Some("the ticker symbol"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+        Column(name = "exchange", comment = Some("the stock exchange"), spec = new ColumnTypeSpec(`type` = "String", size = 8)),
+        Column(name = "lastSale", comment = Some("the latest sale price"), spec = new ColumnTypeSpec(`type` = "Double")),
+        Column(name = "lastSaleTime", comment = Some("the latest sale date/time"), spec = new ColumnTypeSpec(`type` = "DateTime"))
       )
       val table = Table(
         ref = new EntityRef(databaseName, schemaName, tableNameA),

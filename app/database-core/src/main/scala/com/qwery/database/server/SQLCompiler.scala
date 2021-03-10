@@ -2,7 +2,7 @@ package com.qwery.database
 package server
 
 import com.qwery.database.ExpressionVM._
-import com.qwery.database.models.{Column, ColumnMetadata, ColumnTypes, KeyValues}
+import com.qwery.database.models.{TableColumn, ColumnTypes, KeyValues}
 import com.qwery.database.server.QueryProcessor.commands.DatabaseIORequest
 import com.qwery.database.server.QueryProcessor.{commands => cx}
 import com.qwery.database.server.SQLCompiler.implicits.{ExpressionFacade, InvokableFacade}
@@ -45,11 +45,11 @@ object SQLCompiler {
         case unknown => die(s"Unsupported value $unknown")
       }
 
-      def toColumn: Column = expression match {
+      def toColumn: TableColumn = expression match {
         case ex.CurrentRow =>
-          Column.create(name = "CurrentRow", metadata = ColumnMetadata(`type` = ColumnTypes.IntType), maxSize = Some(ROW_ID_BYTES))
+          TableColumn.create(name = "CurrentRow", `type` = ColumnTypes.IntType, maxSize = Some(ROW_ID_BYTES))
         case expr =>
-          Column.create(name = expr.alias getOrElse nextID, metadata = models.ColumnMetadata(`type` = ColumnTypes.DoubleType), maxSize = Some(LONG_BYTES))
+          TableColumn.create(name = expr.alias getOrElse nextID, `type` = ColumnTypes.DoubleType, maxSize = Some(LONG_BYTES))
       }
     }
 

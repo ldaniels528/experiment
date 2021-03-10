@@ -5,7 +5,7 @@ package sparksql.generator
 import java.io.File
 
 import com.qwery.language.SQLLanguageParser
-import com.qwery.models.ColumnSpec
+import com.qwery.models.ColumnTypeSpec
 import com.qwery.models.JoinTypes.JoinType
 import com.qwery.models._
 import com.qwery.models.expressions._
@@ -284,7 +284,7 @@ object SparkCodeCompiler extends SparkCodeCompiler {
       * @param column the given [[Column column]]
       */
     final implicit class ColumnEnrichment(val column: Column) extends AnyVal {
-      def toCode: String = s"${column.name}:${column.spec.typeName}"
+      def toCode: String = s"${column.name}:${column.spec.`type`}"
     }
 
     /**
@@ -525,10 +525,10 @@ object SparkCodeCompiler extends SparkCodeCompiler {
 
     /**
       * Table Column Spec Compiler Extensions
-      * @param columnSpec the given [[ColumnSpec]]
+      * @param columnSpec the given [[ColumnTypeSpec]]
       */
-    final implicit class TableColumnSpecExtensions(val columnSpec: ColumnSpec) extends AnyVal {
-      @inline def toCode: String = columnSpec.typeName
+    final implicit class TableColumnSpecExtensions(val columnSpec: ColumnTypeSpec) extends AnyVal {
+      @inline def toCode: String = columnSpec.`type`
 
       @inline def toSQL: String = toCode
     }
