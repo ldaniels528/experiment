@@ -46,7 +46,7 @@ case class JDBCArray(connection: JDBCConnection, typeName: String, elements: Arr
     val columnType = ColumnTypes.withName(typeName)
     val columns = elements.zipWithIndex map { case (_, index) =>
       TableColumn(name = f"elem$index%02d", `type` = ColumnTypes.withName(typeName),
-        comment = Some(s"Array element $index"), enumValues = Nil, sizeInBytes = columnType.getFixedLength.getOrElse(255))
+        comment = Some(s"Array element $index"), sizeInBytes = columnType.getFixedLength.getOrElse(255))
     }
     new JDBCResultSet(connection, connection.getCatalog, connection.getSchema, tableName = "#Array", columns = columns, data = getArray(start, count) map { elem =>
       Seq(Option(elem))
