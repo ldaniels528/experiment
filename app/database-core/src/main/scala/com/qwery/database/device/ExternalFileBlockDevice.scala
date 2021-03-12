@@ -13,9 +13,8 @@ import scala.io.Source
 
 /**
   * External File Block Device
-  * @param databaseName the database name
-  * @param tableName    the table name
-  * @param config       the [[TableConfig table configuration]]
+  * @param ref    the [[EntityRef table reference]]
+  * @param config the [[TableConfig table configuration]]
   */
 case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends BlockDevice {
   // get the root file or directory
@@ -93,11 +92,14 @@ case class ExternalFileBlockDevice(ref: EntityRef, config: TableConfig) extends 
   private def ensureData(rowID: ROWID): Unit = {
     while (offset <= rowID && files.hasNext) {
       val file = files.next()
-      Source.fromFile(file).use(_.getLines() foreach { line =>
-        val keyValues = parseText(line)
-        device.writeRow(keyValues.toBinaryRow(offset))
-        offset += 1
-      })
+      Source.fromFile(file).use { it =>
+        if (it.hasNext && config.externalTable.exists(_.headersIncluded.contains(true))) it.next()
+        it.getLines() foreach { line =>
+          val keyValues = parseText(line)
+          device.writeRow(keyValues.toBinaryRow(offset))
+          offset += 1
+        }
+      }
     }
   }
 
