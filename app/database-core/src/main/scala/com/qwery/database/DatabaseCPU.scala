@@ -70,9 +70,8 @@ class DatabaseCPU() {
    * Creates a new variable in the current scope
    * @param variable   the [[VariableRef variable]]
    * @param `type`     the variable type
-   * @param isExternal indicates whether the variable is externally defined
    */
-  def createVariable(variable: VariableRef, `type`: String, isExternal: Boolean)(implicit scope: Scope): Unit = {
+  def createVariable(variable: VariableRef, `type`: String)(implicit scope: Scope): Unit = {
     // TODO create a new variable in the current scope
     ???
   }
@@ -154,7 +153,7 @@ class DatabaseCPU() {
       case Create(table: Table) => Some(Solution(table.ref, createTable(table)))
       case Create(tableIndex: TableIndex) => createIndex(tableIndex); None
       case Create(view: View) => Some(Solution(view.ref, createView(view)))
-      case Declare(variable, _type, isExternal) => createVariable(variable, _type, isExternal); None
+      case Declare(variable, _type) => createVariable(variable, _type); None
       case Delete(ref, where, limit) => Some(Solution(ref, deleteRows(ref, where, limit)))
       case DropTable(ref, ifExists) => Some(Solution(ref, dropTable(ref, ifExists)))
       case DropView(ref, ifExists) => Some(Solution(ref, dropView(ref, ifExists)))

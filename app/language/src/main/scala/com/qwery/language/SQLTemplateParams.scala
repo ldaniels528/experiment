@@ -80,6 +80,22 @@ case class SQLTemplateParams(assignables: Map[String, Expression] = Map.empty,
     indicators, joins, keyValuePairs, locations, numerics, orderedFields, properties, repeatedSets, sources, variables
   ).exists(_.nonEmpty)
 
+  /**
+   * Attempts to evaluate the optional patterns in a loop until no further changes occur
+   * @param ts  the given [[TokenStream token stream]]
+   * @param patterns the given patterns (e.g. "MAIN PROGRAM %a:name %W:props ?AS %N:code")
+   * @return  the [[SQLTemplateParams template parameters]]
+   */
+  def withOptions(ts: TokenStream, patterns: String*): SQLTemplateParams = {
+    var params = this
+    var _params: SQLTemplateParams = params
+    do {
+      _params = params
+      patterns.foreach(pattern => params += SQLTemplateParams(ts, pattern))
+    } while (_params != params)
+    params
+  }
+
 }
 
 /**
@@ -92,7 +108,7 @@ object SQLTemplateParams {
     * Creates a new SQL template parameters instance prepopulated with the tokens parsed via the given template
     * @param ts       the given [[TokenStream token stream]]
     * @param template the given template (e.g. "MAIN PROGRAM %a:name %W:props ?AS %N:code")
-    * @return the [[SQLTemplateParser template parser]]
+    * @return the [[SQLTemplateParams template parameters]]
     */
   def apply(ts: TokenStream, template: String): SQLTemplateParams = new SQLTemplateParser(ts).process(cleanup(template))
 

@@ -1,9 +1,9 @@
 package com.qwery.database.util
 
 import com.qwery.database.models.FieldMetadata
-import com.qwery.util.ResourceHelper._
+import com.qwery.util.ResourceHelper.AutoClose
 import org.apache.commons.io.IOUtils
-import org.slf4j.LoggerFactory
+import org.xerial.snappy.{SnappyInputStream, SnappyOutputStream}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.ByteBuffer
@@ -11,30 +11,44 @@ import java.nio.ByteBuffer.wrap
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 /**
- * Add compression support
+ * Adds compression/decompression support
  */
 trait Compression {
-  private lazy val logger = LoggerFactory.getLogger(getClass)
 
-  def compressBytes(bytes: Array[Byte]): Array[Byte] = {
-    val out = new ByteArrayOutputStream(bytes.length)
-    new GZIPOutputStream(out) use { gzos =>
-      gzos.write(bytes)
-      gzos.finish()
-      gzos.flush()
+  def compressGZIP(bytes: Array[Byte]): Array[Byte] = {
+    new ByteArrayOutputStream(bytes.length) use { baos =>
+      new GZIPOutputStream(baos) use { gzos =>
+        gzos.write(bytes)
+        gzos.finish()
+        gzos.flush()
+      }
+      baos.toByteArray
     }
-    val compressedBytes = out.toByteArray
-    //logger.info(s"compressed ${bytes.length} to ${compressedBytes.length} bytes")
-    compressedBytes
   }
 
-  def decompressBytes(bytes: Array[Byte]): Array[Byte] = {
-    val in = new ByteArrayInputStream(bytes)
-    val out = new ByteArrayOutputStream(1024 * 1024)
-    new GZIPInputStream(in).use(IOUtils.copy(_, out))
-    val decompressedBytes = out.toByteArray
-    //logger.info(s"decompressed ${bytes.length} to ${decompressedBytes.length} bytes")
-    decompressedBytes
+  def decompressGZIP(bytes: Array[Byte]): Array[Byte] = {
+    new ByteArrayInputStream(bytes) use { bais =>
+      new ByteArrayOutputStream(bytes.length) use { baos =>
+        new GZIPInputStream(bais).use(IOUtils.copy(_, baos))
+        baos.toByteArray
+      }
+    }
+  }
+
+  def compressSnappy(bytes: Array[Byte]): Array[Byte] = {
+    new ByteArrayOutputStream(bytes.length) use { baos =>
+      new SnappyOutputStream(baos).use(_.write(bytes))
+      baos.toByteArray
+    }
+  }
+
+  def decompressSnappy(bytes: Array[Byte]): Array[Byte] = {
+    new ByteArrayOutputStream(bytes.length) use { baos =>
+      new ByteArrayInputStream(bytes) use { bais =>
+        new SnappyInputStream(bais).use(IOUtils.copy(_, baos))
+      }
+      baos.toByteArray
+    }
   }
 
 }
@@ -50,14 +64,16 @@ object Compression extends Compression {
    */
   final implicit class CompressionByteArrayExtensions(val bytes: Array[Byte]) extends AnyVal {
 
-    def compress: Array[Byte] = compressBytes(bytes)
+    @inline def compress: Array[Byte] = compressGZIP(bytes)
 
+    @inline
     def compressOrNah(implicit fmd: FieldMetadata): Array[Byte] = {
-      if (fmd.isCompressed && fmd.isActive) compressBytes(bytes) else bytes
+      if (fmd.isCompressed && fmd.isActive) compressGZIP(bytes) else bytes
     }
 
+    @inline
     def decompressOrNah(implicit fmd: FieldMetadata): Array[Byte] = {
-      if (fmd.isCompressed && fmd.isActive) decompressBytes(bytes) else bytes
+      if (fmd.isCompressed && fmd.isActive) decompressGZIP(bytes) else bytes
     }
   }
 
@@ -67,14 +83,16 @@ object Compression extends Compression {
    */
   final implicit class CompressionByteBufferExtensions(val buf: ByteBuffer) extends AnyVal {
 
-    def compress: ByteBuffer = wrap(compressBytes(buf.array()))
+    @inline def compress: ByteBuffer = wrap(compressGZIP(buf.array()))
 
+    @inline
     def compressOrNah(implicit fmd: FieldMetadata): ByteBuffer = {
-      if (fmd.isCompressed && fmd.isActive) wrap(compressBytes(buf.array())) else buf
+      if (fmd.isCompressed && fmd.isActive) wrap(compressGZIP(buf.array())) else buf
     }
 
+    @inline
     def decompressOrNah(implicit fmd: FieldMetadata): ByteBuffer = {
-      if (fmd.isCompressed && fmd.isActive) wrap(decompressBytes(buf.array())) else buf
+      if (fmd.isCompressed && fmd.isActive) wrap(decompressGZIP(buf.array())) else buf
     }
   }
 

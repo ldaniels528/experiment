@@ -4,6 +4,7 @@ import com.qwery.die
 import com.qwery.language.SQLLanguageParser.implicits.ItemSeqUtilities
 import com.qwery.language.SQLTemplateParams.MappedParameters
 import com.qwery.models.AlterTable._
+import com.qwery.models.Insert.Into
 import com.qwery.models._
 import com.qwery.models.expressions._
 import com.qwery.util.OptionHelper._
@@ -212,8 +213,6 @@ trait SQLLanguageParser {
     "CREATE EXTERNAL TABLE" -> parseCreateTableExternal,
     "CREATE FUNCTION" -> parseCreateFunction,
     "CREATE INDEX" -> parseCreateTableIndex,
-    "CREATE INLINE TABLE" -> parseCreateInlineTable,
-    "CREATE PARTITIONED TABLE" -> parseCreateTable,
     "CREATE PROCEDURE" -> parseCreateProcedure,
     "CREATE TABLE" -> parseCreateTable,
     "CREATE TYPE" -> parseCreateTypeAsEnum,
@@ -231,23 +230,6 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses a CREATE INLINE TABLE statement
-    * @param ts the given [[TokenStream token stream]]
-    * @return an [[Create executable]]
-    */
-  private def parseCreateInlineTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE INLINE TABLE ?%IFNE:exists %t:name ( %P:columns ) FROM %V:source")
-    Create(InlineTable(
-      ref = EntityRef.parse(params.atoms("name")),
-      columns = params.columns.getOrElse("columns", Nil),
-      values = params.sources.getOrElse("source", ts.die("No source specified")) match {
-        case values: Insert.Values => values
-        case other => ts.die(s"A value list was expected: $other")
-      }
-    ))
-  }
-
-  /**
     * Parses a CREATE PROCEDURE statement
     * @param ts the [[TokenStream token stream]]
     * @return the resulting [[Create]]
@@ -258,19 +240,27 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses a CREATE [PARTITIONED] TABLE statement
+    * Parses a CREATE TABLE statement
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[Create executable]]
+    * @return an [[Invokable executable]]
     */
-  private def parseCreateTable(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE ?%C(mode|PARTITIONED) TABLE ?%IFNE:exists %t:name ( %P:columns ) ?%w:props")
-    Create(Table(
-      ref = EntityRef.parse(params.atoms("name")),
-      description = params.atoms.get("description"),
+  private def parseCreateTable(ts: TokenStream): Invokable = {
+    val params = SQLTemplateParams(ts, "CREATE TABLE ?%IFNE:exists %t:name ( %P:columns )")
+      .withOptions(ts, "?FROM +?%V:source", "?%w:props")
+
+    // generate the table opCode
+    val ref = EntityRef.parse(params.atoms("name"))
+    val createTable = Create(Table(ref,
       columns = params.columns.getOrElse("columns", Nil),
-      ifNotExists = params.indicators.get("exists").contains(true),
-      isPartitioned = params.atoms.is("mode", _ equalsIgnoreCase "PARTITIONED")
-    ))
+      description = params.atoms.get("description"),
+      ifNotExists = params.indicators.get("exists").contains(true)))
+
+    // return the opCode(s)
+    params.sources.get("source") match {
+      case None => createTable
+      case Some(queryable: Queryable) => SQL(createTable, Insert(Into(ref), queryable))
+      case Some(other) => ts.die(s"A queryable source was expected: $other")
+    }
   }
 
   /**
@@ -370,10 +360,8 @@ trait SQLLanguageParser {
     * @return an [[Invokable invokable]]
     */
   private def parseDeclare(ts: TokenStream): Invokable = {
-    val params = SQLTemplateParams(ts, "DECLARE ?%C(mode|EXTERNAL) %v:variable %a:type")
-    val `type` = params.atoms("type")
-    val isExternal = params.atoms.is("mode", _ equalsIgnoreCase "EXTERNAL")
-    Declare(variable = params.variables("variable"), `type` = `type`, isExternal = isExternal)
+    val params = SQLTemplateParams(ts, "DECLARE %v:variable %a:type")
+    Declare(variable = params.variables("variable"), `type` = params.atoms("type"))
   }
 
   private def parseDelete(ts: TokenStream): Delete = {
@@ -506,12 +494,13 @@ trait SQLLanguageParser {
       """|SELECT %E:fields
          |?%C(mode|INTO|OVERWRITE) +?%L:target
          |?FROM +?%q:source %J:joins
-         |?WHERE +?%c:condition
-         |?GROUP +?BY +?%F:groupBy
-         |?HAVING +?%c:havingCondition
-         |?ORDER +?BY +?%o:orderBy
-         |?LIMIT +?%n:limit
          |""".stripMargin)
+      .withOptions(stream, patterns =
+        "?WHERE +?%c:condition",
+        "?GROUP +?BY +?%F:groupBy",
+        "?HAVING +?%c:havingCondition",
+        "?ORDER +?BY +?%o:orderBy",
+        "?LIMIT +?%n:limit")
 
     // create the SELECT model
     var select: Queryable = Select(

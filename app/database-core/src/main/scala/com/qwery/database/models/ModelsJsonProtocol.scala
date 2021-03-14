@@ -78,7 +78,7 @@ object ModelsJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   final implicit val columnModelJsonFormat: RootJsonFormat[Column] = jsonFormat8(Column.apply)
 
-  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat5(Table.apply)
+  final implicit val tableJsonFormat: RootJsonFormat[Table] = jsonFormat4(Table.apply)
 
   ////////////////////////////////////////////////////////////////////////
   //      Column Model Implicits

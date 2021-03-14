@@ -99,18 +99,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE INLINE TABLE statements") {
-      val results = SQLLanguageParser.parse(
-        """|CREATE INLINE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
-           |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
-           |""".stripMargin)
-      assert(results == Create(InlineTable(
-        ref = EntityRef.parse("SpecialSecurities"),
-        columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply),
-        values = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01)))
-      )))
-    }
-
     it("should support CREATE PROCEDURE statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE PROCEDURE testInserts(industry STRING) AS
@@ -177,23 +165,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE TABLE w/ENUM") {
-      val results = SQLLanguageParser.parse(
-        s"""|CREATE TABLE Stocks (
-            |  symbol STRING,
-            |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC'),
-            |  lastSale DOUBLE,
-            |  lastSaleTime DATE
-            |)
-            |""".stripMargin
-      )
-      assert(results == Create(Table(
-        ref = EntityRef.parse("Stocks"),
-        columns = List(
-          Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
-          Column("lastSale DOUBLE"), Column("lastSaleTime DATE"))
-      )))
-    }
 
     it("should support CREATE EXTERNAL TABLE ... WITH statements") {
       val results = SQLLanguageParser.parse(
@@ -218,7 +189,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support complex CREATE EXTERNAL TABLE statements") {
+    it("should support CREATE EXTERNAL TABLE ... PARTITIONED BY statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE EXTERNAL TABLE `kbb_mart.kbb_rev_per_page`(
            |  `rank` string COMMENT 'from deserializer',
@@ -258,6 +229,52 @@ class SQLLanguageParserTest extends AnyFunSpec {
         serdeProperties = Map("quoteChar" -> "\\\"", "separatorChar" -> ","),
         tableProperties = Map("transient_lastDdlTime" -> "1555400098")
       )))
+    }
+
+    it("should support CREATE TABLE w/ENUM") {
+      val results = SQLLanguageParser.parse(
+        s"""|CREATE TABLE Stocks (
+            |  symbol STRING,
+            |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC'),
+            |  lastSale DOUBLE,
+            |  lastSaleTime DATE
+            |)
+            |""".stripMargin
+      )
+      assert(results == Create(Table(
+        ref = EntityRef.parse("Stocks"),
+        columns = List(
+          Column("symbol STRING"), Column("exchange STRING").copy(enumValues = Seq("AMEX", "NASDAQ", "NYSE", "OTCBB", "OTHEROTC")),
+          Column("lastSale DOUBLE"), Column("lastSaleTime DATE"))
+      )))
+    }
+
+    it("should support CREATE TABLE statements with inline VALUES") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
+           |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
+           |""".stripMargin)
+      val ref = EntityRef.parse("SpecialSecurities")
+      assert(results == SQL(
+        Create(Table(ref, columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply))),
+        Insert(Into(ref), source = Insert.Values(List(List("AAPL", 202.11), List("AMD", 23.50), List("GOOG", 765.33), List("AMZN", 699.01))))
+      ))
+    }
+
+    it("should support CREATE TABLE statements with subquery") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
+           |FROM (
+           |    SELECT symbol, lastSale
+           |    FROM Securities
+           |    WHERE useCode = 'SPECIAL'
+           |)
+           |""".stripMargin)
+      val ref = EntityRef.parse("SpecialSecurities")
+      assert(results == SQL(
+        Create(Table(ref, columns = List("symbol STRING", "lastSale DOUBLE").map(Column.apply))),
+        Insert(Into(ref), source = Select(fields = Seq('symbol, 'lastSale), from = Some(Table("Securities")), where = FieldRef('useCode) === "SPECIAL"))
+      ))
     }
 
     it("should support CREATE FUNCTION") {
@@ -314,12 +331,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support DECLARE statements") {
       val results = SQLLanguageParser.parse("DECLARE @customerId INTEGER")
-      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = false))
-    }
-
-    it("should support DECLARE EXTERNAL statements") {
-      val results = SQLLanguageParser.parse("DECLARE EXTERNAL @customerId INTEGER")
-      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER", isExternal = true))
+      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER"))
     }
 
     it("should support DELETE statements") {
@@ -466,7 +478,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support simple SELECT statements without a FROM clause") {
+    it("should support SELECT statements without a FROM clause") {
       val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
       assert(results == Select(fields = List(FieldRef("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
     }

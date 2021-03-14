@@ -8,35 +8,32 @@ Chimera
 
 Incoming Features
 -----------------
-1. BLOBs in separate file - MEDIUM
-2. indexed fields vs payload (event sourcing) - MEDIUM
-3. allocatable blocks for TEXT string types (all variable sized types) - MEDIUM/LARGE
-4. Circular tables - MEDIUM
-5. implement: onDelete/onInsert - SMALL
+1. BLOBs in separate file; allocatable blocks for BLOBs, TEXT string types (all variable sized types) - LARGE
+2. Circular tables - SMALL
+3. implement: onDelete/onInsert/onRowUpdate - SMALL
     TableFile.onRowUpdate { (row:  BinaryRow) => ... }
-6. To support large gaps in RowIDs, we could use offset translation to localized offsets/files like partition device (hashmap)
-7. Add support for Arrays - MEDIUM [see https://cloud.google.com/bigquery/docs/reference/standard-sql/array_functions]
+4. Add support for Arrays - MEDIUM
     a. SELECT value FROM STRING_SPLIT('Roberto,Gail,Dylan', ',');
     b. SELECT Array(1, 2, 3) AS numbers;
     c. SELECT Array("apple", "pear", "orange") AS fruit;
     d. SELECT Array(true, false, true) AS booleans;
-8. Add support for variables as tables - MEDIUM
+5. Add support for tables as variables - MEDIUM
     DECLARE @myTableVariable TABLE (id INT, name varchar(20))
     INSERT INTO @myTableVariable VALUES(1,'Roberto'),(2,'Gail'),(3,'Dylan')
     SELECT * FROM @myTableVariable
-9. Add support for RowID (__id) in the WHERE clause - SMALL
-    SELECT count FROM 'public'.'stocks' WHERE __id BETWEEN 1 AND 100;
-    UPDATE 'public'.'stocks' SET count = 1200 WHERE __id = 100;
-    UPDATE 'public'.'stocks' SET comments = 'N/A' WHERE __id BETWEEN 0 AND 25;
-10. Column-wise SSE-like functions
+6. Add support for rowNumber() function - SMALL
+    SELECT count FROM 'public'.'stocks' WHERE rowNumber() BETWEEN 1 AND 100;
+    UPDATE 'public'.'stocks' SET count = 1200 WHERE rowNumber() = 100;
+    UPDATE 'public'.'stocks' SET comments = 'N/A' WHERE rowNumber() BETWEEN 0 AND 25;
+7. Support CREATE TABLE state_reports LIKE reports - TINY
 
 Completed Features
 ------------------
-1. add isExternal flag to FieldMetadata for BLOBs & Arrays - TINY -> DONE
-2. remove data type information from field metadata - SMALL/MEDIUM -> DONE
-3. GET/PUT/DELETE images (or columns) - MEDIUM -> DONE
+1. add isExternal flag to FieldMetadata for BLOBs & Arrays - TINY
+2. remove data type information from field metadata - SMALL
+3. GET/PUT/DELETE images (or columns) - MEDIUM
     a. GET - SMALL
     b. PUT - SMALL
     c. DELETE - TINY
-4. COMPRESS/DECOMPRESS columns - SMALL -> DONE
-5. Persistent collections should use the database table structure instead of individual files - MEDIUM -> DONE
+4. COMPRESS/DECOMPRESS columns - SMALL
+5. Persistent collections should use the database table structure instead of individual files - SMALL

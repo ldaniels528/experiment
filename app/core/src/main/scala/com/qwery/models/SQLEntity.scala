@@ -14,10 +14,10 @@ sealed trait SQLEntity {
 }
 
 /**
-  * Base class for table-like entities (e.g. tables, logical tables and views)
+  * Base class for table-like entities (e.g. tables, external tables and views)
   * @author lawrence.daniels@gmail.com
   */
-sealed trait TableLike extends SQLEntity {
+sealed trait TableEntity extends SQLEntity {
 
   /**
     * @return the optional description
@@ -67,21 +67,7 @@ case class ExternalTable(ref: EntityRef,
                          format: Option[String] = None,
                          partitionBy: List[Column] = Nil,
                          serdeProperties: Map[String, String] = Map.empty,
-                         tableProperties: Map[String, String] = Map.empty) extends TableLike
-
-/**
-  * Represents an inline table definition
-  * @param ref         the [[EntityRef fully-qualified entity reference]]
-  * @param columns     the table columns
-  * @param values      the collection of [[Insert.Values values]]
-  * @param description the optional description
-  * @example
-  * {{{
-  *   CREATE INLINE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
-  *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
-  * }}}
-  */
-case class InlineTable(ref: EntityRef, columns: List[Column], values: Insert.Values, description: Option[String] = None) extends TableLike
+                         tableProperties: Map[String, String] = Map.empty) extends TableEntity
 
 /**
   * Represents an executable procedure
@@ -95,8 +81,8 @@ case class Procedure(ref: EntityRef, params: Seq[Column], code: Invokable) exten
   * Represents a table definition
   * @param ref         the [[EntityRef fully-qualified entity reference]]
   * @param columns     the table [[Column columns]]
-  * @param ifNotExists if true, the operation will not fail when the view exists
   * @param description the optional description
+  * @param ifNotExists if true, the operation will not fail when the view exists
   * @example
   * {{{
   *     CREATE TABLE [IF NOT EXISTS] Cars(
@@ -111,13 +97,17 @@ case class Procedure(ref: EntityRef, params: Seq[Column], code: Invokable) exten
   *         Origin CHAR(1))
   *     COMMENT 'Data about cars from a public database'
   * }}}
+  * @example
+  * {{{
+  *   CREATE TABLE SpecialSecurities (Symbol STRING, price DOUBLE)
+  *   FROM VALUES ('AAPL', 202), ('AMD', 22), ('INTL', 56), ('AMZN', 671)
+  * }}}
   * @see [[https://www.cloudera.com/documentation/enterprise/5-8-x/topics/impala_create_table.html]]
   */
 case class Table(ref: EntityRef,
                  columns: List[Column],
-                 ifNotExists: Boolean = false,
-                 isPartitioned: Boolean = false,
-                 description: Option[String] = None) extends TableLike
+                 description: Option[String] = None,
+                 ifNotExists: Boolean = false) extends TableEntity
 
 /**
   * Table Companion
@@ -178,4 +168,4 @@ case class UserDefinedFunction(ref: EntityRef, `class`: String, jarLocation: Opt
 case class View(ref: EntityRef,
                 query: Invokable,
                 description: Option[String] = None,
-                ifNotExists: Boolean = false) extends TableLike with Queryable
+                ifNotExists: Boolean = false) extends TableEntity with Queryable
