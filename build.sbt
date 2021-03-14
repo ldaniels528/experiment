@@ -36,12 +36,8 @@ crossScalaVersions := Seq(scalaVersion_2_12)
 /////////////////////////////////////////////////////////////////////////////////
 
 lazy val root = (project in file("./app")).
-  aggregate(
-    core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
-    database_core, database_client, database_jdbc).
-  dependsOn(
-    core, util, language, spark_generator, spark_tools_2_4_x, spark_tools_3_0_x,
-    database_core, database_client, database_jdbc).
+  aggregate(core, util, language, database_core, database_client, database_jdbc).
+  dependsOn(core, util, language, database_core, database_client, database_jdbc).
   //settings(publishingSettings: _*).
   settings(testDependencies: _*).
   settings(
@@ -72,7 +68,7 @@ lazy val util = (project in file("./app/util")).
       scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
       autoCompilerPlugins := true,
       libraryDependencies ++= Seq(
-
+        "org.xerial.snappy" % "snappy-java" % "1.1.8.4"
       ))
 
 lazy val core = (project in file("./app/core")).
@@ -203,82 +199,6 @@ lazy val database_kinesis = (project in file("./app/database-kinesis")).
     autoCompilerPlugins := true,
     libraryDependencies ++= Seq(
       "com.amazonaws" % "amazon-kinesis-client" % awsKinesisClientVersion
-    ))
-
-/////////////////////////////////////////////////////////////////////////////////
-//      Platform Projects: Spark
-/////////////////////////////////////////////////////////////////////////////////
-
-lazy val spark_generator = (project in file("./app/platform/spark/generator")).
-  dependsOn(core, util, language).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "spark-generator",
-    organization := "com.qwery",
-    description := "A SQL-like query language for generating Spark/Scala code",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-
-    ))
-
-lazy val spark_tools_2_4_x = (project in file("./app/platform/spark/tools/2.4.x")).
-  dependsOn(util).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "spark-tools-v2_4",
-    organization := "com.qwery",
-    description := "Qwery Runtime Tools for Spark 2.4.x",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % sparkVersion_2_4_x,
-      "org.apache.spark" %% "spark-sql" % sparkVersion_2_4_x
-    ))
-
-lazy val spark_tools_3_0_x = (project in file("./app/platform/spark/tools/3.0.x")).
-  dependsOn(util).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "spark-tools-v3_0",
-    organization := "com.qwery",
-    description := "Qwery Runtime Tools for Spark 3.0.x",
-    version := appVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    autoCompilerPlugins := true,
-    libraryDependencies ++= Seq(
-      "org.apache.spark" %% "spark-core" % sparkVersion_3_0_x,
-      "org.apache.spark" %% "spark-sql" % sparkVersion_3_0_x
-    ))
-
-lazy val sbt_qwery = (project in file("./app/platform/spark/sbt-plugin")).
-  aggregate(core, util, language, spark_generator).
-  dependsOn(core, util, language, spark_generator).
-  //settings(publishingSettings: _*).
-  settings(testDependencies: _*).
-  settings(
-    name := "sbt-qwery",
-    organization := "com.qwery",
-    description := "SBT plugin for generating Spark/Scala code from an SQL query",
-    version := pluginVersion,
-    scalaVersion := scalaAppVersion,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-Xlint"),
-    scalacOptions in(Compile, doc) ++= Seq("-no-link-warnings"),
-    sbtPlugin := true,
-    scriptedBufferLog := false,
-    libraryDependencies ++= Seq(
-      "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
     ))
 
 /////////////////////////////////////////////////////////////////////////////////
