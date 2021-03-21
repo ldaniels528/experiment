@@ -96,9 +96,9 @@ trait SQLLanguageParser {
     // indirect query?
     case ts if ts is "(" => nextIndirectQuery(ts)(nextQueryOrVariable)
     // row variable (e.g. "@results")?
-    case ts if ts nextIf "#" => nextOpCodeAlias(@#(ts.next().text), ts)
+    case ts if ts nextIf "$" => ts.die("Scalar variable references are not compatible with row sets")
     // field variable (e.g. "$name")?
-    case ts if ts nextIf "@" => ts.die("Local variable references are not compatible with row sets")
+    case ts if ts nextIf "@" => nextOpCodeAlias(@@(ts.next().text), ts)
     // sub-query?
     case ts => nextSubQuery(ts)
   }
@@ -131,7 +131,7 @@ trait SQLLanguageParser {
    * @return an [[AlterTable ALTER TABLE statement]]
    */
   private def parseAlterTable(stream: TokenStream): AlterTable = {
-    val verbs = Seq("ADD", "APPEND", "DROP", "PREPEND")
+    val verbs = Seq("ADD", "APPEND", "DROP", "PREPEND", "RENAME")
     val name = SQLTemplateParams(stream, "ALTER TABLE %t:name").atoms("name")
     var alterations: List[Alteration] = Nil
     while (stream.peek.exists(token => verbs.exists(verb => token is verb))) {
@@ -141,7 +141,10 @@ trait SQLLanguageParser {
         case "APPEND" => AppendColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
         case "DROP" => DropColumn(columnName = SQLTemplateParams(stream, "%a:columnName").atoms("columnName"))
         case "PREPEND" => PrependColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
-        case _ => stream.die("Expected ADD, APPEND, DROP or PREPEND")
+        case "RENAME" =>
+          val subParams = SQLTemplateParams(stream, "%a:oldName AS %a:newName")
+          RenameColumn(oldName = subParams.atoms("oldName"), newName = subParams.atoms("newName"))
+        case _ => stream.die(s"Expected ${verbs.dropRight(1).mkString(", ")} or ${verbs.last}")
       }
       alterations = alteration :: alterations
     }
@@ -416,7 +419,7 @@ trait SQLLanguageParser {
   private def parseForLoop(stream: TokenStream): ForLoop = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
     val variable = params.variables("variable") match {
-      case v: RowSetVariableRef => v
+      case v: ScalarVariableRef => v
       case _ => stream.die("Local variables are not compatible with row sets")
     }
     ForLoop(variable, rows = params.sources("rows"),
@@ -564,7 +567,7 @@ trait SQLLanguageParser {
   private def parseSet(ts: TokenStream): Invokable = {
     val params = SQLTemplateParams(ts, "SET %v:variable =")
     params.variables("variable") match {
-      case v: LocalVariableRef => SetLocalVariable(v.name, SQLTemplateParams(ts, "%e:expr").assignables("expr"))
+      case v: ScalarVariableRef => SetLocalVariable(v.name, SQLTemplateParams(ts, "%e:expr").assignables("expr"))
       case v: RowSetVariableRef => SetRowVariable(v.name, SQLTemplateParams(ts, "%Q:expr").sources("expr"))
     }
   }

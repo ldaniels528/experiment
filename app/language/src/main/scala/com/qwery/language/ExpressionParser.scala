@@ -114,7 +114,7 @@ trait ExpressionParser {
   /**
     * Creates a new field from a token stream
     * @param stream the given [[TokenStream token stream]]
-    * @return a new [[FieldRef field]] instance
+    * @return a new [[FieldRef field reference]] instance
     */
   protected def parseField(stream: TokenStream): FieldRef = {
     import TokenStreamHelpers._
@@ -283,7 +283,7 @@ trait ExpressionParser {
   /**
     * Parses a field with an alias (e.g. "A.Symbol")
     * @param ts the given [[TokenStream token stream]]
-    * @return the option of a [[FieldRef field]]
+    * @return the option of a [[FieldRef field reference]]
     */
   protected def parseJoinField(ts: TokenStream): Option[JoinFieldRef] = {
     val results = processor.process("%a:alias . %a:name", ts)(this)
@@ -360,9 +360,9 @@ trait ExpressionParser {
       case ts if ts.isConstant => Literal(value = ts.next().value)
       // is it an all fields reference?
       case ts if ts nextIf "*" => AllFields
-      // is it a variable? (e.g. @totalCost)
+      // is it a variable? (e.g. $totalCost)
       case ts if (ts is "@") | (ts is "$") => parseVariableRef(ts) map {
-        case v: LocalVariableRef => v
+        case v: ScalarVariableRef => v
         case _: RowSetVariableRef => ts.die("Row set variables cannot be used in expressions")
         case _ => ts.die("Unsupported expression; a column variable was expected (e.g. $myVar)")
       }

@@ -2,9 +2,9 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.{KeyValues, StockQuoteWithDate}
-import com.qwery.models.AlterTable.AppendColumn
+import com.qwery.models.AlterTable.{AddColumn, RenameColumn}
 import com.qwery.models.expressions.{AllFields, BasicFieldRef}
-import com.qwery.models.{ColumnTypeSpec, EntityRef, Table, Column}
+import com.qwery.models.{Column, ColumnTypeSpec, EntityRef, Table}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
 import org.slf4j.LoggerFactory
@@ -81,11 +81,13 @@ class TableFileTest extends AnyFunSpec {
       }
     }
 
-    it("should perform an ALTER TABLE to add new columns") {
+    it("should perform an ALTER TABLE to ADD new columns") {
       TableFile(newTableRef) use { table =>
+        assert(table.config.columns.map(_.name) == List("symbol", "exchange", "lastSale", "lastSaleTime"))
+
         // add a new column
         table.alterTable(Seq(
-          AppendColumn(Column(
+          AddColumn(Column(
             name = "description",
             comment = Some("the company description"),
             spec = new ColumnTypeSpec(`type` = "String", size = 255),
@@ -97,6 +99,23 @@ class TableFileTest extends AnyFunSpec {
       TableFile(newTableRef) use { table =>
         // check the results
         val results = table.getRows(condition = KeyValues()).toList
+        assert(results.headOption.toList.flatMap(_.fields).map(_.name) == List("symbol", "exchange", "lastSale", "lastSaleTime", "description"))
+        results.zipWithIndex foreach { case (result, index) =>
+          logger.info(s"[$index] ${result.toMap}")
+        }
+      }
+    }
+
+    it("should perform an ALTER TABLE to RENAME columns") {
+      TableFile(newTableRef) use { table =>
+        // add a new column
+        table.alterTable(Seq(RenameColumn(oldName = "description", newName = "remarks")))
+      }
+
+      TableFile(newTableRef) use { table =>
+        // check the results
+        val results = table.getRows(condition = KeyValues()).toList
+        assert(results.headOption.toList.flatMap(_.fields).map(_.name) == List("symbol", "exchange", "lastSale", "lastSaleTime", "remarks"))
         results.zipWithIndex foreach { case (result, index) =>
           logger.info(s"[$index] ${result.toMap}")
         }

@@ -116,7 +116,7 @@ trait ExpressionTemplateProcessor {
     val field = stream.next() match {
       case t: AlphaToken => FieldRef(t.text)
       case t: QuotedToken if t.isBackTicks => FieldRef(t.text)
-      case t => throw new IllegalArgumentException(s"Token '$t' is not valid (type: ${t.getClass.getName})")
+      case t => stream.die(s"Token '${t.text}' is not valid (type: ${t.getClass.getName})")
     }
     ExpressionTemplate(fields = Map(name -> field))
   }
@@ -139,9 +139,9 @@ trait ExpressionTemplateProcessor {
     */
   private def extractVariable(name: String, stream: TokenStream): ExpressionTemplate = {
     val variable = stream match {
-      case ts if ts nextIf "#" => @#(ts.next().text)
+      case ts if ts nextIf "$" => $$(ts.next().text)
       case ts if ts nextIf "@" => @@(ts.next().text)
-      case ts => ts.die("Variable expected")
+      case ts => ts.die("Variable identifier expected")
     }
     ExpressionTemplate(variables = Map(name -> variable))
   }

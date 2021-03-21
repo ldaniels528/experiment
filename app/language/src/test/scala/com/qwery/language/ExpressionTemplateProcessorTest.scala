@@ -30,10 +30,10 @@ class ExpressionTemplateProcessorTest extends AnyFunSpec {
       assert(results.expressions.get("falseValue").contains(Literal("Stock")))
     }
 
-    it("should process PRINT(@deptCode)") {
-      val ts = TokenStream("PRINT(@deptCode)")
+    it("should process PRINT($deptCode)") {
+      val ts = TokenStream("PRINT($deptCode)")
       val results = processor.process("PRINT ( %v:variable )", ts)
-      assert(results.variables.get("variable").contains(@@("deptCode")))
+      assert(results.variables.get("variable").contains($$("deptCode")))
     }
 
     it("should process SUBSTRING('Hello World', 5, 1)") {

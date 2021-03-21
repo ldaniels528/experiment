@@ -60,11 +60,20 @@ object AlterTable {
   }
 
   /**
-   * Represents an alteration to add a column
+   * Represents an alteration to prepend a column
    * @param column the [[Column]] to prepend to the first position in the table
    */
   case class PrependColumn(column: Column) extends Alteration {
     override def toSQL = s"PREPEND COLUMN ${column.toSQL}"
+  }
+
+  /**
+   * Represents an alteration to rename a column
+   * @param oldName the current column name
+   * @param newName the new/replacement column name
+   */
+  case class RenameColumn(oldName: String, newName: String) extends Alteration {
+    override def toSQL = s"RENAME COLUMN $oldName AS $newName"
   }
 
 }

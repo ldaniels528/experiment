@@ -1,6 +1,6 @@
 package com.qwery.language
 
-import com.qwery.models.AlterTable.{AddColumn, AppendColumn, DropColumn, PrependColumn}
+import com.qwery.models.AlterTable.{AddColumn, AppendColumn, DropColumn, PrependColumn, RenameColumn}
 import com.qwery.models.Console.Print
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
@@ -51,11 +51,27 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results2 == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
     }
 
+    it("should support ALTER TABLE .. RENAME column statements") {
+      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks RENAME comments AS remarks")
+      assert(results1 == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
+
+      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks RENAME COLUMN comments AS remarks")
+      assert(results2 == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
+    }
+
     it("should support ALTER TABLE with multiple alterations") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT DROP remarks")
+      val results1 = SQLLanguageParser.parse(
+      """|ALTER TABLE stocks
+         |  ADD comments TEXT
+         |  DROP remarks
+         |""".stripMargin)
       assert(results1 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
 
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DROP remarks")
+      val results2 = SQLLanguageParser.parse(
+        """|ALTER TABLE stocks
+           |  ADD COLUMN comments TEXT
+           |  DROP COLUMN remarks
+           |""".stripMargin)
       assert(results2 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
     }
 
@@ -80,42 +96,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support CALL statements") {
       val results = SQLLanguageParser.parse("CALL computeArea(length, width)")
       assert(results == ProcedureCall(name = "computeArea", args = List('length, 'width)))
-    }
-
-    it("should support CREATE FUNCTION statements") {
-      val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
-      assert(results == Create(UserDefinedFunction(ref = EntityRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
-    }
-
-    it("should support CREATE INDEX statements") {
-      val results = SQLLanguageParser.parse(
-        """|CREATE INDEX stocks_symbol ON stocks (symbol)
-           |""".stripMargin)
-      assert(results == Create(TableIndex(
-        ref = EntityRef.parse("stocks_symbol"),
-        columns = List("symbol"),
-        table = EntityRef.parse("stocks"),
-        ifNotExists = false
-      )))
-    }
-
-    it("should support CREATE PROCEDURE statements") {
-      val results = SQLLanguageParser.parse(
-        """|CREATE PROCEDURE testInserts(industry STRING) AS
-           |  RETURN (
-           |    SELECT Symbol, Name, Sector, Industry, SummaryQuote
-           |    FROM Customers
-           |    WHERE Industry = @industry
-           |  )
-           |""".stripMargin)
-      assert(results == Create(Procedure(ref = EntityRef.parse("testInserts"),
-        params = List("industry STRING").map(Column.apply),
-        code = Return(Select(
-          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
-          from = Table("Customers"),
-          where = FieldRef('Industry) === @@(name = "industry")
-        ))
-      )))
     }
 
     it("should support CREATE EXTERNAL TABLE statements") {
@@ -231,6 +211,54 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
+    it("should support CREATE FUNCTION") {
+      val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
+      assert(results == Create(UserDefinedFunction(ref = EntityRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
+    }
+
+    it("should support CREATE FUNCTION ... USING JAR") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
+           |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
+           |""".stripMargin)
+      assert(results == Create(UserDefinedFunction(
+        ref = EntityRef.parse("myFunc"),
+        `class` = "com.qwery.udf.MyFunc",
+        jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
+      )))
+    }
+
+    it("should support CREATE INDEX statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE INDEX stocks_symbol ON stocks (symbol)
+           |""".stripMargin)
+      assert(results == Create(TableIndex(
+        ref = EntityRef.parse("stocks_symbol"),
+        columns = List("symbol"),
+        table = EntityRef.parse("stocks"),
+        ifNotExists = false
+      )))
+    }
+
+    it("should support CREATE PROCEDURE statements") {
+      val results = SQLLanguageParser.parse(
+        """|CREATE PROCEDURE testInserts(industry STRING) AS
+           |  RETURN (
+           |    SELECT Symbol, Name, Sector, Industry, SummaryQuote
+           |    FROM Customers
+           |    WHERE Industry = $industry
+           |  )
+           |""".stripMargin)
+      assert(results == Create(Procedure(ref = EntityRef.parse("testInserts"),
+        params = List("industry STRING").map(Column.apply),
+        code = Return(Select(
+          fields = List('Symbol, 'Name, 'Sector, 'Industry, 'SummaryQuote),
+          from = Table("Customers"),
+          where = FieldRef('Industry) === $$(name = "industry")
+        ))
+      )))
+    }
+
     it("should support CREATE TABLE w/ENUM") {
       val results = SQLLanguageParser.parse(
         s"""|CREATE TABLE Stocks (
@@ -277,18 +305,6 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support CREATE FUNCTION") {
-      val results = SQLLanguageParser.parse(
-        """|CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
-           |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
-           |""".stripMargin)
-      assert(results == Create(UserDefinedFunction(
-        ref = EntityRef.parse("myFunc"),
-        `class` = "com.qwery.udf.MyFunc",
-        jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
-      )))
-    }
-
     it("should support CREATE TYPE ... AS ENUM statements") {
       val results = SQLLanguageParser.parse(
         """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
@@ -330,8 +346,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support DECLARE statements") {
-      val results = SQLLanguageParser.parse("DECLARE @customerId INTEGER")
-      assert(results == Declare(variable = @@("customerId"), `type` = "INTEGER"))
+      val results = SQLLanguageParser.parse("DECLARE $customerId INTEGER")
+      assert(results == Declare(variable = $$("customerId"), `type` = "INTEGER"))
     }
 
     it("should support DELETE statements") {
@@ -353,24 +369,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
       }
     }
 
-    it("should support function call statements") {
+    it("should support FOR ... IN statements") {
       val results = SQLLanguageParser.parse(
-        "SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'")
-      assert(results == Select(
-        fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
-        from = Table("Securities"),
-        where = FieldRef('naics) === "12345"
-      ))
-    }
-
-    it("should support FOR statements") {
-      val results = SQLLanguageParser.parse(
-        """|FOR #item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
+        """|FOR $item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |}
            |""".stripMargin)
       assert(results == ForLoop(
-        variable = @#("item"),
+        variable = $$("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
@@ -381,13 +387,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support FOR ... LOOP statements") {
       val results = SQLLanguageParser.parse(
-        """|FOR #item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
+        """|FOR $item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
            |LOOP
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
            |END LOOP;
            |""".stripMargin)
       assert(results == ForLoop(
-        variable = @#("item"),
+        variable = $$("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
           Print("${item.symbol} is ${item.lastSale)/share")
@@ -481,6 +487,16 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT statements without a FROM clause") {
       val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
       assert(results == Select(fields = List(FieldRef("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
+    }
+
+    it("should support SELECT function call statements") {
+      val results = SQLLanguageParser.parse(
+        "SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'")
+      assert(results == Select(
+        fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
+        from = Table("Securities"),
+        where = FieldRef('naics) === "12345"
+      ))
     }
 
     it("should support SELECT DISTINCT statements") {
@@ -798,8 +814,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
-           |CROSS JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
-           |CROSS JOIN Addresses as A ON A.addressId = CA.addressId
+           |CROSS JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
+           |CROSS JOIN Addresses AS A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -816,9 +832,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT w/INNER JOIN statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
-           |INNER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
-           |INNER JOIN Addresses as A ON A.addressId = CA.addressId
+           |FROM Customers AS C
+           |INNER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
+           |INNER JOIN Addresses AS A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -835,9 +851,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT w/FULL OUTER JOIN statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
-           |FULL OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
-           |FULL OUTER JOIN Addresses as A ON A.addressId = CA.addressId
+           |FROM Customers AS C
+           |FULL OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
+           |FULL OUTER JOIN Addresses AS A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -854,9 +870,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT w/LEFT OUTER JOIN statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
-           |LEFT OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
-           |LEFT OUTER JOIN Addresses as A ON A.addressId = CA.addressId
+           |FROM Customers AS C
+           |LEFT OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
+           |LEFT OUTER JOIN Addresses AS A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -873,9 +889,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT w/RIGHT OUTER JOIN statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
-           |RIGHT OUTER JOIN CustomerAddresses as CA ON CA.customerId = C.customerId
-           |RIGHT OUTER JOIN Addresses as A ON A.addressId = CA.addressId
+           |FROM Customers AS C
+           |RIGHT OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
+           |RIGHT OUTER JOIN Addresses AS A ON A.addressId = CA.addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -892,9 +908,9 @@ class SQLLanguageParserTest extends AnyFunSpec {
     it("should support SELECT w/JOIN ... USING statements") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
-           |FROM Customers as C
-           |JOIN CustomerAddresses as CA USING customerId
-           |JOIN Addresses as A USING addressId
+           |FROM Customers AS C
+           |JOIN CustomerAddresses AS CA USING customerId
+           |JOIN Addresses AS A USING addressId
            |WHERE C.firstName = 'Lawrence' AND C.lastName = 'Daniels'
            |""".stripMargin)
       assert(results == Select(
@@ -908,14 +924,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SET local variable statements") {
-      val results = SQLLanguageParser.parse("SET @customers = @customers + 1")
-      assert(results == SetLocalVariable(name = "customers", @@("customers") + 1))
+    it("should support SET variable statements") {
+      val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
+      assert(results == SetLocalVariable(name = "customers", $$("customers") + 1))
     }
 
     it("should support SET row variable statements") {
       val results = SQLLanguageParser.parse(
-        """|SET #securities = (
+        """|SET @securities = (
            |  SELECT Symbol, Name, Sector, Industry, `Summary Quote`
            |  FROM Securities
            |  WHERE Industry = 'Oil/Gas Transmission'
@@ -932,8 +948,8 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SHOW statements") {
-      val results = SQLLanguageParser.parse("SHOW #theResults LIMIT 5")
-      assert(results == Show(rows = @#("theResults"), limit = 5))
+      val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
+      assert(results == Show(rows = @@("theResults"), limit = 5))
     }
 
     it("should support TRUNCATE statements") {
@@ -961,13 +977,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support WHILE statements") {
       val results = SQLLanguageParser.parse(
-        """|WHILE @cnt < 10
+        """|WHILE $cnt < 10
            |BEGIN
            |   PRINT 'Hello World';
-           |   SET @cnt = @cnt + 1;
+           |   SET $cnt = $cnt + 1;
            |END;
            |""".stripMargin)
-      val cnt = @@("cnt")
+      val cnt = $$("cnt")
       assert(results == While(
         condition = cnt < 10,
         invokable = SQL(

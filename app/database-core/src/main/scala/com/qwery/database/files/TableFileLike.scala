@@ -6,12 +6,13 @@ import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, RowOrientedFile
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
 import com.qwery.database.files.DatabaseFiles.{writeTableConfig, _}
 import com.qwery.database.models.TableConfig.PhysicalTableConfig
-import com.qwery.database.models.{TableColumn, Field, KeyValues, LoadMetrics, Row, TableConfig, TableMetrics}
+import com.qwery.database.models.{Field, KeyValues, LoadMetrics, Row, TableColumn, TableConfig, TableMetrics}
 import com.qwery.implicits.MagicImplicits
 import com.qwery.models.AlterTable._
 import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
 import com.qwery.models.{EntityRef, OrderColumn, TableIndex}
 import com.qwery.util.ResourceHelper._
+import org.slf4j.LoggerFactory
 
 import java.io.File
 import scala.collection.concurrent.TrieMap
@@ -58,8 +59,15 @@ trait TableFileLike {
       case (columns, AppendColumn(column)) => columns ::: column.toTableColumn :: Nil
       case (columns, DropColumn(columnName)) => columns.filterNot(_.name == columnName)
       case (columns, PrependColumn(column)) => column.toTableColumn :: columns
+      case (columns, RenameColumn(oldName, newName)) =>
+        columns.indexWhere(_.name == oldName) match {
+          case -1 => die(s"Column '$oldName' does not exist in ${ref.toSQL}")
+          case n => columns.slice(0, n) ::: columns(n).copy(name = newName) :: columns.slice(n + 1, columns.length)
+        }
       case (_, alteration) => die(s"Unhandled table alteration '${alteration.toSQL}'")
     } distinct
+
+    LoggerFactory.getLogger(this.getClass).info(s"newColumns = ${newColumns.map(_.name)}")
 
     // determine which indices will be kept
     val droppedColumnNames = alterations.collect { case op: DropColumn => op.columnName }

@@ -202,12 +202,12 @@ class DatabaseCPU() {
 
   /**
     * FOR-LOOP statement
-    * @param variable  the given [[RowSetVariableRef variable]]
+    * @param variable  the given [[ScalarVariableRef variable]]
     * @param rows      the given [[Invokable rows]]
     * @param invokable the [[Invokable statements]] to execute
     * @param isReverse indicates reverse order
     */
-  def forLoop(variable: RowSetVariableRef,
+  def forLoop(variable: ScalarVariableRef,
               rows: Invokable,
               invokable: Invokable,
               isReverse: Boolean)(implicit scope: Scope): Option[Solution] = {
@@ -227,7 +227,7 @@ class DatabaseCPU() {
    * @param ref      the [[EntityRef table reference]]
    * @param rowID    the row ID
    * @param columnID the column ID
-   * @return the [[FieldRef field]]
+   * @return the [[FieldRef field reference]]
    */
   def getField(ref: EntityRef, rowID: ROWID, columnID: Int): Field = tableOf(ref).getField(rowID, columnID)
 

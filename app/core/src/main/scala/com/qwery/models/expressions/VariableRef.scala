@@ -15,13 +15,13 @@ sealed trait VariableRef {
 }
 
 /**
-  * Represents a reference to a local variable
-  * @param name the name of the variable
-  */
-case class LocalVariableRef(name: String) extends VariableRef with NamedExpression
-
-/**
   * Represents a reference to a row-set variable
   * @param name the name of the variable
   */
 case class RowSetVariableRef(name: String) extends VariableRef with Queryable
+
+/**
+ * Represents a reference to a scalar variable
+ * @param name the name of the variable
+ */
+case class ScalarVariableRef(name: String) extends VariableRef with FieldRef

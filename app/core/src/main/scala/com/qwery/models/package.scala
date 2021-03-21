@@ -9,18 +9,18 @@ import com.qwery.models.expressions._
 package object models {
 
   /**
-    * Shortcut for creating a local variable reference
+    * Shortcut for creating a scalar variable reference
     * @param name the name of the variable
-    * @return a new [[LocalVariableRef local variable reference]]
+    * @return a new [[ScalarVariableRef scalar variable reference]]
     */
-  def @@(name: String) = LocalVariableRef(name)
+  def $$(name: String) = ScalarVariableRef(name)
 
   /**
     * Shortcut for creating a row-set variable reference
     * @param name the name of the variable
     * @return a new [[RowSetVariableRef row-set variable reference]]
     */
-  def @#(name: String) = RowSetVariableRef(name)
+  def @@(name: String) = RowSetVariableRef(name)
 
   /**
     * Invokable Conversions
