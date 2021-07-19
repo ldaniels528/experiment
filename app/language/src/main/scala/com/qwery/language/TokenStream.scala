@@ -1,5 +1,7 @@
 package com.qwery.language
 
+import com.qwery.language.Token._
+
 /**
   * Represents a token stream; a high-level abstraction of a [[TokenIterator token iterator]]
   * @author lawrence.daniels@gmail.com

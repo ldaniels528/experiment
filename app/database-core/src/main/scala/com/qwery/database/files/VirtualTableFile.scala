@@ -6,7 +6,7 @@ import com.qwery.database.device.{BlockDevice, BlockDeviceQuery}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.models.TableConfig.VirtualTableConfig
 import com.qwery.database.models.{TableColumn, TableConfig}
-import com.qwery.language.SQLDecompiler.implicits.InvokableDeserializer
+import com.qwery.language.SQLDecompiler.implicits.SQLDecompilerHelper
 import com.qwery.models.{EntityRef, Invokable, Select, View}
 
 /**

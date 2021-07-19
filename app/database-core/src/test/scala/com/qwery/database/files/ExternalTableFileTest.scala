@@ -2,6 +2,7 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.KeyValues
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.{Column, ColumnTypeSpec, EntityRef, ExternalTable}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -24,7 +25,7 @@ class ExternalTableFileTest extends AnyFunSpec {
         table = ExternalTable(
           ref = tableRef,
           location = Some("./samples/companylist/csv/"),
-          format = Some("csv"),
+          inputFormat = Some("csv"),
           nullValue = Some("n/a"),
           columns = List(
             Column(name = "Symbol", spec = new ColumnTypeSpec(`type` = "String", size = 10)),

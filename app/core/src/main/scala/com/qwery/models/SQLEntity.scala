@@ -33,7 +33,8 @@ sealed trait TableEntity extends SQLEntity {
   * @param ifNotExists     if true, the operation will not fail when the view exists
   * @param description     the optional description
   * @param fieldTerminator the optional field terminator/delimiter (e.g. ",")
-  * @param format          the file format (e.g. "csv")
+  * @param inputFormat     the input file format (e.g. "csv")
+  * @param outputFormat    the output file format (e.g. "json")
   * @param location        the physical location of the data files
   * @example
   * {{{
@@ -64,7 +65,8 @@ case class ExternalTable(ref: EntityRef,
                          lineTerminator: Option[String] = None,
                          headersIncluded: Option[Boolean] = None,
                          nullValue: Option[String] = None,
-                         format: Option[String] = None,
+                         inputFormat: Option[String] = None,
+                         outputFormat: Option[String] = None,
                          partitionBy: List[Column] = Nil,
                          serdeProperties: Map[String, String] = Map.empty,
                          tableProperties: Map[String, String] = Map.empty) extends TableEntity
@@ -75,7 +77,7 @@ case class ExternalTable(ref: EntityRef,
   * @param params the procedure's parameters
   * @param code   the procedure's code
   */
-case class Procedure(ref: EntityRef, params: Seq[Column], code: Invokable) extends SQLEntity
+case class Procedure(ref: EntityRef, params: Seq[Column], code: Invokable, isReplace: Boolean = false) extends SQLEntity
 
 /**
   * Represents a table definition
@@ -148,8 +150,14 @@ case class TypeAsEnum(ref: EntityRef, values: Seq[String]) extends SQLEntity
   * @param ref         the [[EntityRef fully-qualified entity reference]]
   * @param `class`     the fully-qualified function class name
   * @param jarLocation the optional Jar file path
+  * @param description the optional description
+  * @param ifNotExists if true, the operation will not fail when the view exists
   */
-case class UserDefinedFunction(ref: EntityRef, `class`: String, jarLocation: Option[String]) extends SQLEntity
+case class UserDefinedFunction(ref: EntityRef,
+                               `class`: String,
+                               jarLocation: Option[String],
+                               description: Option[String],
+                               ifNotExists: Boolean) extends SQLEntity
 
 /**
   * Represents a View definition
@@ -168,4 +176,4 @@ case class UserDefinedFunction(ref: EntityRef, `class`: String, jarLocation: Opt
 case class View(ref: EntityRef,
                 query: Invokable,
                 description: Option[String] = None,
-                ifNotExists: Boolean = false) extends TableEntity with Queryable
+                ifNotExists: Boolean) extends TableEntity with Queryable

@@ -56,18 +56,20 @@ class VirtualTableFileTest extends AnyFunSpec {
     }
 
     it("should perform CREATE VIEW") {
-      VirtualTableFile.createView(View(viewRef,
-        description = Some("AMEX Stock symbols sorted by last sale"),
-        query = SQLLanguageParser.parse(
-          s"""|SELECT
-              |   symbol AS ticker,
-              |   exchange AS market,
-              |   lastSale,
-              |   ROUND(lastSale, 1) AS roundedLastSale,
-              |   lastSaleTime
-              |FROM `$databaseName.$schemaName.$tableName`
-              |WHERE exchange = 'AMEX'
-              |ORDER BY lastSale DESC
+      VirtualTableFile.createView(
+        view = View(viewRef,
+          description = Some("AMEX Stock symbols sorted by last sale"),
+          ifNotExists = true,
+          query = SQLLanguageParser.parse(
+            s"""|SELECT
+                |   symbol AS ticker,
+                |   exchange AS market,
+                |   lastSale,
+                |   ROUND(lastSale, 1) AS roundedLastSale,
+                |   lastSaleTime
+                |FROM `$databaseName.$schemaName.$tableName`
+                |WHERE exchange = 'AMEX'
+                |ORDER BY lastSale DESC
               |LIMIT 50
               |""".stripMargin
         )))

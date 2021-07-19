@@ -1,7 +1,7 @@
 package com.qwery.language
 
-import com.qwery.models.AlterTable.{AddColumn, AppendColumn, DropColumn, PrependColumn, RenameColumn}
-import com.qwery.models.Console.Print
+import com.qwery.models.AlterTable._
+import com.qwery.models.Console.{Print, Println}
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models._
 import com.qwery.models.expressions._
@@ -19,97 +19,102 @@ class SQLLanguageParserTest extends AnyFunSpec {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
-    it("should support ALTER TABLE .. ADD column statements") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT"))))
-
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
+    it("should support ALTER TABLE .. ADD") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT")
+      assert(results == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT"))))
     }
 
-    it("should support ALTER TABLE .. APPEND column statements") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
-
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks APPEND COLUMN comments TEXT")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT"))))
+    it("should support ALTER TABLE .. ADD COLUMN .. DEFAULT") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
+      assert(results == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
     }
 
-    it("should support ALTER TABLE .. DROP column statements") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks DROP comments")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
-
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks DROP COLUMN comments")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
+    it("should support ALTER TABLE .. APPEND") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
+      assert(results == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
     }
 
-    it("should support ALTER TABLE .. PREPEND column statements") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND comments TEXT")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
-
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND COLUMN comments TEXT")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
+    it("should support ALTER TABLE .. APPEND COLUMN") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks APPEND COLUMN comments TEXT")
+      assert(results == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT"))))
     }
 
-    it("should support ALTER TABLE .. RENAME column statements") {
-      val results1 = SQLLanguageParser.parse("ALTER TABLE stocks RENAME comments AS remarks")
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
-
-      val results2 = SQLLanguageParser.parse("ALTER TABLE stocks RENAME COLUMN comments AS remarks")
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
+    it("should support ALTER TABLE .. DROP") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks DROP comments")
+      assert(results == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
     }
 
-    it("should support ALTER TABLE with multiple alterations") {
-      val results1 = SQLLanguageParser.parse(
-      """|ALTER TABLE stocks
-         |  ADD comments TEXT
-         |  DROP remarks
-         |""".stripMargin)
-      assert(results1 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
-
-      val results2 = SQLLanguageParser.parse(
-        """|ALTER TABLE stocks
-           |  ADD COLUMN comments TEXT
-           |  DROP COLUMN remarks
-           |""".stripMargin)
-      assert(results2 == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
+    it("should support ALTER TABLE .. DROP COLUMN") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks DROP COLUMN comments")
+      assert(results == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
     }
 
-    it("should support BEGIN ... END statements") {
-      // test type 1
-      val results1 = SQLLanguageParser.parse(
+    it("should support ALTER TABLE .. PREPEND") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND comments TEXT")
+      assert(results == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
+    }
+
+    it("should support ALTER TABLE .. PREPEND COLUMN") {
+       val results = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND COLUMN comments TEXT")
+      assert(results == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
+    }
+
+    it("should support ALTER TABLE .. RENAME") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks RENAME comments AS remarks")
+      assert(results == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
+    }
+
+    it("should support ALTER TABLE .. RENAME COLUMN") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks RENAME COLUMN comments AS remarks")
+      assert(results == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
+    }
+
+    it("should support ALTER TABLE .. ADD/DROP") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT DROP remarks")
+      assert(results == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
+    }
+
+    it("should support ALTER TABLE .. ADD COLUMN/DROP COLUMN") {
+      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DROP COLUMN remarks")
+      assert(results == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
+    }
+
+    it("should support BEGIN .. END") {
+      val results = SQLLanguageParser.parse(
         """|BEGIN
-           |  PRINT 'Hello World'
+           |  PRINT 'Hello ';
+           |  PRINTLN 'World';
            |END
            |""".stripMargin)
-      assert(results1 == Console.Print("Hello World"))
-
-      // test type 2
-      val results2 = SQLLanguageParser.parse(
-        """|{
-           |  PRINT 'Hello World'
-           |}
-           |""".stripMargin)
-      assert(results2 == Console.Print("Hello World"))
+      assert(results == SQL(Console.Print("Hello "), Console.Println("World")))
     }
 
-    it("should support CALL statements") {
+    it("should support { .. }") {
+      val results = SQLLanguageParser.parse(
+        """|{
+           |  INFO 'Hello World'
+           |}
+           |""".stripMargin)
+      assert(results == Console.Info("Hello World"))
+    }
+
+    it("should support CALL") {
       val results = SQLLanguageParser.parse("CALL computeArea(length, width)")
       assert(results == ProcedureCall(name = "computeArea", args = List('length, 'width)))
     }
 
-    it("should support CREATE EXTERNAL TABLE statements") {
-      val results2 = SQLLanguageParser.parse(
+    it("should support CREATE EXTERNAL TABLE") {
+      val results = SQLLanguageParser.parse(
         """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |STORED AS INPUTFORMAT 'JSON' OUTPUTFORMAT 'JSON'
            |LOCATION './dataSets/customers/json/'
            |""".stripMargin)
-      assert(results2 == Create(ExternalTable(
+      assert(results == Create(ExternalTable(
         ref = EntityRef.parse("Customers"),
         columns = List("customer_uid UUID", "name STRING", "address STRING", "ingestion_date LONG").map(Column.apply),
         partitionBy = List("year STRING", "month STRING", "day STRING").map(Column.apply),
-        format = "json",
+        inputFormat = "json", outputFormat = "json",
         location = Some("./dataSets/customers/json/")
       )))
     }
@@ -140,13 +145,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        format = "csv",
+        inputFormat = "csv",
         location = Some("./dataSets/customers/csv/")
       )))
     }
 
-
-    it("should support CREATE EXTERNAL TABLE ... WITH statements") {
+    it("should support CREATE EXTERNAL TABLE .. WITH") {
       val results = SQLLanguageParser.parse(
         """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
@@ -164,14 +168,14 @@ class SQLLanguageParserTest extends AnyFunSpec {
         fieldTerminator = ",",
         headersIncluded = true,
         nullValue = Some("n/a"),
-        format = "csv",
+        inputFormat = "csv",
         location = Some("./dataSets/customers/csv/")
       )))
     }
 
-    it("should support CREATE EXTERNAL TABLE ... PARTITIONED BY statements") {
+    it("should support CREATE EXTERNAL TABLE .. PARTITIONED BY") {
       val results = SQLLanguageParser.parse(
-        """|CREATE EXTERNAL TABLE `kbb_mart.kbb_rev_per_page`(
+        """|CREATE EXTERNAL TABLE revenue_per_page (
            |  `rank` string COMMENT 'from deserializer',
            |  `section` string COMMENT 'from deserializer',
            |  `super_section` string COMMENT 'from deserializer',
@@ -194,7 +198,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
            |  'transient_lastDdlTime'='1555400098')
            |""".stripMargin)
       assert(results == Create(ExternalTable(
-        ref = EntityRef.parse("kbb_mart.kbb_rev_per_page"),
+        ref = EntityRef.parse("revenue_per_page"),
         columns = List(
           Column("rank string"),
           Column("section string"),
@@ -204,7 +208,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
           Column("last_processed_ts_est string")
         ).map(_.copy(comment = Some("from deserializer"))),
         partitionBy = List(Column("hit_dt_est string"), Column("site_experience_desc string")),
-        format = "csv",
+        inputFormat = "csv",
         location = Some("s3://kbb-etl-mart-dev/kbb_rev_per_page/kbb_rev_per_page"),
         serdeProperties = Map("quoteChar" -> "\\\"", "separatorChar" -> ","),
         tableProperties = Map("transient_lastDdlTime" -> "1555400098")
@@ -213,10 +217,15 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support CREATE FUNCTION") {
       val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
-      assert(results == Create(UserDefinedFunction(ref = EntityRef.parse("myFunc"), `class` = "com.qwery.udf.MyFunc", jarLocation = None)))
+      assert(results == Create(UserDefinedFunction(
+        ref = EntityRef.parse("myFunc"),
+        `class` = "com.qwery.udf.MyFunc",
+        ifNotExists = false,
+        description = None,
+        jarLocation = None)))
     }
 
-    it("should support CREATE FUNCTION ... USING JAR") {
+    it("should support CREATE FUNCTION .. USING JAR") {
       val results = SQLLanguageParser.parse(
         """|CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
            |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
@@ -224,11 +233,13 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Create(UserDefinedFunction(
         ref = EntityRef.parse("myFunc"),
         `class` = "com.qwery.udf.MyFunc",
-        jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar"
+        jarLocation = "/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar",
+        ifNotExists = false,
+        description = None
       )))
     }
 
-    it("should support CREATE INDEX statements") {
+    it("should support CREATE INDEX") {
       val results = SQLLanguageParser.parse(
         """|CREATE INDEX stocks_symbol ON stocks (symbol)
            |""".stripMargin)
@@ -240,7 +251,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE PROCEDURE statements") {
+    it("should support CREATE PROCEDURE") {
       val results = SQLLanguageParser.parse(
         """|CREATE PROCEDURE testInserts(industry STRING) AS
            |  RETURN (
@@ -277,7 +288,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )))
     }
 
-    it("should support CREATE TABLE statements with inline VALUES") {
+    it("should support CREATE TABLE with inline VALUES") {
       val results = SQLLanguageParser.parse(
         """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
            |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
@@ -289,7 +300,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support CREATE TABLE statements with subquery") {
+    it("should support CREATE TABLE with subquery") {
       val results = SQLLanguageParser.parse(
         """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
            |FROM (
@@ -305,7 +316,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support CREATE TYPE ... AS ENUM statements") {
+    it("should support CREATE TYPE .. AS ENUM") {
       val results = SQLLanguageParser.parse(
         """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
            |""".stripMargin
@@ -313,7 +324,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       assert(results == Create(TypeAsEnum(ref = EntityRef.parse("mood"), values = Seq("sad", "ok", "happy"))))
     }
 
-    it("should support CREATE VIEW statements") {
+    it("should support CREATE VIEW") {
       val results = SQLLanguageParser.parse(
         """|CREATE VIEW IF NOT EXISTS OilAndGas AS
            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
@@ -328,7 +339,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         ))))
     }
 
-    it("should support CREATE VIEW ... WITH COMMENT statements") {
+    it("should support CREATE VIEW .. WITH COMMENT") {
       val results = SQLLanguageParser.parse(
         """|CREATE VIEW IF NOT EXISTS OilAndGas
            |WITH COMMENT 'AMEX Stock symbols sorted by last sale'
@@ -345,17 +356,17 @@ class SQLLanguageParserTest extends AnyFunSpec {
         ))))
     }
 
-    it("should support DECLARE statements") {
+    it("should support DECLARE") {
       val results = SQLLanguageParser.parse("DECLARE $customerId INTEGER")
       assert(results == Declare(variable = $$("customerId"), `type` = "INTEGER"))
     }
 
-    it("should support DELETE statements") {
+    it("should support DELETE") {
       val results = SQLLanguageParser.parse("DELETE FROM todo_list where item_id = 1238 LIMIT 25")
       assert(results == Delete(table = Table("todo_list"), where = FieldRef('item_id) === 1238, limit = Some(25)))
     }
 
-    it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN statements") {
+    it("should support DEBUG, ERROR, INFO, LOG, PRINT and WARN") {
       case class Expected(command: String, opCode: String => Console, message: String)
       val tests = Seq(
         Expected("DEBUG", Console.Debug.apply, "This is a debug message"),
@@ -369,7 +380,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       }
     }
 
-    it("should support FOR ... IN statements") {
+    it("should support FOR .. IN") {
       val results = SQLLanguageParser.parse(
         """|FOR $item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
            |  PRINT '${item.symbol} is ${item.lastSale)/share';
@@ -385,7 +396,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support FOR ... LOOP statements") {
+    it("should support FOR .. LOOP") {
       val results = SQLLanguageParser.parse(
         """|FOR $item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
            |LOOP
@@ -402,12 +413,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support INCLUDE statements") {
+    it("should support INCLUDE") {
       val results = SQLLanguageParser.parse("INCLUDE 'models/securities.sql'")
       assert(results == Include("models/securities.sql"))
     }
 
-    it("should support INSERT statements without explicitly defined fields") {
+    it("should support INSERT without explicitly defined fields") {
       val results = SQLLanguageParser.parse(
         "INSERT INTO Students VALUES ('Fred Flintstone', 35, 1.28), ('Barney Rubble', 32, 2.32)")
       assert(results == Insert(Into(Table("Students")), Insert.Values(values = List(
@@ -416,7 +427,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))))
     }
 
-    it("should support INSERT-INTO-SELECT statements") {
+    it("should support INSERT-INTO-SELECT") {
       val results = SQLLanguageParser.parse(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
@@ -433,7 +444,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support INSERT-INTO-VALUES statements") {
+    it("should support INSERT-INTO-VALUES") {
       val results = SQLLanguageParser.parse(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
@@ -451,7 +462,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support INSERT-OVERWRITE-SELECT statements") {
+    it("should support INSERT-OVERWRITE-SELECT") {
       val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
@@ -468,7 +479,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support INSERT-OVERWRITE-VALUES statements") {
+    it("should support INSERT-OVERWRITE-VALUES") {
       val results = SQLLanguageParser.parse(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
@@ -484,12 +495,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT statements without a FROM clause") {
+    it("should support SELECT without a FROM clause") {
       val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
       assert(results == Select(fields = List(FieldRef("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
     }
 
-    it("should support SELECT function call statements") {
+    it("should support SELECT function call") {
       val results = SQLLanguageParser.parse(
         "SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'")
       assert(results == Select(
@@ -499,7 +510,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT DISTINCT statements") {
+    it("should support SELECT DISTINCT") {
       val results = SQLLanguageParser.parse(
         "SELECT DISTINCT Ticker_Symbol FROM Securities WHERE Industry = 'Oil/Gas Transmission'")
       assert(results ==
@@ -510,7 +521,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       )
     }
 
-    it("should support SELECT ... INTO statements") {
+    it("should support SELECT .. INTO") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |INTO TABLE OilGasSecurities
@@ -527,7 +538,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... EXISTS(...) statements") {
+    it("should support SELECT .. EXISTS(..)") {
       val results = SQLLanguageParser.parse(
         """|SELECT * FROM Departments WHERE EXISTS(SELECT employee_id FROM Employees WHERE role = 'MANAGER')
            |""".stripMargin)
@@ -538,7 +549,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
         ))
     }
 
-    it("should support SELECT ... GROUP BY fields statements") {
+    it("should support SELECT .. GROUP BY fields") {
       import NativeFunctions._
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
@@ -553,7 +564,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... GROUP BY indices statements") {
+    it("should support SELECT .. GROUP BY indices") {
       import NativeFunctions._
       val results = SQLLanguageParser.parse(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
@@ -568,7 +579,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... LIMIT n statements") {
+    it("should support SELECT .. LIMIT n") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry
            |FROM Customers
@@ -583,7 +594,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... ORDER BY statements") {
+    it("should support SELECT .. ORDER BY") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
@@ -598,7 +609,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... OVER statements") {
+    it("should support SELECT .. OVER") {
       import NativeFunctions._
       val results = SQLLanguageParser.parse(
         """|SELECT PAT_ID, DEPT_ID, INS_AMT,
@@ -616,7 +627,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... OVER w/RANGE statements") {
+    it("should support SELECT .. OVER w/RANGE") {
       import IntervalTypes._
       import NativeFunctions._
       import Over.DataAccessTypes._
@@ -645,7 +656,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... OVER w/ROWS statements") {
+    it("should support SELECT .. OVER w/ROWS") {
       import IntervalTypes._
       import NativeFunctions._
       import Over.DataAccessTypes._
@@ -674,7 +685,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... OVER w/ROWS UNBOUNDED statements") {
+    it("should support SELECT .. OVER w/ROWS UNBOUNDED") {
       import NativeFunctions._
       import Over.DataAccessTypes._
       import Over._
@@ -702,7 +713,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... EXCEPT statements") {
+    it("should support SELECT .. EXCEPT") {
       val results = SQLLanguageParser.parse(
         s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
             |FROM Customers
@@ -724,7 +735,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... INTERSECT statements") {
+    it("should support SELECT .. INTERSECT") {
       val results = SQLLanguageParser.parse(
         s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
             |FROM Customers
@@ -746,7 +757,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... UNION statements") {
+    it("should support SELECT .. UNION") {
       Seq("ALL", "DISTINCT", "") foreach { modifier =>
         val results = SQLLanguageParser.parse(
           s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
@@ -771,7 +782,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       }
     }
 
-    it("should support SELECT ... WHERE BETWEEN statements") {
+    it("should support SELECT .. WHERE BETWEEN") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
@@ -784,7 +795,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... WHERE IN (...) statements") {
+    it("should support SELECT .. WHERE IN (..)") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
@@ -797,7 +808,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT ... WHERE IN (SELECT ...) statements") {
+    it("should support SELECT .. WHERE IN (SELECT ..)") {
       val results = SQLLanguageParser.parse(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers AS C
@@ -810,7 +821,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/CROSS JOIN statements") {
+    it("should support SELECT w/CROSS JOIN") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -829,7 +840,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/INNER JOIN statements") {
+    it("should support SELECT w/INNER JOIN") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -848,7 +859,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/FULL OUTER JOIN statements") {
+    it("should support SELECT w/FULL OUTER JOIN") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -867,7 +878,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/LEFT OUTER JOIN statements") {
+    it("should support SELECT w/LEFT OUTER JOIN") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -886,7 +897,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/RIGHT OUTER JOIN statements") {
+    it("should support SELECT w/RIGHT OUTER JOIN") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -905,7 +916,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SELECT w/JOIN ... USING statements") {
+    it("should support SELECT w/JOIN .. USING") {
       val results = SQLLanguageParser.parse(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
@@ -924,12 +935,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support SET variable statements") {
+    it("should support SET variable") {
       val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
       assert(results == SetLocalVariable(name = "customers", $$("customers") + 1))
     }
 
-    it("should support SET row variable statements") {
+    it("should support SET row variable") {
       val results = SQLLanguageParser.parse(
         """|SET @securities = (
            |  SELECT Symbol, Name, Sector, Industry, `Summary Quote`
@@ -947,17 +958,17 @@ class SQLLanguageParserTest extends AnyFunSpec {
         )))
     }
 
-    it("should support SHOW statements") {
+    it("should support SHOW") {
       val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
       assert(results == Show(rows = @@("theResults"), limit = 5))
     }
 
-    it("should support TRUNCATE statements") {
+    it("should support TRUNCATE") {
       val results = SQLLanguageParser.parse("TRUNCATE stocks")
       assert(results == Truncate(table = EntityRef.parse("stocks")))
     }
 
-    it("should support UPDATE statements") {
+    it("should support UPDATE") {
       val results = SQLLanguageParser.parse(
         """|UPDATE Companies
            |SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
@@ -975,19 +986,38 @@ class SQLLanguageParserTest extends AnyFunSpec {
       ))
     }
 
-    it("should support WHILE statements") {
+    it("should support DO ... WHILE") {
       val results = SQLLanguageParser.parse(
-        """|WHILE $cnt < 10
+        """|DO
            |BEGIN
-           |   PRINT 'Hello World';
+           |   PRINTLN 'Hello World';
+           |   SET $cnt = $cnt + 1;
+           |END
+           |WHILE $cnt < 10
+           |""".stripMargin)
+      val cnt = $$("cnt")
+      assert(results == DoWhile(
+        condition = cnt < 10,
+        invokable = SQL(
+          Println("Hello World"),
+          SetLocalVariable(cnt.name, cnt + 1)
+        )
+      ))
+    }
+
+    it("should support WHILE ... DO") {
+      val results = SQLLanguageParser.parse(
+        """|WHILE $cnt < 10 DO
+           |BEGIN
+           |   PRINTLN 'Hello World';
            |   SET $cnt = $cnt + 1;
            |END;
            |""".stripMargin)
       val cnt = $$("cnt")
-      assert(results == While(
+      assert(results == WhileDo(
         condition = cnt < 10,
         invokable = SQL(
-          Print("Hello World"),
+          Println("Hello World"),
           SetLocalVariable(cnt.name, cnt + 1)
         )
       ))

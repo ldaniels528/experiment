@@ -49,6 +49,14 @@ object Console {
   case class Print(text: String) extends Console
 
   /**
+   * PRINTLN statement
+   * @example
+   * {{{ PRINTLN 'This is will be printed to STDOUT.' }}}
+   * @param text the text to print
+   */
+  case class Println(text: String) extends Console
+
+  /**
     * WARN statement
     * @example
     * {{{ WARN 'This is a warning message.' }}}

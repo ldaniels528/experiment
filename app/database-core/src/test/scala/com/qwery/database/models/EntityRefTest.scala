@@ -1,9 +1,10 @@
 package com.qwery.database.models
 
+import com.qwery.database.models.ModelsJsonProtocol._
 import com.qwery.database.util.JSONSupport.JSONProductConversion
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.EntityRef
 import org.scalatest.funspec.AnyFunSpec
-import ModelsJsonProtocol._
 
 /**
   * Table Reference Test Suite

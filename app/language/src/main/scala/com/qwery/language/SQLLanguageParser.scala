@@ -1,6 +1,7 @@
 package com.qwery.language
 
 import com.qwery.die
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.language.SQLLanguageParser.implicits.ItemSeqUtilities
 import com.qwery.language.SQLTemplateParams.MappedParameters
 import com.qwery.models.AlterTable._
@@ -50,6 +51,7 @@ trait SQLLanguageParser {
     "DECLARE" -> parseDeclare,
     "DEBUG" -> parseConsoleDebug,
     "DELETE" -> parseDelete,
+    "DO" -> parseDoWhile,
     "DROP" -> parseDrop,
     "ERROR" -> parseConsoleError,
     "FOR" -> parseForLoop,
@@ -57,6 +59,7 @@ trait SQLLanguageParser {
     "INFO" -> parseConsoleInfo,
     "INSERT" -> parseInsert,
     "PRINT" -> parseConsolePrint,
+    "PRINTLN" -> parseConsolePrintln,
     "RETURN" -> parseReturn,
     "SELECT" -> parseSelect,
     "SET" -> parseSet,
@@ -64,7 +67,7 @@ trait SQLLanguageParser {
     "TRUNCATE" -> parseTruncate,
     "UPDATE" -> parseUpdate,
     "WARN" -> parseConsoleWarn,
-    "WHILE" -> parseWhile
+    "WHILE" -> parseWhileDo
   )
 
   /**
@@ -136,7 +139,7 @@ trait SQLLanguageParser {
     var alterations: List[Alteration] = Nil
     while (stream.peek.exists(token => verbs.exists(verb => token is verb))) {
       val params = SQLTemplateParams(stream, "%a:verb ?%C(type|COLUMN)")
-      val alteration = params.atoms("verb") match {
+      val alteration = params.atoms("verb").toUpperCase match {
         case "ADD" => AddColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
         case "APPEND" => AppendColumn(column = SQLTemplateParams(stream, "%P:column").columns("column").onlyOne())
         case "DROP" => DropColumn(columnName = SQLTemplateParams(stream, "%a:columnName").atoms("columnName"))
@@ -199,6 +202,15 @@ trait SQLLanguageParser {
     Console.Print(text = SQLTemplateParams(ts, "PRINT %a:text").atoms("text"))
 
   /**
+   * Parses a console PRINTLN statement
+   * @example {{{ PRINT 'This message will be printed to STDOUT' }}}
+   * @param ts the [[TokenStream token stream]]
+   * @return the [[Console.Print]]
+   */
+  private def parseConsolePrintln(ts: TokenStream): Console.Println =
+    Console.Println(text = SQLTemplateParams(ts, "PRINTLN %a:text").atoms("text"))
+
+  /**
     * Parses a console WARN statement
     * @example {{{ WARN 'This is a warning message' }}}
     * @param ts the [[TokenStream token stream]]
@@ -229,7 +241,13 @@ trait SQLLanguageParser {
     */
   private def parseCreateFunction(ts: TokenStream): Create = {
     val params = SQLTemplateParams(ts, "CREATE FUNCTION ?%IFNE:exists %t:name AS %a:class ?USING +?JAR +?%a:jar")
-    Create(UserDefinedFunction(ref = EntityRef.parse(params.atoms("name")), `class` = params.atoms("class"), jarLocation = params.atoms.get("jar")))
+    Create(UserDefinedFunction(
+      ref = EntityRef.parse(params.atoms("name")),
+      `class` = params.atoms("class"),
+      jarLocation = params.atoms.get("jar"),
+      ifNotExists = params.indicators.get("exists").contains(true),
+      description = params.atoms.get("description")
+    ))
   }
 
   /**
@@ -238,8 +256,8 @@ trait SQLLanguageParser {
     * @return the resulting [[Create]]
     */
   private def parseCreateProcedure(ts: TokenStream): Create = {
-    val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %t:name ( ?%P:params ) ?AS %N:code")
-    Create(Procedure(ref = EntityRef.parse(params.atoms("name")), params = params.columns("params"), code = params.sources("code")))
+    val params = SQLTemplateParams(ts, "CREATE PROCEDURE ?%IFNE:exists %t:name ?( +?%P:params +?) ?AS %N:code")
+    Create(Procedure(ref = EntityRef.parse(params.atoms("name")), params = params.columns.getOrElse("params", Nil), code = params.sources("code")))
   }
 
   /**
@@ -248,8 +266,8 @@ trait SQLLanguageParser {
     * @return an [[Invokable executable]]
     */
   private def parseCreateTable(ts: TokenStream): Invokable = {
-    val params = SQLTemplateParams(ts, "CREATE TABLE ?%IFNE:exists %t:name ( %P:columns )")
-      .withOptions(ts, "?FROM +?%V:source", "?%w:props")
+    val params = SQLTemplateParams(ts, "CREATE TABLE ?%IFNE:exists %t:name ?( +?%P:columns +?)")
+      .withOptions(ts, "?FROM +?%V:source", "?LIKE +?%t:template", "?%w:props")
 
     // generate the table opCode
     val ref = EntityRef.parse(params.atoms("name"))
@@ -262,7 +280,7 @@ trait SQLLanguageParser {
     params.sources.get("source") match {
       case None => createTable
       case Some(queryable: Queryable) => SQL(createTable, Insert(Into(ref), queryable))
-      case Some(other) => ts.die(s"A queryable source was expected: $other")
+      case Some(other) => ts.die(s"A queryable source was expected: ${other.toSQL}")
     }
   }
 
@@ -279,8 +297,6 @@ trait SQLLanguageParser {
       replacements.foldLeft(string) { case (line, (a, b)) => line.replaceAllLiterally(a, b) }
     }
 
-    def getLocation: Option[String] = params.atoms.get("path")
-
     Create(ExternalTable(
       ref = EntityRef.parse(params.atoms("name")),
       description = params.atoms.get("description"),
@@ -288,9 +304,10 @@ trait SQLLanguageParser {
       ifNotExists = params.indicators.get("exists").contains(true),
       fieldTerminator = params.atoms.get("field.delimiter").map(escapeChars),
       headersIncluded = params.atoms.get("props.headers").map(_ equalsIgnoreCase "ON"),
-      format = (params.atoms.get("formats.input") ?? params.atoms.get("formats.output")).map(_.toLowerCase),
+      inputFormat = params.atoms.get("formats.input").map(_.toLowerCase),
+      outputFormat = params.atoms.get("formats.output").map(_.toLowerCase),
       lineTerminator = params.atoms.get("line.delimiter").map(escapeChars),
-      location = getLocation,
+      location = params.atoms.get("path"),
       nullValue = params.atoms.get("props.nullValue"),
       partitionBy = params.columns.getOrElse("partitions", Nil),
       serdeProperties = params.properties.getOrElse("props.serde", Map.empty),
@@ -373,6 +390,25 @@ trait SQLLanguageParser {
   }
 
   /**
+   * Parses a DO ... WHILE statement
+   * @example
+   * {{{
+   * DO
+   * BEGIN
+   *    PRINT 'Hello World';
+   *    SET $cnt = $cnt + 1;
+   * END
+   * WHILE $cnt < 10
+   * }}}
+   * @param ts the given [[TokenStream token stream]]
+   * @return an [[DoWhile]]
+   */
+  private def parseDoWhile(ts: TokenStream): DoWhile = {
+    val params = SQLTemplateParams(ts, "DO %N:command WHILE %c:condition")
+    DoWhile(condition = params.conditions("condition"), invokable = params.sources("command"))
+  }
+
+  /**
    * Parses a DROP statement
    * @param ts the given [[TokenStream token stream]]
    * @return an [[Invokable invokable]]
@@ -414,7 +450,7 @@ trait SQLLanguageParser {
     * END LOOP;
     * }}}
     * @param stream the given [[TokenStream token stream]]
-    * @return an [[While]]
+    * @return an [[WhileDo]]
     */
   private def parseForLoop(stream: TokenStream): ForLoop = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
@@ -645,21 +681,21 @@ trait SQLLanguageParser {
   }
 
   /**
-    * Parses a WHILE statement
+    * Parses a WHILE ... DO statement
     * @example
     * {{{
-    * WHILE $cnt < 10
+    * WHILE $cnt < 10 DO
     * BEGIN
     *    PRINT 'Hello World';
     *    SET $cnt = $cnt + 1;
     * END;
     * }}}
     * @param ts the given [[TokenStream token stream]]
-    * @return an [[While]]
+    * @return an [[WhileDo]]
     */
-  private def parseWhile(ts: TokenStream): While = {
-    val params = SQLTemplateParams(ts, "WHILE %c:condition %N:command")
-    While(condition = params.conditions("condition"), invokable = params.sources("command"))
+  private def parseWhileDo(ts: TokenStream): WhileDo = {
+    val params = SQLTemplateParams(ts, "WHILE %c:condition DO %N:command")
+    WhileDo(condition = params.conditions("condition"), invokable = params.sources("command"))
   }
 
 }

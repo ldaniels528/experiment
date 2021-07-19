@@ -1,7 +1,6 @@
 package com.qwery.language
 
-import com.qwery.models.ColumnTypeSpec
-import com.qwery.models._
+import com.qwery.models.{ColumnTypeSpec, _}
 import com.qwery.models.expressions._
 import com.qwery.util.StringHelper._
 

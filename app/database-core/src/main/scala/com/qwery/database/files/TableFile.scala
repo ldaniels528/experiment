@@ -5,7 +5,8 @@ import com.qwery.database.device.{BlockDevice, RowOrientedFileBlockDevice}
 import com.qwery.database.files.DatabaseFiles._
 import com.qwery.database.models.TableColumn.implicits._
 import com.qwery.database.models.TableConfig
-import com.qwery.models.{Table, EntityRef}
+import com.qwery.language.SQLDecompiler.implicits._
+import com.qwery.models.{EntityRef, Table}
 
 /**
   * Represents a physical table file

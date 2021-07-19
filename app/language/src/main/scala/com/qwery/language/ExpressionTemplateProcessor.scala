@@ -1,5 +1,6 @@
 package com.qwery.language
 
+import com.qwery.language.Token._
 import com.qwery.models._
 import com.qwery.models.expressions.{Expression, FieldRef}
 

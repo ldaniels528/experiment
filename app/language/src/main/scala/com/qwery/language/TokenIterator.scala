@@ -1,5 +1,7 @@
 package com.qwery.language
 
+import com.qwery.language.Token._
+
 import java.lang.String.copyValueOf
 
 /**

@@ -50,56 +50,62 @@ sealed trait Token {
 }
 
 /**
-  * Represents a text token
-  * @author lawrence.daniels@gmail.com
-  */
-sealed trait TextToken extends Token {
-  override def value: String
+ * Token Companion
+ */
+object Token {
+
+  /**
+   * Represents a text token
+   * @author lawrence.daniels@gmail.com
+   */
+  sealed trait TextToken extends Token {
+    override def value: String
+  }
+
+  /**
+   * Represents an alphanumeric token
+   * @author lawrence.daniels@gmail.com
+   */
+  case class AlphaToken(text: String, lineNo: Int, columnNo: Int) extends TextToken {
+    override def value: String = text
+  }
+
+  /**
+   * Represents a quoted token
+   * @author lawrence.daniels@gmail.com
+   */
+  case class QuotedToken(text: String, lineNo: Int, columnNo: Int, quoteChar: Char) extends TextToken {
+    override def value: String = text
+
+    def isBackTicks: Boolean = quoteChar == '`'
+
+    def isDoubleQuoted: Boolean = quoteChar == '"'
+
+    def isSingleQuoted: Boolean = quoteChar == '\''
+  }
+
+  /**
+   * Represents a numeric token
+   * @author lawrence.daniels@gmail.com
+   */
+  case class NumericToken(text: String, lineNo: Int, columnNo: Int) extends Token {
+    override def value: Double = text.toDouble
+  }
+
+  /**
+   * Represents an operator token
+   * @author lawrence.daniels@gmail.com
+   */
+  case class OperatorToken(text: String, lineNo: Int, columnNo: Int) extends Token {
+    override def value: String = text
+  }
+
+  /**
+   * Represents a symbolic token
+   * @author lawrence.daniels@gmail.com
+   */
+  case class SymbolToken(text: String, lineNo: Int, columnNo: Int) extends Token {
+    override def value: String = text
+  }
+
 }
-
-/**
-  * Represents an alphanumeric token
-  * @author lawrence.daniels@gmail.com
-  */
-case class AlphaToken(text: String, lineNo: Int, columnNo: Int) extends TextToken {
-  override def value: String = text
-}
-
-/**
-  * Represents a quoted token
-  * @author lawrence.daniels@gmail.com
-  */
-case class QuotedToken(text: String, lineNo: Int, columnNo: Int, quoteChar: Char) extends TextToken {
-  override def value: String = text
-
-  def isBackTicks: Boolean = quoteChar == '`'
-
-  def isDoubleQuoted: Boolean = quoteChar == '"'
-
-  def isSingleQuoted: Boolean = quoteChar == '\''
-}
-
-/**
-  * Represents a numeric token
-  * @author lawrence.daniels@gmail.com
-  */
-case class NumericToken(text: String, lineNo: Int, columnNo: Int) extends Token {
-  override def value: Double = text.toDouble
-}
-
-/**
-  * Represents an operator token
-  * @author lawrence.daniels@gmail.com
-  */
-case class OperatorToken(text: String, lineNo: Int, columnNo: Int) extends Token {
-  override def value: String = text
-}
-
-/**
-  * Represents a symbolic token
-  * @author lawrence.daniels@gmail.com
-  */
-case class SymbolToken(text: String, lineNo: Int, columnNo: Int) extends Token {
-  override def value: String = text
-}
-

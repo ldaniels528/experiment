@@ -2,6 +2,7 @@ package com.qwery.database
 package jdbc
 
 import com.qwery.database.server.testkit.DatabaseTestServer
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.Table
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec

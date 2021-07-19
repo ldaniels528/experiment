@@ -14,11 +14,6 @@ case class ColumnTypeSpec(`type`: String, size: Option[Int], precision: Option[I
 
   def this(`type`: String, size: Int, precision: Int) = this(`type`, size = Option(size), precision = Option(precision))
 
-  /**
-   * @return the SQL representation of this column type specification
-   */
-  def toSQL: String = s"${`type`}(${(size.toList ::: precision.toList).mkString(",")})"
-
 }
 
 /**

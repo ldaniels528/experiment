@@ -26,18 +26,6 @@ case class Column(name: String,
    */
   @inline def isEnum: Boolean = enumValues.nonEmpty
 
-  /**
-   * @return the SQL representation of this column
-   */
-  def toSQL: String = {
-    val sb = new StringBuilder(s"$name ${spec.toSQL}")
-    if (enumValues.nonEmpty) sb.append(s" AS ENUM (${enumValues.map(v => s"'$v'").mkString(",")})")
-    if (!isNullable) sb.append(" NOT NULL")
-    defaultValue.foreach(value => s"DEFAULT '$value'")
-    comment.foreach(remark => s" COMMENT '$remark'")
-    sb.toString()
-  }
-
   override def toString: String = {
     f"""|${getClass.getSimpleName}(
         |name=$name,

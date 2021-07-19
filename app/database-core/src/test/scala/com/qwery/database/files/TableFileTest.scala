@@ -2,6 +2,7 @@ package com.qwery.database
 package files
 
 import com.qwery.database.models.{KeyValues, StockQuoteWithDate}
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.AlterTable.{AddColumn, RenameColumn}
 import com.qwery.models.expressions.{AllFields, BasicFieldRef}
 import com.qwery.models.{Column, ColumnTypeSpec, EntityRef, Table}

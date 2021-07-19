@@ -147,7 +147,8 @@ class DatabaseCPU() {
       case Console.Debug(message) => logger.debug(message); None
       case Console.Error(message) => logger.error(message); None
       case Console.Info(message) => logger.info(message); None
-      case Console.Print(message) => println(message); None
+      case Console.Print(message) => print(message); None
+      case Console.Println(message) => println(message); None
       case Console.Warn(message) => logger.warn(message); None
       case Create(table: ExternalTable) => createExternalTable(table); None
       case Create(table: Table) => Some(Solution(table.ref, createTable(table)))
@@ -175,7 +176,7 @@ class DatabaseCPU() {
       case SQL(ops) => ops.foldLeft[Option[Solution]](None) { (_, op) => execute(databaseName, op) }
       case Truncate(ref) => Some(Solution(ref, truncateTable(ref)))
       case Update(ref, changes, where, limit) => Some(Solution(ref, updateRows(ref, changes, where, limit)))
-      case While(condition, invokable) => `while`(databaseName, condition, invokable)
+      case WhileDo(condition, invokable) => `while`(databaseName, condition, invokable)
       case unhandled => die(s"Unhandled instruction: $unhandled")
     }
   }

@@ -1,13 +1,15 @@
 package com.qwery
 
-import java.io.File
-import java.nio.ByteBuffer
-import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.device.{BlockDevice, ByteArrayBlockDevice, RowOrientedFileBlockDevice}
+import com.qwery.database.models.ColumnTypes.ColumnType
 import com.qwery.database.models.TableColumn
 import com.qwery.implicits.MagicImplicits
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.EntityRef
 import org.slf4j.LoggerFactory
+
+import java.io.File
+import java.nio.ByteBuffer
 
 /**
  * Qwery database package object

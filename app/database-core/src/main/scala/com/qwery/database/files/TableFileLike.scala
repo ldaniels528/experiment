@@ -1,6 +1,7 @@
 package com.qwery.database
 package files
 
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.database.collections.PersistentSeq
 import com.qwery.database.device.{BlockDevice, BlockDeviceQuery, RowOrientedFileBlockDevice, TableIndexDevice}
 import com.qwery.database.files.DatabaseFiles.implicits.RichFiles
@@ -12,7 +13,6 @@ import com.qwery.models.AlterTable._
 import com.qwery.models.expressions.{Condition, Expression, FieldRef => SQLField}
 import com.qwery.models.{EntityRef, OrderColumn, TableIndex}
 import com.qwery.util.ResourceHelper._
-import org.slf4j.LoggerFactory
 
 import java.io.File
 import scala.collection.concurrent.TrieMap
@@ -57,37 +57,29 @@ trait TableFileLike {
     val newColumns = alterations.foldLeft[List[TableColumn]](config.columns.toList) {
       case (columns, AddColumn(column)) => columns ::: column.toTableColumn :: Nil
       case (columns, AppendColumn(column)) => columns ::: column.toTableColumn :: Nil
-      case (columns, DropColumn(columnName)) => columns.filterNot(_.name == columnName)
+      case (columns, DropColumn(columnName)) =>
+        columns.getIndexByName(columnName) as (n => columns.slice(0, n) ::: columns.slice(n + 1, columns.length))
       case (columns, PrependColumn(column)) => column.toTableColumn :: columns
       case (columns, RenameColumn(oldName, newName)) =>
-        columns.indexWhere(_.name == oldName) match {
-          case -1 => die(s"Column '$oldName' does not exist in ${ref.toSQL}")
-          case n => columns.slice(0, n) ::: columns(n).copy(name = newName) :: columns.slice(n + 1, columns.length)
-        }
+        columns.getIndexByName(oldName) as(n => columns.slice(0, n) ::: columns(n).copy(name = newName) :: columns.slice(n + 1, columns.length))
       case (_, alteration) => die(s"Unhandled table alteration '${alteration.toSQL}'")
     } distinct
 
-    LoggerFactory.getLogger(this.getClass).info(s"newColumns = ${newColumns.map(_.name)}")
+    // get the collection of columns to be removed (or renamed)
+    val removedColumnNames = alterations.collect { case op: DropColumn => op.columnName; case op: RenameColumn => op.oldName }.toSet
 
     // determine which indices will be kept
-    val droppedColumnNames = alterations.collect { case op: DropColumn => op.columnName }
-    val newIndices = config.indices.filterNot(_.columns.exists(droppedColumnNames.contains))
+    val newIndices = config.indices.filterNot(_.columns.exists(removedColumnNames.contains))
 
     // determine the new file's name and location
-    val newFile = getTableDataFile(ref, config) as { file => file.getParentFile / (ref.name + "_" + System.currentTimeMillis()) }
+    val newFile = getTableDataFile(ref, config) as(_.getParentFile / (ref.name + "_" + System.currentTimeMillis()))
 
     // create a new configuration
-    val newConfig = config.copy(
-      columns = newColumns,
-      indices = newIndices,
-      physicalTable = Some(PhysicalTableConfig(location = newFile.getAbsolutePath))
-    )
+    val newConfig = config.copy(columns = newColumns, indices = newIndices, physicalTable = Some(PhysicalTableConfig(location = newFile.getAbsolutePath)))
 
     // duplicate the device with the modifications
     val newDevice = new RowOrientedFileBlockDevice(newColumns, newFile)
-    device foreachKVP { row =>
-      newDevice.writeRow(row.toBinaryRow(newDevice))
-    }
+    device foreachKVP { row => newDevice.writeRow(row.toBinaryRow(newDevice)) }
 
     // update the config to point to the new version
     writeTableConfig(ref, newConfig)

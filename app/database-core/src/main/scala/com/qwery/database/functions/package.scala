@@ -42,7 +42,8 @@ package object functions {
   private val transformationFunctions: Map[String, (String, List[Expression]) => TransformationFunction] = Map(
     "count" -> Count,
     "now" -> Now,
-    "round" -> Round
+    "round" -> Round,
+    "version" -> Version
   )
 
   def isTransformationFunction(functionName: String): Boolean = transformationFunctions.contains(functionName)

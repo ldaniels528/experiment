@@ -2,7 +2,8 @@ package com.qwery.database
 package device
 
 import com.qwery.database.files.DatabaseFiles.getTableDataFile
-import com.qwery.database.models.{BinaryRow, TableColumn, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableConfig}
+import com.qwery.database.models.{BinaryRow, FieldMetadata, JsValueConversion, KeyValues, RowMetadata, TableColumn, TableConfig}
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.EntityRef
 import com.qwery.util.ResourceHelper._
 

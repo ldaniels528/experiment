@@ -150,6 +150,18 @@ object TableColumn {
       }
     }
 
+    /**
+     * TableColumn Sequences
+     * @param columns the collection of [[TableColumn columns]]
+     */
+    final implicit class TableColumnSeq(val columns: Seq[TableColumn]) extends AnyVal {
+
+      @inline
+      def getIndexByName(name: String): Int = columns.indexWhere(_.name == name) match {
+        case -1 => die(s"Column '$name' does not exist")
+        case index => index
+      }
+    }
   }
 
 }

@@ -7,6 +7,7 @@ import com.qwery.database.models.{DatabaseConfig, TableConfig}
 import com.qwery.database.util.JSONSupport._
 import com.qwery.database.{DEFAULT_DATABASE, DEFAULT_SCHEMA, die, getServerRootDirectory}
 import com.qwery.implicits.MagicImplicits
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.language.SQLLanguageParser
 import com.qwery.models.{EntityRef, Invokable, TableIndex}
 import com.qwery.util.OptionHelper.OptionEnrichment

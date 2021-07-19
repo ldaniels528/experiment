@@ -17,9 +17,7 @@ case class EntityRef(databaseName: Option[String], schemaName: Option[String], n
     */
   def this(databaseName: String, schemaName: String, tableName: String) = this(Option(databaseName), Option(schemaName), tableName)
 
-  override def toString: String = toSQL
-
-  def toSQL: String = {
+  override def toString: String = {
     val sb = new StringBuilder()
     databaseName.foreach(name => sb.append(name).append('.'))
     schemaName.foreach(name => sb.append(name).append('.'))

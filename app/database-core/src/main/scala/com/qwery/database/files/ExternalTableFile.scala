@@ -60,7 +60,7 @@ object ExternalTableFile {
       indices = Nil,
       description = table.description,
       externalTable = Some(ExternalTableConfig(
-        format = table.format.map(_.toLowerCase),
+        format = table.inputFormat.map(_.toLowerCase),
         location = Some(rootFile.getCanonicalPath),
         fieldTerminator = table.fieldTerminator,
         lineTerminator = table.lineTerminator,

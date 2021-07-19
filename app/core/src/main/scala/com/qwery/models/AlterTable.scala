@@ -31,49 +31,37 @@ object AlterTable {
   /**
    * Represents a table alteration
    */
-  sealed trait Alteration extends Invokable {
-    def toSQL: String
-  }
+  sealed trait Alteration extends Invokable
 
   /**
    * Represents an alteration to add a column
    * @param column the [[Column]] to add the next position in the table
    */
-  case class AddColumn(column: Column) extends Alteration {
-    override def toSQL = s"ADD COLUMN ${column.toSQL}"
-  }
+  case class AddColumn(column: Column) extends Alteration
 
   /**
    * Represents an alteration to append a column
    * @param column the [[Column]] to append the end of the table
    */
-  case class AppendColumn(column: Column) extends Alteration {
-    override def toSQL = s"APPEND COLUMN ${column.toSQL}"
-  }
+  case class AppendColumn(column: Column) extends Alteration
 
   /**
    * Represents an alteration to remove a column
    * @param columnName the name of the column to remove from the table
    */
-  case class DropColumn(columnName: String) extends Alteration {
-    override def toSQL = s"DROP COLUMN $columnName"
-  }
+  case class DropColumn(columnName: String) extends Alteration
 
   /**
    * Represents an alteration to prepend a column
    * @param column the [[Column]] to prepend to the first position in the table
    */
-  case class PrependColumn(column: Column) extends Alteration {
-    override def toSQL = s"PREPEND COLUMN ${column.toSQL}"
-  }
+  case class PrependColumn(column: Column) extends Alteration
 
   /**
    * Represents an alteration to rename a column
    * @param oldName the current column name
    * @param newName the new/replacement column name
    */
-  case class RenameColumn(oldName: String, newName: String) extends Alteration {
-    override def toSQL = s"RENAME COLUMN $oldName AS $newName"
-  }
+  case class RenameColumn(oldName: String, newName: String) extends Alteration
 
 }

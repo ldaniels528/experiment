@@ -1,8 +1,8 @@
 package com.qwery.language
 
+import com.qwery.models.ColumnTypeSpec.implicits._
 import com.qwery.models._
 import com.qwery.models.expressions._
-import ColumnTypeSpec.implicits._
 import org.scalatest.Assertion
 import org.scalatest.funspec.AnyFunSpec
 
