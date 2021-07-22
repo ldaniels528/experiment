@@ -256,6 +256,7 @@ class SQLDecompilerTest extends AnyFunSpec {
         Expected("ERROR", Console.Error.apply, "This is an error message"),
         Expected("INFO", Console.Info.apply, "This is an informational message"),
         Expected("PRINT", Console.Print.apply, "This message will be printed to STDOUT"),
+        Expected("PRINTLN", Console.Println.apply, "This message will be printed to STDOUT"),
         Expected("WARN", Console.Warn.apply, "This is a warning message"))
       tests foreach { case Expected(command, opCode, message) =>
         verify(s"$command '$message'")
@@ -265,7 +266,7 @@ class SQLDecompilerTest extends AnyFunSpec {
     it("should support FOR .. IN") {
       verify(
         """|FOR $item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
-           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |  PRINTLN '{{item.symbol}} is {{item.lastSale}}/share';
            |}
            |""".stripMargin)
     }
@@ -274,7 +275,7 @@ class SQLDecompilerTest extends AnyFunSpec {
       verify(
         """|FOR $item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
            |LOOP
-           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |  PRINTLN '{{item.symbol}} is {{item.lastSale}}/share';
            |END LOOP;
            |""".stripMargin)
     }
@@ -612,10 +613,10 @@ class SQLDecompilerTest extends AnyFunSpec {
 
   def verify(expectedSQL: String): Assertion = {
     logger.info(s"expected: $expectedSQL")
-    val expected = SQLLanguageParser.parse(expectedSQL)
+    val expected = SQLCompiler.compile(expectedSQL)
     val actualSQL = expected.toSQL
     logger.info(s"actual: $actualSQL")
-    val actual = SQLLanguageParser.parse(actualSQL)
+    val actual = SQLCompiler.compile(actualSQL)
     assert(expected == actual)
   }
 

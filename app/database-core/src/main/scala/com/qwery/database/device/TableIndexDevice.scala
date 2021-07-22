@@ -100,6 +100,11 @@ class TableIndexDevice(ref: TableIndex, columns: Seq[TableColumn])
     super.foreachKVP(callback)
   }
 
+  override def foreachKVPInReverse[U](callback: KeyValues => U): Unit = {
+    refresh()
+    super.foreachKVPInReverse(callback)
+  }
+
   /**
    * Inserts a new index row
    * @param rowID    the row ID

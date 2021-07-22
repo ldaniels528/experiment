@@ -12,6 +12,7 @@ import com.qwery.models.expressions._
 
 /**
  * SQL Decompiler Support
+ * @author lawrence.daniels@gmail.com
  */
 trait SQLDecompiler {
 
@@ -34,7 +35,7 @@ trait SQLDecompiler {
       case e: EntityRef => decompileEntityRef(e)
       case Except(query0, query1) => s"${query0.toSQL} except ${query1.toSQL}"
       case e: Expression => decompileExpression(e)
-      case f: ForLoop => s"for ${f.variable.toSQL} in ${if (f.isReverse) "reverse" else ""} (${f.rows.toSQL}) ${f.invokable.toSQL}"
+      case f: ForEach => s"for ${f.variable.toSQL} in ${if (f.isReverse) "reverse" else ""} (${f.rows.toSQL}) ${f.invokable.toSQL}"
       case IN.Values(items) => items.map(_.toSQL).mkString(",")
       case Include(path) => s"include '$path'"
       case i: Insert => decompileInsert(i)
@@ -150,17 +151,17 @@ trait SQLDecompiler {
   }
 
   private def decompileCreateProcedure(p: Procedure): String = {
-    val sb = new StringBuilder("create ")
-    if (p.isReplace) sb.append("or replace ")
-    sb.append(s"procedure ${p.ref.toSQL}(${p.params.map(_.toSQL).mkString(",")}) as ${p.code.toSQL}")
+    val sb = new StringBuilder("create")
+    if (p.isReplace) sb.append(" or replace")
+    sb.append(s" procedure ${p.ref.toSQL}(${p.params.map(_.toSQL).mkString(",")}) as ${p.code.toSQL}")
     sb.toString()
   }
 
   private def decompileCreateTable(t: Table): String = {
-    val sb = new StringBuilder(s"create table ")
-    if (t.ifNotExists) sb.append("if not exists ")
-    sb.append(t.ref.toSQL).append(" (").append(t.columns.map(_.toSQL).mkString(",")).append(") ")
-    t.description.foreach(comment => sb.append(s"comment '$comment' "))
+    val sb = new StringBuilder(s"create table")
+    if (t.ifNotExists) sb.append(" if not exists")
+    sb.append(s" ${t.ref.toSQL} (${t.columns.map(_.toSQL).mkString(",")})")
+    t.description.foreach(comment => sb.append(s" comment '$comment' "))
     sb.toString()
   }
 
@@ -175,10 +176,10 @@ trait SQLDecompiler {
 
   private def decompileCreateView(v: View): String = {
     val sb = new StringBuilder("create view ")
-    if (v.ifNotExists) sb.append("if not exists ")
-    sb.append(v.ref.toSQL).append(" ")
-    v.description.foreach(comment => sb.append(s"comment '$comment' "))
-    sb.append(s"as ${v.query.toSQL} ")
+    if (v.ifNotExists) sb.append(" if not exists ")
+    sb.append(s" ${v.ref.toSQL}")
+    v.description.foreach(comment => sb.append(s" comment '$comment' "))
+    sb.append(s" as ${v.query.toSQL}")
     sb.toString()
   }
 
@@ -215,6 +216,7 @@ trait SQLDecompiler {
     case LIKE(a, b) => s"${a.toSQL} like ${b.toSQL}"
     case Literal(value) => decompileLiteral(value)
     case MathOp(expr0, expr1, operator) => s"${expr0.toSQL} $operator ${expr1.toSQL}"
+    case NOT(a) => s"not ${a.toSQL}"
     case OR(a, b) => s"${a.toSQL} or ${b.toSQL}"
     case o: Over => decompileOver(o)
     case Preceding(expr) => s"${expr.toSQL} preceding"

@@ -3,12 +3,14 @@ package com.qwery.database
 import com.qwery.database.DatabaseCPU.implicits.InvokableWithDatabase
 import com.qwery.database.DatabaseCPU.{Solution, toCriteria}
 import com.qwery.database.ExpressionVM.{RichCondition, evaluate, nextID}
+import com.qwery.database.Scope.{Variable, replaceTags}
 import com.qwery.database.device.BlockDevice
 import com.qwery.database.files.DatabaseFiles.implicits.DBFilesConfig
 import com.qwery.database.files.DatabaseFiles.readTableConfig
 import com.qwery.database.files._
-import com.qwery.database.models.{TableColumn, ColumnTypes, Field, KeyValues, Row, TableMetrics}
-import com.qwery.language.SQLLanguageParser
+import com.qwery.database.models.{ColumnTypes, Field, KeyValues, Row, TableColumn, TableMetrics}
+import com.qwery.language.SQLCompiler
+import com.qwery.language.SQLDecompiler.implicits._
 import com.qwery.models.AlterTable._
 import com.qwery.models.Insert.{Into, Overwrite}
 import com.qwery.models.expressions._
@@ -113,6 +115,12 @@ class DatabaseCPU() {
     tableOf(ref).deleteRows(condition = toCriteria(condition), limit)
   }
 
+  def doWhile(databaseName: String, condition: Condition, invokable: Invokable)(implicit scope: Scope): Option[Solution] = {
+    var result: Option[Solution] = None
+    do result = execute(databaseName, invokable) while (condition.isTrue)
+    result
+  }
+
   /**
     * Deletes a database table
     * @param ref      the [[EntityRef table reference]]
@@ -144,21 +152,22 @@ class DatabaseCPU() {
   def execute(databaseName: String, invokable: Invokable)(implicit scope: Scope): Option[Solution] = {
     invokable.withDatabase(databaseName) match {
       case AlterTable(table, alterations) => alterTable(table, alterations); None
-      case Console.Debug(message) => logger.debug(message); None
-      case Console.Error(message) => logger.error(message); None
-      case Console.Info(message) => logger.info(message); None
-      case Console.Print(message) => print(message); None
-      case Console.Println(message) => println(message); None
-      case Console.Warn(message) => logger.warn(message); None
+      case c: Console.Debug => logger.debug(replaceTags(c.text)); None
+      case c: Console.Error => logger.error(replaceTags(c.text)); None
+      case c: Console.Info => logger.info(replaceTags(c.text)); None
+      case c: Console.Print => print(replaceTags(c.text)); None
+      case c: Console.Println => println(replaceTags(c.text)); None
+      case c: Console.Warn => logger.warn(replaceTags(c.text)); None
       case Create(table: ExternalTable) => createExternalTable(table); None
       case Create(table: Table) => Some(Solution(table.ref, createTable(table)))
       case Create(tableIndex: TableIndex) => createIndex(tableIndex); None
       case Create(view: View) => Some(Solution(view.ref, createView(view)))
       case Declare(variable, _type) => createVariable(variable, _type); None
       case Delete(ref, where, limit) => Some(Solution(ref, deleteRows(ref, where, limit)))
+      case DoWhile(invokable, condition) => doWhile(databaseName, condition, invokable)
       case DropTable(ref, ifExists) => Some(Solution(ref, dropTable(ref, ifExists)))
       case DropView(ref, ifExists) => Some(Solution(ref, dropView(ref, ifExists)))
-      case ForLoop(variable, rows, invokable, isReverse) => forLoop(variable, rows, invokable, isReverse)
+      case ForEach(variable, rows, invokable, isReverse) => forEach(databaseName, variable, rows, invokable, isReverse); None
       case Include(path) => execute(databaseName, invokable = include(path))
       case Insert(Into(ref), Insert.Values(values), fields) =>
         Some(Solution(ref, insertRows(ref, fields = fields.map(_.name), values = values)))
@@ -176,7 +185,7 @@ class DatabaseCPU() {
       case SQL(ops) => ops.foldLeft[Option[Solution]](None) { (_, op) => execute(databaseName, op) }
       case Truncate(ref) => Some(Solution(ref, truncateTable(ref)))
       case Update(ref, changes, where, limit) => Some(Solution(ref, updateRows(ref, changes, where, limit)))
-      case WhileDo(condition, invokable) => `while`(databaseName, condition, invokable)
+      case WhileDo(condition, invokable) => whileDo(databaseName, condition, invokable)
       case unhandled => die(s"Unhandled instruction: $unhandled")
     }
   }
@@ -188,7 +197,7 @@ class DatabaseCPU() {
     * @return the [[Solution solution]] containing a result set or an update count
     */
   def executeQuery(databaseName: String, sql: String)(implicit scope: Scope): Option[Solution] = {
-    execute(databaseName, invokable = SQLLanguageParser.parse(sql))
+    execute(databaseName, invokable = SQLCompiler.compile(sql))
   }
 
   /**
@@ -202,18 +211,37 @@ class DatabaseCPU() {
   }
 
   /**
-    * FOR-LOOP statement
-    * @param variable  the given [[ScalarVariableRef variable]]
-    * @param rows      the given [[Invokable rows]]
-    * @param invokable the [[Invokable statements]] to execute
-    * @param isReverse indicates reverse order
+    * FOR/FOREACH statement
+    * @param databaseName the database name
+    * @param variableRef  the given [[ScalarVariableRef variable reference]]
+    * @param rows         the given [[Invokable rows]]
+    * @param invokable    the [[Invokable statements]] to execute
+    * @param isReverse    indicates reverse order
     */
-  def forLoop(variable: ScalarVariableRef,
+  def forEach(databaseName: String,
+              variableRef: ScalarVariableRef,
               rows: Invokable,
               invokable: Invokable,
-              isReverse: Boolean)(implicit scope: Scope): Option[Solution] = {
-    // TODO implement forLoop
-    ???
+              isReverse: Boolean)(implicit scope: Scope): Unit = {
+    // create a sub-scope containing the local variable
+    val childScope = new SubScope(scope)
+    childScope.addVariable(Variable(name = variableRef.name, value = None))
+    val variable = childScope.getVariable(variableRef.name)
+      .getOrElse(throw new RuntimeException(s"Variable '${variableRef.name}' not found"))
+
+    def processRow(row: KeyValues): Option[Solution] = {
+      variable.value = Some(row.toMap)
+      childScope.currentRow = Some(row)
+      execute(databaseName, invokable)(childScope)
+    }
+
+    // iterate the rows (forward or reverse)
+    rows match {
+      case queryable: Queryable =>
+        implicit val device: BlockDevice = toDevice(databaseName, queryable)
+        if (isReverse) device foreachKVPInReverse processRow else device foreachKVP processRow
+      case other => die(s"A queryable source was expected near '${other.toSQL}''")
+    }
   }
 
   /**
@@ -285,7 +313,7 @@ class DatabaseCPU() {
   def include(path: String): Invokable = {
     val file = new File(path).getCanonicalFile
     logger.info(s"Merging source file '${file.getAbsolutePath}'...")
-    SQLLanguageParser.parse(file)
+    SQLCompiler.compile(file)
   }
 
   /**
@@ -385,7 +413,7 @@ class DatabaseCPU() {
     tableOf(ref).updateRows(row, toCriteria(condition), limit)
   }
 
-  def `while`(databaseName: String, condition: Condition, invokable: Invokable)(implicit scope: Scope): Option[Solution] = {
+  def whileDo(databaseName: String, condition: Condition, invokable: Invokable)(implicit scope: Scope): Option[Solution] = {
     var result: Option[Solution] = None
     while (condition.isTrue) {
       result = execute(databaseName, invokable)

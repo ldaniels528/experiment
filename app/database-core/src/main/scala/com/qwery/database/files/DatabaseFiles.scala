@@ -8,7 +8,7 @@ import com.qwery.database.util.JSONSupport._
 import com.qwery.database.{DEFAULT_DATABASE, DEFAULT_SCHEMA, die, getServerRootDirectory}
 import com.qwery.implicits.MagicImplicits
 import com.qwery.language.SQLDecompiler.implicits._
-import com.qwery.language.SQLLanguageParser
+import com.qwery.language.SQLCompiler
 import com.qwery.models.{EntityRef, Invokable, TableIndex}
 import com.qwery.util.OptionHelper.OptionEnrichment
 import com.qwery.util.ResourceHelper._
@@ -115,7 +115,7 @@ object DatabaseFiles {
   def readViewQuery(ref: EntityRef): Invokable = {
     getTableConfigFile(ref) as { file => assert(file.exists(), s"View '${ref.toSQL}' does not exist [${file.getAbsolutePath}]") }
     val sql = readTableConfig(ref).virtualTable.map(_.queryString).getOrElse(die(s"Object '${ref.toSQL}' is not a view"))
-    SQLLanguageParser.parse(sql)
+    SQLCompiler.compile(sql)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////

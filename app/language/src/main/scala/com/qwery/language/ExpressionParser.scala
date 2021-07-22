@@ -11,7 +11,7 @@ import com.qwery.models.expressions.{NativeFunctions => f, _}
   */
 trait ExpressionParser {
   private val processor = new ExpressionTemplateProcessor {}
-  private val slp = new SQLLanguageParser {}
+  private val slp = new SQLCompiler {}
 
   /**
     * Parses a conditional expression from the given stream

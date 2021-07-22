@@ -13,74 +13,74 @@ import scala.language.postfixOps
   * SQL Language Parser Test
   * @author lawrence.daniels@gmail.com
   */
-class SQLLanguageParserTest extends AnyFunSpec {
+class SQLCompilerTest extends AnyFunSpec {
 
-  describe(classOf[SQLLanguageParser].getSimpleName) {
+  describe(classOf[SQLCompiler].getSimpleName) {
     import com.qwery.models.expressions.implicits._
     import com.qwery.util.OptionHelper.Implicits.Risky._
 
     it("should support ALTER TABLE .. ADD") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT")
+      val results = SQLCompiler.compile("ALTER TABLE stocks ADD comments TEXT")
       assert(results == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT"))))
     }
 
     it("should support ALTER TABLE .. ADD COLUMN .. DEFAULT") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
+      val results = SQLCompiler.compile("ALTER TABLE stocks ADD COLUMN comments TEXT DEFAULT 'N/A'")
       assert(results == AlterTable(EntityRef.parse("stocks"), AddColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
     }
 
     it("should support ALTER TABLE .. APPEND") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
+      val results = SQLCompiler.compile("ALTER TABLE stocks APPEND comments TEXT DEFAULT 'N/A'")
       assert(results == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT").copy(defaultValue = Some("N/A")))))
     }
 
     it("should support ALTER TABLE .. APPEND COLUMN") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks APPEND COLUMN comments TEXT")
+      val results = SQLCompiler.compile("ALTER TABLE stocks APPEND COLUMN comments TEXT")
       assert(results == AlterTable(EntityRef.parse("stocks"), AppendColumn(Column("comments TEXT"))))
     }
 
     it("should support ALTER TABLE .. DROP") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks DROP comments")
+      val results = SQLCompiler.compile("ALTER TABLE stocks DROP comments")
       assert(results == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
     }
 
     it("should support ALTER TABLE .. DROP COLUMN") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks DROP COLUMN comments")
+      val results = SQLCompiler.compile("ALTER TABLE stocks DROP COLUMN comments")
       assert(results == AlterTable(EntityRef.parse("stocks"), DropColumn("comments")))
     }
 
     it("should support ALTER TABLE .. PREPEND") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND comments TEXT")
+      val results = SQLCompiler.compile("ALTER TABLE stocks PREPEND comments TEXT")
       assert(results == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
     }
 
     it("should support ALTER TABLE .. PREPEND COLUMN") {
-       val results = SQLLanguageParser.parse("ALTER TABLE stocks PREPEND COLUMN comments TEXT")
+       val results = SQLCompiler.compile("ALTER TABLE stocks PREPEND COLUMN comments TEXT")
       assert(results == AlterTable(EntityRef.parse("stocks"), PrependColumn(Column("comments TEXT"))))
     }
 
     it("should support ALTER TABLE .. RENAME") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks RENAME comments AS remarks")
+      val results = SQLCompiler.compile("ALTER TABLE stocks RENAME comments AS remarks")
       assert(results == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
     }
 
     it("should support ALTER TABLE .. RENAME COLUMN") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks RENAME COLUMN comments AS remarks")
+      val results = SQLCompiler.compile("ALTER TABLE stocks RENAME COLUMN comments AS remarks")
       assert(results == AlterTable(EntityRef.parse("stocks"), RenameColumn(oldName = "comments", newName = "remarks")))
     }
 
     it("should support ALTER TABLE .. ADD/DROP") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD comments TEXT DROP remarks")
+      val results = SQLCompiler.compile("ALTER TABLE stocks ADD comments TEXT DROP remarks")
       assert(results == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
     }
 
     it("should support ALTER TABLE .. ADD COLUMN/DROP COLUMN") {
-      val results = SQLLanguageParser.parse("ALTER TABLE stocks ADD COLUMN comments TEXT DROP COLUMN remarks")
+      val results = SQLCompiler.compile("ALTER TABLE stocks ADD COLUMN comments TEXT DROP COLUMN remarks")
       assert(results == AlterTable(EntityRef.parse("stocks"), Seq(AddColumn(Column("comments TEXT")), DropColumn("remarks"))))
     }
 
     it("should support BEGIN .. END") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|BEGIN
            |  PRINT 'Hello ';
            |  PRINTLN 'World';
@@ -90,7 +90,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support { .. }") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|{
            |  INFO 'Hello World'
            |}
@@ -99,12 +99,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CALL") {
-      val results = SQLLanguageParser.parse("CALL computeArea(length, width)")
+      val results = SQLCompiler.compile("CALL computeArea(length, width)")
       assert(results == ProcedureCall(name = "computeArea", args = List('length, 'width)))
     }
 
     it("should support CREATE EXTERNAL TABLE") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |STORED AS INPUTFORMAT 'JSON' OUTPUTFORMAT 'JSON'
@@ -120,7 +120,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE EXTERNAL TABLE w/COMMENT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE EXTERNAL TABLE Customers (
            |    customer_uid UUID COMMENT 'Unique Customer ID',
            |    name STRING COMMENT '',
@@ -151,7 +151,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE EXTERNAL TABLE .. WITH") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE EXTERNAL TABLE Customers (customer_uid UUID, name STRING, address STRING, ingestion_date LONG)
            |PARTITIONED BY (year STRING, month STRING, day STRING)
            |ROW FORMAT DELIMITED
@@ -174,7 +174,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE EXTERNAL TABLE .. PARTITIONED BY") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE EXTERNAL TABLE revenue_per_page (
            |  `rank` string COMMENT 'from deserializer',
            |  `section` string COMMENT 'from deserializer',
@@ -216,7 +216,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE FUNCTION") {
-      val results = SQLLanguageParser.parse("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
+      val results = SQLCompiler.compile("CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'")
       assert(results == Create(UserDefinedFunction(
         ref = EntityRef.parse("myFunc"),
         `class` = "com.qwery.udf.MyFunc",
@@ -226,7 +226,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE FUNCTION .. USING JAR") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE FUNCTION myFunc AS 'com.qwery.udf.MyFunc'
            |USING JAR '/home/ldaniels/shocktrade/jars/shocktrade-0.8.jar'
            |""".stripMargin)
@@ -240,7 +240,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE INDEX") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE INDEX stocks_symbol ON stocks (symbol)
            |""".stripMargin)
       assert(results == Create(TableIndex(
@@ -252,7 +252,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE PROCEDURE") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE PROCEDURE testInserts(industry STRING) AS
            |  RETURN (
            |    SELECT Symbol, Name, Sector, Industry, SummaryQuote
@@ -271,7 +271,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE TABLE w/ENUM") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         s"""|CREATE TABLE Stocks (
             |  symbol STRING,
             |  exchange STRING AS ENUM ('AMEX', 'NASDAQ', 'NYSE', 'OTCBB', 'OTHEROTC'),
@@ -289,7 +289,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE TABLE with inline VALUES") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
            |FROM VALUES ('AAPL', 202.11), ('AMD', 23.50), ('GOOG', 765.33), ('AMZN', 699.01)
            |""".stripMargin)
@@ -301,7 +301,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE TABLE with subquery") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE TABLE SpecialSecurities (symbol STRING, lastSale DOUBLE)
            |FROM (
            |    SELECT symbol, lastSale
@@ -317,7 +317,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE TYPE .. AS ENUM") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy')
            |""".stripMargin
       )
@@ -325,7 +325,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE VIEW") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE VIEW IF NOT EXISTS OilAndGas AS
            |SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
@@ -340,7 +340,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support CREATE VIEW .. WITH COMMENT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|CREATE VIEW IF NOT EXISTS OilAndGas
            |WITH COMMENT 'AMEX Stock symbols sorted by last sale'
            |AS
@@ -357,12 +357,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support DECLARE") {
-      val results = SQLLanguageParser.parse("DECLARE $customerId INTEGER")
+      val results = SQLCompiler.compile("DECLARE $customerId INTEGER")
       assert(results == Declare(variable = $$("customerId"), `type` = "INTEGER"))
     }
 
     it("should support DELETE") {
-      val results = SQLLanguageParser.parse("DELETE FROM todo_list where item_id = 1238 LIMIT 25")
+      val results = SQLCompiler.compile("DELETE FROM todo_list where item_id = 1238 LIMIT 25")
       assert(results == Delete(table = Table("todo_list"), where = FieldRef('item_id) === 1238, limit = Some(25)))
     }
 
@@ -375,51 +375,51 @@ class SQLLanguageParserTest extends AnyFunSpec {
         Expected("PRINT", Console.Print.apply, "This message will be printed to STDOUT"),
         Expected("WARN", Console.Warn.apply, "This is a warning message"))
       tests foreach { case Expected(command, opCode, message) =>
-        val results = SQLLanguageParser.parse(s"$command '$message'")
+        val results = SQLCompiler.compile(s"$command '$message'")
         assert(results == opCode(message))
       }
     }
 
     it("should support FOR .. IN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|FOR $item IN (SELECT symbol, lastSale FROM Securities WHERE naics = '12345') {
-           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |  PRINTLN '{{item.symbol}} is {{item.lastSale}}/share';
            |}
            |""".stripMargin)
-      assert(results == ForLoop(
+      assert(results == ForEach(
         variable = $$("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
-          Print("${item.symbol} is ${item.lastSale)/share")
+          Println("{{item.symbol}} is {{item.lastSale}}/share")
         ),
         isReverse = false
       ))
     }
 
     it("should support FOR .. LOOP") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|FOR $item IN REVERSE (SELECT symbol, lastSale FROM Securities WHERE naics = '12345')
            |LOOP
-           |  PRINT '${item.symbol} is ${item.lastSale)/share';
+           |  PRINTLN '{{item.symbol}} is {{item.lastSale}}/share';
            |END LOOP;
            |""".stripMargin)
-      assert(results == ForLoop(
+      assert(results == ForEach(
         variable = $$("item"),
         rows = Select(fields = Seq('symbol, 'lastSale), from = Table("Securities"), where = FieldRef('naics) === "12345"),
         invokable = SQL(
-          Print("${item.symbol} is ${item.lastSale)/share")
+          Println("{{item.symbol}} is {{item.lastSale}}/share")
         ),
         isReverse = true
       ))
     }
 
     it("should support INCLUDE") {
-      val results = SQLLanguageParser.parse("INCLUDE 'models/securities.sql'")
+      val results = SQLCompiler.compile("INCLUDE 'models/securities.sql'")
       assert(results == Include("models/securities.sql"))
     }
 
     it("should support INSERT without explicitly defined fields") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         "INSERT INTO Students VALUES ('Fred Flintstone', 35, 1.28), ('Barney Rubble', 32, 2.32)")
       assert(results == Insert(Into(Table("Students")), Insert.Values(values = List(
         List("Fred Flintstone", 35.0, 1.28),
@@ -428,7 +428,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support INSERT-INTO-SELECT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |FROM Securities
@@ -445,7 +445,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support INSERT-INTO-VALUES") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|INSERT INTO TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
@@ -463,7 +463,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support INSERT-OVERWRITE-SELECT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry)
            |SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |FROM Securities
@@ -480,7 +480,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support INSERT-OVERWRITE-VALUES") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|INSERT OVERWRITE TABLE OilGasSecurities (Symbol, Name, Sector, Industry, LastSale)
            |VALUES
            |  ('AAPL', 'Apple, Inc.', 'Technology', 'Computers', 203.45),
@@ -496,12 +496,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT without a FROM clause") {
-      val results = SQLLanguageParser.parse("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
+      val results = SQLCompiler.compile("SELECT `$$DATA_SOURCE_ID` AS DATA_SOURCE_ID")
       assert(results == Select(fields = List(FieldRef("$$DATA_SOURCE_ID").as("DATA_SOURCE_ID"))))
     }
 
     it("should support SELECT function call") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         "SELECT symbol, customFx(lastSale) FROM Securities WHERE naics = '12345'")
       assert(results == Select(
         fields = Seq('symbol, FunctionCall("customFx")('lastSale)),
@@ -511,7 +511,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT DISTINCT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         "SELECT DISTINCT Ticker_Symbol FROM Securities WHERE Industry = 'Oil/Gas Transmission'")
       assert(results ==
         Select(
@@ -522,7 +522,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. INTO") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, LastSale, MarketCap, IPOyear, Sector, Industry
            |INTO TABLE OilGasSecurities
            |FROM Securities
@@ -539,7 +539,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. EXISTS(..)") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT * FROM Departments WHERE EXISTS(SELECT employee_id FROM Employees WHERE role = 'MANAGER')
            |""".stripMargin)
       assert(results ==
@@ -551,7 +551,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support SELECT .. GROUP BY fields") {
       import NativeFunctions._
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
            |FROM Customers
            |GROUP BY Sector, Industry
@@ -566,7 +566,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support SELECT .. GROUP BY indices") {
       import NativeFunctions._
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Sector, Industry, AVG(LastSale) AS LastSale, COUNT(*) AS total, COUNT(DISTINCT(*)) AS distinctTotal
            |FROM Customers
            |GROUP BY 1, 2
@@ -580,7 +580,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. LIMIT n") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
@@ -595,7 +595,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. ORDER BY") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE Industry = 'Oil/Gas Transmission'
@@ -611,7 +611,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support SELECT .. OVER") {
       import NativeFunctions._
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT PAT_ID, DEPT_ID, INS_AMT,
            |MIN(INS_AMT) OVER (PARTITION BY DEPT_ID ORDER BY DEPT_ID ASC) AS MIN_INS_AMT,
            |MAX(INS_AMT) OVER (PARTITION BY DEPT_ID ORDER BY DEPT_ID ASC) AS MAX_INS_AMT
@@ -634,7 +634,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       import Over._
       import com.qwery.util.OptionHelper.Implicits.Risky._
 
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote, LastSale,
            |       MEAN(LastSale) OVER (
            |          PARTITION BY Symbol
@@ -663,7 +663,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       import Over._
       import com.qwery.util.OptionHelper.Implicits.Risky._
 
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote, LastSale,
            |       MEAN(LastSale) OVER (
            |          PARTITION BY Symbol
@@ -691,7 +691,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
       import Over._
       import com.qwery.util.OptionHelper.Implicits.Risky._
 
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote, LastSale,
            |       MEAN(LastSale) OVER (
            |          PARTITION BY Symbol
@@ -714,7 +714,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. EXCEPT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
             |FROM Customers
             |WHERE Industry = 'Oil/Gas Transmission'
@@ -736,7 +736,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. INTERSECT") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
             |FROM Customers
             |WHERE Industry = 'Oil/Gas Transmission'
@@ -759,7 +759,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
 
     it("should support SELECT .. UNION") {
       Seq("ALL", "DISTINCT", "") foreach { modifier =>
-        val results = SQLLanguageParser.parse(
+        val results = SQLCompiler.compile(
           s"""|SELECT Symbol, Name, Sector, Industry, SummaryQuote
               |FROM Customers
               |WHERE Industry = 'Oil/Gas Transmission'
@@ -783,7 +783,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. WHERE BETWEEN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE IPOYear BETWEEN '2000' AND '2019'
@@ -796,7 +796,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. WHERE IN (..)") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers
            |WHERE IPOYear IN ('2000', '2001', '2003', '2008', '2019')
@@ -809,7 +809,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT .. WHERE IN (SELECT ..)") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT Symbol, Name, Sector, Industry, SummaryQuote
            |FROM Customers AS C
            |WHERE IPOYear IN (SELECT `Year` FROM EligibleYears)
@@ -822,7 +822,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/CROSS JOIN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |CROSS JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
@@ -841,7 +841,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/INNER JOIN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |INNER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
@@ -860,7 +860,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/FULL OUTER JOIN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |FULL OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
@@ -879,7 +879,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/LEFT OUTER JOIN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |LEFT OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
@@ -898,7 +898,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/RIGHT OUTER JOIN") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |RIGHT OUTER JOIN CustomerAddresses AS CA ON CA.customerId = C.customerId
@@ -917,7 +917,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SELECT w/JOIN .. USING") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SELECT C.id, C.firstName, C.lastName, A.city, A.state, A.zipCode
            |FROM Customers AS C
            |JOIN CustomerAddresses AS CA USING customerId
@@ -936,12 +936,12 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SET variable") {
-      val results = SQLLanguageParser.parse("SET $customers = $customers + 1")
+      val results = SQLCompiler.compile("SET $customers = $customers + 1")
       assert(results == SetLocalVariable(name = "customers", $$("customers") + 1))
     }
 
     it("should support SET row variable") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|SET @securities = (
            |  SELECT Symbol, Name, Sector, Industry, `Summary Quote`
            |  FROM Securities
@@ -959,17 +959,17 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support SHOW") {
-      val results = SQLLanguageParser.parse("SHOW @theResults LIMIT 5")
+      val results = SQLCompiler.compile("SHOW @theResults LIMIT 5")
       assert(results == Show(rows = @@("theResults"), limit = 5))
     }
 
     it("should support TRUNCATE") {
-      val results = SQLLanguageParser.parse("TRUNCATE stocks")
+      val results = SQLCompiler.compile("TRUNCATE stocks")
       assert(results == Truncate(table = EntityRef.parse("stocks")))
     }
 
     it("should support UPDATE") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|UPDATE Companies
            |SET Symbol = 'AAPL', Name = 'Apple, Inc.', Sector = 'Technology', Industry = 'Computers', LastSale = 203.45
            |WHERE Symbol = 'AAPL'
@@ -987,7 +987,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support DO ... WHILE") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|DO
            |BEGIN
            |   PRINTLN 'Hello World';
@@ -1006,7 +1006,7 @@ class SQLLanguageParserTest extends AnyFunSpec {
     }
 
     it("should support WHILE ... DO") {
-      val results = SQLLanguageParser.parse(
+      val results = SQLCompiler.compile(
         """|WHILE $cnt < 10 DO
            |BEGIN
            |   PRINTLN 'Hello World';

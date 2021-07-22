@@ -16,7 +16,7 @@ import com.qwery.models.expressions.ScalarVariableRef
   * END LOOP;
   * }}}
   */
-case class ForLoop(variable: ScalarVariableRef,
+case class ForEach(variable: ScalarVariableRef,
                    rows: Invokable,
                    invokable: Invokable,
                    isReverse: Boolean) extends Invokable

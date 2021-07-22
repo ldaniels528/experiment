@@ -2,7 +2,7 @@ package com.qwery.language
 
 import com.qwery.die
 import com.qwery.language.SQLDecompiler.implicits._
-import com.qwery.language.SQLLanguageParser.implicits.ItemSeqUtilities
+import com.qwery.language.SQLCompiler.implicits.ItemSeqUtilities
 import com.qwery.language.SQLTemplateParams.MappedParameters
 import com.qwery.models.AlterTable._
 import com.qwery.models.Insert.Into
@@ -17,10 +17,10 @@ import scala.io.Source
 import scala.language.postfixOps
 
 /**
-  * SQL Language Parser
+  * SQL Compiler Support
   * @author lawrence.daniels@gmail.com
   */
-trait SQLLanguageParser {
+trait SQLCompiler {
 
   /**
     * Returns an iterator of executables
@@ -71,7 +71,7 @@ trait SQLLanguageParser {
   )
 
   /**
-   * Optionally parses an alias (e.g. "( ... ) AS O")
+   * Optionally parses an alias (e.g. '( ... ) AS O')
    * @param entity the given [[Invokable]]
    * @param ts     the given [[TokenStream]]
    * @return the resultant [[Invokable]]
@@ -203,7 +203,7 @@ trait SQLLanguageParser {
 
   /**
    * Parses a console PRINTLN statement
-   * @example {{{ PRINT 'This message will be printed to STDOUT' }}}
+   * @example {{{ PRINTLN 'This message will be printed to STDOUT' }}}
    * @param ts the [[TokenStream token stream]]
    * @return the [[Console.Print]]
    */
@@ -442,23 +442,23 @@ trait SQLLanguageParser {
     * Parses a FOR statement
     * @example
     * {{{
-    * FOR @item IN (
+    * FOR $item IN (
     *   SELECT symbol, lastSale FROM Securities WHERE naics = '12345'
     * )
     * LOOP
-    *   PRINT '${item.symbol}' is ${item.lastSale)/share';
+    *   PRINTLN '${item.symbol}' is ${item.lastSale)/share';
     * END LOOP;
     * }}}
     * @param stream the given [[TokenStream token stream]]
     * @return an [[WhileDo]]
     */
-  private def parseForLoop(stream: TokenStream): ForLoop = {
+  private def parseForLoop(stream: TokenStream): ForEach = {
     val params = SQLTemplateParams(stream, "FOR %v:variable IN ?%k:REVERSE %q:rows")
     val variable = params.variables("variable") match {
       case v: ScalarVariableRef => v
       case _ => stream.die("Local variables are not compatible with row sets")
     }
-    ForLoop(variable, rows = params.sources("rows"),
+    ForEach(variable, rows = params.sources("rows"),
       invokable = stream match {
         case ts if ts is "LOOP" => parseSequence(ts, startElem = "LOOP", endElem = "END LOOP")
         case ts => nextOpCode(ts)
@@ -701,39 +701,39 @@ trait SQLLanguageParser {
 }
 
 /**
-  * SQL Language Parser
+  * SQL Compiler
   * @author lawrence.daniels@gmail.com
   */
-object SQLLanguageParser {
+object SQLCompiler {
 
   /**
     * Parses the contents of the given file into an [[Invokable invokable]]
     * @param file the given [[File file]]
     * @return the resultant [[Invokable]]
     */
-  def parse(file: File): Invokable = parse(Source.fromFile(file).use(_.mkString))
+  def compile(file: File): Invokable = compile(Source.fromFile(file).use(_.mkString))
 
   /**
     * Parses the contents of the given input stream into an [[Invokable invokable]]
     * @param stream the given [[InputStream input stream]]
     * @return the resultant [[Invokable]]
     */
-  def parse(stream: InputStream): Invokable = parse(Source.fromInputStream(stream).mkString)
+  def compile(stream: InputStream): Invokable = compile(Source.fromInputStream(stream).mkString)
 
   /**
     * Parses the contents of the given URL into an [[Invokable invokable]]
     * @param url the given [[URL]]
     * @return the resultant [[Invokable]]
     */
-  def parse(url: URL): Invokable = parse(Source.fromURL(url).use(_.mkString))
+  def compile(url: URL): Invokable = compile(Source.fromURL(url).use(_.mkString))
 
   /**
     * Parses the contents of the given string into an [[Invokable invokable]]
     * @param sourceCode the given SQL code string (e.g. "SELECT * FROM Customers")
     * @return the resultant [[Invokable]]
     */
-  def parse(sourceCode: String): Invokable = {
-    new SQLLanguageParser {} iterate TokenStream(sourceCode) toList match {
+  def compile(sourceCode: String): Invokable = {
+    new SQLCompiler {} iterate TokenStream(sourceCode) toList match {
       case List(SQL(ops)) if ops.size == 1 => ops.head
       case op :: Nil => op
       case ops => SQL(ops)

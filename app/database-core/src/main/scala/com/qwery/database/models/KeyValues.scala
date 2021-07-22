@@ -1,10 +1,10 @@
 package com.qwery.database
 package models
 
-import com.qwery.database.util.Codec.CodecByteBuffer
 import com.qwery.database.device.BlockDevice
-import com.qwery.database.models
+import com.qwery.database.types.QxLong
 import com.qwery.database.util.Codec
+import com.qwery.database.util.Codec.CodecByteBuffer
 
 import java.nio.ByteBuffer
 import java.nio.ByteBuffer.allocate
@@ -13,11 +13,41 @@ import java.nio.ByteBuffer.allocate
  * Represents a row of key-value pairs
  * @param items the collection of key-value pairs
  */
-case class KeyValues(items: (String, Any)*) extends DefaultScope(items: _*) {
+case class KeyValues(items: (String, Any)*) {
+  private val mappings = Map(items: _*)
 
   def ++(that: KeyValues): KeyValues = KeyValues(this.toMap ++ that.toMap)
 
+  def currentRow: QxLong = QxLong(rowID)
+
   def filter(f: ((String, Any)) => Boolean): KeyValues = KeyValues(items.filter(f): _*)
+
+  def exists(f: ((String, Any)) => Boolean): Boolean = mappings.exists(f)
+
+  def forall(f: ((String, Any)) => Boolean): Boolean = mappings.forall(f)
+
+  def foreach(f: ((String, Any)) => Unit): Unit = mappings.foreach(f)
+
+  /**
+   * Retrieves a named value from the scope
+   * @param name the name of the field/attribute
+   * @return the option of a value
+   */
+  def get(name: String): Option[Any] = mappings.get(name)
+
+  def isEmpty: Boolean = mappings.isEmpty
+
+  def nonEmpty: Boolean = !isEmpty
+
+  def keys: Seq[String] = mappings.keys.toSeq
+
+  def toList: List[(String, Any)] = mappings.toList
+
+  override def toString: String = mappings.toString
+
+  def values: Seq[Any] = mappings.values.toSeq
+
+  def rowID: Option[ROWID] = mappings.collectFirst { case (name, id: ROWID) if name == ROWID_NAME => id }
 
   /**
    * Returns the key-value to a binary row
@@ -41,6 +71,8 @@ case class KeyValues(items: (String, Any)*) extends DefaultScope(items: _*) {
       buf
     })
   }
+
+  def toMap: Map[String, Any] = mappings
 
   /**
    * Returns the key-value to a row buffer

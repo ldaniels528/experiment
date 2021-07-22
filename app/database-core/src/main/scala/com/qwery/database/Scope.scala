@@ -2,52 +2,46 @@ package com.qwery.database
 
 import com.qwery.database.Scope._
 import com.qwery.database.models.KeyValues
-import com.qwery.database.types.{QxAny, QxLong}
 
 import scala.collection.concurrent.TrieMap
 
 /**
- * Represents a scope
+ * Creates a new scope
  */
-trait Scope {
+class Scope() {
+  private val variables = TrieMap[String, Variable]()
+  private var row: Option[KeyValues] = None
 
   /**
-   * @return the current row ID
+   * @return the current [[KeyValues row]]
    */
-  def currentRow: QxLong
+  def currentRow: Option[KeyValues] = row
 
-  def exists(f: ((String, Any)) => Boolean): Boolean
-
-  def forall(f: ((String, Any)) => Boolean): Boolean
-
-  def foreach(f: ((String, Any)) => Unit): Unit
+  /**
+   * Sets the current row
+   * @param row the [[KeyValues row]] to set
+   */
+  def currentRow_=(row: Option[KeyValues]): Unit = this.row = row
 
   /**
    * Retrieves a named value from the scope
    * @param name the name of the field/attribute
    * @return the option of a value
    */
-  def get(name: String): Option[Any]
+  def get(name: String): Option[Any] = currentRow.flatMap(_.get(name))
 
   /**
-   * Retrieves a function by name
-   * @param name the function name
-   * @return the [[Function]]
+   * Adds a variable to the scope
+   * @param variable the [[Variable variable]]
    */
-  def getFunction(name: String): Function
+  def addVariable(variable: Variable): Unit = variables(variable.name) = variable
 
   /**
    * Retrieves a variable by name
    * @param name the variable name
    * @return the [[Variable]]
    */
-  def getVariable(name: String): Variable
-
-  def isEmpty: Boolean
-
-  def nonEmpty: Boolean
-
-  def keys: Seq[String]
+  def getVariable(name: String): Option[Variable] = variables.get(name)
 
 }
 
@@ -58,23 +52,45 @@ object Scope {
 
   /**
    * Creates a new Scope
-   * @param items the name-value pairs of this scope
    * @return the [[Scope]]
    */
-  def apply(items: (String, Any)*) = new DefaultScope(items: _*)
+  def apply() = new Scope()
 
-  /**
-   * Represents a function
-   */
-  trait Function {
-    def evaluate(args: Seq[QxAny])(implicit scope: Scope): QxAny
-  }
+  def replaceTags(text: String)(implicit scope: Scope): String = {
+    val sb = new StringBuilder(text)
+    var last = 0
+    var isDone = false
 
-  /**
-   * Represents a aggregate function
-   */
-  trait AggFunction extends Function {
-    def update(keyValues: KeyValues)(implicit scope: Scope): Unit
+    def getFieldValue(name: String, field: String): String = {
+      val variable = scope.getVariable(name).getOrElse(throw new RuntimeException(s"Variable '$name' not found"))
+      variable.value match {
+        case Some(m: Map[String, Any]) => m.get(field).map(_.toString).getOrElse("")
+        case Some(v) => v.toString
+        case None => ""
+      }
+    }
+
+    // replace all tags (e.g. "{{item.name}}")
+    do {
+      // attempt to find a tag
+      val start = sb.indexOf("{{", last)
+      val end = sb.indexOf("}}", start)
+
+      isDone = start == -1 || start > end
+      if (!isDone) {
+        // extract the tag's contents and parse the property (name and field)
+        val tag = sb.substring(start + 2, end).trim
+        val (name, field) = tag.indexOf('.') match {
+          case -1 => die(s"Property expected near '$tag'")
+          case index => (tag.substring(0, index).trim, tag.substring(index + 1).trim)
+        }
+
+        // replace the tag with the value
+        sb.replace(start, end + 2, getFieldValue(name, field))
+      }
+      last = start
+    } while (!isDone)
+    sb.toString()
   }
 
   /**
@@ -83,52 +99,5 @@ object Scope {
    * @param value the value of the variable
    */
   case class Variable(name: String, var value: Option[Any])
-
-}
-
-/**
- * Creates a new Scope
- * @param items the name-value pairs of this scope
- */
-class DefaultScope(items: (String, Any)*) extends Scope {
-  private val mappings = Map(items: _*)
-  private val functions = TrieMap[String, Function]()
-  private val variables = TrieMap[String, Variable]()
-
-  override def currentRow: QxLong = QxLong(rowID)
-
-  override def exists(f: ((String, Any)) => Boolean): Boolean = mappings.exists(f)
-
-  override def forall(f: ((String, Any)) => Boolean): Boolean = mappings.forall(f)
-
-  override def foreach(f: ((String, Any)) => Unit): Unit = mappings.foreach(f)
-
-  override def get(name: String): Option[Any] = mappings.get(name)
-
-  def getOrElse(name: String, default: Any): Any = mappings.getOrElse(name, default)
-
-  override def getFunction(name: String): Function = {
-    functions.getOrElse(name, throw new RuntimeException(s"Function '$name' not found"))
-  }
-
-  override def getVariable(name: String): Variable = {
-    variables.getOrElse(name, throw new RuntimeException(s"Variable '$name' not found"))
-  }
-
-  override def isEmpty: Boolean = mappings.isEmpty
-
-  override def nonEmpty: Boolean = mappings.nonEmpty
-
-  override def keys: Seq[String] = mappings.keys.toSeq
-
-  def toList: List[(String, Any)] = mappings.toList
-
-  def toMap: Map[String, Any] = mappings
-
-  def rowID: Option[ROWID] = mappings.collectFirst { case (name, id: ROWID) if name == ROWID_NAME => id }
-
-  override def toString: String = mappings.toString
-
-  def values: Seq[Any] = mappings.values.toSeq
 
 }

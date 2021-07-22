@@ -24,7 +24,7 @@ object ExpressionVM {
           case When(cond, result) if isTrue(cond) => evaluate(result)
         }) ?? otherwise.map(evaluate) || QxNull
       case Cast(expr, toType) => evaluate(expr) // TODO cast to requested type
-      case CurrentRow => scope.currentRow
+      case CurrentRow => QxLong(scope.currentRow.flatMap(_.rowID))
       case fc@FunctionCall(name, args) =>
         //scope.getFunction(name).evaluate(args.map(evaluate))
         val fxTemplate = lookupTransformationFunction(name)

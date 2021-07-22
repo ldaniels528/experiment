@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * SQL Template Parser
   * @author lawrence.daniels@gmail.com
   */
-class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLLanguageParser {
+class SQLTemplateParser(stream: TokenStream) extends ExpressionParser with SQLCompiler {
 
   /**
     * Indicates whether the given stream matches the given template

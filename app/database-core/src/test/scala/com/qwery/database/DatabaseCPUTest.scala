@@ -163,6 +163,14 @@ class DatabaseCPUTest extends AnyFunSpec {
       assert(results.columns.map(_.name).toSet == Set("market", "roundedLastSale", "lastSale", "lastSaleTime", "ticker"))
     }
 
+    it("should support FOR .. IN") {
+      cpu.executeQuery(databaseName, sql =
+        s"""|FOR $$item IN (SELECT symbol, lastSale FROM `$schemaName.$tableName` LIMIT 5) {
+            |  PRINTLN '{{item.symbol}} is {{item.lastSale}}/share';
+            |}
+            |""".stripMargin)
+    }
+
   }
 
 }

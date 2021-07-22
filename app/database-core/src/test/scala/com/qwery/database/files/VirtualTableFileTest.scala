@@ -3,7 +3,7 @@ package files
 
 import com.qwery.database.models.KeyValues
 import com.qwery.database.models.StockQuote.{randomDate, randomExchange, randomPrice, randomSymbol}
-import com.qwery.language.SQLLanguageParser
+import com.qwery.language.SQLCompiler
 import com.qwery.models.{ColumnTypeSpec, EntityRef, Table, View, Column}
 import com.qwery.util.ResourceHelper._
 import org.scalatest.funspec.AnyFunSpec
@@ -60,7 +60,7 @@ class VirtualTableFileTest extends AnyFunSpec {
         view = View(viewRef,
           description = Some("AMEX Stock symbols sorted by last sale"),
           ifNotExists = true,
-          query = SQLLanguageParser.parse(
+          query = SQLCompiler.compile(
             s"""|SELECT
                 |   symbol AS ticker,
                 |   exchange AS market,

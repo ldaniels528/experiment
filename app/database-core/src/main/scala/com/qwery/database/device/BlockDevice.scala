@@ -177,6 +177,15 @@ trait BlockDevice {
     }
   }
 
+  def foreachKVPInReverse[U](callback: KeyValues => U): Unit = {
+    var rowID: ROWID = length - 1
+    while (rowID >= 0) {
+      val row = getRow(rowID)
+      if (row.metadata.isActive) callback(row.toKeyValues)
+      rowID -= 1
+    }
+  }
+
   /**
    * Retrieves a column by ID
    * @param columnID the column ID

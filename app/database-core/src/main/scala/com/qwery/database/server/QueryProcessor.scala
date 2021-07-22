@@ -148,7 +148,7 @@ class QueryProcessor(routingActors: Int = 5)(implicit timeout: Timeout) {
     * @return the promise of a [[QueryResult]]
     */
   def executeQuery(databaseName: String, sql: String)(implicit timeout: Timeout): Future[QueryResult] = {
-    val command = SQLCompiler.compile(databaseName, sql)
+    val command = QueryProcessorFacade.transform(databaseName, sql)
     (this ? command) map (_.toQueryResult(command))
   }
 
